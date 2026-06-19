@@ -11,6 +11,8 @@ import { logger } from "@/lib/utils/logger";
 // ─── State ────────────────────────────────────────────────────────────────
 
 let syncEngine: SyncEngine | null = null;
+let bookmarkDebounce: ReturnType<typeof setTimeout> | null = null;
+const BOOKMARK_DEBOUNCE_MS = 1000; // coalesce bursts (a folder delete fires many events)
 
 // ─── Init ─────────────────────────────────────────────────────────────────
 
@@ -83,11 +85,30 @@ async function setupSyncAlarm(intervalSeconds: number): Promise<void> {
 // ─── Bookmark Listener ────────────────────────────────────────────────────
 
 function onBookmarkChange(): void {
-  // Debounce via a one-shot alarm. A setTimeout would be dropped if MV3 suspends
-  // the worker before it fires; an alarm survives suspension. Re-creating the
-  // alarm on each change collapses bursts into a single delayed sync.
-  // (Chrome clamps alarm delays to a ~30s floor.)
+  // Backstop: a one-shot alarm survives SW suspension (Chrome floors it at ~30s),
+  // so a change is never lost even if the fast path below doesn't get to run.
   chrome.alarms.create("synkro-bookmark-sync", { delayInMinutes: 0.5 });
+
+  // Fast path: the worker is awake right now (the event just fired), so sync
+  // almost immediately. A short debounce coalesces bursts (e.g. deleting a
+  // folder fires many onRemoved events) into a single sync — applies equally to
+  // adds and removes, so deletions propagate as promptly as additions.
+  if (bookmarkDebounce) clearTimeout(bookmarkDebounce);
+  bookmarkDebounce = setTimeout(async () => {
+    bookmarkDebounce = null;
+    const settings = await getSettings();
+    if (
+      settings.sync_on_change &&
+      settings.enabled_types.includes("bookmarks") &&
+      syncEngine &&
+      !syncEngine.isSyncing
+    ) {
+      // We're handling it now — drop the backstop so it doesn't double-sync.
+      await chrome.alarms.clear("synkro-bookmark-sync");
+      await syncEngine.sync(["bookmarks"]);
+    }
+    // If a sync is already running, leave the alarm to pick this change up next.
+  }, BOOKMARK_DEBOUNCE_MS);
 }
 
 // ─── Message Handler ──────────────────────────────────────────────────────
