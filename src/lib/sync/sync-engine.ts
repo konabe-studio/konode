@@ -110,11 +110,10 @@ export class SyncEngine {
           if (!this.isPayloadEmpty(dataType, freshPayload)) {
             await backend.upload(await this.buildPacket(dataType, freshPayload));
           }
-        } else {
-          // Both have data → conflict resolution
+        } else if (this.settings.conflict_strategy === "manual") {
+          // Manual: queue the conflict for the user to resolve from the popup.
           const localPacket = await this.buildPacket(dataType, localPayload);
-          const { winner, conflict } = this.resolver.resolve(localPacket, remote);
-
+          const { conflict } = this.resolver.resolve(localPacket, remote);
           if (conflict) {
             const currentState = await getState();
             await setState({
@@ -122,12 +121,20 @@ export class SyncEngine {
               pending_conflicts: [...currentState.pending_conflicts, conflict],
             });
             if (this.settings.notifications_enabled) notifyConflict(dataType);
-          } else if (winner) {
-            if (winner.device_id !== this.settings.device_id) {
-              await this.applyRemote(dataType, winner, false);
-            }
-            await backend.upload(await this.buildPacket(dataType, localPayload));
           }
+        } else {
+          // Auto-resolve. applyRemote is NON-destructive for every current data
+          // type (bookmarks/history merge additively by URL; sessions/extensions
+          // are just stored for display/restore), so — unless the user explicitly
+          // chose "prefer-local" — always pull the peer's data in, then push the
+          // merged result. Without this, LWW always picked the local packet (its
+          // timestamp is the sync time, i.e. "now"), so remote additions from
+          // another device never arrived.
+          if (this.settings.conflict_strategy !== "prefer-local") {
+            await this.applyRemote(dataType, remote, false);
+          }
+          const mergedPayload = await this.buildPayload(dataType);
+          await backend.upload(await this.buildPacket(dataType, mergedPayload));
         }
       } else if (!isEmpty) {
         // No remote from other device, but we have local data → push
