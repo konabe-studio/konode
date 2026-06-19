@@ -1,52 +1,54 @@
 # Synkro — TODO & Roadmap
 
-> Utoljára frissítve: 2025-05-11
+> Last updated: 2026-06-19
 
 ---
 
-## 🔴 Kritikus / Blokkoló
+## ✅ Done
 
-- [x] Google OAuth Client ID ✓
-- [x] GitHub PAT auth ✓  
-- [x] WebDAV backend ✓
-- [ ] **Sync flow fix** — pull-first logika
-      Jelenlegi: upload → download (üres adatot tölt fel első szinkronkor)
-      Kell: download → merge → upload
-
----
-
-## 🟡 Sprint 2 — Aktív
-
-- [ ] **Onboarding** — első telepítéskor backend + auth + adattípus wizard
-- [ ] **Import / Export** — JSON fájl backup offline privacy usereknek
-- [ ] **E2EE** — encryption.ts kész, bekötés kell
-- [ ] **Conflict UI** — popup panel a konfliktusok feloldásához
-- [ ] **History sync** — incremental diff
+- [x] Google OAuth client ID + Drive backend
+- [x] GitHub PAT auth + backend
+- [x] WebDAV backend (reachable via optional host permission)
+- [x] **Sync flow** — pull-first (download → merge → upload); fresh-device guard
+- [x] **Onboarding** — first-run wizard (backend + auth + data types)
+- [x] **Import / Export** — JSON file backup in Settings → Advanced
+- [x] **E2EE** — AES-256-GCM wired into the sync engine, opt-in via Settings
+- [x] **Conflict UI** — popup banner resolves queued conflicts (Manual strategy)
+- [x] **History sync** — with de-dup (note: Chrome can't restore visit times/counts)
+- [x] **Extensions sync** — list + "missing on this device" surfacing
+- [x] Session restore (open tabs from another device)
+- [x] SHA-256 checksums, verified on download
+- [x] Optional permissions for history/tabs/management
+- [x] Live popup status (fixed the MV3 broadcast), keyboard-operable setup UI
 
 ---
 
-## 🟢 Sprint 3
+## 🔜 Next
 
-- [ ] Device name auto-detect
-- [ ] Backend validáció mentés előtt
-- [ ] Session manager UI
-- [ ] Firefox support
+- [ ] **True multi-device merge** — fold *all* peer files, not just the newest one
+      (download() now excludes our own file; the engine still compares against a single peer)
+- [ ] **OAuth refresh** — replace the Drive implicit grant with getAuthToken / auth-code + PKCE
+      so background sync survives past the ~1h token expiry
+- [ ] **Session manager UI** — list/restore named sessions (engine + storage already support it)
+- [ ] Backend "newest version" selection on GitHub/WebDAV (needs commit/mtime, not list order)
+- [ ] Tests + lint + CI (none yet)
 
 ---
 
-## ⏳ Nice-to-have
+## 🧭 Later / Nice-to-have
 
-- [ ] Incremental bookmark diff (>10k)
-- [ ] Audit log export
-- [ ] Keyboard shortcuts
+- [ ] Firefox support (browser_specific_settings + polyfill)
 - [ ] Mega backend
+- [ ] Incremental bookmark diff for >10k bookmarks
+- [ ] Audit log export, keyboard shortcuts
+- [ ] Populate `bytes_transferred` (currently unused)
 
 ---
 
-## ✅ Google OAuth verification (publikálás előtt)
+## 📦 Before publishing (Google OAuth verification + Chrome Web Store)
 
-- [ ] Consent Screen: app name, logo, privacy policy URL
-- [ ] drive.file scope indoklás
-- [ ] Demo videó (1-3 perc screencast)
-- [ ] Verification kérelem (1-4 hét, ingyenes)
-- [ ] Chrome Web Store listing ($5 egyszeri)
+- [ ] Consent screen: app name, logo, **privacy policy URL** (write the policy first)
+- [ ] `drive.file` scope justification
+- [ ] Demo video (1–3 min screencast)
+- [ ] Verification request (1–4 weeks, free)
+- [ ] Chrome Web Store listing ($5 one-time)

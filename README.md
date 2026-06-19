@@ -2,19 +2,19 @@
 
 > Privacy-first browser sync to your own storage — no middlemen, no telemetry.
 
-Synkro is a Manifest V3 Chrome extension that syncs your browser data (bookmarks, tabs, sessions, history) to storage you control. Currently supports **Google Drive** and **GitHub**. Mega is planned.
+Synkro is a Manifest V3 Chrome extension that syncs your browser data (bookmarks, sessions, history, installed-extension list) to storage you control. Supports **Google Drive**, **GitHub**, and **WebDAV**.
 
 ---
 
 ## Features
 
-- **Bookmarks** — full two-way sync with merge and diff
-- **Open Tabs** — export/store current session across devices
-- **Named Sessions** — save and restore tab sessions by name
-- **History** — incremental sync with configurable day limit
-- **Conflict resolution** — Last Write Wins, Prefer Local, Prefer Remote, or Manual
-- **Zero telemetry** — no external server, no analytics
-- **E2EE** — AES-256-GCM encryption *(Sprint 2)*
+- **Bookmarks** — two-way sync that preserves your folder structure
+- **Sessions** — save the current tab set and restore it on another device
+- **History** — sync recent history with a configurable day limit *(restore is best-effort: Chrome can't restore original visit times)*
+- **Installed extensions** — sync the list and surface what's missing on each device
+- **Conflict resolution** — Last Write Wins, Prefer Local, Prefer Remote, or Manual (resolve from the popup)
+- **Zero telemetry** — no Synkro server, no analytics; data goes only to the storage you choose
+- **E2EE** — optional AES-256-GCM encryption: turn it on in Settings → Advanced and your data is encrypted before it leaves the device
 
 ---
 
@@ -22,8 +22,9 @@ Synkro is a Manifest V3 Chrome extension that syncs your browser data (bookmarks
 
 | Backend      | Status       | Notes                                          |
 |--------------|--------------|------------------------------------------------|
-| Google Drive | ✅ Supported  | OAuth via Chrome Identity API                  |
-| GitHub       | ✅ Supported  | Personal Access Token, private repo            |
+| Google Drive | ✅ Supported  | OAuth via Chrome Identity API (`drive.file`)   |
+| GitHub       | ✅ Supported  | Fine-grained token, single private repo        |
+| WebDAV       | ✅ Supported  | Nextcloud, ownCloud, Synology, pCloud, kDrive  |
 | Mega         | 🔜 Planned   | Requires megajs + Node polyfills               |
 
 ---
@@ -31,10 +32,9 @@ Synkro is a Manifest V3 Chrome extension that syncs your browser data (bookmarks
 ## Stack
 
 - **Manifest V3** (service worker background)
-- **React 18** + **TypeScript** (popup + options)
-- **Vite** + `vite-plugin-web-extension`
+- **React 18** + **TypeScript** (popup, options, onboarding)
+- **Vite** — manual multi-page build (popup/options/onboarding) plus a separate service-worker build (`vite.sw.config.ts`)
 - **Tailwind CSS v3** (custom dark design system)
-- **Zustand** — state management *(planned for popup)*
 - **Web Crypto API** — AES-256-GCM E2EE
 
 ---
@@ -50,30 +50,30 @@ synkro/
 │   ├── background/
 │   │   └── service-worker.ts      ← alarm polling, listener hub, message router
 │   ├── popup/
-│   │   ├── App.tsx                ← sync status, quick actions
+│   │   ├── App.tsx                ← sync status, conflict resolution, quick actions
 │   │   └── components/
-│   │       ├── StatusBadge.tsx
-│   │       ├── SyncButton.tsx
-│   │       ├── DataTypeRow.tsx
 │   │       └── AuditLog.tsx
 │   ├── options/
 │   │   └── App.tsx                ← full settings: backend, data types, device, advanced
+│   ├── onboarding/
+│   │   └── App.tsx                ← first-run wizard: backend + auth + data types
 │   └── lib/
 │       ├── types.ts               ← all shared types
 │       ├── backends/
 │       │   ├── abstract-backend.ts   ← factory + IBackend interface
 │       │   ├── gdrive-backend.ts
 │       │   ├── github-backend.ts
-│       │   └── mega-backend.ts       ← stub
+│       │   └── webdav-backend.ts
 │       ├── handlers/
-│       │   ├── bookmarks-handler.ts  ← export, import, diff, listeners
+│       │   ├── bookmarks-handler.ts  ← export, import (merge/replace), diff, listeners
 │       │   ├── history-handler.ts
-│       │   └── tabs-handler.ts
+│       │   ├── tabs-handler.ts
+│       │   └── extensions-handler.ts
 │       ├── sync/
-│       │   ├── sync-engine.ts        ← orchestrates per-type sync
-│       │   └── conflict-resolver.ts  ← LWW, prefer-local/remote, 3-way diff
+│       │   ├── sync-engine.ts        ← orchestrates per-type sync, E2EE, conflicts
+│       │   └── conflict-resolver.ts  ← LWW, prefer-local/remote, manual
 │       ├── crypto/
-│       │   └── encryption.ts         ← AES-256-GCM (Sprint 2)
+│       │   └── encryption.ts         ← AES-256-GCM (wired, opt-in)
 │       └── utils/
 │           ├── storage.ts            ← chrome.storage.local wrapper
 │           ├── retry.ts              ← exponential backoff
@@ -134,13 +134,17 @@ All sync data is stored as `SyncPacket` JSON files in your backend:
   "device_id": "uuid-v4",
   "timestamp": "2025-01-15T10:30:00Z",
   "data_type": "bookmarks",
-  "checksum": "a3f8c2d1",
+  "checksum": "<sha-256 hex of the plaintext payload>",
   "encrypted": false,
   "payload": "{ ...JSON data... }"
 }
 ```
 
-Files are named `synkro_{data_type}_{device_id}.json`.
+Files are named `synkro_{data_type}_{device_id}.json`. When E2EE is enabled,
+`encrypted` is `true` and `payload` is the AES-256-GCM blob (salt + IV +
+ciphertext, base64); the `checksum` is still computed over the plaintext so
+identical content matches across devices. The checksum is verified on download
+before any data is imported.
 
 ---
 
@@ -157,23 +161,23 @@ Chrome extensions **cannot access** the browser's native password store. This is
 
 ## Roadmap
 
-| Sprint | Features |
+| Status | Features |
 |--------|----------|
-| 1 ✅   | Bookmarks + Tabs sync, Google Drive + GitHub backends, Popup + Options UI |
-| 2      | E2EE (AES-256-GCM), History sync, Mega backend |
-| 3      | Firefox support (webextension-polyfill), Conflict UI, Session manager |
-| 4      | Incremental diff optimisation, >10k bookmark performance |
+| ✅ Done | Bookmarks / sessions / history / extensions sync · Google Drive + GitHub + WebDAV · popup + options + onboarding · E2EE (opt-in) · conflict resolution UI |
+| 🔜 Next | True multi-device merge (fold all peers), session manager UI, OAuth refresh/PKCE for Drive |
+| 🧭 Later | Firefox support, Mega backend, incremental diff for >10k bookmarks, tests + CI |
 
 ---
 
 ## Privacy & Security
 
-- No data ever sent to Synkro servers (there are none)
-- Credentials stored only in `chrome.storage.local` (device-local)
-- GitHub tokens scoped to `repo` only
-- Google Drive OAuth scoped to `drive.file` (only files created by Synkro)
-- Audit log stored locally, last 200 entries
-- Rate limiting + exponential backoff on all backend calls
+- No data is ever sent to Synkro servers (there are none). Your data goes only to the storage backend you configure (Google Drive, GitHub, or your WebDAV server).
+- **Optional E2EE**: enable it in Settings → Advanced to encrypt every payload (AES-256-GCM, PBKDF2-SHA256) before it leaves the device. Without it, data is stored as plaintext on your chosen backend.
+- The synced data includes your **installed-extension list** (used to flag missing extensions on other devices).
+- Credentials (Drive access token, GitHub token, WebDAV password) and your E2EE passphrase are stored in `chrome.storage.local` on this device only. They are never uploaded. Note `chrome.storage.local` is not encrypted at rest — prefer a fine-grained GitHub token (single repo) and a WebDAV app password.
+- Google Drive OAuth is scoped to `drive.file` (only files Synkro creates).
+- `history`, `tabs`, and `management` are requested as **optional permissions**, only when you enable those data types.
+- Audit log stored locally, last 200 entries. Rate limiting + exponential backoff (transient errors only) on all backend calls.
 
 ---
 
