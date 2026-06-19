@@ -1,4 +1,4 @@
-import type { SyncSettings, SyncState } from "@/lib/types";
+import type { SyncSettings, SyncState, Tombstone } from "@/lib/types";
 
 // ─── Device name detection ─────────────────────────────────────────────────
 
@@ -60,6 +60,7 @@ const KEYS = {
   STATE: "synkro_state",
   AUDIT_LOG: "synkro_audit",
   BOOKMARK_CACHE: "synkro_bm_cache",
+  BOOKMARK_TOMBSTONES: "synkro_bm_tombstones",
   HISTORY_CACHE: "synkro_hist_cache",
   TAB_CACHE: "synkro_tab_cache",
 } as const;
@@ -129,6 +130,14 @@ export async function getBookmarkCache<T>(): Promise<T | null> {
 
 export async function setBookmarkCache<T>(data: T): Promise<void> {
   await set(KEYS.BOOKMARK_CACHE, data);
+}
+
+export async function getTombstones(): Promise<Tombstone[]> {
+  return get<Tombstone[]>(KEYS.BOOKMARK_TOMBSTONES, []);
+}
+
+export async function setTombstones(list: Tombstone[]): Promise<void> {
+  await set(KEYS.BOOKMARK_TOMBSTONES, list);
 }
 
 export async function getTabCache<T>(): Promise<T | null> {

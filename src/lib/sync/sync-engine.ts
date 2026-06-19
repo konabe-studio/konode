@@ -1,6 +1,6 @@
 import type { SyncSettings, SyncState, DataType, SyncPacket } from "@/lib/types";
 import { createBackend } from "@/lib/backends/abstract-backend";
-import { exportBookmarks, importBookmarks } from "@/lib/handlers/bookmarks-handler";
+import { exportBookmarkPayload, importBookmarks } from "@/lib/handlers/bookmarks-handler";
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
 import { exportHistory, importHistory } from "@/lib/handlers/history-handler";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
@@ -164,7 +164,11 @@ export class SyncEngine {
     if (!payload) return true;
     switch (dataType) {
       case "bookmarks": {
-        const flat = this.flattenBookmarks(payload as Array<{ children?: unknown[]; url?: string }>);
+        // Payload is a { tree, tombstones } envelope (or a legacy bare array).
+        const tree = Array.isArray(payload)
+          ? payload
+          : ((payload as { tree?: unknown[] }).tree ?? []);
+        const flat = this.flattenBookmarks(tree as Array<{ children?: unknown[]; url?: string }>);
         return flat.filter((n) => n.url).length === 0;
       }
       case "history":
@@ -193,7 +197,7 @@ export class SyncEngine {
   private async buildPayload(dataType: DataType): Promise<unknown> {
     switch (dataType) {
       case "bookmarks":
-        return exportBookmarks();
+        return exportBookmarkPayload();
       case "sessions": {
         // Make the synced session deterministic: identical open tabs must yield
         // an identical payload (and checksum), otherwise a fresh UUID/timestamp
@@ -276,16 +280,22 @@ export class SyncEngine {
   ): Promise<void> {
     // Validate the parsed payload shape before handing untrusted remote data to
     // the Chrome APIs (a corrupt/tampered file must not crash or mis-import).
-    if ((dataType === "bookmarks" || dataType === "history" || dataType === "extensions")
-        && !Array.isArray(payload)) {
+    if ((dataType === "history" || dataType === "extensions") && !Array.isArray(payload)) {
       throw new Error(`Invalid ${dataType} payload — expected an array.`);
+    }
+    if (dataType === "bookmarks" && !Array.isArray(payload) &&
+        !Array.isArray((payload as { tree?: unknown }).tree)) {
+      throw new Error("Invalid bookmarks payload — expected a tree or { tree, tombstones }.");
     }
 
     switch (dataType) {
       case "bookmarks":
-        // Fresh device → replace entire structure (preserves folders)
-        // Existing device → merge (add missing, don't overwrite)
-        await importBookmarks(payload as never, isLocalEmpty ? "replace" : "merge");
+        // Fresh device → replace; existing device → merge with deletion tracking.
+        await importBookmarks(
+          payload,
+          isLocalEmpty ? "replace" : "merge",
+          this.settings.conflict_strategy
+        );
         break;
       case "history":
         await importHistory(payload as never);

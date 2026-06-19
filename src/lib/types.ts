@@ -30,6 +30,20 @@ export interface SyncBookmark {
   _deleted?: boolean;
 }
 
+// A deletion marker so a removed bookmark propagates (and doesn't resurrect from
+// a peer that still has it). Keyed by URL since merge is URL-based.
+export interface Tombstone {
+  url: string;
+  deletedAt: number; // epoch ms
+}
+
+// Bookmark sync payload: the live tree plus the device's deletion log.
+// (Older packets are a bare SyncBookmark[] — handled for backward compatibility.)
+export interface BookmarkPayload {
+  tree: SyncBookmark[];
+  tombstones: Tombstone[];
+}
+
 // ─── History ───────────────────────────────────────────────────────────────
 
 export interface SyncHistoryItem {

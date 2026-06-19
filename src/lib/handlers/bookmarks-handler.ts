@@ -1,6 +1,6 @@
-import type { SyncBookmark } from "@/lib/types";
+import type { SyncBookmark, Tombstone, BookmarkPayload, ConflictStrategy } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
-import { setBookmarkCache, getBookmarkCache } from "@/lib/utils/storage";
+import { setBookmarkCache, getBookmarkCache, getTombstones, setTombstones } from "@/lib/utils/storage";
 
 // ─── Read ─────────────────────────────────────────────────────────────────
 
@@ -21,16 +21,87 @@ function mapNode(node: chrome.bookmarks.BookmarkTreeNode): SyncBookmark {
   };
 }
 
+// ─── Tombstones (deletion tracking) ────────────────────────────────────────
+
+const TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
+
+// Suppress tombstone recording while WE import (our own create/remove churn
+// during a merge must not be mistaken for user deletions).
+let importing = false;
+
+function toDeletedMap(list: Tombstone[]): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const t of list) m.set(t.url, Math.max(m.get(t.url) ?? 0, t.deletedAt));
+  return m;
+}
+
+function gcTombstones(list: Tombstone[]): Tombstone[] {
+  const cutoff = Date.now() - TOMBSTONE_TTL_MS;
+  const byUrl = new Map<string, number>();
+  for (const t of list) {
+    if (t.deletedAt < cutoff) continue;
+    byUrl.set(t.url, Math.max(byUrl.get(t.url) ?? 0, t.deletedAt));
+  }
+  return [...byUrl].map(([url, deletedAt]) => ({ url, deletedAt }));
+}
+
+function mergeTombstoneLists(a: Tombstone[], b: Tombstone[]): Tombstone[] {
+  return gcTombstones([...a, ...b]);
+}
+
+/** Record tombstones for every URL in a removed bookmark/folder subtree. */
+async function recordRemovedTombstones(node: chrome.bookmarks.BookmarkTreeNode): Promise<void> {
+  if (importing) return;
+  const urls: string[] = [];
+  const walk = (n: chrome.bookmarks.BookmarkTreeNode) => {
+    if (n.url) urls.push(n.url);
+    n.children?.forEach(walk);
+  };
+  walk(node);
+  if (!urls.length) return;
+  const now = Date.now();
+  const current = await getTombstones();
+  await setTombstones(mergeTombstoneLists(current, urls.map((url) => ({ url, deletedAt: now }))));
+  logger.info("Tombstones", `Recorded ${urls.length} deletion(s)`);
+}
+
+/** Bookmark sync payload: live tree + this device's (pruned) deletion log. */
+export async function exportBookmarkPayload(): Promise<BookmarkPayload> {
+  const [tree, tombstones] = await Promise.all([exportBookmarks(), getTombstones()]);
+  const gced = gcTombstones(tombstones);
+  await setTombstones(gced); // keep the stored log pruned
+  return { tree, tombstones: gced };
+}
+
+/** Normalize a parsed bookmark payload (supports the legacy bare-array format). */
+function normalizePayload(payload: unknown): BookmarkPayload {
+  if (Array.isArray(payload)) return { tree: payload as SyncBookmark[], tombstones: [] };
+  const p = (payload ?? {}) as Partial<BookmarkPayload>;
+  return { tree: p.tree ?? [], tombstones: p.tombstones ?? [] };
+}
+
 // ─── Write (import from remote) ──────────────────────────────────────────
 
 export async function importBookmarks(
-  remoteTree: SyncBookmark[],
-  strategy: "merge" | "replace" = "merge"
+  payload: unknown,
+  strategy: "merge" | "replace" = "merge",
+  conflictStrategy: ConflictStrategy = "lww"
 ): Promise<void> {
-  if (strategy === "replace") {
-    await clearAndImport(remoteTree);
-  } else {
-    await mergeBookmarks(remoteTree);
+  const { tree, tombstones: remoteTombstones } = normalizePayload(payload);
+  importing = true;
+  try {
+    // Capture our own deletions before folding in the peer's, so the merge can
+    // tell "I deleted this" from "they deleted this" (matters for prefer-*).
+    const localTombstones = await getTombstones();
+    await setTombstones(mergeTombstoneLists(localTombstones, remoteTombstones));
+
+    if (strategy === "replace") {
+      await clearAndImport(tree);
+    } else {
+      await mergeBookmarks(tree, localTombstones, remoteTombstones, conflictStrategy);
+    }
+  } finally {
+    importing = false;
   }
 }
 
@@ -115,8 +186,64 @@ async function restoreNode(
   }
 }
 
-async function mergeBookmarks(remoteTree: SyncBookmark[]): Promise<void> {
-  const localUrls = new Set(flattenUrls(await exportBookmarks()));
+async function mergeBookmarks(
+  remoteTree: SyncBookmark[],
+  localTombstones: Tombstone[],
+  remoteTombstones: Tombstone[],
+  strategy: ConflictStrategy,
+): Promise<void> {
+  // Index local URL bookmarks (ids + newest dateAdded per URL).
+  const localFlat = flattenNodes(await exportBookmarks()).filter((n) => n.url);
+  const localByUrl = new Map<string, { ids: string[]; dateAdded: number }>();
+  for (const n of localFlat) {
+    if (!n.url) continue;
+    const e = localByUrl.get(n.url) ?? { ids: [], dateAdded: 0 };
+    e.ids.push(n.id);
+    e.dateAdded = Math.max(e.dateAdded, n.dateAdded ?? 0);
+    localByUrl.set(n.url, e);
+  }
+
+  const localDel = toDeletedMap(localTombstones);
+  const remoteDel = toDeletedMap(remoteTombstones);
+  const remoteAdd = new Map<string, number>();
+  for (const n of flattenNodes(remoteTree)) {
+    if (n.url) remoteAdd.set(n.url, Math.max(remoteAdd.get(n.url) ?? 0, n.dateAdded ?? 0));
+  }
+
+  // ── Step A: apply the peer's deletions to local ──
+  // prefer-local never deletes local; prefer-remote deletes unconditionally;
+  // lww deletes only when the deletion is newer than the local add, so a fresh
+  // re-add survives an older tombstone.
+  const toRemove: string[] = [];
+  if (strategy !== "prefer-local") {
+    for (const [url, dAt] of remoteDel) {
+      const loc = localByUrl.get(url);
+      if (!loc) continue;
+      if (strategy === "prefer-remote" || loc.dateAdded <= dAt) toRemove.push(...loc.ids);
+    }
+  }
+  // Safety: refuse a mass-delete from a corrupt/oversized tombstone log.
+  const cap = Math.max(20, Math.floor(localFlat.length * 0.5));
+  if (toRemove.length > cap) {
+    logger.warn("mergeBookmarks", `Skipped deleting ${toRemove.length} bookmarks (cap ${cap}) — tombstone data looks wrong`);
+  } else {
+    for (const id of toRemove) {
+      try { await chrome.bookmarks.remove(id); } catch (err) { logger.error("Bookmark delete (tombstone)", err); }
+    }
+  }
+
+  // ── Step B: additively merge the remote tree (folders preserved), skipping
+  //    anything already local or that a deletion should suppress. ──
+  const localUrlsNow = new Set(flattenUrls(await exportBookmarks()));
+  const skipAdd = (url: string): boolean => {
+    if (localUrlsNow.has(url)) return true;
+    const lAt = localDel.get(url);
+    const rAt = remoteDel.get(url);
+    if (strategy === "prefer-local") return lAt !== undefined;   // honor only our deletions
+    if (strategy === "prefer-remote") return rAt !== undefined;  // honor the peer's deletions
+    const newestDel = Math.max(lAt ?? 0, rAt ?? 0);              // lww
+    return newestDel > 0 && newestDel >= (remoteAdd.get(url) ?? 0);
+  };
 
   const localRoots = (await chrome.bookmarks.getTree())[0]?.children ?? [];
   const localRootIds = new Set(localRoots.map((r) => r.id));
@@ -129,15 +256,13 @@ async function mergeBookmarks(remoteTree: SyncBookmark[]): Promise<void> {
   }
 
   let added = 0;
-
-  // Recreate the remote folder hierarchy instead of dumping every bookmark flat
-  // into "Other Bookmarks". URLs are de-duped against what's already local.
+  const addedUrls = new Set<string>();
   const mergeNode = async (node: SyncBookmark, parentId: string): Promise<void> => {
     if (node.url) {
-      if (localUrls.has(node.url)) return;
+      if (skipAdd(node.url) || addedUrls.has(node.url)) return;
       try {
         await chrome.bookmarks.create({ parentId, title: node.title, url: node.url });
-        localUrls.add(node.url);
+        addedUrls.add(node.url);
         added++;
       } catch (err) {
         logger.error(`Bookmark merge add: ${node.title}`, err);
@@ -169,7 +294,7 @@ async function mergeBookmarks(remoteTree: SyncBookmark[]): Promise<void> {
     for (const child of remoteRoot.children ?? []) await mergeNode(child, targetRootId);
   }
 
-  logger.info("mergeBookmarks", `Merged ${added} new bookmarks from remote (folders preserved)`);
+  logger.info("mergeBookmarks", `Merged +${added} / -${toRemove.length} (folders preserved)`);
 }
 
 // ─── Diff ────────────────────────────────────────────────────────────────
@@ -237,6 +362,10 @@ export function registerBookmarkListeners(onChange: BookmarkChangeCallback): voi
   chrome.bookmarks.onCreated.addListener(onChange);
   chrome.bookmarks.onChanged.addListener(onChange);
   chrome.bookmarks.onMoved.addListener(onChange);
-  chrome.bookmarks.onRemoved.addListener(onChange);
+  chrome.bookmarks.onRemoved.addListener((_id, removeInfo) => {
+    // Record a tombstone so the deletion propagates instead of resurrecting.
+    void recordRemovedTombstones(removeInfo.node);
+    onChange();
+  });
   logger.info("BookmarkListeners", "Registered");
 }
