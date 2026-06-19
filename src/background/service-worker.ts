@@ -53,6 +53,21 @@ async function init(): Promise<void> {
   logger.info("ServiceWorker", "Initialized");
 }
 
+// MV3 tears the worker down when idle and recreates it on the next event. Every
+// entry point (alarm, message, bookmark change) awaits this so it never races a
+// not-yet-created syncEngine — the bug that made sync only work with the worker
+// inspector held open. Cached so init() runs once per worker lifetime.
+let initPromise: Promise<void> | null = null;
+function ensureInit(): Promise<void> {
+  if (!initPromise) {
+    initPromise = init().catch((err) => {
+      logger.error("ServiceWorker.init", err);
+      initPromise = null; // let the next event retry
+    });
+  }
+  return initPromise;
+}
+
 // ─── Badge ────────────────────────────────────────────────────────────────
 
 function updateBadge(status: string): void {
@@ -96,6 +111,7 @@ function onBookmarkChange(): void {
   if (bookmarkDebounce) clearTimeout(bookmarkDebounce);
   bookmarkDebounce = setTimeout(async () => {
     bookmarkDebounce = null;
+    await ensureInit();
     const settings = await getSettings();
     if (
       settings.sync_on_change &&
@@ -129,6 +145,7 @@ chrome.runtime.onMessage.addListener(
 );
 
 async function handleMessage(message: ExtensionMessage): Promise<ExtensionResponse> {
+  await ensureInit();
   switch (message.type) {
     case "SYNC_NOW": {
       if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
@@ -211,6 +228,7 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
 // ─── Alarm Handler ────────────────────────────────────────────────────────
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
+  await ensureInit();
   if (!syncEngine) return;
   if (alarm.name === "synkro-sync") {
     logger.info("Alarm", "Periodic sync triggered");
@@ -235,11 +253,11 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     logger.info("Install", "First install — opening onboarding");
     chrome.tabs.create({ url: chrome.runtime.getURL("onboarding.html") });
   }
-  await init();
+  await ensureInit();
 });
 
 chrome.runtime.onStartup.addListener(async () => {
-  await init();
+  await ensureInit();
 });
 
 // Register bookmark-change listeners once, synchronously, at the top level —
@@ -248,4 +266,4 @@ chrome.runtime.onStartup.addListener(async () => {
 registerBookmarkListeners(onBookmarkChange);
 
 // Init on load (handles MV3 service worker wake-ups)
-init().catch((err) => logger.error("ServiceWorker.init", err));
+void ensureInit();
