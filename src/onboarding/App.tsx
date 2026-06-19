@@ -42,7 +42,6 @@ export default function OnboardingApp() {
   // Data types
   const [dataTypes, setDataTypes] = useState({
     bookmarks: true,
-    
     extensions: true,
     history: false,
     sessions: false,
@@ -469,8 +468,8 @@ export default function OnboardingApp() {
           </p>
           <div style={{ ...S.featureList, marginBottom: 24 }}>
             <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Backend connected</span></div>
-            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Auto sync every 60s</span></div>
-            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Sync on every change</span></div>
+            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Automatic background sync</span></div>
+            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Adjust everything in Settings</span></div>
           </div>
           <button style={S.btnPrimary} onClick={() => window.close()}>
             Close <ArrowRight size={15} />

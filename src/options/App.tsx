@@ -237,7 +237,7 @@ export default function OptionsApp() {
           bookmarks: bookmarkTree,
           extensions: extensions
             .filter(e => e.id !== chrome.runtime.id && e.installType !== "other" && e.installType !== "admin")
-            .map(e => ({ id: e.id, name: e.name, version: e.version, enabled: e.enabled, storeUrl: `https://chromewebstore.google.com/detail/${e.id}` })),
+            .map(e => ({ id: e.id, name: e.name, version: e.version, enabled: e.enabled, storeUrl: `https://chrome.google.com/webstore/detail/${e.id}` })),
           history: historyItems.map(h => ({ url: h.url, title: h.title, lastVisitTime: h.lastVisitTime, visitCount: h.visitCount })),
         },
       };
@@ -916,7 +916,7 @@ export default function OptionsApp() {
                   <div className="settings-row-left">
                     <div><div className="row-label">Source code</div><div className="row-desc">No telemetry. No external servers.</div></div>
                   </div>
-                  <a href="https://github.com/yourusername/synkro" target="_blank" rel="noreferrer" className="link-external">
+                  <a href="https://github.com/benstone326/Synkro" target="_blank" rel="noreferrer" className="link-external">
                     <Github size={12} /> GitHub <ExternalLink size={10} />
                   </a>
                 </div>
@@ -940,7 +940,8 @@ export default function OptionsApp() {
 // ─── Styles ───────────────────────────────────────────────────────────────
 
 const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500&display=swap');
+  /* No external font fetch — a privacy-first extension shouldn't ping Google
+     Fonts on every open. Falls back to the system UI font. */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {

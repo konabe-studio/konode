@@ -1,7 +1,9 @@
 import type { SyncExtension } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 
-const CWS_BASE = "https://chromewebstore.google.com/detail/";
+// Legacy webstore URL: Chrome redirects /detail/<id> to the correct listing.
+// The new chromewebstore.google.com/detail/<id> form needs a slug we don't have.
+const CWS_BASE = "https://chrome.google.com/webstore/detail/";
 
 // ─── Export ──────────────────────────────────────────────────────────────────
 

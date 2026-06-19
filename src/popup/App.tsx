@@ -36,6 +36,7 @@ export default function PopupApp() {
   const [syncedTypes, setSyncedTypes]   = useState<Set<DataType>>(new Set());
   const [missingExtensions, setMissingExtensions] = useState<SyncExtension[]>([]);
   const [hasRemoteSession, setHasRemoteSession] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   // Track animation state separately from sync state
   const animTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -49,8 +50,10 @@ export default function PopupApp() {
       ]);
       if (stateRes.type === "STATE") setState(stateRes.payload);
       if (settingsRes.type === "SETTINGS") setSettings(settingsRes.payload);
+      setLoadError(false);
     } catch (err) {
       console.error("Popup load error:", err);
+      setLoadError(true);
     }
   }, []);
 
@@ -216,6 +219,15 @@ export default function PopupApp() {
             <span className="text-[10px] font-mono text-fg-subtle tabular-nums">{lastSync}</span>
           )}
         </div>
+
+        {loadError && (
+          <button
+            onClick={load}
+            className="w-full flex items-center justify-center gap-2 bg-danger/10 border border-danger/20 rounded-lg px-3 py-2 text-[11px] text-danger hover:bg-danger/15 transition-colors"
+          >
+            <AlertCircle size={11} /> Couldn't reach Synkro — tap to retry
+          </button>
+        )}
 
         {state?.last_error && (
           <div className="flex items-start gap-2 bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">

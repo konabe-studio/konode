@@ -15,7 +15,7 @@ export const logger = {
   },
   warn(action: string, detail?: string) {
     console.warn(`${PREFIX} [WARN] ${action}`, detail ?? "");
-    appendAudit({ timestamp: timestamp(), action, detail, ok: true });
+    appendAudit({ timestamp: timestamp(), action, detail, ok: false });
   },
   error(action: string, err: unknown) {
     const detail = err instanceof Error ? err.message : String(err);
