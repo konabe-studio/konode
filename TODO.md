@@ -25,10 +25,14 @@
 
 ## 🔜 Next
 
+- [x] **OAuth renewal** — silent re-auth (launchWebAuthFlow interactive:false +
+      prompt=none) keeps Drive background sync alive past the ~1h token expiry.
+      (Full auth-code + PKCE refresh token remains a future hardening, but needs
+      Google Cloud Console reconfiguration.)
+- [x] Bookmark deletion sync (tombstones); near-instant sync-on-change; 30s pull
+      floor; SW ensureInit so sync works with the worker cold.
 - [ ] **True multi-device merge** — fold *all* peer files, not just the newest one
       (download() now excludes our own file; the engine still compares against a single peer)
-- [ ] **OAuth refresh** — replace the Drive implicit grant with getAuthToken / auth-code + PKCE
-      so background sync survives past the ~1h token expiry
 - [ ] **Session manager UI** — list/restore named sessions (engine + storage already support it)
 - [ ] Backend "newest version" selection on GitHub/WebDAV (needs commit/mtime, not list order)
 - [ ] Tests + lint + CI (none yet)
