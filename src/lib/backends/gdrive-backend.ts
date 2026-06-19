@@ -67,14 +67,25 @@ export class GDriveBackend implements IBackend {
 
   /** Runs the OAuth flow; resolves to a token, or null if it needs (denied) UI. */
   private tryAuth(interactive: boolean, prompt: "none" | "consent"): Promise<string | null> {
+    const mode = `${prompt}/${interactive ? "interactive" : "silent"}`;
     return new Promise((resolve) => {
       chrome.identity.launchWebAuthFlow(
         { url: buildAuthUrl(prompt), interactive },
         (responseUrl) => {
-          if (chrome.runtime.lastError || !responseUrl) { resolve(null); return; }
-          const token = new URLSearchParams(new URL(responseUrl).hash.slice(1)).get("access_token");
-          if (token) this.cachedToken = token;
-          resolve(token ?? null);
+          if (chrome.runtime.lastError || !responseUrl) {
+            logger.warn("GDrive.auth", `${mode} → ${chrome.runtime.lastError?.message ?? "no response URL"}`);
+            resolve(null);
+            return;
+          }
+          const params = new URLSearchParams(new URL(responseUrl).hash.slice(1));
+          const token = params.get("access_token");
+          if (!token) {
+            logger.warn("GDrive.auth", `${mode} → no token (error=${params.get("error") ?? "?"})`);
+            resolve(null);
+            return;
+          }
+          this.cachedToken = token;
+          resolve(token);
         }
       );
     });
