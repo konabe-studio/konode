@@ -241,7 +241,7 @@ export default function OnboardingApp() {
                 <Cloud size={18} color={backend === "gdrive" ? "var(--accent)" : "var(--text-secondary)"} />
                 <div>
                   <div style={S.backendName}>Google Drive</div>
-                  <div style={S.backendDesc}>OAuth — no credentials stored</div>
+                  <div style={S.backendDesc}>OAuth — short-lived token cached on this device</div>
                 </div>
                 <div style={{ ...S.radio, ...(backend === "gdrive" ? S.radioChecked : {}) }} />
               </div>
@@ -351,11 +351,11 @@ export default function OnboardingApp() {
                     placeholder="username/synkro-sync"
                     value={githubRepo} onChange={(e) => setGithubRepo(e.target.value)} />
                   <a
-                    href="https://github.com/settings/tokens/new?scopes=repo&description=Synkro"
+                    href="https://github.com/settings/personal-access-tokens/new"
                     target="_blank" rel="noreferrer"
                     style={{ fontSize: 11, color: "var(--text-link)", textDecoration: "none", marginTop: 4, display: "inline-block" }}
                   >
-                    Generate a token on GitHub →
+                    Create a fine-grained token (only this repo) →
                   </a>
                 </div>
               )}

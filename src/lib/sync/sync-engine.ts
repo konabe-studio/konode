@@ -1,7 +1,7 @@
 import type { SyncSettings, SyncState, DataType, SyncPacket } from "@/lib/types";
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { exportBookmarks, importBookmarks } from "@/lib/handlers/bookmarks-handler";
-import { exportSession } from "@/lib/handlers/tabs-handler";
+import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
 import { exportHistory, importHistory } from "@/lib/handlers/history-handler";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
 import { getState, setState } from "@/lib/utils/storage";
@@ -91,8 +91,9 @@ export class SyncEngine {
     logger.info("SyncEngine", `Syncing: ${dataType}`);
 
     try {
-      // 1. PULL remote first — always
-      const remote = await backend.download(dataType);
+      // 1. PULL remote first — always. Exclude our own file so we compare
+      //    against a peer's data instead of re-reading what we just uploaded.
+      const remote = await backend.download(dataType, this.settings.device_id);
 
       // 2. Build local payload
       const localPayload = await this.buildPayload(dataType);
@@ -245,29 +246,108 @@ export class SyncEngine {
       raw = await decrypt(packet.payload, this.settings.encryption_passphrase);
     }
     const payload = JSON.parse(raw);
+    await this.applyPayload(dataType, payload, {
+      device_id: packet.device_id,
+      timestamp: packet.timestamp,
+    }, isLocalEmpty);
+  }
 
+  /** Applies an already-decrypted, already-parsed payload for a data type. */
+  private async applyPayload(
+    dataType: DataType,
+    payload: unknown,
+    meta: { device_id: string; timestamp: string },
+    isLocalEmpty: boolean
+  ): Promise<void> {
     switch (dataType) {
       case "bookmarks":
         // Fresh device → replace entire structure (preserves folders)
         // Existing device → merge (add missing, don't overwrite)
-        await importBookmarks(payload, isLocalEmpty ? "replace" : "merge");
+        await importBookmarks(payload as never, isLocalEmpty ? "replace" : "merge");
         break;
       case "history":
-        await importHistory(payload);
+        await importHistory(payload as never);
         break;
       case "sessions":
-        logger.info("applyRemote", `Stored remote sessions for user review`);
+        // Persist the remote session so the user can restore it on demand
+        // (RESTORE_SESSION → restoreSession()). Previously this only logged.
+        await chrome.storage.local.set({
+          synkro_remote_sessions: {
+            device_id: meta.device_id,
+            timestamp: meta.timestamp,
+            session: payload,
+          },
+        });
+        logger.info("applyRemote", "Stored remote session for restore");
         break;
       case "extensions":
         await chrome.storage.local.set({
           synkro_remote_extensions: {
-            device_id: packet.device_id,
-            timestamp: packet.timestamp,
+            device_id: meta.device_id,
+            timestamp: meta.timestamp,
             extensions: payload,
           },
         });
-        logger.info("applyRemote", `Stored remote extensions list (${payload.length} items)`);
+        logger.info(
+          "applyRemote",
+          `Stored remote extensions list (${Array.isArray(payload) ? payload.length : 0} items)`
+        );
         break;
     }
+  }
+
+  // ─── Conflict Resolution ──────────────────────────────────────────────
+
+  /** Resolves a queued manual conflict by applying the local or remote version. */
+  async resolveConflict(id: string, resolution: "local" | "remote"): Promise<void> {
+    const state = await getState();
+    const conflict = state.pending_conflicts.find((c) => c.id === id);
+    if (!conflict) {
+      logger.warn("SyncEngine", `resolveConflict: ${id} not found`);
+      return;
+    }
+
+    if (resolution === "remote") {
+      await this.applyPayload(
+        conflict.data_type,
+        conflict.remote_version,
+        { device_id: "", timestamp: conflict.timestamp },
+        false
+      );
+    } else {
+      // Keep local → re-upload current local data, overwriting remote.
+      const cfg = this.settings.backends.find((b) => b.type === this.settings.active_backend);
+      if (cfg) {
+        const backend = createBackend(cfg);
+        await backend.connect();
+        try {
+          const payload = await this.buildPayload(conflict.data_type);
+          await backend.upload(await this.buildPacket(conflict.data_type, payload));
+        } finally {
+          await backend.disconnect();
+        }
+      }
+    }
+
+    const remaining = state.pending_conflicts.filter((c) => c.id !== id);
+    const newState = await setState({
+      pending_conflicts: remaining,
+      status: remaining.length > 0 ? "conflict" : "idle",
+    });
+    this.onStateChange(newState);
+    logger.info("SyncEngine", `Resolved conflict ${id} → ${resolution}`);
+  }
+
+  // ─── Session restore ──────────────────────────────────────────────────
+
+  /** Opens the tabs from the most recently downloaded remote session. */
+  async restoreSession(): Promise<void> {
+    const r = await chrome.storage.local.get("synkro_remote_sessions");
+    const session = r["synkro_remote_sessions"]?.session;
+    if (!session?.tabs?.length) {
+      logger.warn("SyncEngine", "restoreSession: no remote session available");
+      return;
+    }
+    await importSession(session);
   }
 }

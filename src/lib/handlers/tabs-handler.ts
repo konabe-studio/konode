@@ -52,6 +52,6 @@ export async function updateTabCache(): Promise<void> {
   await setTabCache(tabs);
 }
 
-export async function getLastTabSnapshot(): Promise<SyncTab[] | null> {
+export async function getLastTabSnapshot(): Promise<TabInfo[] | null> {
   return getTabCache<TabInfo[]>();
 }

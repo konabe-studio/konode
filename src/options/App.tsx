@@ -23,7 +23,7 @@ const BACKEND_META: Record<BackendType, { label: string; Icon: typeof Cloud; des
   gdrive: {
     label: "Google Drive",
     Icon: Cloud,
-    desc: "Sync via your Google Drive. OAuth — no credentials stored locally.",
+    desc: "Sync via your Google Drive. OAuth — a short-lived access token is cached on this device only.",
   },
   webdav: {
     label: "WebDAV",
@@ -482,6 +482,14 @@ export default function OptionsApp() {
                           <p className="config-hint">
                             For Nextcloud, use an App Password from Settings → Security.
                           </p>
+                          {(() => {
+                            const u = getBackend("webdav")?.webdav?.url ?? "";
+                            return /^http:\/\//i.test(u) && !/^http:\/\/(localhost|127\.)/i.test(u);
+                          })() && (
+                            <div className="error-row">
+                              <AlertTriangle size={11} /> This is an <code>http://</code> URL — your password would be sent unencrypted. Use <code>https://</code>.
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -532,11 +540,11 @@ export default function OptionsApp() {
                             </div>
                           </div>
                           <a
-                            href="https://github.com/settings/tokens/new?scopes=repo&description=Synkro"
+                            href="https://github.com/settings/personal-access-tokens/new"
                             target="_blank" rel="noreferrer"
                             className="link-external"
                           >
-                            <ExternalLink size={11} /> Generate a token on GitHub
+                            <ExternalLink size={11} /> Create a fine-grained token (only this repo · Contents: Read &amp; Write)
                           </a>
                         </div>
                       )}

@@ -61,7 +61,7 @@ export class WebDAVBackend implements IBackend {
     });
   }
 
-  async download(data_type: DataType): Promise<SyncPacket | null> {
+  async download(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket | null> {
     return withRetry(async () => {
       // PROPFIND to list files in folder
       const res = await fetch(this.baseUrl + "/", {
@@ -73,10 +73,12 @@ export class WebDAVBackend implements IBackend {
       if (!res.ok) return null;
 
       const xml = await res.text();
-      // Extract hrefs from PROPFIND response
-      const hrefs = [...xml.matchAll(/<d:href>([^<]+)<\/d:href>/g)]
+      // Extract hrefs from PROPFIND response. Match any namespace prefix
+      // (d:href, D:href, lp1:href, or bare href) — servers differ.
+      const own = excludeDeviceId ? `synkro_${data_type}_${excludeDeviceId}.json` : null;
+      const hrefs = [...xml.matchAll(/<(?:[a-z0-9]+:)?href>([^<]+)<\/(?:[a-z0-9]+:)?href>/gi)]
         .map(m => m[1])
-        .filter(h => h.includes(`synkro_${data_type}_`) && h.endsWith(".json"));
+        .filter(h => h.includes(`synkro_${data_type}_`) && h.endsWith(".json") && (!own || !h.endsWith(own)));
 
       if (!hrefs.length) return null;
 

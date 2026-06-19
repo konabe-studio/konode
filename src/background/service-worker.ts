@@ -26,23 +26,21 @@ async function init(): Promise<void> {
     logger.info("ServiceWorker", "Reset stuck syncing state");
   }
 
-  // ── Migration: remove "tabs" from enabled_types ──
-  if (settings.enabled_types.includes("tabs")) {
-    await saveSettings({
-      enabled_types: settings.enabled_types.filter((t) => t !== "tabs"),
-    });
-    settings.enabled_types = settings.enabled_types.filter((t) => t !== "tabs");
-    logger.info("ServiceWorker", "Migrated: removed tabs from enabled_types");
+  // ── Migration: drop the legacy "tabs" data type (folded into "sessions") ──
+  // "tabs" is no longer part of DataType, so compare as plain strings.
+  if ((settings.enabled_types as string[]).includes("tabs")) {
+    const cleaned = settings.enabled_types.filter((t) => (t as string) !== "tabs");
+    await saveSettings({ enabled_types: cleaned });
+    settings.enabled_types = cleaned;
+    logger.info("ServiceWorker", "Migrated: removed legacy 'tabs' data type");
   }
 
-  syncEngine = new SyncEngine(settings, async (state) => {
+  syncEngine = new SyncEngine(settings, (state) => {
     updateBadge(state.status);
-    try {
-      const views = chrome.extension?.getViews?.({ type: "popup" }) ?? [];
-      if (views.length > 0) {
-        chrome.runtime.sendMessage({ type: "STATE_UPDATE", payload: state }).catch(() => {});
-      }
-    } catch { /* popup not open */ }
+    // Push live status to any open popup/options view. chrome.extension.getViews
+    // does not exist in an MV3 service worker, so just broadcast — sendMessage
+    // rejects when no view is listening, which is expected; swallow it.
+    chrome.runtime.sendMessage({ type: "STATE_UPDATE", payload: state }).catch(() => {});
   });
 
   if (settings.sync_on_change && settings.enabled_types.includes("bookmarks")) {
@@ -166,6 +164,35 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
       const backend = createBackend(config);
       const result = await backend.testConnection();
       return { type: "TEST_RESULT", payload: result };
+    }
+
+    case "RESOLVE_CONFLICT": {
+      if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
+      await syncEngine.resolveConflict(message.payload.id, message.payload.resolution);
+      return { type: "OK" };
+    }
+
+    case "RESTORE_SESSION": {
+      if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
+      await syncEngine.restoreSession();
+      return { type: "OK" };
+    }
+
+    case "SET_EXTENSION_ENABLED": {
+      await new Promise<void>((resolve, reject) =>
+        chrome.management.setEnabled(message.payload.id, message.payload.enabled, () =>
+          chrome.runtime.lastError
+            ? reject(new Error(chrome.runtime.lastError.message))
+            : resolve()
+        )
+      );
+      return { type: "OK" };
+    }
+
+    case "CLEAR_HISTORY": {
+      // Clears the local audit log shown in the popup.
+      await chrome.storage.local.set({ synkro_audit: [] });
+      return { type: "OK" };
     }
 
     default:

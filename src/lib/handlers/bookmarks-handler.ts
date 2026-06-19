@@ -35,6 +35,22 @@ export async function importBookmarks(
 }
 
 async function clearAndImport(tree: SyncBookmark[]): Promise<void> {
+  // The remote tree: tree[0] is the virtual root, tree[0].children are the real roots.
+  const remoteRoots = tree[0]?.children ?? tree;
+
+  // Guard: never wipe local bookmarks for an empty or malformed remote payload
+  // (a corrupt/tampered file or a transient empty read must not destroy data).
+  const hasRemoteContent = remoteRoots.some((r) => (r?.children?.length ?? 0) > 0);
+  if (!hasRemoteContent) {
+    logger.warn("clearAndImport", "Remote bookmark tree is empty/invalid — skipping destructive replace");
+    return;
+  }
+
+  // Snapshot local bookmarks first so a failed import can be recovered.
+  try {
+    await setBookmarkCache(await exportBookmarks());
+  } catch { /* best effort */ }
+
   // Get the local root folders (Bookmarks bar = "1", Other bookmarks = "2", Mobile = "3")
   const localTree = await chrome.bookmarks.getTree();
   const localRoots = localTree[0]?.children ?? [];
@@ -50,26 +66,21 @@ async function clearAndImport(tree: SyncBookmark[]): Promise<void> {
     }
   }
 
-  // Build a map from remote root titles → local root IDs
-  // e.g. "Bookmarks bar" → "1", "Other bookmarks" → "2"
+  // Match remote roots to local roots by Chrome's stable IDs ("1"/"2"/"3"),
+  // then by title, then by position — never by localized title alone.
+  const localRootIds = new Set(localRoots.map((r) => r.id));
   const localRootByTitle = new Map(localRoots.map((r) => [r.title.toLowerCase(), r.id]));
-
-  // Also map by position as fallback (index 0 = bar, index 1 = other)
-  const localRootIds = localRoots.map((r) => r.id);
-
-  // The remote tree structure: tree[0] is the virtual root, tree[0].children are the real roots
-  // We need to find the actual bookmark content roots
-  const remoteRoots = tree[0]?.children ?? tree;
+  const localRootIdList = localRoots.map((r) => r.id);
 
   for (let i = 0; i < remoteRoots.length; i++) {
     const remoteRoot = remoteRoots[i];
     if (!remoteRoot) continue;
 
-    // Find matching local root by title or position
     const localRootId =
-      localRootByTitle.get(remoteRoot.title.toLowerCase()) ??
-      localRootIds[i] ??
-      localRootIds[1]; // fallback to "Other bookmarks"
+      (localRootIds.has(remoteRoot.id) ? remoteRoot.id : undefined) ??
+      localRootByTitle.get(remoteRoot.title?.toLowerCase()) ??
+      localRootIdList[i] ??
+      localRootIdList[1]; // fallback to "Other bookmarks"
 
     for (const child of remoteRoot.children ?? []) {
       await restoreNode(child, localRootId);
@@ -105,35 +116,60 @@ async function restoreNode(
 }
 
 async function mergeBookmarks(remoteTree: SyncBookmark[]): Promise<void> {
-  const localTree = await exportBookmarks();
-  const localUrls = new Set(flattenUrls(localTree));
+  const localUrls = new Set(flattenUrls(await exportBookmarks()));
 
-  const toAdd = flattenNodes(remoteTree).filter(
-    (n) => n.url && !localUrls.has(n.url)
-  );
-
-  // Add missing bookmarks to the "Other Bookmarks" folder
-  const roots = (await chrome.bookmarks.getTree())[0]?.children ?? [];
-  const other = roots.find((r) => r.id === "2") ?? roots[1]; // "2" = Other Bookmarks
-
-  if (!other) {
-    logger.warn("mergeBookmarks", "Could not find Other Bookmarks folder");
+  const localRoots = (await chrome.bookmarks.getTree())[0]?.children ?? [];
+  const localRootIds = new Set(localRoots.map((r) => r.id));
+  const localRootByTitle = new Map(localRoots.map((r) => [r.title.toLowerCase(), r.id]));
+  const otherId =
+    localRoots.find((r) => r.id === "2")?.id ?? localRoots[1]?.id ?? localRoots[0]?.id;
+  if (!otherId) {
+    logger.warn("mergeBookmarks", "No writable root folder found");
     return;
   }
 
-  for (const node of toAdd) {
-    try {
-      await chrome.bookmarks.create({
-        parentId: other.id,
-        title: node.title,
-        url: node.url,
-      });
-    } catch (err) {
-      logger.error(`Bookmark merge add: ${node.title}`, err);
+  let added = 0;
+
+  // Recreate the remote folder hierarchy instead of dumping every bookmark flat
+  // into "Other Bookmarks". URLs are de-duped against what's already local.
+  const mergeNode = async (node: SyncBookmark, parentId: string): Promise<void> => {
+    if (node.url) {
+      if (localUrls.has(node.url)) return;
+      try {
+        await chrome.bookmarks.create({ parentId, title: node.title, url: node.url });
+        localUrls.add(node.url);
+        added++;
+      } catch (err) {
+        logger.error(`Bookmark merge add: ${node.title}`, err);
+      }
+    } else {
+      // Folder: reuse a same-title folder under parent if present, else create it.
+      let folderId: string;
+      try {
+        const children = await chrome.bookmarks.getChildren(parentId);
+        const existing = children.find((c) => !c.url && c.title === node.title);
+        folderId = existing
+          ? existing.id
+          : (await chrome.bookmarks.create({ parentId, title: node.title })).id;
+      } catch (err) {
+        logger.error(`Bookmark merge folder: ${node.title}`, err);
+        return;
+      }
+      for (const child of node.children ?? []) await mergeNode(child, folderId);
     }
+  };
+
+  const remoteRoots = remoteTree[0]?.children ?? remoteTree;
+  for (const remoteRoot of remoteRoots) {
+    if (!remoteRoot) continue;
+    const targetRootId =
+      (localRootIds.has(remoteRoot.id) ? remoteRoot.id : undefined) ??
+      localRootByTitle.get(remoteRoot.title?.toLowerCase()) ??
+      otherId;
+    for (const child of remoteRoot.children ?? []) await mergeNode(child, targetRootId);
   }
 
-  logger.info("mergeBookmarks", `Added ${toAdd.length} new bookmarks from remote`);
+  logger.info("mergeBookmarks", `Merged ${added} new bookmarks from remote (folders preserved)`);
 }
 
 // ─── Diff ────────────────────────────────────────────────────────────────

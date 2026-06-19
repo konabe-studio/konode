@@ -142,49 +142,76 @@ export class GDriveBackend implements IBackend {
     if (folderId) return folderId;
     const q = encodeURIComponent(`name='${SYNKRO_FOLDER}' and mimeType='${FOLDER_MIME}' and trashed=false`);
     const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name)`, { headers: h });
+    if (!res.ok) throw new Error(`Drive folder lookup failed: ${res.status}`);
     const data = await res.json();
     if (data.files?.length > 0) return data.files[0].id as string;
     const create = await fetch(`${DRIVE_API}/files`, {
       method: "POST", headers: h,
       body: JSON.stringify({ name: SYNKRO_FOLDER, mimeType: FOLDER_MIME }),
     });
-    return (await create.json()).id as string;
+    if (!create.ok) throw new Error(`Drive folder create failed: ${create.status}`);
+    const created = await create.json();
+    if (!created.id) throw new Error("Drive folder create returned no id");
+    return created.id as string;
   }
 
   async upload(packet: SyncPacket): Promise<void> {
     await withRetry(async () => {
       const folderId = this.folderId ?? (await this.ensureFolder());
       const h = await this.authHeaders();
+      const token = await this.getToken(false);
       const filename = `synkro_${packet.data_type}_${packet.device_id}.json`;
       const content = JSON.stringify(packet, null, 2);
       const q = encodeURIComponent(`name='${filename}' and '${folderId}' in parents and trashed=false`);
-      const existing = await (await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id)`, { headers: h })).json();
+      const lookup = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id)`, { headers: h });
+      if (!lookup.ok) throw new Error(`Drive lookup failed: ${lookup.status}`);
+      const existing = await lookup.json();
       if (existing.files?.length > 0) {
-        await fetch(`${UPLOAD_API}/files/${existing.files[0].id}?uploadType=media`, {
+        const res = await fetch(`${UPLOAD_API}/files/${existing.files[0].id}?uploadType=media`, {
           method: "PATCH",
-          headers: { Authorization: `Bearer ${await this.getToken(false)}`, "Content-Type": "application/json" },
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           body: content,
         });
+        if (!res.ok) throw new Error(`Drive update failed: ${res.status}`);
       } else {
-        const form = new FormData();
-        form.append("metadata", new Blob([JSON.stringify({ name: filename, parents: [folderId], mimeType: "application/json" })], { type: "application/json" }));
-        form.append("file", new Blob([content], { type: "application/json" }));
-        await fetch(`${UPLOAD_API}/files?uploadType=multipart`, {
-          method: "POST", headers: { Authorization: `Bearer ${await this.getToken(false)}` }, body: form,
+        // Drive's multipart upload expects multipart/related (metadata part then
+        // media part) — a FormData multipart/form-data body is silently ignored
+        // for metadata, landing the file outside the folder / with no name.
+        const boundary = `synkro_${packet.checksum}_${packet.device_id.slice(0, 8)}`;
+        const metadata = JSON.stringify({ name: filename, parents: [folderId], mimeType: "application/json" });
+        const body =
+          `--${boundary}\r\n` +
+          `Content-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n` +
+          `--${boundary}\r\n` +
+          `Content-Type: application/json\r\n\r\n${content}\r\n` +
+          `--${boundary}--`;
+        const res = await fetch(`${UPLOAD_API}/files?uploadType=multipart`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": `multipart/related; boundary=${boundary}` },
+          body,
         });
+        if (!res.ok) throw new Error(`Drive create failed: ${res.status}`);
       }
       logger.info("GDrive.upload", `${packet.data_type} → ${filename}`);
     });
   }
 
-  async download(data_type: DataType): Promise<SyncPacket | null> {
+  async download(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket | null> {
     return withRetry(async () => {
       const folderId = this.folderId ?? (await this.ensureFolder());
       const h = await this.authHeaders();
       const q = encodeURIComponent(`name contains 'synkro_${data_type}_' and '${folderId}' in parents and trashed=false`);
-      const { files } = await (await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`, { headers: h })).json();
+      const listRes = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`, { headers: h });
+      if (!listRes.ok) throw new Error(`Drive list failed: ${listRes.status}`);
+      const { files } = await listRes.json();
       if (!files?.length) return null;
-      return (await fetch(`${DRIVE_API}/files/${files[0].id}?alt=media`, { headers: h })).json() as Promise<SyncPacket>;
+      // Skip this device's own file so we always compare against a peer's data.
+      const own = excludeDeviceId ? `synkro_${data_type}_${excludeDeviceId}.json` : null;
+      const pick = (files as Array<{ id: string; name: string }>).find((f) => f.name !== own);
+      if (!pick) return null;
+      const fileRes = await fetch(`${DRIVE_API}/files/${pick.id}?alt=media`, { headers: h });
+      if (!fileRes.ok) throw new Error(`Drive download failed: ${fileRes.status}`);
+      return fileRes.json() as Promise<SyncPacket>;
     });
   }
 

@@ -145,17 +145,27 @@ export class GitHubBackend implements IBackend {
     } catch { return null; }
   }
 
-  async download(data_type: DataType): Promise<SyncPacket | null> {
+  async download(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket | null> {
     return withRetry(async () => {
       const res = await fetch(
         `${GITHUB_API}/repos/${this.gh.repo}/contents/${this.path}?ref=${this.branch}`,
         { headers: this.headers() }
       );
       if (!res.ok) return null;
-      const files: Array<{ name: string; download_url: string }> = await res.json();
-      const match = files.find(f => f.name.includes(`synkro_${data_type}_`) && f.name.endsWith(".json"));
+      const files: Array<{ name: string }> = await res.json();
+      const own = excludeDeviceId ? `synkro_${data_type}_${excludeDeviceId}.json` : null;
+      const match = files.find(
+        f => f.name.includes(`synkro_${data_type}_`) && f.name.endsWith(".json") && f.name !== own
+      );
       if (!match) return null;
-      return (await fetch(match.download_url)).json() as Promise<SyncPacket>;
+      // Fetch via the authenticated Contents API (Accept: raw). The public
+      // download_url is unauthenticated and 404s/HTMLs on private repos.
+      const fileRes = await fetch(
+        `${GITHUB_API}/repos/${this.gh.repo}/contents/${this.path}/${match.name}?ref=${this.branch}`,
+        { headers: { ...this.headers(), Accept: "application/vnd.github.raw+json" } }
+      );
+      if (!fileRes.ok) return null;
+      return fileRes.json() as Promise<SyncPacket>;
     });
   }
 

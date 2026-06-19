@@ -140,7 +140,8 @@ export interface IBackend {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   upload(packet: SyncPacket): Promise<void>;
-  download(data_type: DataType, since?: string): Promise<SyncPacket | null>;
+  // excludeDeviceId: skip the caller's own file so we always pull a peer's data.
+  download(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket | null>;
   listVersions(data_type: DataType): Promise<string[]>;
   testConnection(): Promise<{ ok: boolean; message: string }>;
 }
@@ -154,6 +155,8 @@ export type ExtensionMessage =
   | { type: "SAVE_SETTINGS"; payload: Partial<SyncSettings> }
   | { type: "RESOLVE_CONFLICT"; payload: { id: string; resolution: "local" | "remote" } }
   | { type: "CLEAR_HISTORY" }
+  | { type: "RESTORE_SESSION" }
+  | { type: "SET_EXTENSION_ENABLED"; payload: { id: string; enabled: boolean } }
   | { type: "TEST_BACKEND"; payload: { backend: BackendType } };
 
 export type ExtensionResponse =
