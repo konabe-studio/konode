@@ -92,8 +92,11 @@ function updateBadge(status: string): void {
 
 async function setupSyncAlarm(intervalSeconds: number): Promise<void> {
   await chrome.alarms.clear("synkro-sync");
+  // 0.5 min (30s) is Chrome's hard floor for background alarms — independent of
+  // the storage backend (Drive/GitHub/WebDAV are all poll-only, no push), so the
+  // receiving side can't pull faster than this regardless of what's configured.
   chrome.alarms.create("synkro-sync", {
-    periodInMinutes: Math.max(1, intervalSeconds / 60),
+    periodInMinutes: Math.max(0.5, intervalSeconds / 60),
   });
 }
 

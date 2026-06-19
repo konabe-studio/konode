@@ -752,7 +752,7 @@ export default function OptionsApp() {
                 </div>
                 <div className="settings-row">
                   <div className="settings-row-left">
-                    <div><div className="row-label">Sync interval</div><div className="row-desc">How often to check for changes.</div></div>
+                    <div><div className="row-label">Sync interval</div><div className="row-desc">How often this device pulls remote changes. 30s is the browser's minimum for background checks. Your own changes upload almost instantly.</div></div>
                   </div>
                   <div className="slider-wrap">
                     <input type="range" min={30} max={600} step={30}
