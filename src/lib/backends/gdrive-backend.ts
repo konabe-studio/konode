@@ -36,7 +36,7 @@ async function clearSession(): Promise<void> {
   await chrome.storage.local.remove(STORAGE_KEY);
 }
 
-function buildAuthUrl(): string {
+function buildAuthUrl(prompt: "none" | "consent" = "consent"): string {
   const redirectUrl = chrome.identity.getRedirectURL("gdrive");
   return (
     `https://accounts.google.com/o/oauth2/auth` +
@@ -44,7 +44,8 @@ function buildAuthUrl(): string {
     `&response_type=token` +
     `&redirect_uri=${encodeURIComponent(redirectUrl)}` +
     `&scope=${encodeURIComponent("https://www.googleapis.com/auth/drive.file")}` +
-    `&prompt=consent`
+    // prompt=none → silent renewal (no UI) when a Google session already exists.
+    `&prompt=${prompt}`
   );
 }
 
@@ -64,28 +65,48 @@ export class GDriveBackend implements IBackend {
   isConfigured(): boolean { return true; }
   isConnected(): boolean { return !!this.cachedToken; }
 
+  /** Runs the OAuth flow; resolves to a token, or null if it needs (denied) UI. */
+  private tryAuth(interactive: boolean, prompt: "none" | "consent"): Promise<string | null> {
+    return new Promise((resolve) => {
+      chrome.identity.launchWebAuthFlow(
+        { url: buildAuthUrl(prompt), interactive },
+        (responseUrl) => {
+          if (chrome.runtime.lastError || !responseUrl) { resolve(null); return; }
+          const token = new URLSearchParams(new URL(responseUrl).hash.slice(1)).get("access_token");
+          if (token) this.cachedToken = token;
+          resolve(token ?? null);
+        }
+      );
+    });
+  }
+
   async getToken(interactive = false): Promise<string> {
     if (this.cachedToken) return this.cachedToken;
     const session = await loadSession();
     if (session) { this.cachedToken = session.token; return session.token; }
-    if (!interactive) throw new Error("No cached token — sign in required");
-    return new Promise((resolve, reject) => {
-      chrome.identity.launchWebAuthFlow({ url: buildAuthUrl(), interactive: true }, (responseUrl) => {
-        if (chrome.runtime.lastError || !responseUrl) {
-          reject(new Error(chrome.runtime.lastError?.message ?? "Auth cancelled")); return;
-        }
-        const token = new URLSearchParams(new URL(responseUrl).hash.slice(1)).get("access_token");
-        if (!token) { reject(new Error("No access_token")); return; }
-        this.cachedToken = token;
-        resolve(token);
-      });
-    });
+
+    // The 50-min session lapsed. Try a SILENT renewal first (no UI) — this is
+    // what keeps background sync alive past the ~1h token lifetime without the
+    // user re-consenting, on any Chromium browser (Brave/Helium included).
+    let token = await this.tryAuth(false, "none");
+    if (!token) {
+      if (!interactive) throw new Error("Google session expired — open Synkro and sign in again.");
+      token = await this.tryAuth(true, "consent");
+      if (!token) throw new Error("Google sign-in was cancelled");
+    }
+
+    // Persist so the next ~50 min are covered (user info is best-effort).
+    try {
+      await saveSession(token, await this.fetchUserInfo(token));
+    } catch { /* token is still usable even if the user-info call fails */ }
+    return token;
   }
 
   async signIn(): Promise<GDriveUserInfo> {
     this.cachedToken = null;
     await clearSession();
-    const token = await this.getToken(true);
+    const token = await this.tryAuth(true, "consent");
+    if (!token) throw new Error("Google sign-in was cancelled");
     const info = await this.fetchUserInfo(token);
     await saveSession(token, info);
     logger.info("GDrive.signIn", `Signed in as ${info.email}`);
