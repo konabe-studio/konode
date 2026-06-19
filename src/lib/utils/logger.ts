@@ -1,7 +1,5 @@
 import { appendAudit } from "./storage";
 
-type LogLevel = "info" | "warn" | "error" | "debug";
-
 const PREFIX = "[Synkro]";
 
 function timestamp(): string {

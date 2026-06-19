@@ -29,7 +29,7 @@ const KEY_LENGTH = 256; // bits
  */
 export async function deriveKey(
   passphrase: string,
-  salt: Uint8Array
+  salt: Uint8Array<ArrayBuffer>
 ): Promise<CryptoKey> {
   const enc = new TextEncoder();
   const baseKey = await crypto.subtle.importKey(
@@ -57,7 +57,7 @@ export async function deriveKey(
 /**
  * Generates a new random salt for key derivation.
  */
-export function generateSalt(): Uint8Array {
+export function generateSalt(): Uint8Array<ArrayBuffer> {
   return crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
 }
 
@@ -171,7 +171,7 @@ function bufferToBase64(buffer: Uint8Array): string {
   return btoa(binary);
 }
 
-function base64ToBuffer(base64: string): Uint8Array {
+function base64ToBuffer(base64: string): Uint8Array<ArrayBuffer> {
   const binary = atob(base64);
   const buffer = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
