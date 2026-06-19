@@ -107,8 +107,29 @@ export default function OptionsApp() {
 
   const getBackend = (type: BackendType) => settings?.backends.find((b) => b.type === type);
 
+  // WebDAV hits an arbitrary user host that isn't in host_permissions, so we
+  // request it at runtime (optional_host_permissions). Must run inside a user
+  // gesture, so call it first — before any await — in the click handlers below.
+  const requestWebdavHostPermission = async (): Promise<boolean> => {
+    const url = getBackend("webdav")?.webdav?.url;
+    if (!url) return false;
+    try {
+      const origin = new URL(url).origin + "/*";
+      return await chrome.permissions.request({ origins: [origin] });
+    } catch {
+      return false;
+    }
+  };
+
   const save = async () => {
     if (!settings) return;
+    if (settings.active_backend === "webdav") {
+      const granted = await requestWebdavHostPermission();
+      if (!granted) {
+        setTestStatus({ ok: false, message: "Permission to access the WebDAV server was not granted." });
+        return;
+      }
+    }
     setSaving(true);
     await sendMessage({ type: "SAVE_SETTINGS", payload: settings });
     setSaving(false); setSaveOk(true);
@@ -117,6 +138,13 @@ export default function OptionsApp() {
 
   const testBackend = async () => {
     if (!settings?.active_backend) return;
+    if (settings.active_backend === "webdav") {
+      const granted = await requestWebdavHostPermission();
+      if (!granted) {
+        setTestStatus({ ok: false, message: "Permission to access the WebDAV server was not granted." });
+        return;
+      }
+    }
     setTesting(true); setTestStatus(null);
     const res = await sendMessage({ type: "TEST_BACKEND", payload: { backend: settings.active_backend } });
     if (res.type === "TEST_RESULT") setTestStatus(res.payload);
@@ -777,18 +805,56 @@ export default function OptionsApp() {
 
               <h2 className="section-title">Encryption</h2>
               <div className="settings-section">
-                <div className="settings-row row-disabled">
+                <div className="settings-row">
                   <div className="settings-row-left">
                     <div>
                       <div className="row-label">End-to-End Encryption</div>
-                      <div className="row-desc">AES-256-GCM — coming in Sprint 2.</div>
+                      <div className="row-desc">
+                        AES-256-GCM. Data is encrypted with your passphrase before it leaves this
+                        device, so the storage provider can never read it. Keep the passphrase safe —
+                        without it, encrypted data can't be recovered, and every device must use the same one.
+                      </div>
                     </div>
                   </div>
                   <label className="toggle-wrap">
-                    <input type="checkbox" className="toggle-input" checked={false} disabled onChange={() => {}} />
+                    <input type="checkbox" className="toggle-input"
+                      checked={settings.encryption_enabled}
+                      onChange={(e) => update({ encryption_enabled: e.target.checked })} />
                     <span className="toggle-track"><span className="toggle-thumb" /></span>
                   </label>
                 </div>
+                {settings.encryption_enabled && (
+                  <div className="settings-row">
+                    <div className="settings-row-left">
+                      <div>
+                        <div className="row-label">Passphrase</div>
+                        <div className="row-desc">Derives the encryption key. Stored only on this device, never uploaded.</div>
+                      </div>
+                    </div>
+                    <div className="input-pw-wrap" style={{ width: 220 }}>
+                      <input
+                        className="field-input mono"
+                        type={showToken ? "text" : "password"}
+                        value={settings.encryption_passphrase ?? ""}
+                        onChange={(e) => update({ encryption_passphrase: e.target.value })}
+                        placeholder="Choose a strong passphrase"
+                        autoComplete="off"
+                      />
+                      <button className="btn-eye" onClick={() => setShowToken(v => !v)} type="button">
+                        {showToken ? <EyeOff size={13} /> : <Eye size={13} />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {settings.encryption_enabled && !settings.encryption_passphrase && (
+                  <div className="settings-row" style={{ paddingTop: 0 }}>
+                    <div className="settings-row-left">
+                      <div className="row-desc" style={{ color: "var(--danger)" }}>
+                        Encryption is on but no passphrase is set — sync will keep uploading plaintext until you add one.
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <h2 className="section-title">Developer</h2>

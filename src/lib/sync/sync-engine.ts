@@ -6,6 +6,7 @@ import { exportHistory, importHistory } from "@/lib/handlers/history-handler";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
 import { getState, setState } from "@/lib/utils/storage";
 import { logger } from "@/lib/utils/logger";
+import { encrypt, decrypt } from "@/lib/crypto/encryption";
 import { ConflictResolver, notifyConflict } from "./conflict-resolver";
 
 // ─── Sync Engine ─────────────────────────────────────────────────────────
@@ -106,11 +107,11 @@ export class SyncEngine {
           await this.applyRemote(dataType, remote, true);
           const freshPayload = await this.buildPayload(dataType);
           if (!this.isPayloadEmpty(dataType, freshPayload)) {
-            await backend.upload(this.buildPacket(dataType, freshPayload));
+            await backend.upload(await this.buildPacket(dataType, freshPayload));
           }
         } else {
           // Both have data → conflict resolution
-          const localPacket = this.buildPacket(dataType, localPayload);
+          const localPacket = await this.buildPacket(dataType, localPayload);
           const { winner, conflict } = this.resolver.resolve(localPacket, remote);
 
           if (conflict) {
@@ -124,12 +125,12 @@ export class SyncEngine {
             if (winner.device_id !== this.settings.device_id) {
               await this.applyRemote(dataType, winner, false);
             }
-            await backend.upload(this.buildPacket(dataType, localPayload));
+            await backend.upload(await this.buildPacket(dataType, localPayload));
           }
         }
       } else if (!isEmpty) {
         // No remote from other device, but we have local data → push
-        await backend.upload(this.buildPacket(dataType, localPayload));
+        await backend.upload(await this.buildPacket(dataType, localPayload));
       } else {
         // Both empty — nothing to do
         logger.info("SyncEngine", `${dataType}: nothing to sync`);
@@ -198,16 +199,22 @@ export class SyncEngine {
     }
   }
 
-  private buildPacket(dataType: DataType, payload: unknown): SyncPacket {
+  private async buildPacket(dataType: DataType, payload: unknown): Promise<SyncPacket> {
     const payloadStr = JSON.stringify(payload);
+    const useE2ee =
+      this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
     return {
       version: "1.0",
       device_id: this.settings.device_id,
       timestamp: new Date().toISOString(),
       data_type: dataType,
+      // Checksum is over the plaintext so identical content across devices
+      // still matches even though each blob uses a fresh IV/salt.
       checksum: this.simpleChecksum(payloadStr),
-      encrypted: false, // E2EE Sprint 2
-      payload: payloadStr,
+      encrypted: useE2ee,
+      payload: useE2ee
+        ? await encrypt(payloadStr, this.settings.encryption_passphrase!)
+        : payloadStr,
     };
   }
 
@@ -227,7 +234,17 @@ export class SyncEngine {
     packet: SyncPacket,
     isLocalEmpty = false
   ): Promise<void> {
-    const payload = JSON.parse(packet.payload);
+    let raw = packet.payload;
+    if (packet.encrypted) {
+      if (!this.settings.encryption_passphrase) {
+        throw new Error(
+          "Remote data is encrypted, but no passphrase is set on this device. " +
+            "Enable encryption and enter the same passphrase in Settings → Advanced."
+        );
+      }
+      raw = await decrypt(packet.payload, this.settings.encryption_passphrase);
+    }
+    const payload = JSON.parse(raw);
 
     switch (dataType) {
       case "bookmarks":

@@ -4,16 +4,19 @@
  *
  * Design:
  *  - User provides a passphrase
- *  - PBKDF2 derives a 256-bit AES-GCM key (100k iterations, SHA-256)
+ *  - PBKDF2 derives a 256-bit AES-GCM key (600k iterations, SHA-256)
  *  - Each encrypted blob has a random 12-byte IV prepended
  *  - Key never leaves the device; only the derived key is used in-memory
  *
- * Status: STUB — interface defined, implementation ready for Sprint 2.
+ * Status: ACTIVE — wired into the sync engine, opt-in via settings.encryption_enabled.
  */
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
-const PBKDF2_ITERATIONS = 100_000;
+// OWASP 2023 minimum for PBKDF2-HMAC-SHA256. Raising this only affects newly
+// written blobs (each blob carries its own salt; old data stays decryptable
+// only if the count matches — E2EE was never active before, so there is none).
+const PBKDF2_ITERATIONS = 600_000;
 const SALT_LENGTH = 16; // bytes
 const IV_LENGTH = 12;   // bytes — optimal for AES-GCM
 const KEY_LENGTH = 256; // bits
@@ -158,7 +161,14 @@ export async function sha256(input: string): Promise<string> {
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
 function bufferToBase64(buffer: Uint8Array): string {
-  return btoa(String.fromCharCode(...buffer));
+  // Encode in chunks — `String.fromCharCode(...buffer)` spreads every byte as a
+  // separate argument and throws RangeError on large payloads (history, big trees).
+  let binary = "";
+  const CHUNK = 0x8000; // 32 KiB per chunk, well under the argument-count limit
+  for (let i = 0; i < buffer.length; i += CHUNK) {
+    binary += String.fromCharCode(...buffer.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
 }
 
 function base64ToBuffer(base64: string): Uint8Array {

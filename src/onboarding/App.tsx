@@ -37,6 +37,7 @@ export default function OnboardingApp() {
   const [webdavUser, setWebdavUser] = useState("");
   const [webdavPass, setWebdavPass] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
 
   // Data types
   const [dataTypes, setDataTypes] = useState({
@@ -64,6 +65,22 @@ export default function OnboardingApp() {
   };
 
   const finish = async () => {
+    setSetupError(null);
+    // WebDAV reaches an arbitrary host not in host_permissions — request it now,
+    // while we still have the click's user gesture (before any await).
+    if (backend === "webdav") {
+      let granted = false;
+      try {
+        const origin = new URL(webdavUrl).origin + "/*";
+        granted = await chrome.permissions.request({ origins: [origin] });
+      } catch {
+        granted = false;
+      }
+      if (!granted) {
+        setSetupError("Synkro needs permission to reach your WebDAV server. Please allow it to continue.");
+        return;
+      }
+    }
     setSaving(true);
     try {
       const res = await sendMessage({ type: "GET_SETTINGS" });
@@ -392,6 +409,9 @@ export default function OnboardingApp() {
             ))}
           </div>
 
+          {setupError && (
+            <div style={{ ...S.errorRow, marginBottom: 12 }}><XCircle size={12} /> {setupError}</div>
+          )}
           <div style={S.navRow}>
             <button style={S.btnSecondary} onClick={() => setStep("backend")}>Back</button>
             <button style={S.btnPrimary} onClick={finish} disabled={saving}>

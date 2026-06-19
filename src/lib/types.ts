@@ -107,9 +107,9 @@ export interface SyncSettings {
   sync_on_change: boolean;       // trigger sync immediately on bookmark change
   notifications_enabled: boolean;
   debug_mode: boolean;
-  // E2EE — Sprint 2
+  // E2EE (opt-in) — wired into the sync engine; see src/lib/crypto/encryption.ts
   encryption_enabled: boolean;
-  encryption_key_hash?: string; // bcrypt hash to verify key without storing it
+  encryption_passphrase?: string; // device-local only: never uploaded, never leaves chrome.storage.local
 }
 
 // ─── Sync State ────────────────────────────────────────────────────────────

@@ -43,6 +43,10 @@
     "https://accounts.google.com/*",
     "https://g.api.mega.co.nz/*"
   ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
   "oauth2": {
     "client_id": "290320131573-2d68ltqjda1ucdfgi3k6pj3e2fb18lnq.apps.googleusercontent.com",
     "scopes": [
