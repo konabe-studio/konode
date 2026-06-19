@@ -11,8 +11,6 @@ import { logger } from "@/lib/utils/logger";
 // ─── State ────────────────────────────────────────────────────────────────
 
 let syncEngine: SyncEngine | null = null;
-let lastBookmarkChange = 0;
-const BOOKMARK_DEBOUNCE_MS = 5000; // 5s — reduces 409 race conditions on rapid changes
 
 // ─── Init ─────────────────────────────────────────────────────────────────
 
@@ -43,11 +41,8 @@ async function init(): Promise<void> {
     chrome.runtime.sendMessage({ type: "STATE_UPDATE", payload: state }).catch(() => {});
   });
 
-  if (settings.sync_on_change && settings.enabled_types.includes("bookmarks")) {
-    registerBookmarkListeners(onBookmarkChange);
-  } else if (settings.enabled_types.includes("bookmarks")) {
-    registerBookmarkListeners(onBookmarkChange);
-  }
+  // Bookmark listeners are registered once at the top level (see bottom of file),
+  // not here — init() re-runs on every SW wake and would stack duplicate listeners.
 
   if (settings.auto_sync) {
     await setupSyncAlarm(settings.sync_interval_seconds);
@@ -88,19 +83,11 @@ async function setupSyncAlarm(intervalSeconds: number): Promise<void> {
 // ─── Bookmark Listener ────────────────────────────────────────────────────
 
 function onBookmarkChange(): void {
-  const now = Date.now();
-  if (now - lastBookmarkChange < BOOKMARK_DEBOUNCE_MS) return;
-  lastBookmarkChange = now;
-  logger.info("BookmarkChange", "Detected — syncing");
-  setTimeout(async () => {
-    if (!syncEngine) return;
-    // Skip if already syncing — the periodic sync will pick it up
-    if (syncEngine.isSyncing) {
-      logger.info("BookmarkChange", "Sync already in progress, skipping");
-      return;
-    }
-    await syncEngine.sync(["bookmarks"]);
-  }, BOOKMARK_DEBOUNCE_MS);
+  // Debounce via a one-shot alarm. A setTimeout would be dropped if MV3 suspends
+  // the worker before it fires; an alarm survives suspension. Re-creating the
+  // alarm on each change collapses bursts into a single delayed sync.
+  // (Chrome clamps alarm delays to a ~30s floor.)
+  chrome.alarms.create("synkro-bookmark-sync", { delayInMinutes: 0.5 });
 }
 
 // ─── Message Handler ──────────────────────────────────────────────────────
@@ -203,10 +190,20 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
 // ─── Alarm Handler ────────────────────────────────────────────────────────
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (!syncEngine) return;
   if (alarm.name === "synkro-sync") {
-    if (!syncEngine) return;
     logger.info("Alarm", "Periodic sync triggered");
     await syncEngine.sync();
+  } else if (alarm.name === "synkro-bookmark-sync") {
+    const settings = await getSettings();
+    if (
+      settings.sync_on_change &&
+      settings.enabled_types.includes("bookmarks") &&
+      !syncEngine.isSyncing
+    ) {
+      logger.info("Alarm", "Bookmark-change sync triggered");
+      await syncEngine.sync(["bookmarks"]);
+    }
   }
 });
 
@@ -223,6 +220,11 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 chrome.runtime.onStartup.addListener(async () => {
   await init();
 });
+
+// Register bookmark-change listeners once, synchronously, at the top level —
+// MV3 requires event listeners to be attached on every worker load, and doing
+// it here (not in init()) avoids stacking duplicate listeners across wakes.
+registerBookmarkListeners(onBookmarkChange);
 
 // Init on load (handles MV3 service worker wake-ups)
 init().catch((err) => logger.error("ServiceWorker.init", err));

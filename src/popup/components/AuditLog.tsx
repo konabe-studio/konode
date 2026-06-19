@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { AuditEntry } from "@/lib/utils/storage";
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { sendMessage } from "@/lib/utils/messaging";
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 
 export function AuditLog() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
@@ -12,6 +13,11 @@ export function AuditLog() {
       setEntries((result["synkro_audit"] as AuditEntry[]) ?? []);
     });
   }, [open]);
+
+  const clearLog = async () => {
+    await sendMessage({ type: "CLEAR_HISTORY" });
+    setEntries([]);
+  };
 
   return (
     <div className="border-t border-border-subtle">
@@ -25,12 +31,19 @@ export function AuditLog() {
 
       {open && (
         <div className="px-4 pb-3 max-h-36 overflow-y-auto space-y-1 animate-fade-in">
-          {entries.length === 0 && (
+          {entries.length === 0 ? (
             <p className="text-2xs text-fg-subtle text-center py-2">No entries yet</p>
+          ) : (
+            <button
+              onClick={clearLog}
+              className="flex items-center gap-1 text-[10px] text-fg-subtle hover:text-danger transition-colors ml-auto mb-1"
+            >
+              <Trash2 size={9} /> Clear log
+            </button>
           )}
           {entries.slice(0, 20).map((e, i) => (
             <div
-              key={i}
+              key={`${e.timestamp}-${i}`}
               className="flex items-start gap-2 py-1 border-b border-border-subtle/50 last:border-0"
             >
               {e.ok

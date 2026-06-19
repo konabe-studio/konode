@@ -54,11 +54,17 @@ export class ConflictResolver {
         return { winner: remote, conflict: null };
 
       case "manual": {
+        // Parsing may fail for encrypted payloads — keep the raw packet so the
+        // engine can decrypt + apply on resolution; versions are best-effort.
+        const safeParse = (s: string): unknown => {
+          try { return JSON.parse(s); } catch { return null; }
+        };
         const conflict: ConflictItem = {
           id: crypto.randomUUID(),
           data_type: local.data_type,
-          local_version: JSON.parse(local.payload),
-          remote_version: JSON.parse(remote.payload),
+          local_version: safeParse(local.payload),
+          remote_version: safeParse(remote.payload),
+          remote_packet: remote,
           timestamp: new Date().toISOString(),
           resolved: false,
         };

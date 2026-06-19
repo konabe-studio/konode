@@ -1,5 +1,5 @@
 import type { IBackend, BackendConfig, DataType, SyncPacket } from "@/lib/types";
-import { withRetry } from "@/lib/utils/retry";
+import { withRetry, HttpError } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 
 const GITHUB_API = "https://api.github.com";
@@ -87,11 +87,11 @@ export class GitHubBackend implements IBackend {
         );
         if (!retry.ok) {
           const err = await retry.json().catch(() => ({}));
-          throw new Error(`GitHub upload failed: ${retry.status} — ${err.message ?? ""}`);
+          throw new HttpError(retry.status, `GitHub upload failed: ${retry.status} — ${err.message ?? ""}`);
         }
       } else if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(`GitHub upload failed: ${res.status} — ${err.message ?? ""}`);
+        throw new HttpError(res.status, `GitHub upload failed: ${res.status} — ${err.message ?? ""}`);
       }
 
       logger.info("GitHub.upload", `${packet.data_type} → ${filename}`);

@@ -12,7 +12,7 @@ export interface SyncPacket {
   device_id: string;
   timestamp: string; // ISO-8601
   data_type: DataType;
-  checksum: string; // SHA-256 of payload
+  checksum: string; // SHA-256 hex of the plaintext payload
   encrypted: boolean;
   payload: string; // JSON string, optionally encrypted
 }
@@ -128,6 +128,7 @@ export interface ConflictItem {
   data_type: DataType;
   local_version: unknown;
   remote_version: unknown;
+  remote_packet?: SyncPacket; // raw remote packet, so "use remote" can decrypt + apply
   timestamp: string;
   resolved: boolean;
 }

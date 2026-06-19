@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { SyncState, SyncSettings, DataType, SyncExtension } from "@/lib/types";
 import { sendMessage } from "@/lib/utils/messaging";
+import { AuditLog } from "./components/AuditLog";
 import {
   RefreshCw, Settings, Bookmark, Clock, Globe,
   CheckCircle2, AlertCircle, Loader2, Radio, ChevronRight,
-  Wifi, Puzzle, ExternalLink,
+  Wifi, Puzzle, ExternalLink, GitMerge, RotateCcw,
 } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────
@@ -34,6 +35,7 @@ export default function PopupApp() {
   const [syncingType, setSyncingType]   = useState<DataType | null>(null);
   const [syncedTypes, setSyncedTypes]   = useState<Set<DataType>>(new Set());
   const [missingExtensions, setMissingExtensions] = useState<SyncExtension[]>([]);
+  const [hasRemoteSession, setHasRemoteSession] = useState(false);
 
   // Track animation state separately from sync state
   const animTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -89,12 +91,20 @@ export default function PopupApp() {
     chrome.storage.local.get("synkro_remote_extensions", (r) => {
       const remote = r["synkro_remote_extensions"]?.extensions as SyncExtension[] | undefined;
       if (!remote?.length) return;
-      chrome.management.getAll((local) => {
-        const localIds = new Set(local.map((e) => e.id));
-        setMissingExtensions(
-          remote.filter((e) => !localIds.has(e.id) && e.type === "extension")
-        );
+      // "management" is an optional permission now — only query if it was granted.
+      chrome.permissions.contains({ permissions: ["management"] }, (hasMgmt) => {
+        if (!hasMgmt) return;
+        chrome.management.getAll((local) => {
+          const localIds = new Set(local.map((e) => e.id));
+          setMissingExtensions(
+            remote.filter((e) => !localIds.has(e.id) && e.type === "extension")
+          );
+        });
       });
+    });
+
+    chrome.storage.local.get("synkro_remote_sessions", (r) => {
+      setHasRemoteSession(!!r["synkro_remote_sessions"]?.session?.tabs?.length);
     });
 
     return () => {
@@ -156,6 +166,15 @@ export default function PopupApp() {
     });
   };
 
+  const resolveConflict = async (id: string, resolution: "local" | "remote") => {
+    await sendMessage({ type: "RESOLVE_CONFLICT", payload: { id, resolution } });
+    await load();
+  };
+
+  const restoreSession = async () => {
+    await sendMessage({ type: "RESTORE_SESSION" });
+  };
+
   const status = state?.status ?? "idle";
   const statusCfg = STATUS_CONFIG[status];
   const isSyncing = status === "syncing";
@@ -202,6 +221,33 @@ export default function PopupApp() {
           <div className="flex items-start gap-2 bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">
             <AlertCircle size={11} className="text-danger mt-0.5 shrink-0" />
             <span className="text-[11px] text-danger line-clamp-2">{state.last_error}</span>
+          </div>
+        )}
+
+        {(state?.pending_conflicts?.length ?? 0) > 0 && (
+          <div className="space-y-2">
+            {state!.pending_conflicts.map((c) => (
+              <div key={c.id} className="bg-warn/5 border border-warn/20 rounded-lg px-3 py-2">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <GitMerge size={11} className="text-warn shrink-0" />
+                  <span className="text-[11px] text-warn">Conflict in {c.data_type} — choose a version</span>
+                </div>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => resolveConflict(c.id, "local")}
+                    className="flex-1 text-[10px] py-1 rounded bg-surface-3 text-fg-muted hover:text-fg transition-colors"
+                  >
+                    Keep local
+                  </button>
+                  <button
+                    onClick={() => resolveConflict(c.id, "remote")}
+                    className="flex-1 text-[10px] py-1 rounded bg-surface-3 text-fg-muted hover:text-fg transition-colors"
+                  >
+                    Use remote
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
@@ -317,6 +363,18 @@ export default function PopupApp() {
         </div>
       )}
 
+      {/* ── Restore session ── */}
+      {hasRemoteSession && (
+        <div className="px-4 py-2.5 border-b border-border-subtle">
+          <button
+            onClick={restoreSession}
+            className="w-full flex items-center justify-center gap-2 text-[11px] py-2 rounded-lg bg-surface-2 text-fg-muted hover:text-fg hover:bg-surface-3 transition-colors"
+          >
+            <RotateCcw size={11} /> Restore tabs from another device
+          </button>
+        </div>
+      )}
+
       {/* ── Backend info ── */}
       <div className="px-4 py-2.5">
         <div className="flex items-center justify-between">
@@ -340,6 +398,8 @@ export default function PopupApp() {
           </div>
         )}
       </div>
+
+      <AuditLog />
     </div>
   );
 }

@@ -81,6 +81,26 @@ export default function OnboardingApp() {
         return;
       }
     }
+
+    // Request optional permissions for the chosen data types (history/tabs/
+    // management are no longer requested up front).
+    const optPerms: string[] = [];
+    if (dataTypes.history) optPerms.push("history");
+    if (dataTypes.sessions) optPerms.push("tabs");
+    if (dataTypes.extensions) optPerms.push("management");
+    if (optPerms.length) {
+      try {
+        const ok = await chrome.permissions.request({ permissions: optPerms });
+        if (!ok) {
+          setSetupError("Some permissions were declined. Grant them, or turn off those data types, to continue.");
+          return;
+        }
+      } catch {
+        setSetupError("Could not request the required permissions.");
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const res = await sendMessage({ type: "GET_SETTINGS" });
@@ -235,7 +255,9 @@ export default function OnboardingApp() {
             {/* Google Drive */}
             <div
               style={{ ...S.backendCard, ...(backend === "gdrive" ? S.backendSelected : {}) }}
+              role="button" tabIndex={0} aria-pressed={backend === "gdrive"} aria-label="Use Google Drive"
               onClick={() => setBackend("gdrive")}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setBackend("gdrive"); } }}
             >
               <div style={S.backendHeader}>
                 <Cloud size={18} color={backend === "gdrive" ? "var(--accent)" : "var(--text-secondary)"} />
@@ -279,7 +301,9 @@ export default function OnboardingApp() {
             {/* WebDAV */}
             <div
               style={{ ...S.backendCard, ...(backend === "webdav" ? S.backendSelected : {}) }}
+              role="button" tabIndex={0} aria-pressed={backend === "webdav"} aria-label="Use WebDAV"
               onClick={() => setBackend("webdav")}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setBackend("webdav"); } }}
             >
               <div style={S.backendHeader}>
                 <Server size={18} color={backend === "webdav" ? "var(--accent)" : "var(--text-secondary)"} />
@@ -312,7 +336,9 @@ export default function OnboardingApp() {
             {/* GitHub */}
             <div
               style={{ ...S.backendCard, ...(backend === "github" ? S.backendSelected : {}) }}
+              role="button" tabIndex={0} aria-pressed={backend === "github"} aria-label="Use GitHub"
               onClick={() => setBackend("github")}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setBackend("github"); } }}
             >
               <div style={S.backendHeader}>
                 <Github size={18} color={backend === "github" ? "var(--accent)" : "var(--text-secondary)"} />
@@ -388,7 +414,16 @@ export default function OnboardingApp() {
               { key: "history",    Icon: Clock,    label: "History",    desc: "Last 30 days" },
               { key: "sessions",   Icon: Globe,    label: "Sessions",   desc: "Named tab groups" },
             ] as const).map(({ key, Icon, label, desc }) => (
-              <label key={key} style={S.dataRow} onClick={() => toggleData(key)}>
+              <label
+                key={key}
+                style={S.dataRow}
+                role="switch"
+                aria-checked={dataTypes[key]}
+                aria-label={label}
+                tabIndex={0}
+                onClick={() => toggleData(key)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleData(key); } }}
+              >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <Icon size={16} color={dataTypes[key] ? "var(--accent)" : "var(--text-secondary)"} />
                   <div>

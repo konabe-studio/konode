@@ -1,5 +1,5 @@
 import type { IBackend, BackendConfig, DataType, SyncPacket } from "@/lib/types";
-import { withRetry } from "@/lib/utils/retry";
+import { withRetry, HttpError } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 
 const DRIVE_API = "https://www.googleapis.com/drive/v3";
@@ -142,14 +142,14 @@ export class GDriveBackend implements IBackend {
     if (folderId) return folderId;
     const q = encodeURIComponent(`name='${SYNKRO_FOLDER}' and mimeType='${FOLDER_MIME}' and trashed=false`);
     const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name)`, { headers: h });
-    if (!res.ok) throw new Error(`Drive folder lookup failed: ${res.status}`);
+    if (!res.ok) throw new HttpError(res.status, `Drive folder lookup failed: ${res.status}`);
     const data = await res.json();
     if (data.files?.length > 0) return data.files[0].id as string;
     const create = await fetch(`${DRIVE_API}/files`, {
       method: "POST", headers: h,
       body: JSON.stringify({ name: SYNKRO_FOLDER, mimeType: FOLDER_MIME }),
     });
-    if (!create.ok) throw new Error(`Drive folder create failed: ${create.status}`);
+    if (!create.ok) throw new HttpError(create.status, `Drive folder create failed: ${create.status}`);
     const created = await create.json();
     if (!created.id) throw new Error("Drive folder create returned no id");
     return created.id as string;
@@ -164,7 +164,7 @@ export class GDriveBackend implements IBackend {
       const content = JSON.stringify(packet, null, 2);
       const q = encodeURIComponent(`name='${filename}' and '${folderId}' in parents and trashed=false`);
       const lookup = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id)`, { headers: h });
-      if (!lookup.ok) throw new Error(`Drive lookup failed: ${lookup.status}`);
+      if (!lookup.ok) throw new HttpError(lookup.status, `Drive lookup failed: ${lookup.status}`);
       const existing = await lookup.json();
       if (existing.files?.length > 0) {
         const res = await fetch(`${UPLOAD_API}/files/${existing.files[0].id}?uploadType=media`, {
@@ -172,7 +172,7 @@ export class GDriveBackend implements IBackend {
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           body: content,
         });
-        if (!res.ok) throw new Error(`Drive update failed: ${res.status}`);
+        if (!res.ok) throw new HttpError(res.status, `Drive update failed: ${res.status}`);
       } else {
         // Drive's multipart upload expects multipart/related (metadata part then
         // media part) — a FormData multipart/form-data body is silently ignored
@@ -190,7 +190,7 @@ export class GDriveBackend implements IBackend {
           headers: { Authorization: `Bearer ${token}`, "Content-Type": `multipart/related; boundary=${boundary}` },
           body,
         });
-        if (!res.ok) throw new Error(`Drive create failed: ${res.status}`);
+        if (!res.ok) throw new HttpError(res.status, `Drive create failed: ${res.status}`);
       }
       logger.info("GDrive.upload", `${packet.data_type} → ${filename}`);
     });
@@ -202,7 +202,7 @@ export class GDriveBackend implements IBackend {
       const h = await this.authHeaders();
       const q = encodeURIComponent(`name contains 'synkro_${data_type}_' and '${folderId}' in parents and trashed=false`);
       const listRes = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`, { headers: h });
-      if (!listRes.ok) throw new Error(`Drive list failed: ${listRes.status}`);
+      if (!listRes.ok) throw new HttpError(listRes.status, `Drive list failed: ${listRes.status}`);
       const { files } = await listRes.json();
       if (!files?.length) return null;
       // Skip this device's own file so we always compare against a peer's data.
@@ -210,7 +210,7 @@ export class GDriveBackend implements IBackend {
       const pick = (files as Array<{ id: string; name: string }>).find((f) => f.name !== own);
       if (!pick) return null;
       const fileRes = await fetch(`${DRIVE_API}/files/${pick.id}?alt=media`, { headers: h });
-      if (!fileRes.ok) throw new Error(`Drive download failed: ${fileRes.status}`);
+      if (!fileRes.ok) throw new HttpError(fileRes.status, `Drive download failed: ${fileRes.status}`);
       return fileRes.json() as Promise<SyncPacket>;
     });
   }

@@ -1,5 +1,5 @@
 import type { IBackend, BackendConfig, DataType, SyncPacket } from "@/lib/types";
-import { withRetry } from "@/lib/utils/retry";
+import { withRetry, HttpError } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 
 export class WebDAVBackend implements IBackend {
@@ -56,7 +56,7 @@ export class WebDAVBackend implements IBackend {
         headers: this.headers(),
         body: JSON.stringify(packet, null, 2),
       });
-      if (!res.ok) throw new Error(`WebDAV PUT failed: ${res.status}`);
+      if (!res.ok) throw new HttpError(res.status, `WebDAV PUT failed: ${res.status}`);
       logger.info("WebDAV.upload", `${packet.data_type} → ${filename}`);
     });
   }

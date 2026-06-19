@@ -151,11 +151,27 @@ export default function OptionsApp() {
     setTesting(false);
   };
 
-  const toggleDataType = (type: DataType) => {
+  // history/tabs/management are optional permissions now — request them on enable
+  // so the install-time prompt stays minimal (and the CWS review stays clean).
+  const PERM_FOR_TYPE: Partial<Record<DataType, string>> = {
+    history: "history",
+    sessions: "tabs",
+    extensions: "management",
+  };
+
+  const toggleDataType = async (type: DataType) => {
     if (!settings) return;
-    const next = settings.enabled_types.includes(type)
-      ? settings.enabled_types.filter((t) => t !== type)
-      : [...settings.enabled_types, type];
+    const enabling = !settings.enabled_types.includes(type);
+    if (enabling) {
+      const perm = PERM_FOR_TYPE[type];
+      if (perm) {
+        const granted = await chrome.permissions.request({ permissions: [perm] });
+        if (!granted) return; // leave it off if the user declined the permission
+      }
+    }
+    const next = enabling
+      ? [...settings.enabled_types, type]
+      : settings.enabled_types.filter((t) => t !== type);
     update({ enabled_types: next });
   };
 
@@ -380,7 +396,17 @@ export default function OptionsApp() {
                     <div
                       key={type}
                       className={`backend-card ${isActive ? "selected" : ""}`}
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={isActive}
+                      aria-label={`Use ${label}`}
                       onClick={() => update({ active_backend: type })}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          update({ active_backend: type });
+                        }
+                      }}
                     >
                       <div className="backend-card-header">
                         <div className="backend-icon-wrap"><Icon size={17} /></div>
@@ -744,6 +770,7 @@ export default function OptionsApp() {
                   { value: "lww",           label: "Last Write Wins",  desc: "Most recent change always wins." },
                   { value: "prefer-local",  label: "Prefer Local",     desc: "Local changes override remote." },
                   { value: "prefer-remote", label: "Prefer Remote",    desc: "Remote changes override local." },
+                  { value: "manual",        label: "Manual",           desc: "Ask me to resolve each conflict in the popup." },
                 ] as const).map(({ value, label, desc }) => (
                   <label key={value} className="settings-row radio-row">
                     <div className="settings-row-left">

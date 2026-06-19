@@ -27,21 +27,22 @@
   },
   "permissions": [
     "bookmarks",
-    "history",
-    "tabs",
-    "sessions",
     "storage",
     "identity",
     "alarms",
     "notifications",
-    "unlimitedStorage",
+    "unlimitedStorage"
+  ],
+  "optional_permissions": [
+    "history",
+    "tabs",
     "management"
   ],
   "host_permissions": [
     "https://www.googleapis.com/*",
     "https://oauth2.googleapis.com/*",
     "https://accounts.google.com/*",
-    "https://g.api.mega.co.nz/*"
+    "https://api.github.com/*"
   ],
   "optional_host_permissions": [
     "https://*/*",

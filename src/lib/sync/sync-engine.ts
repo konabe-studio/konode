@@ -6,7 +6,7 @@ import { exportHistory, importHistory } from "@/lib/handlers/history-handler";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
 import { getState, setState } from "@/lib/utils/storage";
 import { logger } from "@/lib/utils/logger";
-import { encrypt, decrypt } from "@/lib/crypto/encryption";
+import { encrypt, decrypt, sha256 } from "@/lib/crypto/encryption";
 import { ConflictResolver, notifyConflict } from "./conflict-resolver";
 
 // ─── Sync Engine ─────────────────────────────────────────────────────────
@@ -187,8 +187,17 @@ export class SyncEngine {
     switch (dataType) {
       case "bookmarks":
         return exportBookmarks();
-      case "sessions":
-        return exportSession();
+      case "sessions": {
+        // Make the synced session deterministic: identical open tabs must yield
+        // an identical payload (and checksum), otherwise a fresh UUID/timestamp
+        // every cycle churns versions and causes LWW ping-pong between devices.
+        const session = await exportSession();
+        session.id = `session_${this.settings.device_id}`;
+        session.device_id = this.settings.device_id;
+        session.savedAt = "";
+        session.label = "Current session";
+        return session;
+      }
       case "history":
         return exportHistory(this.settings.history_days_limit);
       case "extensions":
@@ -209,23 +218,14 @@ export class SyncEngine {
       device_id: this.settings.device_id,
       timestamp: new Date().toISOString(),
       data_type: dataType,
-      // Checksum is over the plaintext so identical content across devices
-      // still matches even though each blob uses a fresh IV/salt.
-      checksum: this.simpleChecksum(payloadStr),
+      // SHA-256 over the plaintext, so identical content across devices still
+      // matches even though each encrypted blob uses a fresh IV/salt.
+      checksum: await sha256(payloadStr),
       encrypted: useE2ee,
       payload: useE2ee
         ? await encrypt(payloadStr, this.settings.encryption_passphrase!)
         : payloadStr,
     };
-  }
-
-  private simpleChecksum(str: string): string {
-    // Simple djb2 hash for non-security checksum
-    let hash = 5381;
-    for (let i = 0; i < str.length; i++) {
-      hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
-    }
-    return (hash >>> 0).toString(16);
   }
 
   // ─── Remote Apply ─────────────────────────────────────────────────────
@@ -245,6 +245,14 @@ export class SyncEngine {
       }
       raw = await decrypt(packet.payload, this.settings.encryption_passphrase);
     }
+    // Verify integrity before importing. Legacy packets used a short djb2 hash;
+    // only verify when the checksum is a SHA-256 hex string (64 chars).
+    if (packet.checksum?.length === 64) {
+      const actual = await sha256(raw);
+      if (actual !== packet.checksum) {
+        throw new Error("Sync packet checksum mismatch — refusing to import corrupted data.");
+      }
+    }
     const payload = JSON.parse(raw);
     await this.applyPayload(dataType, payload, {
       device_id: packet.device_id,
@@ -259,6 +267,13 @@ export class SyncEngine {
     meta: { device_id: string; timestamp: string },
     isLocalEmpty: boolean
   ): Promise<void> {
+    // Validate the parsed payload shape before handing untrusted remote data to
+    // the Chrome APIs (a corrupt/tampered file must not crash or mis-import).
+    if ((dataType === "bookmarks" || dataType === "history" || dataType === "extensions")
+        && !Array.isArray(payload)) {
+      throw new Error(`Invalid ${dataType} payload — expected an array.`);
+    }
+
     switch (dataType) {
       case "bookmarks":
         // Fresh device → replace entire structure (preserves folders)
@@ -308,12 +323,17 @@ export class SyncEngine {
     }
 
     if (resolution === "remote") {
-      await this.applyPayload(
-        conflict.data_type,
-        conflict.remote_version,
-        { device_id: "", timestamp: conflict.timestamp },
-        false
-      );
+      // Prefer the raw packet (handles decryption); fall back to the parsed version.
+      if (conflict.remote_packet) {
+        await this.applyRemote(conflict.data_type, conflict.remote_packet, false);
+      } else {
+        await this.applyPayload(
+          conflict.data_type,
+          conflict.remote_version,
+          { device_id: "", timestamp: conflict.timestamp },
+          false
+        );
+      }
     } else {
       // Keep local → re-upload current local data, overwriting remote.
       const cfg = this.settings.backends.find((b) => b.type === this.settings.active_backend);
