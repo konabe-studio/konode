@@ -1,0 +1,108 @@
+import { describe, it, expect } from "vitest";
+import { importBookmarks } from "@/lib/handlers/bookmarks-handler";
+import type { BookmarkPayload, SyncBookmark } from "@/lib/types";
+
+// These exercise the real merge/replace logic against the in-memory
+// chrome.bookmarks fake from test/setup.ts (reset before each test).
+
+/** A remote payload shaped like exportBookmarks() output: virtual root → 3 roots. */
+function payload(barChildren: SyncBookmark[], tombstones: BookmarkPayload["tombstones"] = []): BookmarkPayload {
+  return {
+    tree: [
+      {
+        id: "0",
+        parentId: null,
+        title: "",
+        dateAdded: 0,
+        children: [
+          { id: "1", parentId: "0", title: "Bookmarks bar", dateAdded: 0, children: barChildren },
+          { id: "2", parentId: "0", title: "Other bookmarks", dateAdded: 0, children: [] },
+          { id: "3", parentId: "0", title: "Mobile bookmarks", dateAdded: 0, children: [] },
+        ],
+      },
+    ],
+    tombstones,
+  };
+}
+
+function link(title: string, url: string, dateAdded = 1): SyncBookmark {
+  return { id: `r-${url}`, parentId: "1", title, url, dateAdded };
+}
+
+function folder(title: string, children: SyncBookmark[]): SyncBookmark {
+  return { id: `r-folder-${title}`, parentId: "1", title, dateAdded: 1, children };
+}
+
+/** Seed a bookmark into the local fake under a root (defaults to the bar, "1"). */
+async function seed(title: string, url: string, parentId = "1"): Promise<void> {
+  await chrome.bookmarks.create({ parentId, title, url });
+}
+
+async function localUrls(): Promise<string[]> {
+  const tree = await chrome.bookmarks.getTree();
+  const urls: string[] = [];
+  const walk = (n: chrome.bookmarks.BookmarkTreeNode) => {
+    if (n.url) urls.push(n.url);
+    n.children?.forEach(walk);
+  };
+  tree.forEach(walk);
+  return urls.sort();
+}
+
+describe("importBookmarks — merge", () => {
+  it("additively adds new remote bookmarks without duplicating existing ones", async () => {
+    await seed("A", "https://a.com");
+    await importBookmarks(payload([link("A", "https://a.com"), link("B", "https://b.com")]), "merge", "lww");
+    expect(await localUrls()).toEqual(["https://a.com", "https://b.com"]);
+  });
+
+  it("propagates a peer deletion via a newer tombstone (lww)", async () => {
+    await seed("A", "https://a.com");
+    await seed("B", "https://b.com");
+    const future = Date.now() + 60_000; // newer than the just-created local bookmarks
+    // Remote tree no longer contains B, and carries a tombstone for it.
+    await importBookmarks(
+      payload([link("A", "https://a.com")], [{ url: "https://b.com", deletedAt: future }]),
+      "merge",
+      "lww"
+    );
+    expect(await localUrls()).toEqual(["https://a.com"]);
+  });
+
+  it("prefer-local ignores the peer's deletions", async () => {
+    await seed("A", "https://a.com");
+    await seed("B", "https://b.com");
+    const future = Date.now() + 60_000;
+    await importBookmarks(
+      payload([link("A", "https://a.com")], [{ url: "https://b.com", deletedAt: future }]),
+      "merge",
+      "prefer-local"
+    );
+    expect(await localUrls()).toEqual(["https://a.com", "https://b.com"]);
+  });
+
+  it("preserves folders and reuses a same-title folder on re-merge (no duplicate)", async () => {
+    const p = payload([folder("Work", [link("W", "https://work.com")])]);
+    await importBookmarks(p, "merge", "lww");
+    await importBookmarks(p, "merge", "lww"); // second merge must not duplicate
+
+    expect(await localUrls()).toEqual(["https://work.com"]);
+    const barChildren = await chrome.bookmarks.getChildren("1");
+    const workFolders = barChildren.filter((c) => !c.url && c.title === "Work");
+    expect(workFolders).toHaveLength(1);
+  });
+});
+
+describe("importBookmarks — replace", () => {
+  it("clears local and restores the remote tree", async () => {
+    await seed("A", "https://a.com");
+    await importBookmarks(payload([link("B", "https://b.com")]), "replace");
+    expect(await localUrls()).toEqual(["https://b.com"]);
+  });
+
+  it("refuses a destructive replace when the remote tree is empty (data-loss guard)", async () => {
+    await seed("A", "https://a.com");
+    await importBookmarks(payload([]), "replace"); // all roots empty
+    expect(await localUrls()).toEqual(["https://a.com"]);
+  });
+});

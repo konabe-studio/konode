@@ -6,6 +6,72 @@ import { vi, beforeEach } from "vitest";
 
 const store = new Map();
 
+// ─── chrome.bookmarks in-memory fake ───────────────────────────────────────
+// Flat node map (id → node); the tree is materialized on demand. Models Chrome's
+// virtual root "0" with the three stable roots: "1" bar, "2" other, "3" mobile.
+let bmSeq = 100;
+let bmNodes = new Map();
+
+function resetBookmarks() {
+  bmSeq = 100;
+  bmNodes = new Map();
+  bmNodes.set("0", { id: "0", parentId: undefined, title: "", index: 0 });
+  [["1", "Bookmarks bar"], ["2", "Other bookmarks"], ["3", "Mobile bookmarks"]].forEach(
+    ([id, title], i) => bmNodes.set(id, { id, parentId: "0", title, index: i })
+  );
+}
+resetBookmarks();
+
+function bmChildren(parentId) {
+  return [...bmNodes.values()]
+    .filter((n) => n.parentId === parentId)
+    .sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+}
+
+function bmBuild(id) {
+  const n = bmNodes.get(id);
+  const node = { id: n.id, parentId: n.parentId, title: n.title, dateAdded: n.dateAdded };
+  if (typeof n.url === "string") node.url = n.url;
+  else node.children = bmChildren(id).map((c) => bmBuild(c.id));
+  return node;
+}
+
+function makeBookmarks() {
+  return {
+    getTree: () => Promise.resolve([bmBuild("0")]),
+    getChildren: (parentId) => Promise.resolve(bmChildren(parentId).map((c) => bmBuild(c.id))),
+    create: (props) => {
+      const id = String(bmSeq++);
+      const node = {
+        id,
+        parentId: props.parentId,
+        title: props.title ?? "",
+        dateAdded: Date.now(),
+        index: bmChildren(props.parentId).length,
+      };
+      if (typeof props.url === "string") node.url = props.url;
+      bmNodes.set(id, node);
+      return Promise.resolve(bmBuild(id));
+    },
+    remove: (id) => {
+      bmNodes.delete(id);
+      return Promise.resolve();
+    },
+    removeTree: (id) => {
+      const collect = (pid) => {
+        for (const c of bmChildren(pid)) { collect(c.id); bmNodes.delete(c.id); }
+      };
+      collect(id);
+      bmNodes.delete(id);
+      return Promise.resolve();
+    },
+    onCreated: { addListener: () => {} },
+    onChanged: { addListener: () => {} },
+    onMoved: { addListener: () => {} },
+    onRemoved: { addListener: () => {} },
+  };
+}
+
 function makeChrome() {
   return {
     runtime: { id: "test-extension-id", lastError: undefined },
@@ -32,6 +98,7 @@ function makeChrome() {
         },
       },
     },
+    bookmarks: makeBookmarks(),
     notifications: { create: vi.fn() },
     alarms: { create: vi.fn(), clear: () => Promise.resolve(true) },
     action: { setBadgeText: vi.fn(), setBadgeBackgroundColor: vi.fn() },
@@ -49,4 +116,5 @@ if (typeof navigator === "undefined") {
 
 beforeEach(() => {
   store.clear();
+  resetBookmarks();
 });
