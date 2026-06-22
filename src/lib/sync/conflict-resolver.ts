@@ -147,6 +147,20 @@ export class ConflictResolver {
   }
 }
 
+// ─── Peer ordering ─────────────────────────────────────────────────────────
+
+/**
+ * Orders peer packets newest-first by their `timestamp` (the same clock LWW uses
+ * in `resolve`). Backends list files in arbitrary order (GitHub by filename, WebDAV
+ * by PROPFIND order), so the engine sorts here to guarantee `peers[0]` is the most
+ * recent regardless of backend. Stable copy — does not mutate the input.
+ */
+export function orderPeersByTime(packets: SyncPacket[]): SyncPacket[] {
+  return [...packets].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+}
+
 // ─── Notify helper ───────────────────────────────────────────────────────
 
 export function notifyConflict(dataType: DataType): void {

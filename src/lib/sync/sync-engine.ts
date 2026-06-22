@@ -13,7 +13,7 @@ import {
 } from "@/lib/utils/storage";
 import { logger } from "@/lib/utils/logger";
 import { encrypt, decrypt, sha256 } from "@/lib/crypto/encryption";
-import { ConflictResolver, notifyConflict } from "./conflict-resolver";
+import { ConflictResolver, notifyConflict, orderPeersByTime } from "./conflict-resolver";
 
 // ─── Sync Engine ─────────────────────────────────────────────────────────
 
@@ -98,8 +98,13 @@ export class SyncEngine {
 
     try {
       // 1. PULL every peer's file (excluding our own), so we converge against
-      //    ALL devices in one cycle — not just the most recent one.
-      const peers = await backend.downloadAll(dataType, this.settings.device_id);
+      //    ALL devices in one cycle — not just the most recent one. Order
+      //    newest-first by packet timestamp: backends list files in arbitrary
+      //    order, but the manual-conflict path and the oldest→newest fold below
+      //    both assume peers[0] is the most recent.
+      const peers = orderPeersByTime(
+        await backend.downloadAll(dataType, this.settings.device_id)
+      );
 
       // 2. Build local payload
       const localPayload = await this.buildPayload(dataType);

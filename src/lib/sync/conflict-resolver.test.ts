@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ConflictResolver } from "@/lib/sync/conflict-resolver";
+import { ConflictResolver, orderPeersByTime } from "@/lib/sync/conflict-resolver";
 import type { SyncPacket } from "@/lib/types";
 
 function packet(over: Partial<SyncPacket>): SyncPacket {
@@ -68,5 +68,23 @@ describe("ConflictResolver", () => {
       [{ url: "b" }, { url: "c" }]
     );
     expect(merged.map((x) => x.url)).toEqual(["a", "b", "c"]);
+  });
+});
+
+describe("orderPeersByTime", () => {
+  it("orders peers newest-first regardless of input order", () => {
+    const old = packet({ device_id: "old", timestamp: "2026-01-01T00:00:00.000Z" });
+    const mid = packet({ device_id: "mid", timestamp: "2026-03-01T00:00:00.000Z" });
+    const newest = packet({ device_id: "new", timestamp: "2026-06-01T00:00:00.000Z" });
+    const out = orderPeersByTime([old, newest, mid]);
+    expect(out.map((p) => p.device_id)).toEqual(["new", "mid", "old"]);
+  });
+
+  it("does not mutate the input array", () => {
+    const a = packet({ device_id: "a", timestamp: "2026-01-01T00:00:00.000Z" });
+    const b = packet({ device_id: "b", timestamp: "2026-02-01T00:00:00.000Z" });
+    const input = [a, b];
+    orderPeersByTime(input);
+    expect(input.map((p) => p.device_id)).toEqual(["a", "b"]);
   });
 });

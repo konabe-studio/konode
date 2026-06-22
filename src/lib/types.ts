@@ -169,8 +169,10 @@ export interface IBackend {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   upload(packet: SyncPacket): Promise<void>;
-  // All peer packets (newest first where the backend can order), excluding the
-  // caller's own file — so the engine can merge across every device, not just one.
+  // All peer packets, excluding the caller's own file — so the engine can merge
+  // across every device, not just one. Order is not significant: the engine sorts
+  // newest-first by packet timestamp (`orderPeersByTime`), so backends may return
+  // files in any order (e.g. directory-listing order).
   downloadAll(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket[]>;
   listVersions(data_type: DataType): Promise<string[]>;
   testConnection(): Promise<{ ok: boolean; message: string }>;
