@@ -21,14 +21,17 @@ on any Chromium browser.
 - **Session-manager UI** — the popup lists each peer device's session with a
   per-device Restore button; `synkro_remote_sessions` is a device-keyed map so
   sessions aggregate across all peers.
+- **Cross-peer data merge for every type** — extensions now aggregate across all
+  peers too (`synkro_remote_extensions` is device-keyed; the popup unions the lists),
+  so bookmarks, history, sessions and extensions all merge across all devices.
 
 ## Next
-1. Aggregate **extensions** across all peers (bookmarks/history/sessions already
-   merge all; the extensions display type is still newest-peer-wins).
-2. **Newest-version selection** for GitHub/WebDAV downloads (needs commit/mtime,
+1. **Newest-version selection** for GitHub/WebDAV downloads (needs commit/mtime,
    not directory-listing order).
-3. Broaden test coverage to the sync engine + bookmark merge (needs a fuller
+2. Broaden test coverage to the sync engine + bookmark merge (needs a fuller
    chrome.bookmarks fake).
+3. Pre-publish QA: end-to-end test the **GitHub** and **WebDAV** backends (only
+   Drive has been verified across devices so far).
 
 ## Later / nice-to-have
 - Firefox support (`browser_specific_settings` + the `browser.*` polyfill).

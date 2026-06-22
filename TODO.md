@@ -40,8 +40,9 @@
       count, last-synced) with a per-device Restore button. `synkro_remote_sessions`
       is now a device-keyed map, so every peer's session survives (sessions now
       aggregate across all peers, not newest-peer-wins).
-- [ ] Aggregate **extensions** across *all* peers (still newest-peer-wins for the
-      extensions display type; bookmarks/history/sessions already merge all)
+- [x] Aggregate **extensions** across *all* peers — `synkro_remote_extensions` is a
+      device-keyed map; the popup unions every peer's list (deduped by id). All four
+      data types now merge across all peers.
 - [ ] Backend "newest version" selection on GitHub/WebDAV (needs commit/mtime, not list order)
 - [x] **Tests + lint + CI** — Vitest (encryption, retry, conflict resolver,
       tombstone helpers) + ESLint flat config + GitHub Actions CI. _Run
@@ -62,6 +63,10 @@
 
 ## 📦 Before publishing (Google OAuth verification + Chrome Web Store)
 
+- [ ] **Test GitHub sync end-to-end** (fine-grained PAT) — only the Drive backend
+      has had real multi-device testing so far
+- [ ] **Test WebDAV sync end-to-end** (basic auth + runtime host permission) — ditto;
+      only Drive is verified
 - [ ] Consent screen: app name, logo, **privacy policy URL** (write the policy first)
 - [ ] `drive.file` scope justification
 - [ ] Demo video (1–3 min screencast)

@@ -28,6 +28,10 @@ The first working build, hardened over a review + fix pass. Highlights:
   stored device-keyed (`synkro_remote_sessions` is now a map), so every peer's
   session survives instead of only the newest. Sessions carry the device label so
   the list is human-readable.
+- **Cross-peer extension aggregation** — `synkro_remote_extensions` is now device-keyed
+  too; the popup unions every peer's installed-extension list (deduped by id), so
+  "missing on this device" reflects extensions installed on **any** other device, not
+  just the most recently synced one.
 
 ### Changed
 - **Sync model**: pull peer file first (excluding our own), then for additive

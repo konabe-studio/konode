@@ -67,7 +67,9 @@ src/
 - **Conflict strategies** are now **per-item (per URL)**: `lww` (newest action
   wins), `prefer-local`, `prefer-remote`, `manual` (popup banner resolves).
 - **History** is additive + de-duped; restore is lossy by design (Chrome can't set
-  visit times/counts). **Sessions/extensions** are stored for restore/display only.
+  visit times/counts). **Sessions/extensions** are stored per peer device (keyed by
+  `device_id`) for restore/display: the popup lists every peer's session and unions
+  every peer's extension list ("missing on this device").
 
 ## MV3 lifecycle gotchas (don't regress these)
 
@@ -93,8 +95,10 @@ src/
 
 `synkro_settings`, `synkro_state`, `synkro_audit`, `synkro_bm_cache`,
 `synkro_bm_tombstones`, `synkro_gdrive_session`, `synkro_remote_extensions`,
-`synkro_remote_sessions` (a `{ [device_id]: { device_id, timestamp, session } }`
-map — one stored session per peer device; legacy single-object shape still read).
+`synkro_remote_sessions`. The last two are **device-keyed maps**
+(`{ [device_id]: { device_id, timestamp, session|extensions } }`) — one entry per
+peer device, so the popup can list every peer's session and union every peer's
+extension list. Legacy single-object shape still read by the normalizers.
 
 ## Conventions
 
