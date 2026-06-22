@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import type { SyncState, SyncSettings, DataType, SyncExtension } from "@/lib/types";
+import type { SyncState, SyncSettings, DataType, SyncExtension, RemoteSessionEntry } from "@/lib/types";
 import { sendMessage } from "@/lib/utils/messaging";
+import { normalizeRemoteSessions } from "@/lib/utils/storage";
 import { AuditLog } from "./components/AuditLog";
 import {
   RefreshCw, Settings, Bookmark, Clock, Globe,
@@ -35,7 +36,7 @@ export default function PopupApp() {
   const [syncingType, setSyncingType]   = useState<DataType | null>(null);
   const [syncedTypes, setSyncedTypes]   = useState<Set<DataType>>(new Set());
   const [missingExtensions, setMissingExtensions] = useState<SyncExtension[]>([]);
-  const [hasRemoteSession, setHasRemoteSession] = useState(false);
+  const [remoteSessions, setRemoteSessions] = useState<RemoteSessionEntry[]>([]);
   const [loadError, setLoadError] = useState(false);
 
   // Track animation state separately from sync state
@@ -107,7 +108,7 @@ export default function PopupApp() {
     });
 
     chrome.storage.local.get("synkro_remote_sessions", (r) => {
-      setHasRemoteSession(!!r["synkro_remote_sessions"]?.session?.tabs?.length);
+      setRemoteSessions(normalizeRemoteSessions(r["synkro_remote_sessions"]));
     });
 
     return () => {
@@ -174,8 +175,8 @@ export default function PopupApp() {
     await load();
   };
 
-  const restoreSession = async () => {
-    await sendMessage({ type: "RESTORE_SESSION" });
+  const restoreSession = async (id: string) => {
+    await sendMessage({ type: "RESTORE_SESSION", payload: { id } });
   };
 
   const status = state?.status ?? "idle";
@@ -375,15 +376,37 @@ export default function PopupApp() {
         </div>
       )}
 
-      {/* ── Restore session ── */}
-      {hasRemoteSession && (
-        <div className="px-4 py-2.5 border-b border-border-subtle">
-          <button
-            onClick={restoreSession}
-            className="w-full flex items-center justify-center gap-2 text-[11px] py-2 rounded-lg bg-surface-2 text-fg-muted hover:text-fg hover:bg-surface-3 transition-colors"
-          >
-            <RotateCcw size={11} /> Restore tabs from another device
-          </button>
+      {/* ── Restore sessions (one per peer device) ── */}
+      {remoteSessions.length > 0 && (
+        <div className="px-4 py-2.5 border-b border-border-subtle space-y-1.5">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-fg-subtle">
+            Sessions from other devices
+          </span>
+          {remoteSessions.map((entry) => (
+            <div key={entry.session.id} className="flex items-center gap-2 py-0.5">
+              <div className="flex-1 min-w-0">
+                <span className="text-[11px] text-fg-muted truncate block">
+                  {entry.session.label || "Unknown device"}
+                </span>
+                <span className="text-[10px] text-fg-subtle">
+                  {entry.session.tabs.length} tab{entry.session.tabs.length === 1 ? "" : "s"}
+                  {entry.timestamp &&
+                    ` · ${new Date(entry.timestamp).toLocaleString([], {
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}`}
+                </span>
+              </div>
+              <button
+                onClick={() => restoreSession(entry.session.id)}
+                className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-surface-2 text-fg-muted hover:text-fg hover:bg-surface-3 transition-colors shrink-0"
+              >
+                <RotateCcw size={11} /> Restore
+              </button>
+            </div>
+          ))}
         </div>
       )}
 

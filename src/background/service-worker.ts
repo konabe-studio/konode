@@ -202,7 +202,7 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
 
     case "RESTORE_SESSION": {
       if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
-      await syncEngine.restoreSession();
+      await syncEngine.restoreSession(message.payload?.id);
       return { type: "OK" };
     }
 

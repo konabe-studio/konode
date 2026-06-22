@@ -1,10 +1,10 @@
-import type { SyncSettings, SyncState, DataType, SyncPacket } from "@/lib/types";
+import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession } from "@/lib/types";
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { exportBookmarkPayload, importBookmarks } from "@/lib/handlers/bookmarks-handler";
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
 import { exportHistory, importHistory } from "@/lib/handlers/history-handler";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
-import { getState, setState } from "@/lib/utils/storage";
+import { getState, setState, getRemoteSessions, setRemoteSession } from "@/lib/utils/storage";
 import { logger } from "@/lib/utils/logger";
 import { encrypt, decrypt, sha256 } from "@/lib/crypto/encryption";
 import { ConflictResolver, notifyConflict } from "./conflict-resolver";
@@ -198,7 +198,9 @@ export class SyncEngine {
         session.id = `session_${this.settings.device_id}`;
         session.device_id = this.settings.device_id;
         session.savedAt = "";
-        session.label = "Current session";
+        // Carry the human-readable device name so peers can label the session
+        // list. Stable per device, so the payload stays deterministic (no churn).
+        session.label = this.settings.device_label;
         return session;
       }
       case "history":
@@ -293,16 +295,14 @@ export class SyncEngine {
         await importHistory(payload as never);
         break;
       case "sessions":
-        // Persist the remote session so the user can restore it on demand
-        // (RESTORE_SESSION → restoreSession()). Previously this only logged.
-        await chrome.storage.local.set({
-          synkro_remote_sessions: {
-            device_id: meta.device_id,
-            timestamp: meta.timestamp,
-            session: payload,
-          },
+        // Persist the remote session, keyed by device_id, so every peer's session
+        // survives (not just the newest) and the popup can list/restore each.
+        await setRemoteSession({
+          device_id: meta.device_id,
+          timestamp: meta.timestamp,
+          session: payload as SyncSession,
         });
-        logger.info("applyRemote", "Stored remote session for restore");
+        logger.info("applyRemote", `Stored remote session for ${meta.device_id}`);
         break;
       case "extensions":
         await chrome.storage.local.set({
@@ -369,14 +369,19 @@ export class SyncEngine {
 
   // ─── Session restore ──────────────────────────────────────────────────
 
-  /** Opens the tabs from the most recently downloaded remote session. */
-  async restoreSession(): Promise<void> {
-    const r = await chrome.storage.local.get("synkro_remote_sessions");
-    const session = r["synkro_remote_sessions"]?.session;
-    if (!session?.tabs?.length) {
+  /**
+   * Opens the tabs from a stored peer session. Pass a session `id` to restore a
+   * specific device; omit it to restore the most recent one (legacy behavior).
+   */
+  async restoreSession(sessionId?: string): Promise<void> {
+    const entries = await getRemoteSessions();
+    const entry = sessionId
+      ? entries.find((e) => e.session.id === sessionId)
+      : entries[0];
+    if (!entry?.session?.tabs?.length) {
       logger.warn("SyncEngine", "restoreSession: no remote session available");
       return;
     }
-    await importSession(session);
+    await importSession(entry.session);
   }
 }

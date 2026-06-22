@@ -69,6 +69,13 @@ export interface SyncSession {
   }>;
 }
 
+/** A peer device's stored session, keyed by device_id in `synkro_remote_sessions`. */
+export interface RemoteSessionEntry {
+  device_id: string;
+  timestamp: string; // ISO-8601, from SyncPacket.timestamp
+  session: SyncSession;
+}
+
 // ─── Extension ─────────────────────────────────────────────────────────────
 
 export interface SyncExtension {
@@ -171,7 +178,7 @@ export type ExtensionMessage =
   | { type: "SAVE_SETTINGS"; payload: Partial<SyncSettings> }
   | { type: "RESOLVE_CONFLICT"; payload: { id: string; resolution: "local" | "remote" } }
   | { type: "CLEAR_HISTORY" }
-  | { type: "RESTORE_SESSION" }
+  | { type: "RESTORE_SESSION"; payload?: { id?: string } }
   | { type: "SET_EXTENSION_ENABLED"; payload: { id: string; enabled: boolean } }
   | { type: "TEST_BACKEND"; payload: { backend: BackendType } };
 

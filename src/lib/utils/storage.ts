@@ -1,4 +1,4 @@
-import type { SyncSettings, SyncState, Tombstone } from "@/lib/types";
+import type { RemoteSessionEntry, SyncSettings, SyncState, Tombstone } from "@/lib/types";
 
 // ─── Device name detection ─────────────────────────────────────────────────
 
@@ -63,6 +63,7 @@ const KEYS = {
   BOOKMARK_TOMBSTONES: "synkro_bm_tombstones",
   HISTORY_CACHE: "synkro_hist_cache",
   TAB_CACHE: "synkro_tab_cache",
+  REMOTE_SESSIONS: "synkro_remote_sessions",
 } as const;
 
 // ─── Generic Helpers ───────────────────────────────────────────────────────
@@ -146,4 +147,40 @@ export async function getTabCache<T>(): Promise<T | null> {
 
 export async function setTabCache<T>(data: T): Promise<void> {
   await set(KEYS.TAB_CACHE, data);
+}
+
+// ─── Remote sessions (one per peer device) ──────────────────────────────────
+
+/**
+ * Normalizes the `synkro_remote_sessions` value into an array, newest first.
+ * Accepts the current device-keyed map, the legacy single-object shape, and
+ * empty/undefined. Pure so the popup can use it synchronously after a
+ * `chrome.storage.local.get` callback.
+ */
+export function normalizeRemoteSessions(raw: unknown): RemoteSessionEntry[] {
+  if (!raw || typeof raw !== "object") return [];
+  // Legacy single-object shape: { device_id, timestamp, session }
+  if ("session" in (raw as Record<string, unknown>)) {
+    const entry = raw as RemoteSessionEntry;
+    return entry.session?.tabs?.length ? [entry] : [];
+  }
+  // Current map shape: { [device_id]: RemoteSessionEntry }
+  return Object.values(raw as Record<string, RemoteSessionEntry>)
+    .filter((e) => e?.session?.tabs?.length)
+    .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+}
+
+export async function getRemoteSessions(): Promise<RemoteSessionEntry[]> {
+  const r = await chrome.storage.local.get(KEYS.REMOTE_SESSIONS);
+  return normalizeRemoteSessions(r[KEYS.REMOTE_SESSIONS]);
+}
+
+/** Upserts one peer's session into the device-keyed map (upgrades legacy shape). */
+export async function setRemoteSession(entry: RemoteSessionEntry): Promise<void> {
+  const r = await chrome.storage.local.get(KEYS.REMOTE_SESSIONS);
+  const cur = r[KEYS.REMOTE_SESSIONS] as Record<string, RemoteSessionEntry> | undefined;
+  const map: Record<string, RemoteSessionEntry> =
+    cur && typeof cur === "object" && !("session" in cur) ? { ...cur } : {};
+  map[entry.device_id] = entry;
+  await set(KEYS.REMOTE_SESSIONS, map);
 }
