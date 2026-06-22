@@ -15,18 +15,18 @@ on any Chromium browser.
 - Opt-in E2EE (AES-256-GCM); SHA-256 integrity, verified on download.
 - Three backends: Google Drive, GitHub (fine-grained PAT), WebDAV.
 - History / sessions / extensions data types; conflict-resolution UI.
+- **Drive OAuth refresh token (PKCE)** — survives past the ~1h token, no re-consent.
+- **Tests + lint + CI** — Vitest + ESLint + GitHub Actions (verify green after `npm install`).
 
 ## Next
-1. **Drive OAuth refresh token (PKCE)** — survive past the ~1h token without
-   re-consent on Brave/Helium/ungoogled. _(In flight — see SESSION_HANDOFF.)_
-2. **True multi-device merge (3+ devices)** — fold *all* peer files, not just the
+1. **True multi-device merge (3+ devices)** — fold *all* peer files, not just the
    newest one. The engine currently compares against a single remote packet.
-3. **Session-manager UI** — list and restore named sessions (engine + storage
+2. **Session-manager UI** — list and restore named sessions (engine + storage
    already support it; only the surface is missing).
-4. **Tests + lint + CI** — no automated checks yet; add Vitest + ESLint + a CI
-   workflow before the surface grows further.
-5. **Newest-version selection** for GitHub/WebDAV downloads (needs commit/mtime,
+3. **Newest-version selection** for GitHub/WebDAV downloads (needs commit/mtime,
    not directory-listing order).
+4. Broaden test coverage to the sync engine + bookmark merge (needs a fuller
+   chrome.bookmarks fake).
 
 ## Later / nice-to-have
 - Firefox support (`browser_specific_settings` + the `browser.*` polyfill).

@@ -60,6 +60,12 @@ The first working build, hardened over a review + fix pass. Highlights:
 - Unused deps (`zustand`, `webextension-polyfill`) and dead components
   (StatusBadge, SyncButton, DataTypeRow).
 
+### Tooling
+- **Vitest** suite (encryption, retry policy, conflict resolver, tombstone
+  helpers) with an in-memory chrome.* stub; **ESLint** flat config; **GitHub
+  Actions CI** (type-check + test on every push). Scripts: `test`, `test:watch`,
+  `lint`, `check`.
+
 ### Drive OAuth (refresh token)
 - Replaced the implicit grant (token died after ~1h, silent re-auth unreliable on
   Brave) with **PKCE authorization-code + refresh token** (new shared module

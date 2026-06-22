@@ -36,7 +36,10 @@
       (download() now excludes our own file; the engine still compares against a single peer)
 - [ ] **Session manager UI** — list/restore named sessions (engine + storage already support it)
 - [ ] Backend "newest version" selection on GitHub/WebDAV (needs commit/mtime, not list order)
-- [ ] Tests + lint + CI (none yet)
+- [x] **Tests + lint + CI** — Vitest (encryption, retry, conflict resolver,
+      tombstone helpers) + ESLint flat config + GitHub Actions CI. _Run
+      `npm install` once to pull the new devDeps and regenerate the lockfile,
+      then confirm `npm run test` / CI is green._
 
 ---
 
