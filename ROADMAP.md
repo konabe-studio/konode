@@ -29,11 +29,12 @@ on any Chromium browser.
   is correct on every backend. GitHub/WebDAV list files in arbitrary order; rather
   than per-backend commit/mtime lookups, ordering uses the same clock LWW already
   trusts.
+- **Sync-engine + bookmark-merge test coverage** — an in-memory `chrome.bookmarks`
+  fake drives `importBookmarks` (merge/replace/tombstone/folders) and
+  `SyncEngine.syncType` (pull → fold every peer → push merged) under Vitest.
 
 ## Next
-1. Broaden test coverage to the sync engine + bookmark merge (needs a fuller
-   chrome.bookmarks fake).
-2. Pre-publish QA: end-to-end test the **GitHub** and **WebDAV** backends (only
+1. Pre-publish QA: end-to-end test the **GitHub** and **WebDAV** backends (only
    Drive has been verified across devices so far).
 
 ## Later / nice-to-have
