@@ -18,15 +18,16 @@ on any Chromium browser.
 - **Drive OAuth refresh token (PKCE)** — survives past the ~1h token, no re-consent.
 - **Tests + lint + CI** — Vitest + ESLint + GitHub Actions (verify green after `npm install`).
 - **True multi-device merge (3+ devices)** — `downloadAll()` + fold every peer per sync.
+- **Session-manager UI** — the popup lists each peer device's session with a
+  per-device Restore button; `synkro_remote_sessions` is a device-keyed map so
+  sessions aggregate across all peers.
 
 ## Next
-1. **Session-manager UI** — list and restore named sessions (engine + storage
-   already support it; only the surface is missing).
-2. Aggregate extensions/sessions across all peers (bookmarks/history already merge
-   all; those display/restore types are still newest-peer-wins).
-3. **Newest-version selection** for GitHub/WebDAV downloads (needs commit/mtime,
+1. Aggregate **extensions** across all peers (bookmarks/history/sessions already
+   merge all; the extensions display type is still newest-peer-wins).
+2. **Newest-version selection** for GitHub/WebDAV downloads (needs commit/mtime,
    not directory-listing order).
-4. Broaden test coverage to the sync engine + bookmark merge (needs a fuller
+3. Broaden test coverage to the sync engine + bookmark merge (needs a fuller
    chrome.bookmarks fake).
 
 ## Later / nice-to-have

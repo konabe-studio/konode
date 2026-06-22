@@ -93,7 +93,8 @@ src/
 
 `synkro_settings`, `synkro_state`, `synkro_audit`, `synkro_bm_cache`,
 `synkro_bm_tombstones`, `synkro_gdrive_session`, `synkro_remote_extensions`,
-`synkro_remote_sessions`.
+`synkro_remote_sessions` (a `{ [device_id]: { device_id, timestamp, session } }`
+map — one stored session per peer device; legacy single-object shape still read).
 
 ## Conventions
 

@@ -22,6 +22,12 @@ The first working build, hardened over a review + fix pass. Highlights:
 - **Session restore** and **extension re-enable** message handlers; audit log
   mounted in the popup with a Clear action.
 - Onboarding requests optional permissions for the chosen data types.
+- **Session-manager UI** — the popup now lists the open-tab session of **each** peer
+  device (name, tab count, last-synced time) with a per-device Restore button,
+  instead of a single "Restore tabs from another device" button. Remote sessions are
+  stored device-keyed (`synkro_remote_sessions` is now a map), so every peer's
+  session survives instead of only the newest. Sessions carry the device label so
+  the list is human-readable.
 
 ### Changed
 - **Sync model**: pull peer file first (excluding our own), then for additive

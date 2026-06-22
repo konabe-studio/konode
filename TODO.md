@@ -36,9 +36,12 @@
       file; the engine folds them all in per sync (oldest→newest), so 3+ devices
       converge in one cycle. Per-strategy deletion handling lives in the bookmark
       merge. (Cost scales with device count — N peer fetches per data type/sync.)
-- [ ] **Session manager UI** — list/restore named sessions (engine + storage already support it)
-- [ ] Aggregate extensions/sessions across *all* peers (currently newest-peer-wins
-      for those display/restore types; bookmarks/history already merge all)
+- [x] **Session manager UI** — popup lists each peer device's session (name, tab
+      count, last-synced) with a per-device Restore button. `synkro_remote_sessions`
+      is now a device-keyed map, so every peer's session survives (sessions now
+      aggregate across all peers, not newest-peer-wins).
+- [ ] Aggregate **extensions** across *all* peers (still newest-peer-wins for the
+      extensions display type; bookmarks/history/sessions already merge all)
 - [ ] Backend "newest version" selection on GitHub/WebDAV (needs commit/mtime, not list order)
 - [x] **Tests + lint + CI** — Vitest (encryption, retry, conflict resolver,
       tombstone helpers) + ESLint flat config + GitHub Actions CI. _Run
