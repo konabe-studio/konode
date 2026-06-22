@@ -24,13 +24,16 @@ on any Chromium browser.
 - **Cross-peer data merge for every type** — extensions now aggregate across all
   peers too (`synkro_remote_extensions` is device-keyed; the popup unions the lists),
   so bookmarks, history, sessions and extensions all merge across all devices.
+- **Newest-peer ordering** — the engine sorts peers newest-first by packet
+  `timestamp` (`orderPeersByTime`), so `peers[0]` (the LWW/manual-conflict baseline)
+  is correct on every backend. GitHub/WebDAV list files in arbitrary order; rather
+  than per-backend commit/mtime lookups, ordering uses the same clock LWW already
+  trusts.
 
 ## Next
-1. **Newest-version selection** for GitHub/WebDAV downloads (needs commit/mtime,
-   not directory-listing order).
-2. Broaden test coverage to the sync engine + bookmark merge (needs a fuller
+1. Broaden test coverage to the sync engine + bookmark merge (needs a fuller
    chrome.bookmarks fake).
-3. Pre-publish QA: end-to-end test the **GitHub** and **WebDAV** backends (only
+2. Pre-publish QA: end-to-end test the **GitHub** and **WebDAV** backends (only
    Drive has been verified across devices so far).
 
 ## Later / nice-to-have

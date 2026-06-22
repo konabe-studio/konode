@@ -42,6 +42,11 @@ The first working build, hardened over a review + fix pass. Highlights:
   converge in one cycle instead of relying on slow transitive propagation.
   Per-strategy deletion handling stays inside the bookmark merge; prefer-local now
   consistently adds peers' new bookmarks while ignoring their deletions.
+- **Newest-peer ordering**: the engine now sorts downloaded peer packets newest-first
+  by their `timestamp` (`orderPeersByTime`) before resolving conflicts and folding
+  them in. GitHub and WebDAV list files in arbitrary order, so `peers[0]` (the LWW /
+  manual-conflict baseline) was previously an arbitrary peer rather than the most
+  recent one. Uses the same clock LWW relies on — no per-backend commit/mtime lookups.
 - **Near-instant sync-on-change** (~1s debounced fast path) with a 30s backstop
   alarm; periodic pull floor lowered from 60s to Chrome's real 30s minimum.
 - Integrity: checksums are now **SHA-256** (was a mislabeled djb2) and **verified
