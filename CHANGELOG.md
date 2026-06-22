@@ -60,7 +60,12 @@ The first working build, hardened over a review + fix pass. Highlights:
 - Unused deps (`zustand`, `webextension-polyfill`) and dead components
   (StatusBadge, SyncButton, DataTypeRow).
 
-### In progress
-- Drive OAuth: replacing implicit-grant + silent re-auth (unreliable on Brave)
-  with PKCE auth-code → **refresh token** so background sync survives indefinitely
-  without re-consent. See `SESSION_HANDOFF.md`.
+### Drive OAuth (refresh token)
+- Replaced the implicit grant (token died after ~1h, silent re-auth unreliable on
+  Brave) with **PKCE authorization-code + refresh token** (new shared module
+  `lib/backends/gdrive-oauth.ts`). One interactive consent stores a refresh token;
+  access tokens then refresh via a plain POST — no UI, no browser session — so
+  background sync survives indefinitely on every Chromium browser. backend +
+  options + onboarding share the one implementation.
+- _Needs runtime verification (re-sign-in required to mint the first refresh
+  token). See `SESSION_HANDOFF.md`._

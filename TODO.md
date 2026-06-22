@@ -25,10 +25,11 @@
 
 ## 🔜 Next
 
-- [x] **OAuth renewal** — silent re-auth (launchWebAuthFlow interactive:false +
-      prompt=none) keeps Drive background sync alive past the ~1h token expiry.
-      (Full auth-code + PKCE refresh token remains a future hardening, but needs
-      Google Cloud Console reconfiguration.)
+- [x] **OAuth refresh (Drive)** — PKCE auth-code + refresh token
+      (`lib/backends/gdrive-oauth.ts`). Background sync renews silently past the
+      ~1h expiry on every Chromium browser. (Silent re-auth via prompt=none was
+      tried first and failed on Brave.) _Needs runtime verification — re-sign-in
+      required to mint the first refresh token._
 - [x] Bookmark deletion sync (tombstones); near-instant sync-on-change; 30s pull
       floor; SW ensureInit so sync works with the worker cold.
 - [ ] **True multi-device merge** — fold *all* peer files, not just the newest one

@@ -40,7 +40,7 @@ src/
 ├── onboarding/   App.tsx          (first-run wizard)
 └── lib/
     ├── types.ts                   all shared types (SyncPacket, BookmarkPayload, Tombstone, messages…)
-    ├── backends/  abstract-backend (factory + IBackend) · gdrive · github · webdav
+    ├── backends/  abstract-backend (factory + IBackend) · gdrive · gdrive-oauth (PKCE+refresh) · github · webdav
     ├── handlers/  bookmarks · history · tabs · extensions   (export/import per data type)
     ├── sync/      sync-engine (orchestration, E2EE, conflicts) · conflict-resolver
     ├── crypto/    encryption.ts   (AES-256-GCM, PBKDF2 600k, sha256)
@@ -82,7 +82,12 @@ src/
   faster; receiving-side latency ≈ up to one interval. Editing device uploads in
   ~1s (debounced fast path + 30s backstop alarm).
 - `chrome.identity.getAuthToken` works only on real Chrome — **not** Brave/Helium/
-  ungoogled (no Google integration). Those need the web auth flow.
+  ungoogled. So Drive uses the **PKCE authorization-code flow** via
+  `launchWebAuthFlow` (`lib/backends/gdrive-oauth.ts`): one interactive consent →
+  **refresh token**, then access tokens refresh via a plain POST (no UI, no
+  browser session). Implicit grant + silent `prompt=none` was tried first and
+  fails on Brave (can't reach the Google session). The Web-app `client_secret`
+  ships embedded (non-confidential for an installed app; rotatable in the console).
 
 ## Storage keys (`chrome.storage.local`)
 
