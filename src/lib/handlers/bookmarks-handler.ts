@@ -29,13 +29,13 @@ const TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
 // during a merge must not be mistaken for user deletions).
 let importing = false;
 
-function toDeletedMap(list: Tombstone[]): Map<string, number> {
+export function toDeletedMap(list: Tombstone[]): Map<string, number> {
   const m = new Map<string, number>();
   for (const t of list) m.set(t.url, Math.max(m.get(t.url) ?? 0, t.deletedAt));
   return m;
 }
 
-function gcTombstones(list: Tombstone[]): Tombstone[] {
+export function gcTombstones(list: Tombstone[]): Tombstone[] {
   const cutoff = Date.now() - TOMBSTONE_TTL_MS;
   const byUrl = new Map<string, number>();
   for (const t of list) {
@@ -45,7 +45,7 @@ function gcTombstones(list: Tombstone[]): Tombstone[] {
   return [...byUrl].map(([url, deletedAt]) => ({ url, deletedAt }));
 }
 
-function mergeTombstoneLists(a: Tombstone[], b: Tombstone[]): Tombstone[] {
+export function mergeTombstoneLists(a: Tombstone[], b: Tombstone[]): Tombstone[] {
   return gcTombstones([...a, ...b]);
 }
 
@@ -74,7 +74,7 @@ export async function exportBookmarkPayload(): Promise<BookmarkPayload> {
 }
 
 /** Normalize a parsed bookmark payload (supports the legacy bare-array format). */
-function normalizePayload(payload: unknown): BookmarkPayload {
+export function normalizePayload(payload: unknown): BookmarkPayload {
   if (Array.isArray(payload)) return { tree: payload as SyncBookmark[], tombstones: [] };
   const p = (payload ?? {}) as Partial<BookmarkPayload>;
   return { tree: p.tree ?? [], tombstones: p.tombstones ?? [] };
