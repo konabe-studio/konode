@@ -1,10 +1,16 @@
-import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession } from "@/lib/types";
+import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncExtension } from "@/lib/types";
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { exportBookmarkPayload, importBookmarks } from "@/lib/handlers/bookmarks-handler";
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
 import { exportHistory, importHistory } from "@/lib/handlers/history-handler";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
-import { getState, setState, getRemoteSessions, setRemoteSession } from "@/lib/utils/storage";
+import {
+  getState,
+  setState,
+  getRemoteSessions,
+  setRemoteSession,
+  setRemoteExtensions,
+} from "@/lib/utils/storage";
 import { logger } from "@/lib/utils/logger";
 import { encrypt, decrypt, sha256 } from "@/lib/crypto/encryption";
 import { ConflictResolver, notifyConflict } from "./conflict-resolver";
@@ -304,19 +310,22 @@ export class SyncEngine {
         });
         logger.info("applyRemote", `Stored remote session for ${meta.device_id}`);
         break;
-      case "extensions":
-        await chrome.storage.local.set({
-          synkro_remote_extensions: {
-            device_id: meta.device_id,
-            timestamp: meta.timestamp,
-            extensions: payload,
-          },
+      case "extensions": {
+        // Store per device (keyed by device_id) so the popup can union every peer's
+        // list — "missing on this device" then reflects extensions installed on ANY
+        // peer, not just the newest one.
+        const extensions = (payload as SyncExtension[]) ?? [];
+        await setRemoteExtensions({
+          device_id: meta.device_id,
+          timestamp: meta.timestamp,
+          extensions,
         });
         logger.info(
           "applyRemote",
-          `Stored remote extensions list (${Array.isArray(payload) ? payload.length : 0} items)`
+          `Stored remote extensions for ${meta.device_id} (${extensions.length} items)`
         );
         break;
+      }
     }
   }
 

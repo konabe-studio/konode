@@ -1,4 +1,11 @@
-import type { RemoteSessionEntry, SyncSettings, SyncState, Tombstone } from "@/lib/types";
+import type {
+  RemoteExtensionEntry,
+  RemoteSessionEntry,
+  SyncExtension,
+  SyncSettings,
+  SyncState,
+  Tombstone,
+} from "@/lib/types";
 
 // ─── Device name detection ─────────────────────────────────────────────────
 
@@ -64,6 +71,7 @@ const KEYS = {
   HISTORY_CACHE: "synkro_hist_cache",
   TAB_CACHE: "synkro_tab_cache",
   REMOTE_SESSIONS: "synkro_remote_sessions",
+  REMOTE_EXTENSIONS: "synkro_remote_extensions",
 } as const;
 
 // ─── Generic Helpers ───────────────────────────────────────────────────────
@@ -183,4 +191,37 @@ export async function setRemoteSession(entry: RemoteSessionEntry): Promise<void>
     cur && typeof cur === "object" && !("session" in cur) ? { ...cur } : {};
   map[entry.device_id] = entry;
   await set(KEYS.REMOTE_SESSIONS, map);
+}
+
+// ─── Remote extensions (aggregated across all peers) ────────────────────────
+
+/**
+ * Normalizes the `synkro_remote_extensions` value into a **deduped union** of every
+ * peer device's installed-extension list (first occurrence per id wins). Accepts the
+ * current device-keyed map, the legacy single-object shape, and empty/undefined.
+ * Pure so the popup can use it synchronously after a `chrome.storage.local.get`.
+ */
+export function normalizeRemoteExtensions(raw: unknown): SyncExtension[] {
+  if (!raw || typeof raw !== "object") return [];
+  const entries: RemoteExtensionEntry[] =
+    "extensions" in (raw as Record<string, unknown>)
+      ? [raw as RemoteExtensionEntry] // legacy single-object shape
+      : Object.values(raw as Record<string, RemoteExtensionEntry>); // device-keyed map
+  const byId = new Map<string, SyncExtension>();
+  for (const entry of entries) {
+    for (const ext of entry?.extensions ?? []) {
+      if (ext?.id && !byId.has(ext.id)) byId.set(ext.id, ext);
+    }
+  }
+  return [...byId.values()];
+}
+
+/** Upserts one peer's extension list into the device-keyed map (upgrades legacy shape). */
+export async function setRemoteExtensions(entry: RemoteExtensionEntry): Promise<void> {
+  const r = await chrome.storage.local.get(KEYS.REMOTE_EXTENSIONS);
+  const cur = r[KEYS.REMOTE_EXTENSIONS] as Record<string, RemoteExtensionEntry> | undefined;
+  const map: Record<string, RemoteExtensionEntry> =
+    cur && typeof cur === "object" && !("extensions" in cur) ? { ...cur } : {};
+  map[entry.device_id] = entry;
+  await set(KEYS.REMOTE_EXTENSIONS, map);
 }

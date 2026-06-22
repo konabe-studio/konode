@@ -89,6 +89,13 @@ export interface SyncExtension {
   type: "extension" | "theme" | "app";
 }
 
+/** A peer device's stored extension list, keyed by device_id in `synkro_remote_extensions`. */
+export interface RemoteExtensionEntry {
+  device_id: string;
+  timestamp: string; // ISO-8601, from SyncPacket.timestamp
+  extensions: SyncExtension[];
+}
+
 export interface BackendConfig {
   type: BackendType;
   label: string;

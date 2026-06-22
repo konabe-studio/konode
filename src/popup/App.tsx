@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { SyncState, SyncSettings, DataType, SyncExtension, RemoteSessionEntry } from "@/lib/types";
 import { sendMessage } from "@/lib/utils/messaging";
-import { normalizeRemoteSessions } from "@/lib/utils/storage";
+import { normalizeRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/storage";
 import { AuditLog } from "./components/AuditLog";
 import {
   RefreshCw, Settings, Bookmark, Clock, Globe,
@@ -93,8 +93,9 @@ export default function PopupApp() {
     load();
 
     chrome.storage.local.get("synkro_remote_extensions", (r) => {
-      const remote = r["synkro_remote_extensions"]?.extensions as SyncExtension[] | undefined;
-      if (!remote?.length) return;
+      // Union of every peer device's extension list (deduped by id).
+      const remote = normalizeRemoteExtensions(r["synkro_remote_extensions"]);
+      if (!remote.length) return;
       // "management" is an optional permission now — only query if it was granted.
       chrome.permissions.contains({ permissions: ["management"] }, (hasMgmt) => {
         if (!hasMgmt) return;
