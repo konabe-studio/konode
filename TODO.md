@@ -32,9 +32,13 @@
       required to mint the first refresh token._
 - [x] Bookmark deletion sync (tombstones); near-instant sync-on-change; 30s pull
       floor; SW ensureInit so sync works with the worker cold.
-- [ ] **True multi-device merge** — fold *all* peer files, not just the newest one
-      (download() now excludes our own file; the engine still compares against a single peer)
+- [x] **True multi-device merge** — `IBackend.downloadAll()` returns every peer
+      file; the engine folds them all in per sync (oldest→newest), so 3+ devices
+      converge in one cycle. Per-strategy deletion handling lives in the bookmark
+      merge. (Cost scales with device count — N peer fetches per data type/sync.)
 - [ ] **Session manager UI** — list/restore named sessions (engine + storage already support it)
+- [ ] Aggregate extensions/sessions across *all* peers (currently newest-peer-wins
+      for those display/restore types; bookmarks/history already merge all)
 - [ ] Backend "newest version" selection on GitHub/WebDAV (needs commit/mtime, not list order)
 - [x] **Tests + lint + CI** — Vitest (encryption, retry, conflict resolver,
       tombstone helpers) + ESLint flat config + GitHub Actions CI. _Run

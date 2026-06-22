@@ -17,12 +17,13 @@ on any Chromium browser.
 - History / sessions / extensions data types; conflict-resolution UI.
 - **Drive OAuth refresh token (PKCE)** — survives past the ~1h token, no re-consent.
 - **Tests + lint + CI** — Vitest + ESLint + GitHub Actions (verify green after `npm install`).
+- **True multi-device merge (3+ devices)** — `downloadAll()` + fold every peer per sync.
 
 ## Next
-1. **True multi-device merge (3+ devices)** — fold *all* peer files, not just the
-   newest one. The engine currently compares against a single remote packet.
-2. **Session-manager UI** — list and restore named sessions (engine + storage
+1. **Session-manager UI** — list and restore named sessions (engine + storage
    already support it; only the surface is missing).
+2. Aggregate extensions/sessions across all peers (bookmarks/history already merge
+   all; those display/restore types are still newest-peer-wins).
 3. **Newest-version selection** for GitHub/WebDAV downloads (needs commit/mtime,
    not directory-listing order).
 4. Broaden test coverage to the sync engine + bookmark merge (needs a fuller

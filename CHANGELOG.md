@@ -27,6 +27,11 @@ The first working build, hardened over a review + fix pass. Highlights:
 - **Sync model**: pull peer file first (excluding our own), then for additive
   data types always merge the peer in and push the merged result — fixes "remote
   changes never arrived" under Last Write Wins.
+- **Multi-device merge**: `IBackend.download` → `downloadAll`, returning every
+  peer file; the engine folds them all in per sync (oldest→newest) so 3+ devices
+  converge in one cycle instead of relying on slow transitive propagation.
+  Per-strategy deletion handling stays inside the bookmark merge; prefer-local now
+  consistently adds peers' new bookmarks while ignoring their deletions.
 - **Near-instant sync-on-change** (~1s debounced fast path) with a 30s backstop
   alarm; periodic pull floor lowered from 60s to Chrome's real 30s minimum.
 - Integrity: checksums are now **SHA-256** (was a mislabeled djb2) and **verified

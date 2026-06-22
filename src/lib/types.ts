@@ -155,8 +155,9 @@ export interface IBackend {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   upload(packet: SyncPacket): Promise<void>;
-  // excludeDeviceId: skip the caller's own file so we always pull a peer's data.
-  download(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket | null>;
+  // All peer packets (newest first where the backend can order), excluding the
+  // caller's own file — so the engine can merge across every device, not just one.
+  downloadAll(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket[]>;
   listVersions(data_type: DataType): Promise<string[]>;
   testConnection(): Promise<{ ok: boolean; message: string }>;
 }

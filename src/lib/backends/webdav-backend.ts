@@ -61,7 +61,7 @@ export class WebDAVBackend implements IBackend {
     });
   }
 
-  async download(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket | null> {
+  async downloadAll(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket[]> {
     return withRetry(async () => {
       // PROPFIND to list files in folder
       const res = await fetch(this.baseUrl + "/", {
@@ -70,7 +70,7 @@ export class WebDAVBackend implements IBackend {
         body: `<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/></d:prop></d:propfind>`,
       });
 
-      if (!res.ok) return null;
+      if (!res.ok) return [];
 
       const xml = await res.text();
       // Extract hrefs from PROPFIND response. Match any namespace prefix
@@ -80,17 +80,15 @@ export class WebDAVBackend implements IBackend {
         .map(m => m[1])
         .filter(h => h.includes(`synkro_${data_type}_`) && h.endsWith(".json") && (!own || !h.endsWith(own)));
 
-      if (!hrefs.length) return null;
-
-      // Pick the most recent by filename (contains device_id, sorted by modification time ideally)
-      const fileUrl = hrefs[hrefs.length - 1];
-      const fullUrl = fileUrl.startsWith("http") ? fileUrl : new URL(fileUrl, this.w.url).href;
-
-      const fileRes = await fetch(fullUrl, {
-        headers: { Authorization: `Basic ${btoa(`${this.w.username}:${this.w.password}`)}` },
-      });
-      if (!fileRes.ok) return null;
-      return fileRes.json() as Promise<SyncPacket>;
+      const packets: SyncPacket[] = [];
+      for (const href of hrefs) {
+        const fullUrl = href.startsWith("http") ? href : new URL(href, this.w.url).href;
+        const r = await fetch(fullUrl, {
+          headers: { Authorization: `Basic ${btoa(`${this.w.username}:${this.w.password}`)}` },
+        });
+        if (r.ok) packets.push((await r.json()) as SyncPacket);
+      }
+      return packets;
     });
   }
 

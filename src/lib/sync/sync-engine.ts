@@ -91,57 +91,49 @@ export class SyncEngine {
     logger.info("SyncEngine", `Syncing: ${dataType}`);
 
     try {
-      // 1. PULL remote first — always. Exclude our own file so we compare
-      //    against a peer's data instead of re-reading what we just uploaded.
-      const remote = await backend.download(dataType, this.settings.device_id);
+      // 1. PULL every peer's file (excluding our own), so we converge against
+      //    ALL devices in one cycle — not just the most recent one.
+      const peers = await backend.downloadAll(dataType, this.settings.device_id);
 
       // 2. Build local payload
       const localPayload = await this.buildPayload(dataType);
       const isEmpty = this.isPayloadEmpty(dataType, localPayload);
 
-      // 3. Decide flow based on state
-      if (remote && remote.device_id !== this.settings.device_id) {
-        // Remote exists from another device
-        if (isEmpty) {
-          // Fresh device → replace entire structure
-          logger.info("SyncEngine", `${dataType}: fresh device, applying remote`);
-          await this.applyRemote(dataType, remote, true);
-          const freshPayload = await this.buildPayload(dataType);
-          if (!this.isPayloadEmpty(dataType, freshPayload)) {
-            await backend.upload(await this.buildPacket(dataType, freshPayload));
-          }
-        } else if (this.settings.conflict_strategy === "manual") {
-          // Manual: queue the conflict for the user to resolve from the popup.
-          const localPacket = await this.buildPacket(dataType, localPayload);
-          const { conflict } = this.resolver.resolve(localPacket, remote);
-          if (conflict) {
-            const currentState = await getState();
-            await setState({
-              status: "conflict",
-              pending_conflicts: [...currentState.pending_conflicts, conflict],
-            });
-            if (this.settings.notifications_enabled) notifyConflict(dataType);
-          }
+      // 3. Decide flow
+      if (peers.length === 0) {
+        // No peers yet — push our own data if we have any.
+        if (!isEmpty) {
+          await backend.upload(await this.buildPacket(dataType, localPayload));
         } else {
-          // Auto-resolve. applyRemote is NON-destructive for every current data
-          // type (bookmarks/history merge additively by URL; sessions/extensions
-          // are just stored for display/restore), so — unless the user explicitly
-          // chose "prefer-local" — always pull the peer's data in, then push the
-          // merged result. Without this, LWW always picked the local packet (its
-          // timestamp is the sync time, i.e. "now"), so remote additions from
-          // another device never arrived.
-          if (this.settings.conflict_strategy !== "prefer-local") {
-            await this.applyRemote(dataType, remote, false);
-          }
-          const mergedPayload = await this.buildPayload(dataType);
-          await backend.upload(await this.buildPacket(dataType, mergedPayload));
+          logger.info("SyncEngine", `${dataType}: nothing to sync`);
         }
-      } else if (!isEmpty) {
-        // No remote from other device, but we have local data → push
-        await backend.upload(await this.buildPacket(dataType, localPayload));
+      } else if (!isEmpty && this.settings.conflict_strategy === "manual") {
+        // Manual: queue a conflict against the newest peer for the popup to resolve.
+        const localPacket = await this.buildPacket(dataType, localPayload);
+        const { conflict } = this.resolver.resolve(localPacket, peers[0]);
+        if (conflict) {
+          const currentState = await getState();
+          await setState({
+            status: "conflict",
+            pending_conflicts: [...currentState.pending_conflicts, conflict],
+          });
+          if (this.settings.notifications_enabled) notifyConflict(dataType);
+        }
       } else {
-        // Both empty — nothing to do
-        logger.info("SyncEngine", `${dataType}: nothing to sync`);
+        // Auto-resolve across ALL peers. applyRemote is non-destructive for every
+        // data type (bookmarks/history merge additively + tombstones; sessions/
+        // extensions are stored for display/restore), so fold each peer in — this
+        // is what makes 3+ devices converge in a single cycle. Apply oldest→newest
+        // so any snapshot-style store ends on the most recent peer. Per-strategy
+        // deletion handling (lww/prefer-local/prefer-remote) lives inside the
+        // bookmark merge.
+        for (const peer of [...peers].reverse()) {
+          await this.applyRemote(dataType, peer, false);
+        }
+        const merged = await this.buildPayload(dataType);
+        if (!this.isPayloadEmpty(dataType, merged)) {
+          await backend.upload(await this.buildPacket(dataType, merged));
+        }
       }
 
       // 4. Update sync count

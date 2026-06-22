@@ -119,7 +119,7 @@ export class GDriveBackend implements IBackend {
     });
   }
 
-  async download(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket | null> {
+  async downloadAll(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket[]> {
     return withRetry(async () => {
       const folderId = this.folderId ?? (await this.ensureFolder());
       const h = await this.authHeaders();
@@ -127,14 +127,16 @@ export class GDriveBackend implements IBackend {
       const listRes = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`, { headers: h });
       if (!listRes.ok) throw new HttpError(listRes.status, `Drive list failed: ${listRes.status}`);
       const { files } = await listRes.json();
-      if (!files?.length) return null;
-      // Skip this device's own file so we always compare against a peer's data.
+      if (!files?.length) return [];
+      // Every peer file (newest first), minus our own.
       const own = excludeDeviceId ? `synkro_${data_type}_${excludeDeviceId}.json` : null;
-      const pick = (files as Array<{ id: string; name: string }>).find((f) => f.name !== own);
-      if (!pick) return null;
-      const fileRes = await fetch(`${DRIVE_API}/files/${pick.id}?alt=media`, { headers: h });
-      if (!fileRes.ok) throw new HttpError(fileRes.status, `Drive download failed: ${fileRes.status}`);
-      return fileRes.json() as Promise<SyncPacket>;
+      const peers = (files as Array<{ id: string; name: string }>).filter((f) => f.name !== own);
+      const packets: SyncPacket[] = [];
+      for (const f of peers) {
+        const r = await fetch(`${DRIVE_API}/files/${f.id}?alt=media`, { headers: h });
+        if (r.ok) packets.push((await r.json()) as SyncPacket);
+      }
+      return packets;
     });
   }
 
