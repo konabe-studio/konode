@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import type { SyncSettings, BackendType, DataType, BackendConfig, SyncExtension } from "@/lib/types";
 import { sendMessage } from "@/lib/utils/messaging";
+import { interactiveSignIn } from "@/lib/backends/gdrive-oauth";
 import {
   Cloud, Github, Server, Bookmark, Clock,
   Globe, Puzzle, AlertTriangle, CheckCircle2, XCircle,
@@ -81,9 +82,10 @@ export default function OptionsApp() {
   useEffect(() => {
     load();
     chrome.storage.local.get("synkro_gdrive_session", (r) => {
+      // A stored session means we have a refresh token — show the account
+      // regardless of access-token age (it renews silently).
       const s = r["synkro_gdrive_session"];
-      if (!s || Date.now() - s.savedAt > 50 * 60 * 1000) return;
-      setGdriveUser({ email: s.email, displayName: s.displayName });
+      if (s) setGdriveUser({ email: s.email ?? "", displayName: s.displayName ?? "" });
     });
     chrome.storage.local.get("synkro_remote_extensions", (r) => {
       if (r["synkro_remote_extensions"]?.extensions) {
@@ -177,38 +179,19 @@ export default function OptionsApp() {
 
   // ─── Google Drive OAuth ────────────────────────────────────────────────
 
-  const connectGDrive = () => {
+  const connectGDrive = async () => {
     setGdriveConnecting(true); setGdriveError(null);
-    const CLIENT_ID = "290320131573-2d68ltqjda1ucdfgi3k6pj3e2fb18lnq.apps.googleusercontent.com";
-    const redirectUrl = chrome.identity.getRedirectURL("gdrive");
-    const authUrl =
-      `https://accounts.google.com/o/oauth2/auth?client_id=${CLIENT_ID}` +
-      `&response_type=token&redirect_uri=${encodeURIComponent(redirectUrl)}` +
-      `&scope=${encodeURIComponent("https://www.googleapis.com/auth/drive.file")}&prompt=consent`;
-
-    chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, async (responseUrl) => {
-      if (chrome.runtime.lastError || !responseUrl) {
-        setGdriveError(chrome.runtime.lastError?.message ?? "Cancelled");
-        setGdriveConnecting(false); return;
-      }
-      try {
-        const token = new URLSearchParams(new URL(responseUrl).hash.slice(1)).get("access_token");
-        if (!token) throw new Error("No token received");
-        const res = await fetch("https://www.googleapis.com/drive/v3/about?fields=user", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error(`Google API error: ${res.status}`);
-        const data = await res.json();
-        const user = { email: data.user?.emailAddress ?? "", displayName: data.user?.displayName ?? "" };
-        setGdriveUser(user);
-        chrome.storage.local.set({ synkro_gdrive_session: { ...user, token, savedAt: Date.now() } });
-        update({ active_backend: "gdrive" });
-      } catch (err) {
-        setGdriveError(err instanceof Error ? err.message : "Connection failed");
-      } finally {
-        setGdriveConnecting(false);
-      }
-    });
+    try {
+      // One interactive consent (PKCE auth-code) → stores a refresh token, so
+      // background sync renews silently afterwards. See lib/backends/gdrive-oauth.
+      const s = await interactiveSignIn();
+      setGdriveUser({ email: s.email, displayName: s.displayName });
+      update({ active_backend: "gdrive" });
+    } catch (err) {
+      setGdriveError(err instanceof Error ? err.message : "Connection failed");
+    } finally {
+      setGdriveConnecting(false);
+    }
   };
 
   const disconnectGDrive = () => {

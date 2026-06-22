@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { sendMessage } from "@/lib/utils/messaging";
+import { interactiveSignIn } from "@/lib/backends/gdrive-oauth";
 import type { BackendType, SyncSettings } from "@/lib/types";
 import {
   Radio, Cloud, Server, Github, Bookmark,
@@ -108,13 +109,8 @@ export default function OnboardingApp() {
 
       const backends = [];
       if (backend === "gdrive") {
-        const session = await new Promise<{ token: string; email: string; displayName: string } | null>((resolve) => {
-          chrome.storage.local.get("synkro_gdrive_session", (r) => resolve(r["synkro_gdrive_session"] ?? null));
-        });
+        // The session (incl. refresh token) was already persisted by connectGDrive.
         backends.push({ type: "gdrive" as const, label: "Google Drive", enabled: true, gdrive: {} });
-        if (session) {
-          chrome.storage.local.set({ synkro_gdrive_session: session });
-        }
       } else if (backend === "github") {
         backends.push({
           type: "github" as const, label: "GitHub", enabled: true,
@@ -148,34 +144,17 @@ export default function OnboardingApp() {
 
   const connectGDrive = () => {
     setGdriveConnecting(true); setGdriveError(null);
-    const CLIENT_ID = "290320131573-2d68ltqjda1ucdfgi3k6pj3e2fb18lnq.apps.googleusercontent.com";
-    const redirectUrl = chrome.identity.getRedirectURL("gdrive");
-    const authUrl =
-      `https://accounts.google.com/o/oauth2/auth?client_id=${CLIENT_ID}` +
-      `&response_type=token&redirect_uri=${encodeURIComponent(redirectUrl)}` +
-      `&scope=${encodeURIComponent("https://www.googleapis.com/auth/drive.file")}&prompt=consent`;
-
-    chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, async (responseUrl) => {
-      if (chrome.runtime.lastError || !responseUrl) {
-        setGdriveError(chrome.runtime.lastError?.message ?? "Cancelled");
-        setGdriveConnecting(false); return;
-      }
+    void (async () => {
       try {
-        const token = new URLSearchParams(new URL(responseUrl).hash.slice(1)).get("access_token");
-        if (!token) throw new Error("No token");
-        const res = await fetch("https://www.googleapis.com/drive/v3/about?fields=user", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        const user = { email: data.user?.emailAddress ?? "", displayName: data.user?.displayName ?? "" };
-        setGdriveUser(user);
-        chrome.storage.local.set({ synkro_gdrive_session: { ...user, token, savedAt: Date.now() } });
+        // PKCE auth-code consent → stores a refresh token (see lib/backends/gdrive-oauth).
+        const s = await interactiveSignIn();
+        setGdriveUser({ email: s.email, displayName: s.displayName });
       } catch (err) {
         setGdriveError(err instanceof Error ? err.message : "Failed");
       } finally {
         setGdriveConnecting(false);
       }
-    });
+    })();
   };
 
   // ─── GitHub token verify ───────────────────────────────────────────────
