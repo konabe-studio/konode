@@ -38,8 +38,14 @@ function makeChrome() {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/* eslint-disable @typescript-eslint/no-explicit-any */
 (globalThis as any).chrome = makeChrome();
+
+// storage.ts computes DEFAULT_SETTINGS at module load via detectDeviceName(),
+// which reads navigator.userAgent — not defined in Vitest's Node env (Node < 21).
+if (typeof navigator === "undefined") {
+  (globalThis as any).navigator = { userAgent: "Synkro Test (Windows NT 10.0)" };
+}
 
 beforeEach(() => {
   store.clear();
