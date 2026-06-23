@@ -68,6 +68,7 @@ export class WebDAVBackend implements IBackend {
         method: "PROPFIND",
         headers: { ...this.headers(), Depth: "1" },
         body: `<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/></d:prop></d:propfind>`,
+        cache: "no-store",
       });
 
       if (!res.ok) return [];
@@ -85,6 +86,7 @@ export class WebDAVBackend implements IBackend {
         const fullUrl = href.startsWith("http") ? href : new URL(href, this.w.url).href;
         const r = await fetch(fullUrl, {
           headers: { Authorization: `Basic ${btoa(`${this.w.username}:${this.w.password}`)}` },
+          cache: "no-store", // avoid a stale peer file from the browser HTTP cache
         });
         if (r.ok) packets.push((await r.json()) as SyncPacket);
       }

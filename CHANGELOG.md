@@ -45,8 +45,9 @@ The first working build, hardened over a review + fix pass. Highlights:
 - **GitHub upload 409 fixed at the root**: GitHub sends `Cache-Control: max-age=60`
   on contents reads, so the browser HTTP cache returned a *stale* SHA for up to a
   minute after a write — every PUT (and every retry) then 409'd with "…does not
-  match". Reads now use `cache: "no-store"`, the SHA is re-read on each attempt, and
-  a 409 is retried with exponential backoff (up to 5 attempts).
+  match". All backend reads (GitHub, WebDAV, Drive) now use `cache: "no-store"` so a
+  peer file / SHA is always fresh; the GitHub SHA is re-read on each attempt and a 409
+  is retried with exponential backoff (up to 5 attempts).
 - **No redundant uploads**: each data type now records the checksum it last uploaded
   and skips the upload when nothing changed — so a sync that finds nothing new no
   longer writes a fresh commit every interval (which also removed the main 409

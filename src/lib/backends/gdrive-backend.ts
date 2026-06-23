@@ -124,7 +124,7 @@ export class GDriveBackend implements IBackend {
       const folderId = this.folderId ?? (await this.ensureFolder());
       const h = await this.authHeaders();
       const q = encodeURIComponent(`name contains 'synkro_${data_type}_' and '${folderId}' in parents and trashed=false`);
-      const listRes = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`, { headers: h });
+      const listRes = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`, { headers: h, cache: "no-store" });
       if (!listRes.ok) throw new HttpError(listRes.status, `Drive list failed: ${listRes.status}`);
       const { files } = await listRes.json();
       if (!files?.length) return [];
@@ -133,7 +133,7 @@ export class GDriveBackend implements IBackend {
       const peers = (files as Array<{ id: string; name: string }>).filter((f) => f.name !== own);
       const packets: SyncPacket[] = [];
       for (const f of peers) {
-        const r = await fetch(`${DRIVE_API}/files/${f.id}?alt=media`, { headers: h });
+        const r = await fetch(`${DRIVE_API}/files/${f.id}?alt=media`, { headers: h, cache: "no-store" });
         if (r.ok) packets.push((await r.json()) as SyncPacket);
       }
       return packets;
