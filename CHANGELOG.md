@@ -54,6 +54,11 @@ The first working build, hardened over a review + fix pass. Highlights:
   trigger). Made the bookmark payload deterministic (a missing `dateAdded`, e.g. on
   the root node, now falls back to `0` instead of `Date.now()`) so an unchanged tree
   hashes identically across syncs and devices.
+- **Resilient downloads**: a single corrupt or partially-written remote file (e.g.
+  trailing bytes after the JSON — "Unexpected non-whitespace character after JSON")
+  no longer aborts the whole sync. Each backend skips a file it can't parse, and the
+  engine skips any peer whose file fails to apply (parse / checksum / import), folding
+  in the rest. The owning device rewrites its file cleanly on the next sync.
 - **Forgiving GitHub repository field**: the backend now normalizes the Repository
   value to an `owner/repo` slug (`normalizeRepoSlug`), accepting a pasted
   `https://github.com/owner/repo` URL, a `.git` suffix, a trailing slash, or the

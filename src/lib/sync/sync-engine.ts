@@ -141,7 +141,16 @@ export class SyncEngine {
         // deletion handling (lww/prefer-local/prefer-remote) lives inside the
         // bookmark merge.
         for (const peer of [...peers].reverse()) {
-          await this.applyRemote(dataType, peer, false);
+          try {
+            await this.applyRemote(dataType, peer, false);
+          } catch (err) {
+            // One bad peer file (corrupt JSON, checksum mismatch, import error) must
+            // not abort the whole sync — skip it and fold in the rest.
+            logger.warn(
+              "SyncEngine",
+              `Skipping peer ${peer.device_id} for ${dataType}: ${err instanceof Error ? err.message : err}`
+            );
+          }
         }
         const merged = await this.buildPayload(dataType);
         if (!this.isPayloadEmpty(dataType, merged)) {

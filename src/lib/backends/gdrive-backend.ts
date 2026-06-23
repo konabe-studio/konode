@@ -134,7 +134,12 @@ export class GDriveBackend implements IBackend {
       const packets: SyncPacket[] = [];
       for (const f of peers) {
         const r = await fetch(`${DRIVE_API}/files/${f.id}?alt=media`, { headers: h, cache: "no-store" });
-        if (r.ok) packets.push((await r.json()) as SyncPacket);
+        if (!r.ok) continue;
+        try {
+          packets.push(JSON.parse(await r.text()) as SyncPacket);
+        } catch {
+          logger.warn("GDrive.downloadAll", `Skipping unreadable sync file: ${f.name}`);
+        }
       }
       return packets;
     });

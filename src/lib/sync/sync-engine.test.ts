@@ -170,6 +170,22 @@ describe("SyncEngine.syncType — bookmarks", () => {
     expect(backend.uploads).toHaveLength(1);
   });
 
+  it("skips a peer whose file fails to apply (checksum mismatch) and folds in the rest", async () => {
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    const good = await peerPacket(engine, "peer1", payload([link("B", "https://b.com")]));
+    const bad = await peerPacket(engine, "peer2", payload([link("C", "https://c.com")]));
+    bad.checksum = "0".repeat(64); // 64-char but wrong → checksum verification throws
+
+    backend.files.set("bookmarks_peer1", good);
+    backend.files.set("bookmarks_peer2", bad);
+
+    // Must not throw; the good peer applies, the corrupt one is skipped.
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    expect(await localUrls()).toEqual(["https://b.com"]);
+  });
+
   it("uploads again once the data changes", async () => {
     const engine = makeEngine();
     const backend = new FakeBackend();

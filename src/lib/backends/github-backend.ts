@@ -184,7 +184,12 @@ export class GitHubBackend implements IBackend {
           `${GITHUB_API}/repos/${this.repoSlug}/contents/${this.path}/${m.name}?ref=${this.branch}`,
           { headers: { ...this.headers(), Accept: "application/vnd.github.raw+json" }, cache: "no-store" }
         );
-        if (r.ok) packets.push((await r.json()) as SyncPacket);
+        if (!r.ok) continue;
+        try {
+          packets.push(JSON.parse(await r.text()) as SyncPacket);
+        } catch {
+          logger.warn("GitHub.downloadAll", `Skipping unreadable sync file: ${m.name}`);
+        }
       }
       return packets;
     });

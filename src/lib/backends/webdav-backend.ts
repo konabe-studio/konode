@@ -88,7 +88,14 @@ export class WebDAVBackend implements IBackend {
           headers: { Authorization: `Basic ${btoa(`${this.w.username}:${this.w.password}`)}` },
           cache: "no-store", // avoid a stale peer file from the browser HTTP cache
         });
-        if (r.ok) packets.push((await r.json()) as SyncPacket);
+        if (!r.ok) continue;
+        try {
+          packets.push(JSON.parse(await r.text()) as SyncPacket);
+        } catch {
+          // A corrupt/partial file (e.g. trailing junk from a non-truncating write)
+          // must not abort the whole sync — skip it; the owner rewrites it next sync.
+          logger.warn("WebDAV.downloadAll", `Skipping unreadable sync file: ${href}`);
+        }
       }
       return packets;
     });
