@@ -67,7 +67,10 @@
       (fixed a repo-URL parse + a stale-SHA 409 along the way)
 - [x] **Test WebDAV sync end-to-end** (basic auth) — verified on pCloud (free tier):
       `synkro/` folder + files appear, two-way sync works
-- [ ] Consent screen: app name, logo, **privacy policy URL** (write the policy first)
+- [~] **Privacy policy** — first draft written (`PRIVACY.md`); fill the
+      `[BRACKETED]` placeholders (publisher, contact email, date), have it reviewed,
+      then host it at a public URL (e.g. GitHub Pages or the studio site)
+- [ ] Consent screen: app name, logo, **privacy policy URL** (link the hosted policy)
 - [ ] `drive.file` scope justification
 - [ ] Demo video (1–3 min screencast)
 - [ ] Verification request (1–4 weeks, free)
