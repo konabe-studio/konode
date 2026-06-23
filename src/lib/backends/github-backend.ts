@@ -4,6 +4,22 @@ import { logger } from "@/lib/utils/logger";
 
 const GITHUB_API = "https://api.github.com";
 
+/**
+ * Coerce whatever the user pasted into the Repository field to an `owner/repo`
+ * slug. Accepts `owner/repo`, an `https://github.com/owner/repo` URL (with or
+ * without a `.git` suffix or trailing slash), and the `git@github.com:owner/repo`
+ * SSH form. The GitHub API 404s on a trailing slash or a full URL, so this keeps
+ * the field forgiving instead of failing with a confusing "not found".
+ */
+export function normalizeRepoSlug(input: string | undefined): string {
+  return (input ?? "")
+    .trim()
+    .replace(/^git@github\.com:/i, "")
+    .replace(/^https?:\/\/(www\.)?github\.com\//i, "")
+    .replace(/\.git$/i, "")
+    .replace(/^\/+|\/+$/g, "");
+}
+
 export interface GitHubUserInfo {
   login: string;
   name: string;
@@ -27,6 +43,8 @@ export class GitHubBackend implements IBackend {
 
   private get branch(): string { return this.gh.branch ?? "main"; }
   private get path(): string { return this.gh.path ?? "synkro"; }
+  /** `owner/repo`, tolerant of a pasted URL / `.git` suffix / trailing slash. */
+  private get repoSlug(): string { return normalizeRepoSlug(this.gh.repo); }
 
   private headers(): HeadersInit {
     return {
@@ -73,7 +91,7 @@ export class GitHubBackend implements IBackend {
       if (sha) body.sha = sha;
 
       const res = await fetch(
-        `${GITHUB_API}/repos/${this.gh.repo}/contents/${filename}`,
+        `${GITHUB_API}/repos/${this.repoSlug}/contents/${filename}`,
         { method: "PUT", headers: this.headers(), body: JSON.stringify(body) }
       );
 
@@ -82,7 +100,7 @@ export class GitHubBackend implements IBackend {
         const freshSha = await this.getFileSHA(filename, branch);
         if (freshSha) body.sha = freshSha;
         const retry = await fetch(
-          `${GITHUB_API}/repos/${this.gh.repo}/contents/${filename}`,
+          `${GITHUB_API}/repos/${this.repoSlug}/contents/${filename}`,
           { method: "PUT", headers: this.headers(), body: JSON.stringify(body) }
         );
         if (!retry.ok) {
@@ -104,14 +122,14 @@ export class GitHubBackend implements IBackend {
     if (this.repoInitialized) return;
 
     const repoRes = await fetch(
-      `${GITHUB_API}/repos/${this.gh.repo}`,
+      `${GITHUB_API}/repos/${this.repoSlug}`,
       { headers: this.headers() }
     );
 
     if (!repoRes.ok) {
       throw new Error(
         repoRes.status === 404
-          ? `Repository '${this.gh.repo}' not found. Create it on GitHub first.`
+          ? `Repository '${this.repoSlug}' not found. Create it on GitHub first.`
           : `GitHub repo check failed: ${repoRes.status}`
       );
     }
@@ -120,7 +138,7 @@ export class GitHubBackend implements IBackend {
 
     // If repo is empty (no commits), initialize it
     if (!repoData.default_branch) {
-      await fetch(`${GITHUB_API}/repos/${this.gh.repo}/contents/README.md`, {
+      await fetch(`${GITHUB_API}/repos/${this.repoSlug}/contents/README.md`, {
         method: "PUT",
         headers: this.headers(),
         body: JSON.stringify({
@@ -137,7 +155,7 @@ export class GitHubBackend implements IBackend {
   private async getFileSHA(path: string, branch: string): Promise<string | null> {
     try {
       const res = await fetch(
-        `${GITHUB_API}/repos/${this.gh.repo}/contents/${path}?ref=${branch}`,
+        `${GITHUB_API}/repos/${this.repoSlug}/contents/${path}?ref=${branch}`,
         { headers: this.headers() }
       );
       if (!res.ok) return null;
@@ -148,7 +166,7 @@ export class GitHubBackend implements IBackend {
   async downloadAll(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket[]> {
     return withRetry(async () => {
       const res = await fetch(
-        `${GITHUB_API}/repos/${this.gh.repo}/contents/${this.path}?ref=${this.branch}`,
+        `${GITHUB_API}/repos/${this.repoSlug}/contents/${this.path}?ref=${this.branch}`,
         { headers: this.headers() }
       );
       if (!res.ok) return [];
@@ -162,7 +180,7 @@ export class GitHubBackend implements IBackend {
       const packets: SyncPacket[] = [];
       for (const m of matches) {
         const r = await fetch(
-          `${GITHUB_API}/repos/${this.gh.repo}/contents/${this.path}/${m.name}?ref=${this.branch}`,
+          `${GITHUB_API}/repos/${this.repoSlug}/contents/${this.path}/${m.name}?ref=${this.branch}`,
           { headers: { ...this.headers(), Accept: "application/vnd.github.raw+json" } }
         );
         if (r.ok) packets.push((await r.json()) as SyncPacket);
@@ -192,18 +210,18 @@ export class GitHubBackend implements IBackend {
       if (!this.gh.repo) return { ok: true, message: `Signed in as @${user.login} — set a repository below` };
 
       // Check repo access
-      const repoRes = await fetch(`${GITHUB_API}/repos/${this.gh.repo}`, { headers: this.headers() });
+      const repoRes = await fetch(`${GITHUB_API}/repos/${this.repoSlug}`, { headers: this.headers() });
 
       if (repoRes.status === 404) {
         return {
           ok: false,
-          message: `Repository '${this.gh.repo}' not found. Create it on GitHub (private) then retry.`,
+          message: `Repository '${this.repoSlug}' not found. Create it on GitHub (private) then retry.`,
         };
       }
       if (repoRes.status === 403) {
         return {
           ok: false,
-          message: `No access to '${this.gh.repo}'. For Fine-grained tokens: ensure Contents → Read & Write is enabled.`,
+          message: `No access to '${this.repoSlug}'. For Fine-grained tokens: ensure Contents → Read & Write is enabled.`,
         };
       }
       if (!repoRes.ok) {

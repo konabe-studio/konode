@@ -34,6 +34,11 @@ The first working build, hardened over a review + fix pass. Highlights:
   just the most recently synced one.
 
 ### Changed
+- **Forgiving GitHub repository field**: the backend now normalizes the Repository
+  value to an `owner/repo` slug (`normalizeRepoSlug`), accepting a pasted
+  `https://github.com/owner/repo` URL, a `.git` suffix, a trailing slash, or the
+  `git@github.com:` SSH form — previously these produced a confusing "repository not
+  found" because the GitHub API 404s on a full URL or a trailing slash.
 - **Sync model**: pull peer file first (excluding our own), then for additive
   data types always merge the peer in and push the merged result — fixes "remote
   changes never arrived" under Last Write Wins.
