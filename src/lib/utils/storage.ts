@@ -1,4 +1,5 @@
 import type {
+  DataType,
   RemoteExtensionEntry,
   RemoteSessionEntry,
   SyncExtension,
@@ -72,6 +73,7 @@ const KEYS = {
   TAB_CACHE: "synkro_tab_cache",
   REMOTE_SESSIONS: "synkro_remote_sessions",
   REMOTE_EXTENSIONS: "synkro_remote_extensions",
+  UPLOAD_CHECKSUMS: "synkro_upload_checksums",
 } as const;
 
 // ─── Generic Helpers ───────────────────────────────────────────────────────
@@ -224,4 +226,18 @@ export async function setRemoteExtensions(entry: RemoteExtensionEntry): Promise<
     cur && typeof cur === "object" && !("extensions" in cur) ? { ...cur } : {};
   map[entry.device_id] = entry;
   await set(KEYS.REMOTE_EXTENSIONS, map);
+}
+
+// ─── Upload de-dup (skip re-uploading unchanged data) ───────────────────────
+
+/** Checksum of the payload this device last uploaded for a data type, if any. */
+export async function getLastUploadChecksum(dataType: DataType): Promise<string | null> {
+  const r = await chrome.storage.local.get(KEYS.UPLOAD_CHECKSUMS);
+  return (r[KEYS.UPLOAD_CHECKSUMS] as Record<string, string> | undefined)?.[dataType] ?? null;
+}
+
+export async function setLastUploadChecksum(dataType: DataType, checksum: string): Promise<void> {
+  const r = await chrome.storage.local.get(KEYS.UPLOAD_CHECKSUMS);
+  const map = { ...((r[KEYS.UPLOAD_CHECKSUMS] as Record<string, string>) ?? {}), [dataType]: checksum };
+  await set(KEYS.UPLOAD_CHECKSUMS, map);
 }

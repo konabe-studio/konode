@@ -10,6 +10,8 @@ import {
   getRemoteSessions,
   setRemoteSession,
   setRemoteExtensions,
+  getLastUploadChecksum,
+  setLastUploadChecksum,
 } from "@/lib/utils/storage";
 import { logger } from "@/lib/utils/logger";
 import { encrypt, decrypt, sha256 } from "@/lib/crypto/encryption";
@@ -114,7 +116,7 @@ export class SyncEngine {
       if (peers.length === 0) {
         // No peers yet — push our own data if we have any.
         if (!isEmpty) {
-          await backend.upload(await this.buildPacket(dataType, localPayload));
+          await this.uploadIfChanged(backend, dataType, localPayload);
         } else {
           logger.info("SyncEngine", `${dataType}: nothing to sync`);
         }
@@ -143,7 +145,7 @@ export class SyncEngine {
         }
         const merged = await this.buildPayload(dataType);
         if (!this.isPayloadEmpty(dataType, merged)) {
-          await backend.upload(await this.buildPacket(dataType, merged));
+          await this.uploadIfChanged(backend, dataType, merged);
         }
       }
 
@@ -223,6 +225,27 @@ export class SyncEngine {
         throw new Error(`Unknown data type: ${_e}`);
       }
     }
+  }
+
+  /**
+   * Upload only when the payload changed since our last successful upload. The
+   * checksum is over the plaintext payload (stable for identical data, independent
+   * of the packet's per-cycle timestamp), so a sync that finds nothing new doesn't
+   * spam the backend with a fresh commit every interval — and can't race its own
+   * write into a 409.
+   */
+  private async uploadIfChanged(
+    backend: ReturnType<typeof createBackend>,
+    dataType: DataType,
+    payload: unknown
+  ): Promise<void> {
+    const packet = await this.buildPacket(dataType, payload);
+    if ((await getLastUploadChecksum(dataType)) === packet.checksum) {
+      logger.info("SyncEngine", `${dataType}: unchanged since last upload — skipping`);
+      return;
+    }
+    await backend.upload(packet);
+    await setLastUploadChecksum(dataType, packet.checksum);
   }
 
   private async buildPacket(dataType: DataType, payload: unknown): Promise<SyncPacket> {
@@ -365,7 +388,9 @@ export class SyncEngine {
         await backend.connect();
         try {
           const payload = await this.buildPayload(conflict.data_type);
-          await backend.upload(await this.buildPacket(conflict.data_type, payload));
+          const packet = await this.buildPacket(conflict.data_type, payload);
+          await backend.upload(packet); // forced: conflict resolution overwrites remote
+          await setLastUploadChecksum(conflict.data_type, packet.checksum);
         } finally {
           await backend.disconnect();
         }

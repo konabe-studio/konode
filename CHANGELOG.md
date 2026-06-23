@@ -42,11 +42,17 @@ The first working build, hardened over a review + fix pass. Highlights:
   the saved secret out of casual inspection / screenshots / screen-sharing. Note:
   credentials are still stored in `chrome.storage.local` — the standard extension
   model, since there's no OS secret store.)
-- **GitHub upload 409 resilience**: re-read the file SHA on every upload attempt and
-  retry a 409 ("…does not match <sha>") with exponential backoff (up to 5 attempts)
-  instead of a single immediate retry. GitHub's Contents API is eventually consistent,
-  so a write quickly followed by another could see a stale SHA and fail; backing off
-  and re-reading resolves it.
+- **GitHub upload 409 fixed at the root**: GitHub sends `Cache-Control: max-age=60`
+  on contents reads, so the browser HTTP cache returned a *stale* SHA for up to a
+  minute after a write — every PUT (and every retry) then 409'd with "…does not
+  match". Reads now use `cache: "no-store"`, the SHA is re-read on each attempt, and
+  a 409 is retried with exponential backoff (up to 5 attempts).
+- **No redundant uploads**: each data type now records the checksum it last uploaded
+  and skips the upload when nothing changed — so a sync that finds nothing new no
+  longer writes a fresh commit every interval (which also removed the main 409
+  trigger). Made the bookmark payload deterministic (a missing `dateAdded`, e.g. on
+  the root node, now falls back to `0` instead of `Date.now()`) so an unchanged tree
+  hashes identically across syncs and devices.
 - **Forgiving GitHub repository field**: the backend now normalizes the Repository
   value to an `owner/repo` slug (`normalizeRepoSlug`), accepting a pasted
   `https://github.com/owner/repo` URL, a `.git` suffix, a trailing slash, or the

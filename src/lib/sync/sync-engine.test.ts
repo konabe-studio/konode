@@ -157,4 +157,28 @@ describe("SyncEngine.syncType — bookmarks", () => {
 
     expect(await localUrls()).toEqual([]);
   });
+
+  it("skips re-upload when nothing changed since the last upload", async () => {
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    // Second cycle found nothing new → no redundant commit (no 409 to race into).
+    expect(backend.uploads).toHaveLength(1);
+  });
+
+  it("uploads again once the data changes", async () => {
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    await chrome.bookmarks.create({ parentId: "1", title: "B", url: "https://b.com" });
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    expect(backend.uploads).toHaveLength(2);
+  });
 });

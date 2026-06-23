@@ -15,7 +15,10 @@ function mapNode(node: chrome.bookmarks.BookmarkTreeNode): SyncBookmark {
     parentId: node.parentId ?? null,
     title: node.title,
     url: node.url,
-    dateAdded: node.dateAdded ?? Date.now(),
+    // Stable fallback (not Date.now()) so an unchanged tree exports to an identical
+    // payload/checksum every time — the root node carries no dateAdded, and a moving
+    // value there would defeat upload de-dup and cross-device checksum matching.
+    dateAdded: node.dateAdded ?? 0,
     dateModified: node.dateGroupModified,
     children: node.children?.map(mapNode),
   };

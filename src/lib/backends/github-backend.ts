@@ -154,7 +154,10 @@ export class GitHubBackend implements IBackend {
     try {
       const res = await fetch(
         `${GITHUB_API}/repos/${this.repoSlug}/contents/${path}?ref=${branch}`,
-        { headers: this.headers() }
+        // GitHub sends `Cache-Control: max-age=60` on contents reads, so the browser
+        // HTTP cache can hand back a stale SHA right after a write — which then makes
+        // the next PUT 409 ("does not match"). `no-store` forces a fresh read.
+        { headers: this.headers(), cache: "no-store" }
       );
       if (!res.ok) return null;
       return (await res.json()).sha ?? null;
@@ -165,7 +168,7 @@ export class GitHubBackend implements IBackend {
     return withRetry(async () => {
       const res = await fetch(
         `${GITHUB_API}/repos/${this.repoSlug}/contents/${this.path}?ref=${this.branch}`,
-        { headers: this.headers() }
+        { headers: this.headers(), cache: "no-store" }
       );
       if (!res.ok) return [];
       const files: Array<{ name: string }> = await res.json();
@@ -179,7 +182,7 @@ export class GitHubBackend implements IBackend {
       for (const m of matches) {
         const r = await fetch(
           `${GITHUB_API}/repos/${this.repoSlug}/contents/${this.path}/${m.name}?ref=${this.branch}`,
-          { headers: { ...this.headers(), Accept: "application/vnd.github.raw+json" } }
+          { headers: { ...this.headers(), Accept: "application/vnd.github.raw+json" }, cache: "no-store" }
         );
         if (r.ok) packets.push((await r.json()) as SyncPacket);
       }
