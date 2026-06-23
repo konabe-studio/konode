@@ -70,8 +70,13 @@
 - [~] **Privacy policy** — first draft written (`PRIVACY.md`); fill the
       `[BRACKETED]` placeholders (publisher, contact email, date), have it reviewed,
       then host it at a public URL (e.g. GitHub Pages or the studio site)
-- [ ] Consent screen: app name, logo, **privacy policy URL** (link the hosted policy)
-- [ ] `drive.file` scope justification
+- [~] Consent screen: app name, logo, **privacy policy URL** — copy drafted in
+      `STORE_LISTING.md`; needs the hosted policy URL + contact email, then fill in
+      the Cloud Console
+- [x] `drive.file` scope justification — drafted in `STORE_LISTING.md`
+- [~] **Chrome Web Store listing copy** — name, summary, description, category,
+      single-purpose, and per-permission justifications drafted in `STORE_LISTING.md`
+      (remaining: screenshots, $5 registration, submit)
 - [ ] Demo video (1–3 min screencast)
 - [ ] Verification request (1–4 weeks, free)
 - [ ] Chrome Web Store listing ($5 one-time)
