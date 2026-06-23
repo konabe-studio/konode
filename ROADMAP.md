@@ -32,10 +32,13 @@ on any Chromium browser.
 - **Sync-engine + bookmark-merge test coverage** — an in-memory `chrome.bookmarks`
   fake drives `importBookmarks` (merge/replace/tombstone/folders) and
   `SyncEngine.syncType` (pull → fold every peer → push merged) under Vitest.
+- **All three backends device-verified** — two-way sync confirmed end-to-end on
+  Google Drive, GitHub, and WebDAV (pCloud). Stale-read 409s fixed (`cache:no-store`);
+  idle syncs no longer re-commit (`uploadIfChanged`).
 
 ## Next
-1. Pre-publish QA: end-to-end test the **GitHub** and **WebDAV** backends (only
-   Drive has been verified across devices so far).
+All feature / polish / QA items are done — the remaining work is the **publishing
+phase** (see *Before publishing* below).
 
 ## Later / nice-to-have
 - Firefox support (`browser_specific_settings` + the `browser.*` polyfill).

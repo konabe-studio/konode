@@ -63,10 +63,10 @@
 
 ## 📦 Before publishing (Google OAuth verification + Chrome Web Store)
 
-- [ ] **Test GitHub sync end-to-end** (fine-grained PAT) — only the Drive backend
-      has had real multi-device testing so far
-- [ ] **Test WebDAV sync end-to-end** (basic auth + runtime host permission) — ditto;
-      only Drive is verified
+- [x] **Test GitHub sync end-to-end** (fine-grained PAT) — two-way sync verified
+      (fixed a repo-URL parse + a stale-SHA 409 along the way)
+- [x] **Test WebDAV sync end-to-end** (basic auth) — verified on pCloud (free tier):
+      `synkro/` folder + files appear, two-way sync works
 - [ ] Consent screen: app name, logo, **privacy policy URL** (write the policy first)
 - [ ] `drive.file` scope justification
 - [ ] Demo video (1–3 min screencast)
