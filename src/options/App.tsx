@@ -6,8 +6,66 @@ import {
   Cloud, Github, Server, Bookmark, Clock,
   Globe, Puzzle, AlertTriangle, CheckCircle2, XCircle,
   Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
-  Radio, Sliders, Shield, Save,
+  Radio, Sliders, Shield, Save, Pencil,
 } from "lucide-react";
+
+// ─── Secret field ───────────────────────────────────────────────────────────
+// Masks a *saved* secret (token / password / passphrase): once a value exists, the
+// raw string is no longer bound into the DOM — the field shows a •••• summary (last
+// 4 chars) until the user clicks Replace to enter a new one. The reveal toggle is
+// per-field, so unmasking one secret no longer unmasks the others.
+function SecretField({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const hasSaved = value.length > 0;
+  const [editing, setEditing] = useState(!hasSaved);
+  const [revealed, setRevealed] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  if (hasSaved && !editing) {
+    const masked = "•".repeat(Math.min(Math.max(value.length - 4, 8), 24)) + value.slice(-4);
+    return (
+      <div className="input-pw-wrap">
+        <input className="field-input mono" type="text" value={masked} readOnly tabIndex={-1} />
+        <button
+          className="btn-eye"
+          type="button"
+          title="Replace"
+          onClick={() => { setDraft(""); setRevealed(false); setEditing(true); }}
+        >
+          <Pencil size={13} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="input-pw-wrap">
+      <input
+        className="field-input mono"
+        type={revealed ? "text" : "password"}
+        value={hasSaved ? draft : value}
+        onChange={(e) => { setDraft(e.target.value); onChange(e.target.value); }}
+        placeholder={placeholder}
+        autoComplete="off"
+      />
+      <button
+        className="btn-eye"
+        type="button"
+        title={revealed ? "Hide" : "Show"}
+        onClick={() => setRevealed((v) => !v)}
+      >
+        {revealed ? <EyeOff size={13} /> : <Eye size={13} />}
+      </button>
+    </div>
+  );
+}
 
 // ─── Nav ──────────────────────────────────────────────────────────────────
 
@@ -63,7 +121,6 @@ export default function OptionsApp() {
   // GitHub user info (fetched after token entry)
   const [githubUser, setGithubUser] = useState<{ login: string; name: string } | null>(null);
   const [githubChecking, setGithubChecking] = useState(false);
-  const [showToken, setShowToken] = useState(false);
 
   // Import/Export
   const [exportStatus, setExportStatus] = useState<"idle" | "ok" | "error">("idle");
@@ -473,19 +530,11 @@ export default function OptionsApp() {
                             </div>
                             <div className="field-group" style={{ flex: 1 }}>
                               <label className="field-label">Password / App token</label>
-                              <div className="input-pw-wrap">
-                                <input
-                                  className="field-input mono"
-                                  type={showToken ? "text" : "password"}
-                                  value={getBackend("webdav")?.webdav?.password ?? ""}
-                                  onChange={(e) => updateBackend("webdav", { webdav: { ...getBackend("webdav")?.webdav, password: e.target.value } as any })}
-                                  placeholder="••••••••"
-                                  autoComplete="off"
-                                />
-                                <button className="btn-eye" onClick={() => setShowToken(v => !v)} type="button">
-                                  {showToken ? <EyeOff size={13} /> : <Eye size={13} />}
-                                </button>
-                              </div>
+                              <SecretField
+                                value={getBackend("webdav")?.webdav?.password ?? ""}
+                                placeholder="••••••••"
+                                onChange={(v) => updateBackend("webdav", { webdav: { ...getBackend("webdav")?.webdav, password: v } as any })}
+                              />
                             </div>
                           </div>
                           <p className="config-hint">
@@ -507,22 +556,14 @@ export default function OptionsApp() {
                         <div className="backend-config" onClick={(e) => e.stopPropagation()}>
                           <div className="field-group">
                             <label className="field-label">Personal Access Token</label>
-                            <div className="input-pw-wrap">
-                              <input
-                                className="field-input mono"
-                                type={showToken ? "text" : "password"}
-                                value={getBackend("github")?.github?.token ?? ""}
-                                onChange={async (e) => {
-                                  updateBackend("github", { github: { ...getBackend("github")?.github, token: e.target.value } });
-                                  if (e.target.value.length > 10) await verifyGithubToken(e.target.value);
-                                }}
-                                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                                autoComplete="off"
-                              />
-                              <button className="btn-eye" onClick={() => setShowToken(v => !v)} type="button">
-                                {showToken ? <EyeOff size={13} /> : <Eye size={13} />}
-                              </button>
-                            </div>
+                            <SecretField
+                              value={getBackend("github")?.github?.token ?? ""}
+                              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                              onChange={async (v) => {
+                                updateBackend("github", { github: { ...getBackend("github")?.github, token: v } });
+                                if (v.length > 10) await verifyGithubToken(v);
+                              }}
+                            />
                             {githubChecking && <div className="verify-row"><Loader2 size={11} className="spin" /> Verifying…</div>}
                             {githubUser && !githubChecking && (
                               <div className="verify-row ok"><CheckCircle2 size={11} /> @{githubUser.login} — {githubUser.name}</div>
@@ -849,18 +890,12 @@ export default function OptionsApp() {
                         <div className="row-desc">Derives the encryption key. Stored only on this device, never uploaded.</div>
                       </div>
                     </div>
-                    <div className="input-pw-wrap" style={{ width: 220 }}>
-                      <input
-                        className="field-input mono"
-                        type={showToken ? "text" : "password"}
+                    <div style={{ width: 220 }}>
+                      <SecretField
                         value={settings.encryption_passphrase ?? ""}
-                        onChange={(e) => update({ encryption_passphrase: e.target.value })}
                         placeholder="Choose a strong passphrase"
-                        autoComplete="off"
+                        onChange={(v) => update({ encryption_passphrase: v })}
                       />
-                      <button className="btn-eye" onClick={() => setShowToken(v => !v)} type="button">
-                        {showToken ? <EyeOff size={13} /> : <Eye size={13} />}
-                      </button>
                     </div>
                   </div>
                 )}

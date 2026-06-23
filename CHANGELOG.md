@@ -34,6 +34,14 @@ The first working build, hardened over a review + fix pass. Highlights:
   just the most recently synced one.
 
 ### Changed
+- **Saved secrets are masked in Settings**: once a token / WebDAV password / E2EE
+  passphrase is saved, the field shows a `••••••` summary (last 4 chars) instead of
+  binding the raw value into the DOM — a "Replace" action re-enters edit mode. The
+  reveal (eye) toggle is now per-field, so unmasking one secret no longer unmasks the
+  others. (A `type="password"` field always exposes its value in the DOM; this keeps
+  the saved secret out of casual inspection / screenshots / screen-sharing. Note:
+  credentials are still stored in `chrome.storage.local` — the standard extension
+  model, since there's no OS secret store.)
 - **Forgiving GitHub repository field**: the backend now normalizes the Repository
   value to an `owner/repo` slug (`normalizeRepoSlug`), accepting a pasted
   `https://github.com/owner/repo` URL, a `.git` suffix, a trailing slash, or the
