@@ -42,6 +42,11 @@ The first working build, hardened over a review + fix pass. Highlights:
   the saved secret out of casual inspection / screenshots / screen-sharing. Note:
   credentials are still stored in `chrome.storage.local` — the standard extension
   model, since there's no OS secret store.)
+- **GitHub upload 409 resilience**: re-read the file SHA on every upload attempt and
+  retry a 409 ("…does not match <sha>") with exponential backoff (up to 5 attempts)
+  instead of a single immediate retry. GitHub's Contents API is eventually consistent,
+  so a write quickly followed by another could see a stale SHA and fail; backing off
+  and re-reading resolves it.
 - **Forgiving GitHub repository field**: the backend now normalizes the Repository
   value to an `owner/repo` slug (`normalizeRepoSlug`), accepting a pasted
   `https://github.com/owner/repo` URL, a `.git` suffix, a trailing slash, or the

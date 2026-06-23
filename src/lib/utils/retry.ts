@@ -9,7 +9,7 @@ export class HttpError extends Error {
 }
 
 /** Retry only transient failures: network errors and HTTP 408/429/5xx. */
-function defaultShouldRetry(err: Error): boolean {
+export function defaultShouldRetry(err: Error): boolean {
   if (err instanceof HttpError) {
     return err.status === 408 || err.status === 429 || err.status >= 500;
   }

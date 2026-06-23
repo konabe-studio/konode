@@ -1,5 +1,5 @@
 import type { IBackend, BackendConfig, DataType, SyncPacket } from "@/lib/types";
-import { withRetry, HttpError } from "@/lib/utils/retry";
+import { withRetry, HttpError, defaultShouldRetry } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 
 const GITHUB_API = "https://api.github.com";
@@ -76,44 +76,42 @@ export class GitHubBackend implements IBackend {
     // Ensure repo is initialized before first upload
     await this.ensureRepoInitialized();
 
-    await withRetry(async () => {
-      const branch = this.gh.branch ?? "main";
-      const filename = `${this.path}/synkro_${packet.data_type}_${packet.device_id}.json`;
-      const content = btoa(unescape(encodeURIComponent(JSON.stringify(packet, null, 2))));
+    const branch = this.gh.branch ?? "main";
+    const filename = `${this.path}/synkro_${packet.data_type}_${packet.device_id}.json`;
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(packet, null, 2))));
 
-      // Always fetch fresh SHA to avoid 409 conflicts
-      const sha = await this.getFileSHA(filename, branch);
-      const body: Record<string, unknown> = {
-        message: `sync: ${packet.data_type} [${packet.device_id.slice(0, 8)}]`,
-        content,
-        branch,
-      };
-      if (sha) body.sha = sha;
+    await withRetry(
+      async () => {
+        // Re-read the SHA on every attempt. GitHub's Contents API is eventually
+        // consistent, so right after a write a stale SHA can come back and cause a
+        // 409 ("…does not match <sha>"); backing off and re-reading lets it settle.
+        const sha = await this.getFileSHA(filename, branch);
+        const body: Record<string, unknown> = {
+          message: `sync: ${packet.data_type} [${packet.device_id.slice(0, 8)}]`,
+          content,
+          branch,
+        };
+        if (sha) body.sha = sha;
 
-      const res = await fetch(
-        `${GITHUB_API}/repos/${this.repoSlug}/contents/${filename}`,
-        { method: "PUT", headers: this.headers(), body: JSON.stringify(body) }
-      );
-
-      if (res.status === 409) {
-        // SHA mismatch — fetch fresh SHA and retry
-        const freshSha = await this.getFileSHA(filename, branch);
-        if (freshSha) body.sha = freshSha;
-        const retry = await fetch(
+        const res = await fetch(
           `${GITHUB_API}/repos/${this.repoSlug}/contents/${filename}`,
           { method: "PUT", headers: this.headers(), body: JSON.stringify(body) }
         );
-        if (!retry.ok) {
-          const err = await retry.json().catch(() => ({}));
-          throw new HttpError(retry.status, `GitHub upload failed: ${retry.status} — ${err.message ?? ""}`);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new HttpError(res.status, `GitHub upload failed: ${res.status} — ${err.message ?? ""}`);
         }
-      } else if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new HttpError(res.status, `GitHub upload failed: ${res.status} — ${err.message ?? ""}`);
-      }
 
-      logger.info("GitHub.upload", `${packet.data_type} → ${filename}`);
-    });
+        logger.info("GitHub.upload", `${packet.data_type} → ${filename}`);
+      },
+      {
+        // A 409 here is a stale-SHA conflict on our *own* file — retry it (with
+        // backoff, re-reading the SHA) on top of the default transient set.
+        maxAttempts: 5,
+        shouldRetry: (e) =>
+          defaultShouldRetry(e) || (e instanceof HttpError && e.status === 409),
+      }
+    );
   }
 
   private repoInitialized = false;

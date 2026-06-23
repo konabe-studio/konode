@@ -39,4 +39,24 @@ describe("withRetry", () => {
     ).rejects.toBeInstanceOf(HttpError);
     expect(fn).toHaveBeenCalledTimes(3);
   });
+
+  it("retries a 409 only when shouldRetry opts in (GitHub stale-SHA conflict)", async () => {
+    // Default: a 409 is terminal.
+    const terminal = vi.fn().mockRejectedValue(new HttpError(409));
+    await expect(withRetry(terminal, { baseDelayMs: 1 })).rejects.toBeInstanceOf(HttpError);
+    expect(terminal).toHaveBeenCalledTimes(1);
+
+    // Opted in (as the GitHub upload does): the 409 is retried, then succeeds.
+    const recovering = vi
+      .fn()
+      .mockRejectedValueOnce(new HttpError(409))
+      .mockResolvedValue("ok");
+    const out = await withRetry(recovering, {
+      baseDelayMs: 1,
+      jitter: false,
+      shouldRetry: (e) => e instanceof HttpError && e.status === 409,
+    });
+    expect(out).toBe("ok");
+    expect(recovering).toHaveBeenCalledTimes(2);
+  });
 });
