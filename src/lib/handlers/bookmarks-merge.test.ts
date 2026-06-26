@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { importBookmarks } from "@/lib/handlers/bookmarks-handler";
+import { importBookmarks, exportBookmarkPayload } from "@/lib/handlers/bookmarks-handler";
 import type { BookmarkPayload, SyncBookmark } from "@/lib/types";
 
 // These exercise the real merge/replace logic against the in-memory
@@ -90,6 +90,39 @@ describe("importBookmarks — merge", () => {
     const barChildren = await chrome.bookmarks.getChildren("1");
     const workFolders = barChildren.filter((c) => !c.url && c.title === "Work");
     expect(workFolders).toHaveLength(1);
+  });
+});
+
+describe("empty folders are not synced", () => {
+  it("merge does not resurrect a folder whose only bookmark was deleted", async () => {
+    await seed("X", "https://x.com", "1"); // local X lives in the bar
+    const future = Date.now() + 60_000;
+    // Peer still has a "Gone" folder containing X, but X is tombstoned.
+    await importBookmarks(
+      payload([folder("Gone", [link("X", "https://x.com")])], [{ url: "https://x.com", deletedAt: future }]),
+      "merge",
+      "lww"
+    );
+    expect(await localUrls()).toEqual([]); // X deleted by the tombstone
+    const bar = await chrome.bookmarks.getChildren("1");
+    expect(bar.filter((c) => !c.url && c.title === "Gone")).toHaveLength(0); // not resurrected
+  });
+
+  it("merge ignores a purely empty remote folder", async () => {
+    await importBookmarks(payload([folder("EmptyDir", [])]), "merge", "lww");
+    const bar = await chrome.bookmarks.getChildren("1");
+    expect(bar.filter((c) => !c.url && c.title === "EmptyDir")).toHaveLength(0);
+  });
+
+  it("exportBookmarkPayload omits empty folders but keeps folders with links", async () => {
+    await chrome.bookmarks.create({ parentId: "1", title: "EmptyDir" });
+    const full = await chrome.bookmarks.create({ parentId: "1", title: "FullDir" });
+    await chrome.bookmarks.create({ parentId: full.id, title: "L", url: "https://l.com" });
+    const { tree } = await exportBookmarkPayload();
+    const bar = tree[0].children?.find((r) => r.id === "1");
+    const folderTitles = (bar?.children ?? []).filter((c) => !c.url).map((c) => c.title);
+    expect(folderTitles).toContain("FullDir");
+    expect(folderTitles).not.toContain("EmptyDir");
   });
 });
 

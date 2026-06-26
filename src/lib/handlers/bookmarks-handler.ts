@@ -73,7 +73,9 @@ export async function exportBookmarkPayload(): Promise<BookmarkPayload> {
   const [tree, tombstones] = await Promise.all([exportBookmarks(), getTombstones()]);
   const gced = gcTombstones(tombstones);
   await setTombstones(gced); // keep the stored log pruned
-  return { tree, tombstones: gced };
+  // Don't sync empty folders — a folder carries no tombstone, so leaving empty
+  // folders in the payload is what made a deleted folder resurrect from a peer.
+  return { tree: pruneEmptyFolders(tree), tombstones: gced };
 }
 
 /** Normalize a parsed bookmark payload (supports the legacy bare-array format). */
@@ -260,10 +262,17 @@ async function mergeBookmarks(
 
   let added = 0;
   const addedUrls = new Set<string>();
-  const mergeNode = async (node: SyncBookmark, parentId: string): Promise<void> => {
+
+  // Create folders LAZILY — a folder is only materialized when a descendant
+  // bookmark is actually added under it (`ensureParent` walks up and creates the
+  // chain on demand, memoized). This stops an empty folder from resurrecting from
+  // a peer: when a folder's bookmarks are all deleted/tombstoned (folders carry no
+  // tombstone of their own), nothing triggers its creation, so it stays gone.
+  const mergeNode = async (node: SyncBookmark, ensureParent: () => Promise<string>): Promise<void> => {
     if (node.url) {
       if (skipAdd(node.url) || addedUrls.has(node.url)) return;
       try {
+        const parentId = await ensureParent();
         await chrome.bookmarks.create({ parentId, title: node.title, url: node.url });
         addedUrls.add(node.url);
         added++;
@@ -271,19 +280,20 @@ async function mergeBookmarks(
         logger.error(`Bookmark merge add: ${node.title}`, err);
       }
     } else {
-      // Folder: reuse a same-title folder under parent if present, else create it.
-      let folderId: string;
-      try {
+      // Reuse a same-title folder under the parent, else create it — but only when
+      // the first descendant actually needs it.
+      let folderId: string | null = null;
+      const ensureThis = async (): Promise<string> => {
+        if (folderId) return folderId;
+        const parentId = await ensureParent();
         const children = await chrome.bookmarks.getChildren(parentId);
         const existing = children.find((c) => !c.url && c.title === node.title);
         folderId = existing
           ? existing.id
           : (await chrome.bookmarks.create({ parentId, title: node.title })).id;
-      } catch (err) {
-        logger.error(`Bookmark merge folder: ${node.title}`, err);
-        return;
-      }
-      for (const child of node.children ?? []) await mergeNode(child, folderId);
+        return folderId;
+      };
+      for (const child of node.children ?? []) await mergeNode(child, ensureThis);
     }
   };
 
@@ -294,7 +304,9 @@ async function mergeBookmarks(
       (localRootIds.has(remoteRoot.id) ? remoteRoot.id : undefined) ??
       localRootByTitle.get(remoteRoot.title?.toLowerCase()) ??
       otherId;
-    for (const child of remoteRoot.children ?? []) await mergeNode(child, targetRootId);
+    for (const child of remoteRoot.children ?? []) {
+      await mergeNode(child, () => Promise.resolve(targetRootId));
+    }
   }
 
   logger.info("mergeBookmarks", `Merged +${added} / -${toRemove.length} (folders preserved)`);
@@ -355,6 +367,24 @@ function flattenUrls(nodes: SyncBookmark[]): string[] {
   return flattenNodes(nodes)
     .map((n) => n.url)
     .filter((u): u is string => !!u);
+}
+
+/** Drop folders with no bookmark (URL) descendant — empty folders aren't synced,
+ *  so a deleted folder doesn't keep resurrecting empty from a peer. The virtual
+ *  root and the three top-level roots are always kept. */
+function pruneEmptyFolders(tree: SyncBookmark[]): SyncBookmark[] {
+  const hasUrlDescendant = (n: SyncBookmark): boolean =>
+    !!n.url || (n.children ?? []).some(hasUrlDescendant);
+  const pruneChildren = (children: SyncBookmark[]): SyncBookmark[] =>
+    children
+      .filter((c) => !!c.url || hasUrlDescendant(c))
+      .map((c) => (c.url ? c : { ...c, children: pruneChildren(c.children ?? []) }));
+  return tree.map((root) => ({
+    ...root,
+    children: (root.children ?? []).map((r) =>
+      r.url ? r : { ...r, children: pruneChildren(r.children ?? []) }
+    ),
+  }));
 }
 
 // ─── Listeners ───────────────────────────────────────────────────────────

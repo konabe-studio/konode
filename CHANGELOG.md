@@ -97,6 +97,11 @@ The first working build, hardened over a review + fix pass. Highlights:
   snapshots local first; root matching uses Chrome's stable IDs.
 
 ### Fixed
+- **Empty folders no longer resurrect.** Folders carry no tombstone (those are
+  URL-keyed), so a deleted folder's bookmarks were removed but the empty folder
+  synced back from a peer. Now the merge creates folders lazily (only when a
+  descendant bookmark is actually added) and empty folders are pruned from the
+  synced payload — so deleting a folder propagates fully.
 - `type-check` now passes (non-existent `SyncTab` type; `includes("tabs")` against
   a value no longer in `DataType`; `Uint8Array<ArrayBuffer>` for Web Crypto).
 - Live popup status (the MV3 `chrome.extension.getViews` broadcast gate was dead).
