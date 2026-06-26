@@ -93,8 +93,10 @@ brand concept (`BRAND.md`) and apply it everywhere.
       typography, voice, anti-"AI-slop" principles (see `BRAND.md`)
 - [ ] **Logo** — wordmark + mark + app icons (16 / 32 / 48 / 128)
 - [ ] **Brand guidelines** — the system, with do/don't
-- [~] **UI pass** — popup re-skinned to the new design system with system light/dark
-      (`sk-*` tokens, Inter + mono, signal accent, pulse; noise/glow/DM Sans removed).
-      Options + onboarding still on the old dark theme — reuse the `sk-*` tokens next.
+- [x] **UI pass** — popup, options **and** onboarding re-skinned to the new design
+      system with system light/dark (`sk-*` tokens, signal-green accent, pulse;
+      noise/glow/DM Sans removed). Popup: active-streams icon grid, content-fit
+      height with a pinned header, wordmark dropped. Fonts (Inter + JetBrains Mono)
+      now **self-hosted** — no external Google Fonts fetch.
 - [ ] **Website** (privacy-first story, backends, open source)
 - [ ] **Pitch deck**

@@ -139,3 +139,20 @@ The first working build, hardened over a review + fix pass. Highlights:
   options + onboarding share the one implementation.
 - _Needs runtime verification (re-sign-in required to mint the first refresh
   token). See `SESSION_HANDOFF.md`._
+
+### UI / brand re-skin
+- **Popup re-skinned** to a system-following light/dark theme (new `sk-*` design
+  tokens; opts in via a `.sk-body` class). Content-fit height with a pinned
+  header + a single scrolling body, so the audit log grows the popup instead of
+  pushing the header off the top at Chrome's ~600px ceiling; the leftover black
+  strip after toggling the audit log is gone. Active streams became a 4-circle
+  icon grid (green = OK, amber spinner = syncing) and the wordmark header was
+  dropped (settings moved into the status row).
+- **Options + onboarding re-skinned** to the same palette — accent moved from
+  Google blue to the signal green, with light/dark surfaces, borders and focus
+  rings retuned. Fixed green-on-green contrast where the selected-card tint and
+  the icon chips were the same pale green (account avatar, Disconnect button,
+  selected backend icon, sidebar/onboarding logo).
+- **Self-hosted fonts** — Inter + JetBrains Mono (latin-subset woff2, OFL) bundled
+  under `public/fonts`, wired via `@font-face`; the external Google Fonts fetch is
+  gone for good and DM Sans is no longer referenced. Nothing leaves the device.
