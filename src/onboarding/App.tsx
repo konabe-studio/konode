@@ -198,7 +198,7 @@ export default function OnboardingApp() {
       {step === "welcome" && (
         <div style={S.card}>
           <div style={S.logoWrap}>
-            <Radio size={28} color="var(--accent)" />
+            <Radio size={28} color="white" />
           </div>
           <h1 style={S.h1}>Welcome to Synkro</h1>
           <p style={S.subtitle}>
@@ -238,7 +238,7 @@ export default function OnboardingApp() {
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setBackend("gdrive"); } }}
             >
               <div style={S.backendHeader}>
-                <Cloud size={18} color={backend === "gdrive" ? "var(--accent)" : "var(--text-secondary)"} />
+                <Cloud size={18} color={backend === "gdrive" ? "var(--text-primary)" : "var(--text-secondary)"} />
                 <div>
                   <div style={S.backendName}>Google Drive</div>
                   <div style={S.backendDesc}>OAuth — short-lived token cached on this device</div>
@@ -284,7 +284,7 @@ export default function OnboardingApp() {
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setBackend("webdav"); } }}
             >
               <div style={S.backendHeader}>
-                <Server size={18} color={backend === "webdav" ? "var(--accent)" : "var(--text-secondary)"} />
+                <Server size={18} color={backend === "webdav" ? "var(--text-primary)" : "var(--text-secondary)"} />
                 <div>
                   <div style={S.backendName}>WebDAV</div>
                   <div style={S.backendDesc}>Nextcloud, pCloud, Synology, ownCloud…</div>
@@ -319,7 +319,7 @@ export default function OnboardingApp() {
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setBackend("github"); } }}
             >
               <div style={S.backendHeader}>
-                <Github size={18} color={backend === "github" ? "var(--accent)" : "var(--text-secondary)"} />
+                <Github size={18} color={backend === "github" ? "var(--text-primary)" : "var(--text-secondary)"} />
                 <div>
                   <div style={S.backendName}>GitHub / Gitea / GitLab</div>
                   <div style={S.backendDesc}>Private repository via Personal Access Token</div>
@@ -490,7 +490,7 @@ const S: Record<string, React.CSSProperties> = {
   },
   logoWrap: {
     width: 56, height: 56, borderRadius: 14,
-    background: "var(--accent-light)",
+    background: "var(--accent)",
     display: "flex", alignItems: "center", justifyContent: "center",
     marginBottom: 20,
   },
@@ -571,21 +571,21 @@ const S: Record<string, React.CSSProperties> = {
 
 const CSS = `
   :root {
-    --bg: #fafafb; --bg-card: #fff; --bg-card-sel: #f0f4ff; --bg-input: #fff;
-    --bg-hover: #f5f5f5; --border: #e8e8e8; --border-input: #d1d5db;
-    --text-primary: #1c1e21; --text-secondary: #5a5f6b; --text-link: #1a73e8;
-    --accent: #1a73e8; --accent-light: #e8f0fe; --toggle-off: #d1d5db;
-    --success: #188038; --danger: #d93025;
-    --shadow: 0 1px 2px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.04);
+    --bg: #f7f8fa; --bg-card: #fff; --bg-card-sel: #e7f5ef; --bg-input: #fff;
+    --bg-hover: #f1f3f5; --border: #e6e8eb; --border-input: #d4d8dd;
+    --text-primary: #11151a; --text-secondary: #5b6470; --text-link: #0e9e6e;
+    --accent: #0e9e6e; --accent-light: #e7f5ef; --toggle-off: #d4d8dd;
+    --success: #0e9e6e; --danger: #dc2626;
+    --shadow: 0 1px 2px rgba(17,21,26,.05), 0 0 0 1px rgba(17,21,26,.06);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #1b1b1f; --bg-card: #27272b; --bg-card-sel: #2e3550; --bg-input: #2f2f33;
-      --bg-hover: #2f2f33; --border: #3a3a3e; --border-input: #4a4a50;
-      --text-primary: #e8e8ea; --text-secondary: #9a9aa4; --text-link: #8ab4f8;
-      --accent: #8ab4f8; --accent-light: #2e3550; --toggle-off: #4a4a55;
-      --success: #81c995; --danger: #f28b82;
-      --shadow: 0 1px 3px rgba(0,0,0,.3), 0 0 0 1px rgba(255,255,255,.04);
+      --bg: #0f1216; --bg-card: #161a20; --bg-card-sel: #173a30; --bg-input: #1e232b;
+      --bg-hover: #1e232b; --border: #2a2f37; --border-input: #353b45;
+      --text-primary: #e6e9ee; --text-secondary: #97a0ad; --text-link: #34d399;
+      --accent: #34d399; --accent-light: #173a30; --toggle-off: #353b45;
+      --success: #34d399; --danger: #f87171;
+      --shadow: 0 1px 3px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.05);
     }
   }
   html, body, #root { margin: 0; padding: 0; background: var(--bg); }
