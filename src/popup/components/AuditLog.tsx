@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { AuditEntry } from "@/lib/utils/storage";
 import { sendMessage } from "@/lib/utils/messaging";
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { CheckCircle2, XCircle, ChevronDown, Trash2 } from "lucide-react";
 
 export function AuditLog() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
@@ -20,47 +20,45 @@ export function AuditLog() {
   };
 
   return (
-    <div className="border-t border-border-subtle">
+    <div className="mt-3.5 border-t border-sk-hairline pt-3.5">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-2.5 text-2xs text-fg-subtle hover:text-fg-muted transition-colors"
+        aria-expanded={open}
+        className="flex w-full items-center justify-between p-0.5 text-sk-subtle"
       >
-        <span className="font-mono uppercase tracking-wider">Audit Log</span>
-        {open ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+        <span className="font-mono text-[11px] font-medium uppercase tracking-[0.08em]">Audit log</span>
+        <ChevronDown
+          size={14}
+          strokeWidth={2}
+          className="transition-transform duration-150"
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+        />
       </button>
 
       {open && (
-        <div className="px-4 pb-3 max-h-36 overflow-y-auto space-y-1 animate-fade-in">
+        <div className="mt-2.5 space-y-1.5 animate-fade-in">
           {entries.length === 0 ? (
-            <p className="text-2xs text-fg-subtle text-center py-2">No entries yet</p>
+            <p className="py-2 text-center font-mono text-[11px] text-sk-subtle">No entries yet</p>
           ) : (
             <button
               onClick={clearLog}
-              className="flex items-center gap-1 text-[10px] text-fg-subtle hover:text-danger transition-colors ml-auto mb-1"
+              className="ml-auto flex items-center gap-1 text-[11px] text-sk-subtle transition-colors hover:text-sk-danger"
             >
-              <Trash2 size={9} /> Clear log
+              <Trash2 size={11} /> Clear log
             </button>
           )}
           {entries.slice(0, 20).map((e, i) => (
-            <div
-              key={`${e.timestamp}-${i}`}
-              className="flex items-start gap-2 py-1 border-b border-border-subtle/50 last:border-0"
-            >
-              {e.ok
-                ? <CheckCircle2 size={9} className="text-accent/60 mt-0.5 shrink-0" />
-                : <XCircle size={9} className="text-danger/60 mt-0.5 shrink-0" />
-              }
-              <div className="flex-1 min-w-0">
-                <span className="text-[10px] font-mono text-fg-muted truncate block">
-                  {e.action}
-                </span>
-                {e.detail && (
-                  <span className="text-[10px] text-fg-subtle truncate block">
-                    {e.detail}
-                  </span>
-                )}
+            <div key={`${e.timestamp}-${i}`} className="flex items-start gap-2 font-mono text-[11px]">
+              {e.ok ? (
+                <CheckCircle2 size={11} className="mt-0.5 shrink-0 text-sk-signal" />
+              ) : (
+                <XCircle size={11} className="mt-0.5 shrink-0 text-sk-danger" />
+              )}
+              <div className="min-w-0 flex-1">
+                <span className="block truncate text-sk-text">{e.action}</span>
+                {e.detail && <span className="block truncate text-sk-subtle">{e.detail}</span>}
               </div>
-              <span className="text-[9px] font-mono text-fg-subtle shrink-0 tabular-nums">
+              <span className="shrink-0 tabular-nums text-sk-subtle">
                 {new Date(e.timestamp).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",

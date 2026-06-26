@@ -29,6 +29,28 @@ export default {
           muted: "#a1a1aa",
           subtle: "#71717a",
         },
+        // Synkro design-system tokens (popup). Map to CSS vars in index.css that
+        // flip on prefers-color-scheme. Prefixed `sk-` so they don't clash with the
+        // existing dark tokens above (which options/onboarding still use).
+        sk: {
+          bg: "var(--sk-bg)",
+          surface: "var(--sk-surface)",
+          raised: "var(--sk-raised)",
+          tint: "var(--sk-tint)",
+          hairline: "var(--sk-hairline)",
+          text: "var(--sk-text)",
+          muted: "var(--sk-muted)",
+          subtle: "var(--sk-subtle)",
+          signal: "var(--sk-signal)",
+          "on-signal": "var(--sk-on-signal)",
+          warn: "var(--sk-warn)",
+          danger: "var(--sk-danger)",
+        },
+      },
+      borderRadius: {
+        card: "14px",
+        box: "12px",
+        icon: "8px",
       },
       fontFamily: {
         mono: ["'JetBrains Mono'", "monospace"],
@@ -42,6 +64,7 @@ export default {
         "spin-slow": "spin 3s linear infinite",
         "fade-in": "fadeIn 0.3s ease forwards",
         "slide-up": "slideUp 0.3s ease forwards",
+        "synkro-pulse": "synkro-pulse 2s ease-out infinite",
       },
       keyframes: {
         fadeIn: {
@@ -51,6 +74,10 @@ export default {
         slideUp: {
           "0%": { opacity: "0", transform: "translateY(6px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "synkro-pulse": {
+          "0%": { transform: "scale(1)", opacity: "0.45" },
+          "70%,100%": { transform: "scale(3.2)", opacity: "0" },
         },
       },
       boxShadow: {

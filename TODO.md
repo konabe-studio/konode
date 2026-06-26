@@ -80,3 +80,21 @@
 - [ ] Demo video (1–3 min screencast)
 - [ ] Verification request (1–4 weeks, free)
 - [ ] Chrome Web Store listing ($5 one-time)
+
+---
+
+## 🎨 Brand & UI refresh (final pre-launch polish)
+
+The functionality is done; the last step before launch is making it *look*
+intentional — so the UI doesn't read as generic / AI-generated. Build on a single
+brand concept (`BRAND.md`) and apply it everywhere.
+
+- [ ] **Brand concept** — positioning, personality, logo direction, color palette,
+      typography, voice, anti-"AI-slop" principles (see `BRAND.md`)
+- [ ] **Logo** — wordmark + mark + app icons (16 / 32 / 48 / 128)
+- [ ] **Brand guidelines** — the system, with do/don't
+- [~] **UI pass** — popup re-skinned to the new design system with system light/dark
+      (`sk-*` tokens, Inter + mono, signal accent, pulse; noise/glow/DM Sans removed).
+      Options + onboarding still on the old dark theme — reuse the `sk-*` tokens next.
+- [ ] **Website** (privacy-first story, backends, open source)
+- [ ] **Pitch deck**

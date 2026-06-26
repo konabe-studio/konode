@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=JetBrains+Mono:wght@400;500&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -16,16 +15,6 @@
     color: #f4f4f5;
     font-family: 'DM Sans', sans-serif;
     -webkit-font-smoothing: antialiased;
-  }
-
-  /* Subtle noise texture overlay */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 9999;
   }
 
   ::-webkit-scrollbar {
@@ -61,4 +50,69 @@
     background: linear-gradient(#18181f, #18181f) padding-box,
                 linear-gradient(135deg, #6ee7b730, #ffffff0f) border-box;
   }
+}
+
+/* ── Synkro design-system theme (popup) ───────────────────────────────────
+   Light defaults; flips to dark on the OS/browser preference. Only the popup
+   opts in (via .sk-body + the sk-* Tailwind classes), so options/onboarding
+   keep their existing dark styling. */
+:root {
+  --sk-bg: #ffffff;
+  --sk-surface: #ffffff;
+  --sk-raised: #f7f8fa;
+  --sk-tint: #f7f8fa;
+  --sk-hairline: rgba(17, 21, 26, 0.1);
+  --sk-text: #11151a;
+  --sk-muted: #5b6470;
+  --sk-subtle: #8a929e;
+  --sk-signal: #0e9e6e;
+  --sk-on-signal: #ffffff;
+  --sk-warn: #b7791f;
+  --sk-danger: #dc2626;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sk-bg: #0f1216;
+    --sk-surface: #161a20;
+    --sk-raised: #1e232b;
+    --sk-tint: #161a20;
+    --sk-hairline: rgba(255, 255, 255, 0.08);
+    --sk-text: #e6e9ee;
+    --sk-muted: #97a0ad;
+    --sk-subtle: #6b7480;
+    --sk-signal: #34d399;
+    --sk-on-signal: #0f1216;
+    --sk-warn: #f5a524;
+    --sk-danger: #f87171;
+  }
+}
+
+@keyframes synkro-pulse {
+  0% { transform: scale(1); opacity: 0.45; }
+  70%, 100% { transform: scale(3.2); opacity: 0; }
+}
+
+/* The popup opts into the system-following theme (added in popup/main.tsx). */
+.sk-body {
+  background: var(--sk-bg);
+  color: var(--sk-text);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+.sk-body :focus-visible {
+  outline: 2px solid var(--sk-signal);
+  outline-offset: 2px;
+}
+
+/* The shared base rule pins html/body/#root to height:100% with a dark bg — fine
+   for the full-page options/onboarding, but in a content-sized popup it (a) shows
+   the dark base behind #root and (b) stops the popup shrinking back after the
+   audit log is opened and closed (leaving a black strip). Scope the popup page to
+   content height + the theme bg so it grows and shrinks cleanly. */
+html:has(.sk-body),
+.sk-body,
+.sk-body #root {
+  height: auto;
+  min-height: 0;
+  background: var(--sk-bg);
 }

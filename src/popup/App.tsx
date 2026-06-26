@@ -5,7 +5,7 @@ import { normalizeRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/
 import { AuditLog } from "./components/AuditLog";
 import {
   RefreshCw, Settings, Bookmark, Clock, Globe,
-  CheckCircle2, AlertCircle, Loader2, Radio, ChevronRight,
+  AlertCircle, Loader2, ChevronRight,
   Wifi, Puzzle, ExternalLink, GitMerge, RotateCcw,
 } from "lucide-react";
 
@@ -19,11 +19,11 @@ const DATA_TYPE_META: Record<DataType, { label: string; icon: typeof Bookmark }>
 };
 
 const STATUS_CONFIG = {
-  idle:     { color: "text-fg-muted",  dot: "bg-fg-subtle",          label: "Ready"    },
-  syncing:  { color: "text-warn",      dot: "bg-warn animate-pulse", label: "Syncing…" },
-  success:  { color: "text-accent",    dot: "bg-accent",             label: "Synced"   },
-  error:    { color: "text-danger",    dot: "bg-danger",             label: "Error"    },
-  conflict: { color: "text-warn",      dot: "bg-warn animate-pulse", label: "Conflict" },
+  idle:     { color: "text-sk-muted",  dot: "bg-sk-subtle", ring: "border-sk-subtle", label: "Ready"    },
+  syncing:  { color: "text-sk-text",   dot: "bg-sk-signal", ring: "border-sk-signal", label: "Syncing…" },
+  success:  { color: "text-sk-text",   dot: "bg-sk-signal", ring: "border-sk-signal", label: "Synced"   },
+  error:    { color: "text-sk-danger", dot: "bg-sk-danger", ring: "border-sk-danger", label: "Error"    },
+  conflict: { color: "text-sk-warn",   dot: "bg-sk-warn",   ring: "border-sk-warn",   label: "Conflict" },
 };
 
 const SYNC_ORDER: DataType[] = ["bookmarks", "history", "sessions", "extensions"];
@@ -187,126 +187,122 @@ export default function PopupApp() {
   const lastSync = state?.last_sync
     ? new Date(state.last_sync).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : null;
+  const pulsing = status === "syncing" || status === "success";
 
   return (
-    <div
-      className="w-[360px] min-h-[480px] bg-surface-1 flex flex-col"
-      style={{ fontFamily: "'DM Sans', sans-serif" }}
-    >
-      {/* ── Header ── */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
+    <div className="flex max-h-[600px] w-[360px] flex-col bg-sk-bg text-sk-text">
+      {/* Pinned top — header, status, banners and the primary action stay put while
+          the body below scrolls. Chrome caps a popup at ~600px tall, so once the
+          (expanded) content exceeds that, only the body region scrolls instead of
+          the whole popup pushing its header off the top. */}
+      <div className="shrink-0 px-4 pt-4">
+      {/* ── Status + settings (the toolbar icon already identifies the popup,
+            so the wordmark header is dropped; settings moves to the top-right) ── */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <span className="relative flex h-2 w-2 items-center justify-center">
+            {pulsing && (
+              <span className={`absolute h-2 w-2 rounded-full border-[1.5px] ${statusCfg.ring} animate-synkro-pulse`} />
+            )}
+            <span className={`h-2 w-2 rounded-full ${statusCfg.dot}`} />
+          </span>
+          <span className={`text-sm font-medium ${statusCfg.color}`}>{statusCfg.label}</span>
+        </div>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-accent/20 flex items-center justify-center">
-            <Radio size={12} className="text-accent" />
-          </div>
-          <span className="text-sm font-semibold tracking-wide text-fg">Synkro</span>
-        </div>
-        <button
-          onClick={openOptions}
-          className="p-1.5 rounded-md text-fg-subtle hover:text-fg hover:bg-surface-3 transition-colors"
-          aria-label="Settings"
-        >
-          <Settings size={14} />
-        </button>
-      </header>
-
-      {/* ── Status + Actions ── */}
-      <div className="px-4 py-4 border-b border-border-subtle space-y-3 shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
-            <span className={`text-xs font-medium ${statusCfg.color}`}>{statusCfg.label}</span>
-          </div>
-          {lastSync && (
-            <span className="text-[10px] font-mono text-fg-subtle tabular-nums">{lastSync}</span>
-          )}
-        </div>
-
-        {loadError && (
+          {lastSync && <span className="font-mono text-[13px] tabular-nums text-sk-muted">{lastSync}</span>}
           <button
-            onClick={load}
-            className="w-full flex items-center justify-center gap-2 bg-danger/10 border border-danger/20 rounded-lg px-3 py-2 text-[11px] text-danger hover:bg-danger/15 transition-colors"
+            onClick={openOptions}
+            aria-label="Settings"
+            className="flex h-8 w-8 items-center justify-center rounded-icon text-sk-muted transition-colors hover:bg-sk-raised"
           >
-            <AlertCircle size={11} /> Couldn't reach Synkro — tap to retry
+            <Settings size={18} strokeWidth={1.75} />
           </button>
-        )}
+        </div>
+      </div>
 
-        {state?.last_error && (
-          <div className="flex items-start gap-2 bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">
-            <AlertCircle size={11} className="text-danger mt-0.5 shrink-0" />
-            <span className="text-[11px] text-danger line-clamp-2">{state.last_error}</span>
-          </div>
-        )}
+      {/* ── Banners ── */}
+      {(loadError || state?.last_error || (state?.pending_conflicts?.length ?? 0) > 0 || !hasBackend) && (
+        <div className="mt-3 space-y-2">
+          {loadError && (
+            <button
+              onClick={load}
+              className="flex w-full items-center justify-center gap-2 rounded-box border border-sk-hairline bg-sk-raised px-3 py-2 text-[12px] text-sk-danger transition-colors hover:bg-sk-tint"
+            >
+              <AlertCircle size={12} /> Couldn't reach Synkro — tap to retry
+            </button>
+          )}
 
-        {(state?.pending_conflicts?.length ?? 0) > 0 && (
-          <div className="space-y-2">
-            {state!.pending_conflicts.map((c) => (
-              <div key={c.id} className="bg-warn/5 border border-warn/20 rounded-lg px-3 py-2">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <GitMerge size={11} className="text-warn shrink-0" />
-                  <span className="text-[11px] text-warn">Conflict in {c.data_type} — choose a version</span>
+          {state?.last_error && (
+            <div className="flex items-start gap-2 rounded-box border border-sk-hairline bg-sk-raised px-3 py-2">
+              <AlertCircle size={12} className="mt-0.5 shrink-0 text-sk-danger" />
+              <span className="line-clamp-2 text-[12px] text-sk-danger">{state.last_error}</span>
+            </div>
+          )}
+
+          {(state?.pending_conflicts?.length ?? 0) > 0 &&
+            state!.pending_conflicts.map((c) => (
+              <div key={c.id} className="rounded-box border border-sk-hairline bg-sk-raised px-3 py-2">
+                <div className="mb-1.5 flex items-center gap-2">
+                  <GitMerge size={12} className="shrink-0 text-sk-warn" />
+                  <span className="text-[12px] text-sk-warn">Conflict in {c.data_type} — choose a version</span>
                 </div>
                 <div className="flex gap-1.5">
                   <button
                     onClick={() => resolveConflict(c.id, "local")}
-                    className="flex-1 text-[10px] py-1 rounded bg-surface-3 text-fg-muted hover:text-fg transition-colors"
+                    className="flex-1 rounded-box border border-sk-hairline bg-sk-surface py-1.5 text-[11px] text-sk-muted transition-colors hover:text-sk-text"
                   >
                     Keep local
                   </button>
                   <button
                     onClick={() => resolveConflict(c.id, "remote")}
-                    className="flex-1 text-[10px] py-1 rounded bg-surface-3 text-fg-muted hover:text-fg transition-colors"
+                    className="flex-1 rounded-box border border-sk-hairline bg-sk-surface py-1.5 text-[11px] text-sk-muted transition-colors hover:text-sk-text"
                   >
                     Use remote
                   </button>
                 </div>
               </div>
             ))}
-          </div>
-        )}
 
-        {!hasBackend && (
-          <button
-            onClick={openOptions}
-            className="w-full flex items-center justify-between bg-warn/5 border border-warn/20 rounded-lg px-3 py-2 hover:bg-warn/10 transition-colors"
-          >
-            <div className="flex items-center gap-2 text-warn">
-              <Wifi size={11} />
-              <span className="text-[11px]">No backend configured</span>
-            </div>
-            <ChevronRight size={11} className="text-warn/60" />
-          </button>
-        )}
+          {!hasBackend && (
+            <button
+              onClick={openOptions}
+              className="flex w-full items-center justify-between rounded-box border border-sk-hairline bg-sk-raised px-3 py-2 transition-colors hover:bg-sk-tint"
+            >
+              <span className="flex items-center gap-2 text-sk-warn">
+                <Wifi size={12} />
+                <span className="text-[12px]">No backend configured</span>
+              </span>
+              <ChevronRight size={12} className="text-sk-warn" />
+            </button>
+          )}
+        </div>
+      )}
 
-        <button
-          onClick={handleSyncNow}
-          disabled={isSyncing || !hasBackend}
-          className={`
-            w-full flex items-center justify-center gap-2
-            py-2.5 rounded-lg text-sm font-medium
-            transition-all duration-200 select-none
-            ${hasBackend
-              ? "bg-accent text-surface-0 hover:bg-accent/90 active:scale-[0.98] shadow-glow-sm"
-              : "bg-surface-3 text-fg-subtle cursor-not-allowed"
-            }
-            disabled:opacity-60
-          `}
-        >
-          {isSyncing
-            ? <Loader2 size={14} className="animate-spin" />
-            : <RefreshCw size={14} />
-          }
-          {isSyncing ? "Syncing…" : "Sync Now"}
-        </button>
+      {/* ── Sync now ── */}
+      <button
+        onClick={handleSyncNow}
+        disabled={isSyncing || !hasBackend}
+        className={`mt-4 flex h-11 w-full select-none items-center justify-center gap-2 rounded-box text-sm font-medium transition-colors ${
+          hasBackend
+            ? "bg-sk-signal text-sk-on-signal hover:opacity-90 active:scale-[0.99]"
+            : "cursor-not-allowed bg-sk-raised text-sk-subtle"
+        } disabled:opacity-60`}
+      >
+        {isSyncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} strokeWidth={2} />}
+        {isSyncing ? "Syncing…" : "Sync now"}
+      </button>
       </div>
 
-      {/* ── Data Streams ── */}
-      <div className="px-4 py-3 border-b border-border-subtle flex-1">
-        <p className="text-[10px] font-mono text-fg-subtle uppercase tracking-wider mb-2">
-          Active Streams
-        </p>
-        <div className="space-y-0.5">
-          {(["bookmarks", "history", "sessions", "extensions"] as DataType[]).map((type) => {
+      {/* Scrollable body — the popup grows to fit this; when it would exceed
+          Chrome's ~600px ceiling, this region scrolls and the header stays pinned. */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+      {/* ── Active streams (live per-type status) ── */}
+      <section className="mt-4">
+        <h2 className="mb-2 pl-0.5 font-mono text-[11px] font-medium tracking-[0.08em] text-sk-subtle">
+          ACTIVE STREAMS
+        </h2>
+        <div className="grid grid-cols-4 gap-2.5">
+          {SYNC_ORDER.map((type) => {
             const meta = DATA_TYPE_META[type];
             const Icon = meta.icon;
             const isEnabled = settings?.enabled_types.includes(type) ?? false;
@@ -314,128 +310,113 @@ export default function PopupApp() {
             const wasSynced = syncedTypes.has(type);
             const isPending = isSyncing && isEnabled && !isCurrentlySyncing && !wasSynced;
 
+            // Green icon = OK; yellow spinner = syncing; subtle = pending/off.
+            const iconColor = isCurrentlySyncing
+              ? "text-sk-warn"
+              : isEnabled && !isPending
+                ? "text-sk-signal"
+                : "text-sk-subtle";
+            const state = isCurrentlySyncing
+              ? "syncing"
+              : !isEnabled
+                ? "off"
+                : isPending
+                  ? "pending"
+                  : "synced";
+
             return (
               <div
                 key={type}
-                className={`
-                  flex items-center justify-between px-3 py-2 rounded-md
-                  transition-all duration-200
-                  ${!isEnabled ? "opacity-35" : ""}
-                  ${isCurrentlySyncing ? "bg-accent/10 border border-accent/20" : isEnabled ? "bg-surface-2" : ""}
-                `}
+                title={`${meta.label} — ${state}`}
+                aria-label={`${meta.label}: ${state}`}
+                className={`flex aspect-square items-center justify-center rounded-full border border-sk-hairline bg-sk-tint ${!isEnabled ? "opacity-40" : ""}`}
               >
-                <div className="flex items-center gap-2.5">
-                  <Icon
-                    size={13}
-                    className={
-                      isCurrentlySyncing ? "text-accent animate-pulse" :
-                      isEnabled ? "text-accent/70" : "text-fg-subtle"
-                    }
-                  />
-                  <span className={`text-xs ${isCurrentlySyncing ? "text-fg font-medium" : "text-fg-muted"}`}>
-                    {meta.label}
-                  </span>
-                  {isCurrentlySyncing && (
-                    <span className="text-[10px] text-accent/70 font-mono animate-pulse">syncing…</span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  {isCurrentlySyncing ? (
-                    <Loader2 size={11} className="text-accent animate-spin" />
-                  ) : wasSynced ? (
-                    <CheckCircle2 size={11} className="text-accent" />
-                  ) : isPending ? (
-                    <Clock size={11} className="text-fg-subtle opacity-40" />
-                  ) : isEnabled ? (
-                    <CheckCircle2 size={11} className="text-accent/50" />
-                  ) : (
-                    <div className="w-[11px] h-[11px] rounded-full border border-border-strong" />
-                  )}
-                </div>
+                {isCurrentlySyncing ? (
+                  <Loader2 size={22} className={`animate-spin ${iconColor}`} />
+                ) : (
+                  <Icon size={22} strokeWidth={1.75} className={iconColor} />
+                )}
               </div>
             );
           })}
         </div>
-      </div>
+      </section>
 
       {/* ── Missing extensions ── */}
       {missingExtensions.length > 0 && (
-        <div className="px-4 py-2.5 border-b border-border-subtle">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-fg-muted">
-              <span className="text-warn font-medium">{missingExtensions.length}</span> missing extensions
-            </span>
-            <button
-              onClick={openAllMissing}
-              className="flex items-center gap-1 text-[10px] text-accent hover:text-accent/80 transition-colors"
-            >
-              <ExternalLink size={10} />
-              Open all
-            </button>
-          </div>
+        <div className="flex items-center justify-between px-0.5 pb-0.5 pt-[11px]">
+          <span className="text-[13px]">
+            <span className="font-medium text-sk-warn">{missingExtensions.length}</span> missing extensions
+          </span>
+          <button
+            onClick={openAllMissing}
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-sk-text hover:underline hover:underline-offset-2"
+          >
+            Open all
+            <ExternalLink size={13} strokeWidth={2} />
+          </button>
         </div>
       )}
 
       {/* ── Restore sessions (one per peer device) ── */}
       {remoteSessions.length > 0 && (
-        <div className="px-4 py-2.5 border-b border-border-subtle space-y-1.5">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-fg-subtle">
-            Sessions from other devices
-          </span>
-          {remoteSessions.map((entry) => (
-            <div key={entry.session.id} className="flex items-center gap-2 py-0.5">
-              <div className="flex-1 min-w-0">
-                <span className="text-[11px] text-fg-muted truncate block">
-                  {entry.session.label || "Unknown device"}
-                </span>
-                <span className="text-[10px] text-fg-subtle">
-                  {entry.session.tabs.length} tab{entry.session.tabs.length === 1 ? "" : "s"}
-                  {entry.timestamp &&
-                    ` · ${new Date(entry.timestamp).toLocaleString([], {
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}`}
-                </span>
+        <section className="mt-4">
+          <h2 className="mb-2 pl-0.5 font-mono text-[11px] font-medium tracking-[0.08em] text-sk-subtle">
+            SESSIONS FROM OTHER DEVICES
+          </h2>
+          <div className="space-y-1.5">
+            {remoteSessions.map((entry) => (
+              <div key={entry.session.id} className="flex items-center gap-2 px-0.5 py-0.5">
+                <div className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px]">{entry.session.label || "Unknown device"}</span>
+                  <span className="font-mono text-[11px] text-sk-subtle">
+                    {entry.session.tabs.length} tab{entry.session.tabs.length === 1 ? "" : "s"}
+                    {entry.timestamp &&
+                      ` · ${new Date(entry.timestamp).toLocaleString([], {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}`}
+                  </span>
+                </div>
+                <button
+                  onClick={() => restoreSession(entry.session.id)}
+                  className="flex shrink-0 items-center gap-1.5 rounded-box border border-sk-hairline bg-sk-raised px-2.5 py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text"
+                >
+                  <RotateCcw size={12} /> Restore
+                </button>
               </div>
-              <button
-                onClick={() => restoreSession(entry.session.id)}
-                className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-surface-2 text-fg-muted hover:text-fg hover:bg-surface-3 transition-colors shrink-0"
-              >
-                <RotateCcw size={11} /> Restore
-              </button>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </section>
       )}
 
-      {/* ── Backend info ── */}
-      <div className="px-4 py-2.5">
-        <div className="flex items-center justify-between">
+      {/* ── Footer ── */}
+      <footer className="mt-3.5 flex items-end justify-between border-t border-sk-hairline pt-3.5">
+        <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-fg-subtle">Backend</span>
-            <span className="text-[10px] font-mono text-fg-muted">
-              {settings?.active_backend ?? "—"}
-            </span>
+            <span className="text-xs text-sk-muted">Backend</span>
+            <span className="font-mono text-xs">{settings?.active_backend ?? "—"}</span>
           </div>
-          <button
-            onClick={openOptions}
-            className="text-[10px] text-accent/70 hover:text-accent transition-colors"
-          >
-            Configure →
-          </button>
+          {settings?.device_label && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-sk-muted">Device</span>
+              <span className="font-mono text-xs">{settings.device_label}</span>
+            </div>
+          )}
         </div>
-        {settings?.device_label && (
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[10px] text-fg-subtle">Device</span>
-            <span className="text-[10px] font-mono text-fg-muted">{settings.device_label}</span>
-          </div>
-        )}
-      </div>
+        <button
+          onClick={openOptions}
+          className="text-[13px] font-medium text-sk-text hover:underline hover:underline-offset-2"
+        >
+          Configure →
+        </button>
+      </footer>
 
+      {/* ── Audit log ── */}
       <AuditLog />
+      </div>
     </div>
   );
 }
