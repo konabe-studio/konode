@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Self-hosted fonts (latin subset, OFL) bundled under public/fonts → dist/fonts.
+   No external fetch — the extension never pings Google Fonts. Absolute /fonts/
+   paths resolve from the extension root on every page (popup/options/onboarding). */
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/inter-400.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/inter-500.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/jetbrains-mono-400.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/jetbrains-mono-500.woff2') format('woff2'); }
+
 @layer base {
   *, *::before, *::after {
     box-sizing: border-box;
@@ -13,7 +21,7 @@
     height: 100%;
     background-color: #0a0a0f;
     color: #f4f4f5;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 

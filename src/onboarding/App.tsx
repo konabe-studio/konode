@@ -570,6 +570,8 @@ const S: Record<string, React.CSSProperties> = {
 };
 
 const CSS = `
+  @font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/inter-400.woff2') format('woff2'); }
+  @font-face { font-family: 'Inter'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/inter-500.woff2') format('woff2'); }
   :root {
     --bg: #f7f8fa; --bg-card: #fff; --bg-card-sel: #e7f5ef; --bg-input: #fff;
     --bg-hover: #f1f3f5; --border: #e6e8eb; --border-input: #d4d8dd;
@@ -588,7 +590,7 @@ const CSS = `
       --shadow: 0 1px 3px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.05);
     }
   }
-  html, body, #root { margin: 0; padding: 0; background: var(--bg); }
+  html, body, #root { margin: 0; padding: 0; background: var(--bg); font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
   * { box-sizing: border-box; }
   .spin { animation: spin .8s linear infinite; display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }

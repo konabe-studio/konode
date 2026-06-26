@@ -54,7 +54,7 @@ export default {
       },
       fontFamily: {
         mono: ["'JetBrains Mono'", "monospace"],
-        sans: ["'DM Sans'", "sans-serif"],
+        sans: ["'Inter'", "system-ui", "sans-serif"],
       },
       fontSize: {
         "2xs": ["0.65rem", { lineHeight: "1rem" }],
