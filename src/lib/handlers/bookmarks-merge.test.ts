@@ -156,6 +156,45 @@ describe("importBookmarks — moves", () => {
     const wdtChildren = await chrome.bookmarks.getChildren(wdt.id);
     expect(wdtChildren.find((c) => c.url === "https://x.com")).toBeTruthy(); // stayed put
   });
+
+  it("places a moved bookmark at the peer's index, not at the end", async () => {
+    // Local order inside folder F: A, X, B
+    const f = await chrome.bookmarks.create({ parentId: "1", title: "F" });
+    await chrome.bookmarks.create({ parentId: f.id, title: "A", url: "https://a.com" });
+    await chrome.bookmarks.create({ parentId: f.id, title: "X", url: "https://x.com" });
+    await chrome.bookmarks.create({ parentId: f.id, title: "B", url: "https://b.com" });
+
+    // Peer moved X to the front of F (index 0), with a newer move record.
+    const future = Date.now() + 60_000;
+    const p: BookmarkPayload = {
+      tree: [
+        {
+          id: "0", parentId: null, title: "", dateAdded: 0,
+          children: [
+            {
+              id: "1", parentId: "0", title: "Bookmarks bar", dateAdded: 0,
+              children: [
+                folder("F", [
+                  link("X", "https://x.com"),
+                  link("A", "https://a.com"),
+                  link("B", "https://b.com"),
+                ]),
+              ],
+            },
+            { id: "2", parentId: "0", title: "Other bookmarks", dateAdded: 0, children: [] },
+            { id: "3", parentId: "0", title: "Mobile bookmarks", dateAdded: 0, children: [] },
+          ],
+        },
+      ],
+      tombstones: [],
+      moves: [{ url: "https://x.com", at: future }],
+    };
+    await importBookmarks(p, "merge", "lww");
+
+    const fLocal = (await chrome.bookmarks.getChildren("1")).find((c) => !c.url && c.title === "F")!;
+    const order = (await chrome.bookmarks.getChildren(fLocal.id)).map((c) => c.url);
+    expect(order).toEqual(["https://x.com", "https://a.com", "https://b.com"]); // X moved to front
+  });
 });
 
 describe("importBookmarks — replace", () => {

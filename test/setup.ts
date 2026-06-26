@@ -42,13 +42,10 @@ function makeBookmarks() {
     getChildren: (parentId) => Promise.resolve(bmChildren(parentId).map((c) => bmBuild(c.id))),
     create: (props) => {
       const id = String(bmSeq++);
-      const node = {
-        id,
-        parentId: props.parentId,
-        title: props.title ?? "",
-        dateAdded: Date.now(),
-        index: bmChildren(props.parentId).length,
-      };
+      const siblings = bmChildren(props.parentId);
+      const idx = typeof props.index === "number" ? Math.min(props.index, siblings.length) : siblings.length;
+      for (const s of siblings) if ((s.index ?? 0) >= idx) s.index = (s.index ?? 0) + 1; // shift to insert
+      const node = { id, parentId: props.parentId, title: props.title ?? "", dateAdded: Date.now(), index: idx };
       if (typeof props.url === "string") node.url = props.url;
       bmNodes.set(id, node);
       return Promise.resolve(bmBuild(id));
@@ -68,8 +65,12 @@ function makeBookmarks() {
     move: (id, dest) => {
       const n = bmNodes.get(id);
       if (n && dest && dest.parentId) {
-        n.index = bmChildren(dest.parentId).length; // append (count before reparent)
-        n.parentId = dest.parentId;
+        const target = dest.parentId;
+        const siblings = bmChildren(target).filter((s) => s.id !== id);
+        const idx = typeof dest.index === "number" ? Math.min(dest.index, siblings.length) : siblings.length;
+        for (const s of siblings) if ((s.index ?? 0) >= idx) s.index = (s.index ?? 0) + 1; // shift to insert
+        n.parentId = target;
+        n.index = idx;
       }
       return Promise.resolve(n ? bmBuild(id) : undefined);
     },

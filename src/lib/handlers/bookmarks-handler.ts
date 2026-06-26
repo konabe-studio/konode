@@ -298,10 +298,16 @@ async function mergeBookmarks(
   //    if missing (unless a deletion suppresses it), or — if already local — move
   //    it to the peer's folder when the peer's placement wins (move LWW). The
   //    placement map is the CURRENT local parent per URL, read after deletions. ──
-  const placement = new Map<string, { id: string; parentId: string | null }>();
-  for (const n of flattenNodes(await exportBookmarks())) {
-    if (n.url && !placement.has(n.url)) placement.set(n.url, { id: n.id, parentId: n.parentId });
-  }
+  // url → current local {id, parent, index-within-parent}, so we can detect both
+  // a folder change and a reorder, and skip a move that's already in the right spot.
+  const placement = new Map<string, { id: string; parentId: string | null; index: number }>();
+  const indexLocal = (nodes: SyncBookmark[]): void => {
+    nodes.forEach((n, i) => {
+      if (n.url && !placement.has(n.url)) placement.set(n.url, { id: n.id, parentId: n.parentId, index: i });
+      if (n.children) indexLocal(n.children);
+    });
+  };
+  indexLocal(await exportBookmarks());
   const suppressedByDeletion = (url: string): boolean => {
     const lAt = localDel.get(url);
     const rAt = remoteDel.get(url);
@@ -335,17 +341,19 @@ async function mergeBookmarks(
   // the chain on demand, memoized). This stops an empty folder from resurrecting
   // from a peer: when a folder's bookmarks are all deleted/tombstoned (folders carry
   // no tombstone of their own), nothing triggers its creation, so it stays gone.
-  const mergeNode = async (node: SyncBookmark, ensureParent: () => Promise<string>): Promise<void> => {
+  // `index` = the node's position among its siblings in the REMOTE tree, so adds
+  // and moves land at the peer's position instead of always at the end of the folder.
+  const mergeNode = async (node: SyncBookmark, ensureParent: () => Promise<string>, index: number): Promise<void> => {
     if (node.url) {
       if (addedUrls.has(node.url)) return;
       const loc = placement.get(node.url);
       if (loc) {
-        // Already local → relocate to the peer's folder if its placement wins.
+        // Already local → relocate to the peer's folder/position if its placement wins.
         if (shouldMove(node.url)) {
           try {
             const targetId = await ensureParent();
-            if (loc.parentId !== targetId) {
-              await chrome.bookmarks.move(loc.id, { parentId: targetId });
+            if (loc.parentId !== targetId || loc.index !== index) {
+              await chrome.bookmarks.move(loc.id, { parentId: targetId, index });
               moved++;
             }
           } catch (err) {
@@ -357,15 +365,15 @@ async function mergeBookmarks(
       if (suppressedByDeletion(node.url)) return;
       try {
         const parentId = await ensureParent();
-        await chrome.bookmarks.create({ parentId, title: node.title, url: node.url });
+        await chrome.bookmarks.create({ parentId, index, title: node.title, url: node.url });
         addedUrls.add(node.url);
         added++;
       } catch (err) {
         logger.error(`Bookmark merge add: ${node.title}`, err);
       }
     } else {
-      // Reuse a same-title folder under the parent, else create it — but only when
-      // the first descendant actually needs it.
+      // Reuse a same-title folder under the parent, else create it (at the peer's
+      // position) — but only when the first descendant actually needs it.
       let folderId: string | null = null;
       const ensureThis = async (): Promise<string> => {
         if (folderId) return folderId;
@@ -374,10 +382,11 @@ async function mergeBookmarks(
         const existing = children.find((c) => !c.url && c.title === node.title);
         folderId = existing
           ? existing.id
-          : (await chrome.bookmarks.create({ parentId, title: node.title })).id;
+          : (await chrome.bookmarks.create({ parentId, index, title: node.title })).id;
         return folderId;
       };
-      for (const child of node.children ?? []) await mergeNode(child, ensureThis);
+      let i = 0;
+      for (const child of node.children ?? []) { await mergeNode(child, ensureThis, i); i++; }
     }
   };
 
@@ -388,8 +397,10 @@ async function mergeBookmarks(
       (localRootIds.has(remoteRoot.id) ? remoteRoot.id : undefined) ??
       localRootByTitle.get(remoteRoot.title?.toLowerCase()) ??
       otherId;
+    let i = 0;
     for (const child of remoteRoot.children ?? []) {
-      await mergeNode(child, () => Promise.resolve(targetRootId));
+      await mergeNode(child, () => Promise.resolve(targetRootId), i);
+      i++;
     }
   }
 

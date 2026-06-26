@@ -102,6 +102,9 @@ The first working build, hardened over a review + fix pass. Highlights:
   (`synkro_bm_moves`, recorded on `onMoved`) carried in the payload; the merge
   relocates a locally-present bookmark to the peer's folder with last-write-wins
   (prefer-local keeps local placement; prefer-remote always adopts the peer's).
+  The merge also passes the **position/index** from the peer's tree to
+  create/move, so a moved or added bookmark lands at the peer's spot instead of
+  always at the end of the folder.
 - **Empty folders no longer resurrect.** Folders carry no tombstone (those are
   URL-keyed), so a deleted folder's bookmarks were removed but the empty folder
   synced back from a peer. Now the merge creates folders lazily (only when a
