@@ -65,6 +65,19 @@ function makeBookmarks() {
       bmNodes.delete(id);
       return Promise.resolve();
     },
+    move: (id, dest) => {
+      const n = bmNodes.get(id);
+      if (n && dest && dest.parentId) {
+        n.index = bmChildren(dest.parentId).length; // append (count before reparent)
+        n.parentId = dest.parentId;
+      }
+      return Promise.resolve(n ? bmBuild(id) : undefined);
+    },
+    getSubTree: (id) => Promise.resolve(bmNodes.has(id) ? [bmBuild(id)] : []),
+    get: (idOrList) => {
+      const ids = Array.isArray(idOrList) ? idOrList : [idOrList];
+      return Promise.resolve(ids.filter((i) => bmNodes.has(i)).map((i) => bmBuild(i)));
+    },
     onCreated: { addListener: () => {} },
     onChanged: { addListener: () => {} },
     onMoved: { addListener: () => {} },

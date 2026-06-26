@@ -97,6 +97,11 @@ The first working build, hardened over a review + fix pass. Highlights:
   snapshots local first; root matching uses Chrome's stable IDs.
 
 ### Fixed
+- **Bookmark moves now propagate.** The URL-keyed merge ignored a bookmark's
+  folder, so moving one between folders didn't sync. Added a per-URL move log
+  (`synkro_bm_moves`, recorded on `onMoved`) carried in the payload; the merge
+  relocates a locally-present bookmark to the peer's folder with last-write-wins
+  (prefer-local keeps local placement; prefer-remote always adopts the peer's).
 - **Empty folders no longer resurrect.** Folders carry no tombstone (those are
   URL-keyed), so a deleted folder's bookmarks were removed but the empty folder
   synced back from a peer. Now the merge creates folders lazily (only when a

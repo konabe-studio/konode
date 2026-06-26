@@ -126,6 +126,38 @@ describe("empty folders are not synced", () => {
   });
 });
 
+describe("importBookmarks — moves", () => {
+  it("relocates a bookmark to the peer's folder when the peer's move is newer (lww)", async () => {
+    const wdt = await chrome.bookmarks.create({ parentId: "1", title: "Web Design Things" });
+    await chrome.bookmarks.create({ parentId: wdt.id, title: "X", url: "https://x.com" });
+
+    // Peer has X at the bar root with a newer move record.
+    const future = Date.now() + 60_000;
+    const p: BookmarkPayload = {
+      ...payload([link("X", "https://x.com")]),
+      moves: [{ url: "https://x.com", at: future }],
+    };
+    await importBookmarks(p, "merge", "lww");
+
+    const bar = await chrome.bookmarks.getChildren("1");
+    expect(bar.find((c) => c.url === "https://x.com")).toBeTruthy(); // now at the bar root
+    const wdtChildren = await chrome.bookmarks.getChildren(wdt.id);
+    expect(wdtChildren.find((c) => c.url === "https://x.com")).toBeFalsy(); // gone from WDT
+    expect(await localUrls()).toEqual(["https://x.com"]); // no duplicate
+  });
+
+  it("does NOT move a present bookmark without a newer move record", async () => {
+    const wdt = await chrome.bookmarks.create({ parentId: "1", title: "WDT" });
+    await chrome.bookmarks.create({ parentId: wdt.id, title: "X", url: "https://x.com" });
+
+    // Peer lists X at the bar root but carries no move → placement must not churn.
+    await importBookmarks(payload([link("X", "https://x.com")]), "merge", "lww");
+
+    const wdtChildren = await chrome.bookmarks.getChildren(wdt.id);
+    expect(wdtChildren.find((c) => c.url === "https://x.com")).toBeTruthy(); // stayed put
+  });
+});
+
 describe("importBookmarks — replace", () => {
   it("clears local and restores the remote tree", async () => {
     await seed("A", "https://a.com");

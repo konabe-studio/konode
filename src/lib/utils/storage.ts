@@ -1,5 +1,6 @@
 import type {
   DataType,
+  MoveRecord,
   RemoteExtensionEntry,
   RemoteSessionEntry,
   SyncExtension,
@@ -69,6 +70,7 @@ const KEYS = {
   AUDIT_LOG: "synkro_audit",
   BOOKMARK_CACHE: "synkro_bm_cache",
   BOOKMARK_TOMBSTONES: "synkro_bm_tombstones",
+  BOOKMARK_MOVES: "synkro_bm_moves",
   HISTORY_CACHE: "synkro_hist_cache",
   TAB_CACHE: "synkro_tab_cache",
   REMOTE_SESSIONS: "synkro_remote_sessions",
@@ -149,6 +151,16 @@ export async function getTombstones(): Promise<Tombstone[]> {
 
 export async function setTombstones(list: Tombstone[]): Promise<void> {
   await set(KEYS.BOOKMARK_TOMBSTONES, list);
+}
+
+// Per-URL "last (re)placed at" log, so bookmark MOVES propagate with LWW
+// (folders carry no identity; a move keeps the URL but changes its parent).
+export async function getMoves(): Promise<MoveRecord[]> {
+  return get<MoveRecord[]>(KEYS.BOOKMARK_MOVES, []);
+}
+
+export async function setMoves(list: MoveRecord[]): Promise<void> {
+  await set(KEYS.BOOKMARK_MOVES, list);
 }
 
 export async function getTabCache<T>(): Promise<T | null> {

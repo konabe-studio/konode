@@ -37,11 +37,20 @@ export interface Tombstone {
   deletedAt: number; // epoch ms
 }
 
+// A move marker: a URL was last (re)placed into its folder at `at`. Lets bookmark
+// MOVES propagate with last-write-wins (folders have no stable identity, and a
+// move keeps the URL but changes its parent — which the URL-keyed merge ignores).
+export interface MoveRecord {
+  url: string;
+  at: number; // epoch ms
+}
+
 // Bookmark sync payload: the live tree plus the device's deletion log.
 // (Older packets are a bare SyncBookmark[] — handled for backward compatibility.)
 export interface BookmarkPayload {
   tree: SyncBookmark[];
   tombstones: Tombstone[];
+  moves?: MoveRecord[]; // optional for back-compat with packets written before move-sync
 }
 
 // ─── History ───────────────────────────────────────────────────────────────
