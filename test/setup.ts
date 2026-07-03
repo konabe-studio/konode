@@ -74,6 +74,14 @@ function makeBookmarks() {
       }
       return Promise.resolve(n ? bmBuild(id) : undefined);
     },
+    update: (id, changes) => {
+      const n = bmNodes.get(id);
+      if (n) {
+        if (typeof changes.title === "string") n.title = changes.title;
+        if (typeof changes.url === "string") n.url = changes.url;
+      }
+      return Promise.resolve(n ? bmBuild(id) : undefined);
+    },
     getSubTree: (id) => Promise.resolve(bmNodes.has(id) ? [bmBuild(id)] : []),
     get: (idOrList) => {
       const ids = Array.isArray(idOrList) ? idOrList : [idOrList];

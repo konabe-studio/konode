@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { importBookmarks, exportBookmarkPayload } from "@/lib/handlers/bookmarks-handler";
+import { importBookmarks, exportBookmarkPayload, registerBookmarkListeners } from "@/lib/handlers/bookmarks-handler";
 import type { BookmarkPayload, SyncBookmark } from "@/lib/types";
 
 // These exercise the real merge/replace logic against the in-memory
@@ -90,6 +90,31 @@ describe("importBookmarks — merge", () => {
     const barChildren = await chrome.bookmarks.getChildren("1");
     const workFolders = barChildren.filter((c) => !c.url && c.title === "Work");
     expect(workFolders).toHaveLength(1);
+  });
+});
+
+describe("importBookmarks — URL edit (no duplicate)", () => {
+  it("tombstones the replaced url on edit so a peer doesn't resurrect it", async () => {
+    // Capture the onChanged listener the handler registers (the fake's is a no-op).
+    let onChanged: ((id: string, info: { title: string; url?: string }) => void) | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (chrome.bookmarks.onChanged as any).addListener = (cb: never) => { onChanged = cb; };
+    registerBookmarkListeners(() => {});
+
+    // Local: create A, then export — this snapshots the tree into synkro_bm_cache,
+    // which is the state peers still hold (id → https://a.com).
+    const a = await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    await exportBookmarkPayload();
+
+    // User edits the URL A → A2. Chrome fires onChanged with the NEW url.
+    await chrome.bookmarks.update(a.id, { url: "https://a2.com" });
+    onChanged!(a.id, { title: "A", url: "https://a2.com" });
+    await new Promise((r) => setTimeout(r, 0)); // let recordUrlChange persist the tombstone
+
+    // A peer still lists the OLD url. Before the fix, the merge re-added it as a
+    // duplicate; now the edit's tombstone suppresses it.
+    await importBookmarks(payload([link("A", "https://a.com")]), "merge", "lww");
+    expect(await localUrls()).toEqual(["https://a2.com"]);
   });
 });
 

@@ -94,6 +94,26 @@ async function recordRemovedTombstones(node: chrome.bookmarks.BookmarkTreeNode):
   logger.info("Tombstones", `Recorded ${urls.length} deletion(s)`);
 }
 
+/** Editing a bookmark's URL fires onChanged (NOT onRemoved), so no tombstone is
+ *  recorded for the REPLACED url. Since the whole sync model is URL-keyed, a peer
+ *  that still holds the old url re-adds it on the next merge — leaving a duplicate
+ *  next to the edited bookmark. Record a tombstone for the old url so the edit is
+ *  treated as delete(old)+add(new) and the old url is suppressed everywhere.
+ *  The old url comes from the last-synced snapshot (synkro_bm_cache), which is
+ *  exactly what peers still hold. */
+async function recordUrlChange(id: string, newUrl: string | undefined): Promise<void> {
+  if (importing || !newUrl) return;
+  const cache = await getBookmarkCache<SyncBookmark[]>();
+  if (!cache) return;
+  const prev = flattenNodes(cache).find((n) => n.id === id);
+  const oldUrl = prev?.url;
+  if (!oldUrl || oldUrl === newUrl) return;
+  const now = Date.now();
+  const current = await getTombstones();
+  await setTombstones(mergeTombstoneLists(current, [{ url: oldUrl, deletedAt: now }]));
+  logger.info("Tombstones", `Recorded URL-change deletion for ${oldUrl}`);
+}
+
 /** Record a move (per URL) for a moved bookmark/folder subtree, so the new
  *  placement propagates with LWW. */
 async function recordMove(id: string): Promise<void> {
@@ -123,6 +143,9 @@ export async function exportBookmarkPayload(): Promise<BookmarkPayload> {
   const gcedMoves = gcMoves(moves);
   await setTombstones(gced); // keep the stored logs pruned
   await setMoves(gcedMoves);
+  // Snapshot the current (full) tree so a later URL edit can find the replaced
+  // url by id and tombstone it (see recordUrlChange). This is the state peers hold.
+  await setBookmarkCache(tree);
   // Don't sync empty folders — a folder carries no tombstone, so leaving empty
   // folders in the payload is what made a deleted folder resurrect from a peer.
   return { tree: pruneEmptyFolders(tree), tombstones: gced, moves: gcedMoves };
@@ -482,7 +505,12 @@ export type BookmarkChangeCallback = () => void;
 
 export function registerBookmarkListeners(onChange: BookmarkChangeCallback): void {
   chrome.bookmarks.onCreated.addListener(onChange);
-  chrome.bookmarks.onChanged.addListener(onChange);
+  chrome.bookmarks.onChanged.addListener((id, changeInfo) => {
+    // A URL edit is a delete(old)+add(new) in the URL-keyed sync model — record a
+    // tombstone for the replaced url so a peer doesn't resurrect it as a duplicate.
+    void recordUrlChange(id, changeInfo.url);
+    onChange();
+  });
   chrome.bookmarks.onMoved.addListener((id) => {
     // Record the move (per URL, timestamped) so the new placement propagates.
     void recordMove(id);
