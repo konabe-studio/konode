@@ -17,13 +17,14 @@
  */
 
 import { logger } from "@/lib/utils/logger";
+import { KEYS } from "@/lib/utils/storage";
 
 const CLIENT_ID = "290320131573-l79rlp36rgmuc5bkisoqfcjc4k9t58dq.apps.googleusercontent.com";
 const CLIENT_SECRET = "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";
 const AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 const SCOPE = "https://www.googleapis.com/auth/drive.file";
-const STORAGE_KEY = "synkro_gdrive_session";
+const STORAGE_KEY = KEYS.GDRIVE_SESSION;
 const EXPIRY_BUFFER_MS = 60_000; // refresh a minute before the token actually expires
 
 export interface GDriveSession {

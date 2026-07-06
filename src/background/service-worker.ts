@@ -7,6 +7,7 @@ import { SyncEngine } from "@/lib/sync/sync-engine";
 import { registerBookmarkListeners } from "@/lib/handlers/bookmarks-handler";
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { logger, setLoggerDebug } from "@/lib/utils/logger";
+import { BADGE_COLORS, STATE_UPDATE } from "@/lib/constants";
 
 // ─── State ────────────────────────────────────────────────────────────────
 
@@ -41,7 +42,7 @@ async function init(): Promise<void> {
     // Push live status to any open popup/options view. chrome.extension.getViews
     // does not exist in an MV3 service worker, so just broadcast — sendMessage
     // rejects when no view is listening, which is expected; swallow it.
-    chrome.runtime.sendMessage({ type: "STATE_UPDATE", payload: state }).catch(() => {});
+    chrome.runtime.sendMessage({ type: STATE_UPDATE, payload: state }).catch(() => {});
   });
 
   // Bookmark listeners are registered once at the top level (see bottom of file),
@@ -72,16 +73,8 @@ function ensureInit(): Promise<void> {
 // ─── Badge ────────────────────────────────────────────────────────────────
 
 function updateBadge(status: string): void {
-  const colors: Record<string, string> = {
-    idle: "#71717a",
-    syncing: "#fbbf24",
-    success: "#6ee7b7",
-    error: "#f87171",
-    conflict: "#fb923c",
-  };
-
   chrome.action.setBadgeBackgroundColor({
-    color: colors[status] ?? colors.idle,
+    color: BADGE_COLORS[status as keyof typeof BADGE_COLORS] ?? BADGE_COLORS.idle,
   });
 
   chrome.action.setBadgeText({

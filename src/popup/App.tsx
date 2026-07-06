@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { SyncState, SyncSettings, DataType, SyncExtension, RemoteSessionEntry } from "@/lib/types";
 import { sendMessage } from "@/lib/utils/messaging";
-import { normalizeRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/storage";
+import { KEYS, normalizeRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/storage";
+import { STATE_UPDATE } from "@/lib/constants";
 import { AuditLog } from "./components/AuditLog";
 import {
   RefreshCw, Settings, Bookmark, Clock, Globe,
@@ -92,9 +93,9 @@ export default function PopupApp() {
   useEffect(() => {
     load();
 
-    chrome.storage.local.get("synkro_remote_extensions", (r) => {
+    chrome.storage.local.get(KEYS.REMOTE_EXTENSIONS, (r) => {
       // Union of every peer device's extension list (deduped by id).
-      const remote = normalizeRemoteExtensions(r["synkro_remote_extensions"]);
+      const remote = normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]);
       if (!remote.length) return;
       // "management" is an optional permission now — only query if it was granted.
       chrome.permissions.contains({ permissions: ["management"] }, (hasMgmt) => {
@@ -108,8 +109,8 @@ export default function PopupApp() {
       });
     });
 
-    chrome.storage.local.get("synkro_remote_sessions", (r) => {
-      setRemoteSessions(normalizeRemoteSessions(r["synkro_remote_sessions"]));
+    chrome.storage.local.get(KEYS.REMOTE_SESSIONS, (r) => {
+      setRemoteSessions(normalizeRemoteSessions(r[KEYS.REMOTE_SESSIONS]));
     });
 
     return () => {
@@ -152,7 +153,7 @@ export default function PopupApp() {
   // Listen for real-time state updates from background
   useEffect(() => {
     const handler = (msg: { type: string; payload: SyncState }) => {
-      if (msg.type === "STATE_UPDATE") setState(msg.payload);
+      if (msg.type === STATE_UPDATE) setState(msg.payload);
     };
     chrome.runtime.onMessage.addListener(handler);
     return () => chrome.runtime.onMessage.removeListener(handler);

@@ -1,9 +1,9 @@
 import type { SyncExtension } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
+import { CWS_DETAIL_BASE } from "@/lib/constants";
 
 // Legacy webstore URL: Chrome redirects /detail/<id> to the correct listing.
 // The new chromewebstore.google.com/detail/<id> form needs a slug we don't have.
-const CWS_BASE = "https://chrome.google.com/webstore/detail/";
 
 // ─── Export ──────────────────────────────────────────────────────────────────
 
@@ -38,7 +38,7 @@ export async function exportExtensions(): Promise<SyncExtension[]> {
           version: ext.version,
           enabled: ext.enabled,
           homepageUrl: ext.homepageUrl,
-          storeUrl: `${CWS_BASE}${ext.id}`,
+          storeUrl: `${CWS_DETAIL_BASE}${ext.id}`,
           description: ext.description,
           type: ext.type as "extension" | "theme" | "app",
         }));

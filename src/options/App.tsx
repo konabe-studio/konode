@@ -9,7 +9,8 @@ import {
   Radio, Sliders, Shield, Save, Pencil, Key, Copy,
 } from "lucide-react";
 import { generateRecoveryKey } from "@/lib/crypto/encryption";
-import { normalizeRemoteExtensions } from "@/lib/utils/storage";
+import { KEYS, normalizeRemoteExtensions } from "@/lib/utils/storage";
+import { CWS_DETAIL_BASE } from "@/lib/constants";
 
 // ─── Secret field ───────────────────────────────────────────────────────────
 // Masks a *saved* secret (token / password / passphrase): once a value exists, the
@@ -141,17 +142,17 @@ export default function OptionsApp() {
 
   useEffect(() => {
     load();
-    chrome.storage.local.get("synkro_gdrive_session", (r) => {
+    chrome.storage.local.get(KEYS.GDRIVE_SESSION, (r) => {
       // A stored session means we have a refresh token — show the account
       // regardless of access-token age (it renews silently).
-      const s = r["synkro_gdrive_session"];
+      const s = r[KEYS.GDRIVE_SESSION];
       if (s) setGdriveUser({ email: s.email ?? "", displayName: s.displayName ?? "" });
     });
-    chrome.storage.local.get("synkro_remote_extensions", (r) => {
+    chrome.storage.local.get(KEYS.REMOTE_EXTENSIONS, (r) => {
       // Use the normalizer: the value is a device-keyed map now, not the legacy
       // single object — reading `.extensions` off the map returned nothing, so the
       // options "missing on this device" list stayed empty (the popup was correct).
-      setRemoteExtensions(normalizeRemoteExtensions(r["synkro_remote_extensions"]));
+      setRemoteExtensions(normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]));
     });
     chrome.management.getAll((exts) => setLocalExtIds(new Set(exts.map((e) => e.id))));
   }, [load]);
@@ -256,7 +257,7 @@ export default function OptionsApp() {
   };
 
   const disconnectGDrive = () => {
-    chrome.storage.local.remove("synkro_gdrive_session");
+    chrome.storage.local.remove(KEYS.GDRIVE_SESSION);
     setGdriveUser(null);
     if (settings?.active_backend === "gdrive") update({ active_backend: null });
   };
@@ -281,7 +282,7 @@ export default function OptionsApp() {
           bookmarks: bookmarkTree,
           extensions: extensions
             .filter(e => e.id !== chrome.runtime.id && e.installType !== "other" && e.installType !== "admin")
-            .map(e => ({ id: e.id, name: e.name, version: e.version, enabled: e.enabled, storeUrl: `https://chrome.google.com/webstore/detail/${e.id}` })),
+            .map(e => ({ id: e.id, name: e.name, version: e.version, enabled: e.enabled, storeUrl: `${CWS_DETAIL_BASE}${e.id}` })),
           history: historyItems.map(h => ({ url: h.url, title: h.title, lastVisitTime: h.lastVisitTime, visitCount: h.visitCount })),
         },
       };

@@ -64,7 +64,11 @@ export const DEFAULT_STATE: SyncState = {
 
 // ─── Keys ──────────────────────────────────────────────────────────────────
 
-const KEYS = {
+// The single source of truth for every chrome.storage.local key. Exported so the
+// UI reads/writes go through KEYS.* instead of re-typing raw "synkro_*" strings
+// (a mistyped/legacy literal is what left the options "missing extensions" list
+// silently empty).
+export const KEYS = {
   SETTINGS: "synkro_settings",
   STATE: "synkro_state",
   AUDIT_LOG: "synkro_audit",
@@ -77,6 +81,7 @@ const KEYS = {
   REMOTE_EXTENSIONS: "synkro_remote_extensions",
   UPLOAD_CHECKSUMS: "synkro_upload_checksums",
   SYNC_LOCK: "synkro_sync_lock",
+  GDRIVE_SESSION: "synkro_gdrive_session",
 } as const;
 
 // ─── Generic Helpers ───────────────────────────────────────────────────────
