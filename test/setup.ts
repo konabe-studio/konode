@@ -22,6 +22,11 @@ function resetBookmarks() {
 }
 resetBookmarks();
 
+// ─── chrome.history in-memory fake ─────────────────────────────────────────
+let histEntries = new Map();
+function resetHistory() { histEntries = new Map(); }
+resetHistory();
+
 function bmChildren(parentId) {
   return [...bmNodes.values()]
     .filter((n) => n.parentId === parentId)
@@ -122,6 +127,11 @@ function makeChrome() {
     },
     bookmarks: makeBookmarks(),
     tabs: { query: () => Promise.resolve([]), create: () => Promise.resolve({}) },
+    history: {
+      search: ({ maxResults } = {}) =>
+        Promise.resolve([...histEntries.values()].slice(0, maxResults ?? Infinity)),
+      addUrl: ({ url }) => { histEntries.set(url, { id: url, url, title: "", lastVisitTime: 1, visitCount: 1 }); return Promise.resolve(); },
+    },
     notifications: { create: vi.fn() },
     alarms: { create: vi.fn(), clear: () => Promise.resolve(true) },
     action: { setBadgeText: vi.fn(), setBadgeBackgroundColor: vi.fn() },
@@ -140,4 +150,5 @@ if (typeof navigator === "undefined") {
 beforeEach(() => {
   store.clear();
   resetBookmarks();
+  resetHistory();
 });

@@ -29,7 +29,6 @@ export interface SyncBookmark {
   title: string;
   url?: string;
   dateAdded: number;
-  dateModified?: number;
   children?: SyncBookmark[];
   _deleted?: boolean;
 }

@@ -71,11 +71,12 @@ const KEYS = {
   BOOKMARK_CACHE: "synkro_bm_cache",
   BOOKMARK_TOMBSTONES: "synkro_bm_tombstones",
   BOOKMARK_MOVES: "synkro_bm_moves",
-  HISTORY_CACHE: "synkro_hist_cache",
+  HIST_IMPORTED: "synkro_hist_imported",
   TAB_CACHE: "synkro_tab_cache",
   REMOTE_SESSIONS: "synkro_remote_sessions",
   REMOTE_EXTENSIONS: "synkro_remote_extensions",
   UPLOAD_CHECKSUMS: "synkro_upload_checksums",
+  SYNC_LOCK: "synkro_sync_lock",
 } as const;
 
 // ─── Generic Helpers ───────────────────────────────────────────────────────
@@ -169,6 +170,47 @@ export async function getTabCache<T>(): Promise<T | null> {
 
 export async function setTabCache<T>(data: T): Promise<void> {
   await set(KEYS.TAB_CACHE, data);
+}
+
+// ─── Imported history (CO-6) ─────────────────────────────────────────────────
+// URLs this device RECEIVED via history import (not genuinely visited here).
+// Excluded from this device's export so imported entries don't get re-published
+// as native visits and resurrect across the device mesh forever.
+
+const HIST_IMPORTED_CAP = 20_000;
+
+export async function getImportedHistoryUrls(): Promise<string[]> {
+  return get<string[]>(KEYS.HIST_IMPORTED, []);
+}
+
+export async function addImportedHistoryUrls(urls: string[]): Promise<void> {
+  if (!urls.length) return;
+  const current = await get<string[]>(KEYS.HIST_IMPORTED, []);
+  const seen = new Set(current);
+  const merged = [...current];
+  for (const u of urls) if (!seen.has(u)) { seen.add(u); merged.push(u); }
+  // FIFO cap to bound storage. Dropping the oldest can at worst let one very old
+  // imported URL be re-exported once — it won't perpetually resurrect.
+  const capped = merged.length > HIST_IMPORTED_CAP ? merged.slice(-HIST_IMPORTED_CAP) : merged;
+  await set(KEYS.HIST_IMPORTED, capped);
+}
+
+// ─── Sync lock (CO-4) ─────────────────────────────────────────────────────────
+// A persisted, TTL'd lock so a sync interrupted by an MV3 worker suspension can't
+// leave a later wake double-running (belt-and-braces with the in-memory isSyncing,
+// which only guards within a single worker instance). A stale lock (older than the
+// TTL) is ignored, so a crashed sync self-heals rather than blocking forever.
+
+export async function acquireSyncLock(ttlMs: number): Promise<boolean> {
+  const now = Date.now();
+  const lockedAt = await get<number>(KEYS.SYNC_LOCK, 0);
+  if (lockedAt && now - lockedAt < ttlMs) return false; // a fresh lock is held
+  await set(KEYS.SYNC_LOCK, now);
+  return true;
+}
+
+export async function releaseSyncLock(): Promise<void> {
+  await set(KEYS.SYNC_LOCK, 0);
 }
 
 // ─── Remote sessions (one per peer device) ──────────────────────────────────

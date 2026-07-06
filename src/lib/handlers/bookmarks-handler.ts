@@ -23,7 +23,9 @@ function mapNode(node: chrome.bookmarks.BookmarkTreeNode): SyncBookmark {
     // payload/checksum every time — the root node carries no dateAdded, and a moving
     // value there would defeat upload de-dup and cross-device checksum matching.
     dateAdded: node.dateAdded ?? 0,
-    dateModified: node.dateGroupModified,
+    // NOTE: node.dateGroupModified is deliberately NOT synced — it's a per-folder
+    // local mod-time that differs across devices for the same logical tree, so
+    // including it only churned the payload/checksum. Nothing in the merge reads it.
     children: node.children?.map(mapNode),
   };
 }

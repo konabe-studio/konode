@@ -12,10 +12,18 @@ import {
   setRemoteExtensions,
   getLastUploadChecksum,
   setLastUploadChecksum,
+  acquireSyncLock,
+  releaseSyncLock,
 } from "@/lib/utils/storage";
 import { logger } from "@/lib/utils/logger";
 import { encrypt, decrypt, sha256, createKeyVerifier, verifyPassphrase } from "@/lib/crypto/encryption";
 import { ConflictResolver, notifyConflict, orderPeersByTime } from "./conflict-resolver";
+
+// How long the persisted sync lock stays valid before it's treated as stale, so a
+// crashed/suspended sync self-heals. Only governs cross-instance recovery speed:
+// within a live worker `isSyncing` already prevents a double-run, so this can be
+// short. 2 min comfortably covers a retry-heavy multi-type sync.
+const SYNC_LOCK_TTL_MS = 2 * 60 * 1000;
 
 /**
  * A peer's encrypted data can't be read with this device's passphrase — the
@@ -68,6 +76,15 @@ export class SyncEngine {
       return;
     }
 
+    // Cross-instance guard (CO-4): a persisted TTL lock so a sync interrupted by an
+    // MV3 worker suspension can't have a later wake double-run. A stale lock is
+    // ignored, so a crashed sync self-heals. isSyncing (above) guards within one
+    // worker instance; this guards across suspend/recreate.
+    if (!(await acquireSyncLock(SYNC_LOCK_TTL_MS))) {
+      logger.warn("SyncEngine", "Another sync holds the lock — skipping");
+      return;
+    }
+
     this.isSyncing = true;
     const state = await setState({ status: "syncing", last_error: null });
     this.onStateChange(state);
@@ -98,6 +115,7 @@ export class SyncEngine {
     } finally {
       await backend.disconnect();
       this.isSyncing = false;
+      await releaseSyncLock();
     }
   }
 

@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { normalizeRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/storage";
+import {
+  normalizeRemoteSessions, normalizeRemoteExtensions,
+  acquireSyncLock, releaseSyncLock,
+  getImportedHistoryUrls, addImportedHistoryUrls,
+} from "@/lib/utils/storage";
 import type { RemoteSessionEntry, RemoteExtensionEntry, SyncExtension } from "@/lib/types";
 
 function entry(device: string, ts: string, tabCount = 1): RemoteSessionEntry {
@@ -77,5 +81,34 @@ describe("normalizeRemoteExtensions", () => {
     };
     const out = normalizeRemoteExtensions(map);
     expect(out.map((e) => e.id).sort()).toEqual(["e1", "e2", "e3"]);
+  });
+});
+
+describe("sync lock (CO-4)", () => {
+  it("acquires when free, blocks a fresh lock, frees on release", async () => {
+    expect(await acquireSyncLock(60_000)).toBe(true);
+    expect(await acquireSyncLock(60_000)).toBe(false); // held & fresh → blocked
+    await releaseSyncLock();
+    expect(await acquireSyncLock(60_000)).toBe(true); // freed → acquirable
+  });
+
+  it("treats a lock older than the TTL as stale (self-heals)", async () => {
+    await acquireSyncLock(60_000); // lockedAt = now
+    expect(await acquireSyncLock(0)).toBe(true); // ttl 0 → any existing lock is stale
+  });
+});
+
+describe("imported-history set (CO-6)", () => {
+  it("merges, de-dups, and reports imported URLs", async () => {
+    await addImportedHistoryUrls(["https://a.com", "https://b.com"]);
+    await addImportedHistoryUrls(["https://b.com", "https://c.com"]); // b.com is a dup
+    expect((await getImportedHistoryUrls()).sort()).toEqual([
+      "https://a.com", "https://b.com", "https://c.com",
+    ]);
+  });
+
+  it("no-ops on an empty list", async () => {
+    await addImportedHistoryUrls([]);
+    expect(await getImportedHistoryUrls()).toEqual([]);
   });
 });
