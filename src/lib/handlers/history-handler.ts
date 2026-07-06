@@ -1,5 +1,6 @@
 import type { SyncHistoryItem } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
+import { isSafeContentUrl } from "@/lib/utils/url";
 
 // ─── Export ──────────────────────────────────────────────────────────────
 
@@ -34,6 +35,11 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
   let added = 0;
   for (const item of items) {
     if (!item.url || known.has(item.url)) continue;
+    // Only add plain web URLs from a remote packet — never javascript:/data:/file:.
+    if (!isSafeContentUrl(item.url)) {
+      logger.warn("importHistory", `Skipping unsafe URL: ${item.url}`);
+      continue;
+    }
     try {
       await chrome.history.addUrl({ url: item.url });
       known.add(item.url);

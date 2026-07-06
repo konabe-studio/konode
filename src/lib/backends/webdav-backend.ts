@@ -1,6 +1,10 @@
 import type { IBackend, BackendConfig, DataType, SyncPacket } from "@/lib/types";
 import { withRetry, HttpError } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
+import { isSecureBackendUrl } from "@/lib/utils/url";
+
+const INSECURE_URL_MSG =
+  "WebDAV over plain http:// is not allowed — your username and password would be sent unencrypted on every request. Use an https:// URL (http is permitted only for localhost).";
 
 export class WebDAVBackend implements IBackend {
   readonly type = "webdav" as const;
@@ -30,6 +34,8 @@ export class WebDAVBackend implements IBackend {
   }
 
   async connect(): Promise<void> {
+    // Refuse to send Basic-auth credentials over plaintext http:// (loopback aside).
+    if (!isSecureBackendUrl(this.w.url)) throw new Error(INSECURE_URL_MSG);
     await this.ensureFolder();
     logger.info("WebDAV connected", this.baseUrl);
   }
@@ -105,6 +111,7 @@ export class WebDAVBackend implements IBackend {
 
   async testConnection(): Promise<{ ok: boolean; message: string }> {
     try {
+      if (!isSecureBackendUrl(this.w.url)) return { ok: false, message: INSECURE_URL_MSG };
       const res = await fetch(this.w.url, {
         method: "PROPFIND",
         headers: { ...this.headers(), Depth: "0" },

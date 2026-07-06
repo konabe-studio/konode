@@ -134,6 +134,14 @@ export class GitHubBackend implements IBackend {
 
     const repoData = await repoRes.json();
 
+    // Refuse to sync browser data to a public repo — with E2EE off (the default)
+    // it would publish bookmarks/history to the open internet.
+    if (repoData.private === false) {
+      throw new Error(
+        `Repository '${this.repoSlug}' is public — refusing to sync your browser data to a public repo. Make it private and retry.`
+      );
+    }
+
     // If repo is empty (no commits), initialize it
     if (!repoData.default_branch) {
       await fetch(`${GITHUB_API}/repos/${this.repoSlug}/contents/README.md`, {
@@ -235,6 +243,12 @@ export class GitHubBackend implements IBackend {
       }
 
       const repo = await repoRes.json();
+      if (repo.private === false) {
+        return {
+          ok: false,
+          message: `'${repo.full_name}' is a public repository — your synced data would be visible to everyone. Use a private repo.`,
+        };
+      }
       const isEmpty = !repo.default_branch;
       return {
         ok: true,

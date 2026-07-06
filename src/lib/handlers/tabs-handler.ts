@@ -3,6 +3,7 @@ import type { SyncSession } from "@/lib/types";
 type TabInfo = { url: string; title?: string; pinned: boolean; favIconUrl?: string };
 import { logger } from "@/lib/utils/logger";
 import { setTabCache, getTabCache } from "@/lib/utils/storage";
+import { isSafeContentUrl } from "@/lib/utils/url";
 
 // ─── Export Current Tabs ──────────────────────────────────────────────────
 
@@ -37,6 +38,12 @@ export async function importSession(session: SyncSession): Promise<void> {
   logger.info("importSession", `Opening ${session.tabs.length} tabs from "${session.label}"`);
 
   for (const tab of session.tabs) {
+    // Never open a non-web URL from a remote packet (javascript:/data:/file: are
+    // an injection/exfiltration vector); only http(s) tabs are restored.
+    if (!isSafeContentUrl(tab.url)) {
+      logger.warn("importSession", `Skipping unsafe tab URL: ${tab.url}`);
+      continue;
+    }
     try {
       await chrome.tabs.create({ url: tab.url, pinned: tab.pinned, active: false });
     } catch (err) {

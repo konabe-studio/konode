@@ -293,13 +293,13 @@ export class SyncEngine {
       }
       raw = await decrypt(packet.payload, this.settings.encryption_passphrase);
     }
-    // Verify integrity before importing. Legacy packets used a short djb2 hash;
-    // only verify when the checksum is a SHA-256 hex string (64 chars).
-    if (packet.checksum?.length === 64) {
-      const actual = await sha256(raw);
-      if (actual !== packet.checksum) {
-        throw new Error("Sync packet checksum mismatch — refusing to import corrupted data.");
-      }
+    // Verify integrity before importing. Every packet is v1.0 with a SHA-256
+    // checksum (64 hex chars); require one and reject anything without it, so a
+    // tampered/corrupt file can't bypass verification by truncating or omitting
+    // the checksum.
+    const actual = await sha256(raw);
+    if (packet.checksum?.length !== 64 || actual !== packet.checksum) {
+      throw new Error("Sync packet checksum invalid or missing — refusing to import unverified data.");
     }
     const payload = JSON.parse(raw);
     await this.applyPayload(dataType, payload, {
