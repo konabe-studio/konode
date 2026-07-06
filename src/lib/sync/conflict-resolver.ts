@@ -154,11 +154,17 @@ export class ConflictResolver {
  * in `resolve`). Backends list files in arbitrary order (GitHub by filename, WebDAV
  * by PROPFIND order), so the engine sorts here to guarantee `peers[0]` is the most
  * recent regardless of backend. Stable copy — does not mutate the input.
+ *
+ * Ties (equal timestamps — common when a 1s debounce fans a change out to several
+ * devices in the same second) are broken deterministically by `device_id`, so
+ * `peers[0]` (the LWW / manual-conflict baseline) is IDENTICAL on every device
+ * instead of depending on the backend's listing order.
  */
 export function orderPeersByTime(packets: SyncPacket[]): SyncPacket[] {
-  return [...packets].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  );
+  return [...packets].sort((a, b) => {
+    const dt = new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    return dt !== 0 ? dt : a.device_id.localeCompare(b.device_id);
+  });
 }
 
 // ─── Notify helper ───────────────────────────────────────────────────────

@@ -87,4 +87,14 @@ describe("orderPeersByTime", () => {
     orderPeersByTime(input);
     expect(input.map((p) => p.device_id)).toEqual(["a", "b"]);
   });
+
+  it("breaks equal-timestamp ties deterministically by device_id (same on every device)", () => {
+    const t = "2026-03-01T00:00:00.000Z";
+    const x = packet({ device_id: "x-dev", timestamp: t });
+    const a = packet({ device_id: "a-dev", timestamp: t });
+    const m = packet({ device_id: "m-dev", timestamp: t });
+    // Two different backend listing orders must yield the SAME peers[0].
+    expect(orderPeersByTime([x, a, m]).map((p) => p.device_id)).toEqual(["a-dev", "m-dev", "x-dev"]);
+    expect(orderPeersByTime([m, x, a]).map((p) => p.device_id)).toEqual(["a-dev", "m-dev", "x-dev"]);
+  });
 });

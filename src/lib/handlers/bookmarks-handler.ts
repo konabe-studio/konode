@@ -296,15 +296,17 @@ async function mergeBookmarks(
   }
 
   // ── Step A: apply the peer's deletions to local ──
-  // prefer-local never deletes local; prefer-remote deletes unconditionally;
-  // lww deletes only when the deletion is newer than the local add, so a fresh
-  // re-add survives an older tombstone.
+  // prefer-local never deletes local. prefer-remote and lww both honor a peer
+  // deletion, but never destroy a local add that is STRICTLY NEWER than the
+  // tombstone — a fresh re-add always survives an older deletion (a re-add is the
+  // user's newer intent). prefer-remote still differs from lww on the add/move
+  // side (it adopts the peer's placement); only the delete side is guarded here.
   const toRemove: string[] = [];
   if (strategy !== "prefer-local") {
     for (const [url, dAt] of remoteDel) {
       const loc = localByUrl.get(url);
       if (!loc) continue;
-      if (strategy === "prefer-remote" || loc.dateAdded <= dAt) toRemove.push(...loc.ids);
+      if (loc.dateAdded <= dAt) toRemove.push(...loc.ids);
     }
   }
   // Safety: refuse a mass-delete from a corrupt/oversized tombstone log.

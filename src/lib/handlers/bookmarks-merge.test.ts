@@ -69,6 +69,30 @@ describe("importBookmarks — merge", () => {
     expect(await localUrls()).toEqual(["https://a.com"]);
   });
 
+  it("prefer-remote keeps a local bookmark that is newer than the peer's tombstone", async () => {
+    await seed("A", "https://a.com");
+    await seed("B", "https://b.com"); // just created → dateAdded ≈ now
+    const past = Date.now() - 60_000;  // deletion is OLDER than the local re-add
+    await importBookmarks(
+      payload([link("A", "https://a.com")], [{ url: "https://b.com", deletedAt: past }]),
+      "merge",
+      "prefer-remote"
+    );
+    expect(await localUrls()).toEqual(["https://a.com", "https://b.com"]); // B survives
+  });
+
+  it("prefer-remote still deletes a local bookmark older than the peer's tombstone", async () => {
+    await seed("A", "https://a.com");
+    await seed("B", "https://b.com");
+    const future = Date.now() + 60_000; // deletion is NEWER than the local bookmark
+    await importBookmarks(
+      payload([link("A", "https://a.com")], [{ url: "https://b.com", deletedAt: future }]),
+      "merge",
+      "prefer-remote"
+    );
+    expect(await localUrls()).toEqual(["https://a.com"]); // B deleted
+  });
+
   it("prefer-local ignores the peer's deletions", async () => {
     await seed("A", "https://a.com");
     await seed("B", "https://b.com");
