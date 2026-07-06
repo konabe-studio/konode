@@ -6,7 +6,7 @@ import { getSettings, getState, setState, saveSettings } from "@/lib/utils/stora
 import { SyncEngine } from "@/lib/sync/sync-engine";
 import { registerBookmarkListeners } from "@/lib/handlers/bookmarks-handler";
 import { createBackend } from "@/lib/backends/abstract-backend";
-import { logger } from "@/lib/utils/logger";
+import { logger, setLoggerDebug } from "@/lib/utils/logger";
 
 // ─── State ────────────────────────────────────────────────────────────────
 
@@ -18,6 +18,7 @@ const BOOKMARK_DEBOUNCE_MS = 1000; // coalesce bursts (a folder delete fires man
 
 async function init(): Promise<void> {
   const settings = await getSettings();
+  setLoggerDebug(settings.debug_mode);
 
   // ── Reset stuck "syncing" state from previous session ──
   const currentState = await getState();
@@ -168,6 +169,7 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
 
     case "SAVE_SETTINGS": {
       const updated = await saveSettings(message.payload);
+      setLoggerDebug(updated.debug_mode);
 
       // Reinit engine with new settings
       syncEngine?.updateSettings(updated);

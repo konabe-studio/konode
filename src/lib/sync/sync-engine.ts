@@ -143,6 +143,9 @@ export class SyncEngine {
       const localPayload = await this.buildPayload(dataType);
       const isEmpty = this.isPayloadEmpty(dataType, localPayload);
 
+      // Verbose troubleshooting line (only emitted when Debug mode is on).
+      logger.debug("SyncEngine", `${dataType}: ${peers.length} peer(s), local ${isEmpty ? "empty" : "non-empty"}, strategy ${this.settings.conflict_strategy}`);
+
       // 3. Decide flow
       if (peers.length === 0) {
         // No peers yet — push our own data if we have any.
@@ -317,6 +320,11 @@ export class SyncEngine {
       data_type: dataType,
       // SHA-256 over the plaintext, so identical content across devices still
       // matches even though each encrypted blob uses a fresh IV/salt.
+      // Trade-off (accepted): with E2EE on, this is a plaintext-confirmation oracle
+      // — an observer of the backend could confirm a *guessed* payload by hashing
+      // it. Harmless in practice: bookmark/history payloads carry far too much
+      // entropy to guess whole, and switching to HMAC(key, …) would break the
+      // cross-device dedup (the per-blob PBKDF2 salt makes the AES key non-stable).
       checksum: await sha256(payloadStr),
       encrypted: useE2ee,
       payload: useE2ee

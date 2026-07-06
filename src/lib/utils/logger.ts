@@ -2,6 +2,14 @@ import { appendAudit } from "./storage";
 
 const PREFIX = "[Synkro]";
 
+// Gates logger.debug — set from settings.debug_mode (see service worker) so the
+// "Debug mode" toggle actually controls verbose console output instead of being
+// inert. Defaults off.
+let debugEnabled = false;
+export function setLoggerDebug(on: boolean): void {
+  debugEnabled = on;
+}
+
 function timestamp(): string {
   return new Date().toISOString();
 }
@@ -21,7 +29,7 @@ export const logger = {
     appendAudit({ timestamp: timestamp(), action, detail, ok: false });
   },
   debug(action: string, data?: unknown) {
-    // Only log in debug mode — checked at call site via settings
+    if (!debugEnabled) return; // gated by settings.debug_mode
     console.debug(`${PREFIX} [DEBUG] ${action}`, data ?? "");
   },
 };

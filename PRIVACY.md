@@ -70,6 +70,15 @@ store, so these credentials are held in standard local extension storage. They n
 leave your device except as part of the authenticated request to your chosen
 backend.
 
+The **encryption passphrase** (if you enable end-to-end encryption) is held the same
+way — in local extension storage on your device. It has to be available to the
+extension without you present so that background sync can keep running unattended, so
+it cannot be locked behind a prompt. It is never uploaded and never leaves your
+device. Note that, like the browser's own stored data, it is therefore readable by
+someone with full access to your device's browser profile; end-to-end encryption
+protects your data on the **storage backend** (which never sees the passphrase), not
+against an attacker who already controls your device.
+
 ## Optional end-to-end encryption
 
 Synkro offers **optional** end-to-end encryption (AES-256-GCM, with a key derived
