@@ -11,7 +11,9 @@ Brave and Helium; also Chrome, ungoogled-chromium).
 
 - **Data types:** bookmarks, history, sessions (open tabs), installed-extension list.
 - **Backends:** Google Drive (OAuth), GitHub (fine-grained PAT), WebDAV (basic auth).
-- **Privacy:** optional end-to-end encryption (AES-256-GCM, opt-in); credentials
+- **Privacy:** optional end-to-end encryption (AES-256-GCM). E2EE is a **conscious
+  choice made during onboarding** (default off, but the user picks encrypt-or-not
+  explicitly — nothing is silently uploaded behind a hidden default). Credentials
   live only in `chrome.storage.local` on the device.
 
 ## Build & run
@@ -52,9 +54,14 @@ src/
 - **Per device, per data type** a file `synkro_<type>_<device_id>.json` is written
   to the backend's `Synkro` folder. `device_id` is a random UUID per install.
 - **Packet** = `SyncPacket { version, device_id, timestamp, data_type, checksum
-  (SHA-256 of plaintext), encrypted, payload }`. When E2EE is on, `payload` is the
-  base64 `salt+iv+ciphertext`; checksum stays over plaintext so identical content
-  matches across devices. Checksum is **verified on download** before import.
+  (SHA-256 of plaintext), encrypted, payload, verifier? }`. When E2EE is on, `payload`
+  is the base64 `salt+iv+ciphertext`; checksum stays over plaintext so identical content
+  matches across devices. Checksum (64-char SHA-256) is **required and verified on
+  download** before import — a missing/short checksum is rejected. `verifier`
+  (present only when encrypted) is a passphrase verifier: on download the engine
+  checks the peer's verifier against the local passphrase and throws a
+  `PassphraseError` (surfaced as an error state) on mismatch — so a mistyped
+  passphrase fails loudly instead of silently forking devices into unreadable data.
 - **Flow** (`sync-engine.syncType`): pull peer file first (`download(type,
   ownDeviceId)` excludes our own file) → if local empty: replace → else auto-merge
   (pull remote in, push merged) unless strategy is `manual` (queue a conflict).

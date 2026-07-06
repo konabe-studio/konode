@@ -73,10 +73,17 @@ backend.
 ## Optional end-to-end encryption
 
 Synkro offers **optional** end-to-end encryption (AES-256-GCM, with a key derived
-from a passphrase you set). When you enable it, your synced data is encrypted on your
+from a passphrase you set). During setup you make an **explicit choice** whether to
+turn it on — it is **off by default**, but nothing is uploaded until you have
+consciously decided. When you enable it, your synced data is encrypted on your
 device **before** it is uploaded, so the contents are unreadable to the storage
 provider and to anyone who obtains the stored files. You hold the passphrase; if you
-lose it, the encrypted data cannot be recovered.
+lose it, the encrypted data cannot be recovered, and every device must use the same
+passphrase (Synkro warns you on a mismatch rather than silently failing).
+
+If you choose **not** to encrypt, your synced data (bookmarks, and any of history,
+open tabs, or the extension list you enable) is stored on your chosen backend in
+readable form. Choose encryption if your storage might be seen by anyone but you.
 
 ## Google API services (Limited Use)
 
