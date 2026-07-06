@@ -5,14 +5,15 @@ import type { BackendType, SyncSettings } from "@/lib/types";
 import {
   Radio, Cloud, Server, Github, Bookmark,
   Clock, Puzzle, Globe, CheckCircle2, ArrowRight,
-  Loader2, XCircle, Eye, EyeOff,
+  Loader2, XCircle, Eye, EyeOff, Lock, Key,
 } from "lucide-react";
+import { generateRecoveryKey } from "@/lib/crypto/encryption";
 
 // ─── Steps ────────────────────────────────────────────────────────────────
 
-type Step = "welcome" | "backend" | "data" | "done";
+type Step = "welcome" | "backend" | "data" | "encrypt" | "done";
 
-const STEPS: Step[] = ["welcome", "backend", "data", "done"];
+const STEPS: Step[] = ["welcome", "backend", "data", "encrypt", "done"];
 
 // ─── App ──────────────────────────────────────────────────────────────────
 
@@ -50,6 +51,10 @@ export default function OnboardingApp() {
 
   const toggleData = (key: keyof typeof dataTypes) =>
     setDataTypes((p) => ({ ...p, [key]: !p[key] }));
+
+  // Encryption choice (made consciously on the "encrypt" step)
+  const [encEnabled, setEncEnabled] = useState(false);
+  const [encPass, setEncPass] = useState("");
 
   const next = () => {
     const idx = STEPS.indexOf(step);
@@ -128,7 +133,11 @@ export default function OnboardingApp() {
 
       await sendMessage({
         type: "SAVE_SETTINGS",
-        payload: { ...current, active_backend: backend, backends, enabled_types },
+        payload: {
+          ...current, active_backend: backend, backends, enabled_types,
+          encryption_enabled: encEnabled,
+          encryption_passphrase: encEnabled ? encPass : undefined,
+        },
       });
 
       // Trigger first sync
@@ -427,7 +436,75 @@ export default function OnboardingApp() {
           )}
           <div style={S.navRow}>
             <button style={S.btnSecondary} onClick={() => setStep("backend")}>Back</button>
-            <button style={S.btnPrimary} onClick={finish} disabled={saving}>
+            <button style={S.btnPrimary} onClick={() => setStep("encrypt")}>
+              Continue <ArrowRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === "encrypt" && (
+        <div style={S.card}>
+          <h1 style={S.h1}>Encrypt your data?</h1>
+          <p style={S.subtitle}>
+            Your choice — Synkro works either way. Encryption scrambles everything on this device
+            before it's uploaded, so your storage provider can never read it.
+          </p>
+
+          <label
+            style={{ ...S.dataRow, marginBottom: 12 }}
+            role="switch"
+            aria-checked={encEnabled}
+            aria-label="End-to-end encryption"
+            tabIndex={0}
+            onClick={() => setEncEnabled((v) => !v)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEncEnabled((v) => !v); } }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <Lock size={16} color={encEnabled ? "var(--accent)" : "var(--text-secondary)"} />
+              <div>
+                <div style={{ fontSize: 13, color: "var(--text-primary)" }}>End-to-end encryption</div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>AES-256-GCM. Recommended.</div>
+              </div>
+            </div>
+            <div style={{ ...S.toggleTrack, background: encEnabled ? "var(--accent)" : "var(--toggle-off)" }}>
+              <div style={{ ...S.toggleThumb, transform: encEnabled ? "translateX(16px)" : "translateX(0)" }} />
+            </div>
+          </label>
+
+          {encEnabled ? (
+            <div style={{ marginBottom: 12 }}>
+              <input
+                style={S.input}
+                type="text"
+                placeholder="Choose a passphrase, or generate a key →"
+                value={encPass}
+                onChange={(e) => setEncPass(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => { const k = generateRecoveryKey(); setEncPass(k); }}
+                style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                <Key size={12} /> Generate a strong key
+              </button>
+              <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 10, lineHeight: 1.5 }}>
+                <b>Save this passphrase.</b> It never leaves your device and can't be recovered if lost —
+                and every device must use the same one.
+              </div>
+            </div>
+          ) : (
+            <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 12, lineHeight: 1.5 }}>
+              Your data will be stored <b>unencrypted</b> on your backend. Fine for storage you fully trust;
+              you can turn encryption on later in Settings.
+            </div>
+          )}
+
+          {setupError && (
+            <div style={{ ...S.errorRow, marginBottom: 12 }}><XCircle size={12} /> {setupError}</div>
+          )}
+          <div style={S.navRow}>
+            <button style={S.btnSecondary} onClick={() => setStep("data")}>Back</button>
+            <button style={S.btnPrimary} onClick={finish} disabled={saving || (encEnabled && !encPass)}>
               {saving ? <Loader2 size={14} className="spin" /> : <CheckCircle2 size={14} />}
               {saving ? "Setting up…" : "Finish & Sync"}
             </button>

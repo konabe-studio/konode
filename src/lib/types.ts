@@ -15,6 +15,10 @@ export interface SyncPacket {
   checksum: string; // SHA-256 hex of the plaintext payload
   encrypted: boolean;
   payload: string; // JSON string, optionally encrypted
+  // When `encrypted`, a passphrase verifier (createKeyVerifier) so a peer can
+  // detect a passphrase MISMATCH up front — instead of a decrypt failing silently
+  // and the devices diverging. Absent on plaintext packets and legacy files.
+  verifier?: string;
 }
 
 // ─── Bookmark ──────────────────────────────────────────────────────────────

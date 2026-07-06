@@ -121,6 +121,7 @@ function makeChrome() {
       },
     },
     bookmarks: makeBookmarks(),
+    tabs: { query: () => Promise.resolve([]), create: () => Promise.resolve({}) },
     notifications: { create: vi.fn() },
     alarms: { create: vi.fn(), clear: () => Promise.resolve(true) },
     action: { setBadgeText: vi.fn(), setBadgeBackgroundColor: vi.fn() },

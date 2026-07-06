@@ -6,8 +6,9 @@ import {
   Cloud, Github, Server, Bookmark, Clock,
   Globe, Puzzle, AlertTriangle, CheckCircle2, XCircle,
   Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
-  Radio, Sliders, Shield, Save, Pencil,
+  Radio, Sliders, Shield, Save, Pencil, Key, Copy,
 } from "lucide-react";
+import { generateRecoveryKey } from "@/lib/crypto/encryption";
 
 // ─── Secret field ───────────────────────────────────────────────────────────
 // Masks a *saved* secret (token / password / passphrase): once a value exists, the
@@ -123,6 +124,7 @@ export default function OptionsApp() {
   const [githubChecking, setGithubChecking] = useState(false);
 
   // Import/Export
+  const [genKey, setGenKey] = useState<string | null>(null);
   const [exportStatus, setExportStatus] = useState<"idle" | "ok" | "error">("idle");
   const [importStatus, setImportStatus] = useState<"idle" | "ok" | "error">("idle");
   const [importCount, setImportCount] = useState(0);
@@ -896,6 +898,24 @@ export default function OptionsApp() {
                         placeholder="Choose a strong passphrase"
                         onChange={(v) => update({ encryption_passphrase: v })}
                       />
+                      <button
+                        type="button"
+                        onClick={() => { const k = generateRecoveryKey(); setGenKey(k); update({ encryption_passphrase: k }); }}
+                        style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                        <Key size={12} /> Generate a strong key
+                      </button>
+                      {genKey && (
+                        <div className="row-desc" style={{ marginTop: 8, color: "var(--text-primary)" }}>
+                          Save this now — it's the only way to recover your data if you forget it. Enter the same key on your other devices.
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                            <code style={{ userSelect: "all", fontSize: 12, wordBreak: "break-all" }}>{genKey}</code>
+                            <button type="button" title="Copy" onClick={() => navigator.clipboard?.writeText(genKey)}
+                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", flexShrink: 0 }}>
+                              <Copy size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -903,7 +923,18 @@ export default function OptionsApp() {
                   <div className="settings-row" style={{ paddingTop: 0 }}>
                     <div className="settings-row-left">
                       <div className="row-desc" style={{ color: "var(--danger)" }}>
-                        Encryption is on but no passphrase is set — sync will keep uploading plaintext until you add one.
+                        Encryption is on but no passphrase is set — sync keeps uploading plaintext until you add one.
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {!settings.encryption_enabled && (
+                  <div className="settings-row" style={{ paddingTop: 0 }}>
+                    <div className="settings-row-left">
+                      <AlertTriangle size={14} className="row-icon" style={{ color: "var(--text-secondary)" }} />
+                      <div className="row-desc">
+                        Encryption is off — your synced data (bookmarks, history, sessions, extensions) is stored
+                        <b> unencrypted</b> on your backend. Turn it on to encrypt everything before it leaves this device.
                       </div>
                     </div>
                   </div>

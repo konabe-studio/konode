@@ -145,6 +145,25 @@ export async function verifyPassphrase(
   }
 }
 
+// ─── Recovery key ─────────────────────────────────────────────────────────
+
+/**
+ * Generates a strong, human-copyable recovery key (no ambiguous characters,
+ * grouped for readability) — an alternative to a user-invented passphrase, so
+ * people can save a high-entropy key instead of choosing (and forgetting) a weak
+ * one. ~98 bits of entropy over a 30-character alphabet.
+ */
+export function generateRecoveryKey(): string {
+  const ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"; // no i / l / o / 0 / 1
+  const bytes = crypto.getRandomValues(new Uint8Array(20));
+  let out = "";
+  for (let i = 0; i < bytes.length; i++) {
+    out += ALPHABET[bytes[i] % ALPHABET.length]; // negligible modulo bias at this entropy
+    if ((i + 1) % 4 === 0 && i < bytes.length - 1) out += "-";
+  }
+  return out;
+}
+
 // ─── SHA-256 checksum ────────────────────────────────────────────────────
 
 /**

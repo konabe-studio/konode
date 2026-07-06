@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { SyncEngine } from "@/lib/sync/sync-engine";
+import { SyncEngine, PassphraseError } from "@/lib/sync/sync-engine";
 import { DEFAULT_SETTINGS, DEFAULT_STATE } from "@/lib/utils/storage";
 import type {
   IBackend,
@@ -196,5 +196,40 @@ describe("SyncEngine.syncType — bookmarks", () => {
     await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
 
     expect(backend.uploads).toHaveLength(2);
+  });
+});
+
+describe("SyncEngine.syncType — E2EE", () => {
+  function encEngine(deviceId: string, passphrase: string): SyncEngine {
+    return new SyncEngine(
+      { ...DEFAULT_SETTINGS, device_id: deviceId, conflict_strategy: "lww",
+        encryption_enabled: true, encryption_passphrase: passphrase },
+      () => {}
+    );
+  }
+  async function encPeer(passphrase: string, deviceId: string, p: BookmarkPayload): Promise<SyncPacket> {
+    return priv(encEngine(deviceId, passphrase)).buildPacket("bookmarks", p);
+  }
+
+  it("round-trips a peer encrypted with the SAME passphrase and re-uploads encrypted", async () => {
+    const engine = encEngine("me", "correct horse");
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    backend.files.set("bookmarks_peer1", await encPeer("correct horse", "peer1", payload([link("B", "https://b.com")])));
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    expect(await localUrls()).toEqual(["https://a.com", "https://b.com"]);
+    const last = backend.uploads[backend.uploads.length - 1];
+    expect(last.encrypted).toBe(true);
+    expect(last.verifier).toBeTruthy();
+  });
+
+  it("surfaces a PassphraseError when a peer used a DIFFERENT passphrase (no silent fork)", async () => {
+    const engine = encEngine("me", "my-passphrase");
+    const backend = new FakeBackend();
+    backend.files.set("bookmarks_peer1", await encPeer("their-different-one", "peer1", payload([link("B", "https://b.com")])));
+
+    await expect(priv(engine).syncType("bookmarks", backend, DEFAULT_STATE)).rejects.toBeInstanceOf(PassphraseError);
   });
 });

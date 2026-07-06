@@ -14,8 +14,20 @@ import {
   setLastUploadChecksum,
 } from "@/lib/utils/storage";
 import { logger } from "@/lib/utils/logger";
-import { encrypt, decrypt, sha256 } from "@/lib/crypto/encryption";
+import { encrypt, decrypt, sha256, createKeyVerifier, verifyPassphrase } from "@/lib/crypto/encryption";
 import { ConflictResolver, notifyConflict, orderPeersByTime } from "./conflict-resolver";
+
+/**
+ * A peer's encrypted data can't be read with this device's passphrase — the
+ * passphrases don't match (or none is set). Thrown so the sync surfaces a clear,
+ * user-visible error instead of silently skipping the peer and diverging forever.
+ */
+export class PassphraseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PassphraseError";
+  }
+}
 
 // ─── Sync Engine ─────────────────────────────────────────────────────────
 
@@ -99,6 +111,7 @@ export class SyncEngine {
     logger.info("SyncEngine", `Syncing: ${dataType}`);
 
     try {
+
       // 1. PULL every peer's file (excluding our own), so we converge against
       //    ALL devices in one cycle — not just the most recent one. Order
       //    newest-first by packet timestamp: backends list files in arbitrary
@@ -144,6 +157,9 @@ export class SyncEngine {
           try {
             await this.applyRemote(dataType, peer, false);
           } catch (err) {
+            // A passphrase mismatch must NOT be swallowed — otherwise the devices
+            // diverge silently. Surface it loudly (outer catch → error state).
+            if (err instanceof PassphraseError) throw err;
             // One bad peer file (corrupt JSON, checksum mismatch, import error) must
             // not abort the whole sync — skip it and fold in the rest.
             logger.warn(
@@ -248,11 +264,15 @@ export class SyncEngine {
     dataType: DataType,
     payload: unknown
   ): Promise<void> {
-    const packet = await this.buildPacket(dataType, payload);
-    if ((await getLastUploadChecksum(dataType)) === packet.checksum) {
+    // Compute the (cheap) plaintext checksum BEFORE building the full packet, so an
+    // unchanged encrypted sync doesn't pay the expensive PBKDF2 for encrypt+verifier
+    // on every idle interval — only when there's actually something to upload.
+    const checksum = await sha256(JSON.stringify(payload));
+    if ((await getLastUploadChecksum(dataType)) === checksum) {
       logger.info("SyncEngine", `${dataType}: unchanged since last upload — skipping`);
       return;
     }
+    const packet = await this.buildPacket(dataType, payload);
     await backend.upload(packet);
     await setLastUploadChecksum(dataType, packet.checksum);
   }
@@ -273,6 +293,10 @@ export class SyncEngine {
       payload: useE2ee
         ? await encrypt(payloadStr, this.settings.encryption_passphrase!)
         : payloadStr,
+      // Attach a passphrase verifier so peers can detect a mismatch up front.
+      ...(useE2ee
+        ? { verifier: await createKeyVerifier(this.settings.encryption_passphrase!) }
+        : {}),
     };
   }
 
@@ -285,13 +309,29 @@ export class SyncEngine {
   ): Promise<void> {
     let raw = packet.payload;
     if (packet.encrypted) {
-      if (!this.settings.encryption_passphrase) {
-        throw new Error(
-          "Remote data is encrypted, but no passphrase is set on this device. " +
-            "Enable encryption and enter the same passphrase in Settings → Advanced."
+      const pass = this.settings.encryption_passphrase;
+      if (!pass) {
+        throw new PassphraseError(
+          "A peer's synced data is encrypted, but no passphrase is set on this device. " +
+            "Enable encryption with the SAME passphrase as your other devices in Settings → Advanced."
         );
       }
-      raw = await decrypt(packet.payload, this.settings.encryption_passphrase);
+      // Check the peer's passphrase verifier first, so a mismatch is reported as a
+      // clear "passphrases don't match" error rather than a silent decrypt skip.
+      if (packet.verifier && !(await verifyPassphrase(pass, packet.verifier))) {
+        throw new PassphraseError(
+          `Your encryption passphrase doesn't match device ${packet.device_id.slice(0, 8)}. ` +
+            "Use the same passphrase on all your devices (Settings → Advanced)."
+        );
+      }
+      try {
+        raw = await decrypt(packet.payload, pass);
+      } catch {
+        // No verifier on the packet (legacy) but decrypt failed — still a mismatch.
+        throw new PassphraseError(
+          "Could not decrypt a peer's synced data — check that your encryption passphrase matches your other devices."
+        );
+      }
     }
     // Verify integrity before importing. Every packet is v1.0 with a SHA-256
     // checksum (64 hex chars); require one and reject anything without it, so a
