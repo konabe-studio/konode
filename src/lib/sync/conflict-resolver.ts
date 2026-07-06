@@ -62,6 +62,7 @@ export class ConflictResolver {
         const conflict: ConflictItem = {
           id: crypto.randomUUID(),
           data_type: local.data_type,
+          device_id: remote.device_id,
           local_version: safeParse(local.payload),
           remote_version: safeParse(remote.payload),
           remote_packet: remote,

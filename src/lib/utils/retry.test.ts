@@ -32,6 +32,14 @@ describe("withRetry", () => {
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
+  it("does NOT retry a non-network TypeError (a programming bug, not a fetch failure)", async () => {
+    const fn = vi.fn().mockRejectedValue(new TypeError("x is not a function"));
+    await expect(
+      withRetry(fn, { maxAttempts: 3, baseDelayMs: 1, jitter: false })
+    ).rejects.toBeInstanceOf(TypeError);
+    expect(fn).toHaveBeenCalledTimes(1); // terminal → no wasted backoff
+  });
+
   it("gives up after maxAttempts", async () => {
     const fn = vi.fn().mockRejectedValue(new HttpError(500));
     await expect(

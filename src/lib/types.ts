@@ -166,6 +166,7 @@ export interface SyncState {
 export interface ConflictItem {
   id: string;
   data_type: DataType;
+  device_id: string; // the peer this conflict is against (dedupe key; correct map key on apply)
   local_version: unknown;
   remote_version: unknown;
   remote_packet?: SyncPacket; // raw remote packet, so "use remote" can decrypt + apply

@@ -83,9 +83,19 @@ export class WebDAVBackend implements IBackend {
       // Extract hrefs from PROPFIND response. Match any namespace prefix
       // (d:href, D:href, lp1:href, or bare href) — servers differ.
       const own = excludeDeviceId ? `synkro_${data_type}_${excludeDeviceId}.json` : null;
+      // Compare the DECODED basename exactly — hrefs can be percent-encoded and an
+      // `endsWith(own)` substring check could both miss our own file and wrongly
+      // exclude a peer whose name ends with the same suffix.
+      const basename = (h: string): string => {
+        try { return decodeURIComponent(h).split("/").pop() ?? ""; }
+        catch { return h.split("/").pop() ?? ""; }
+      };
       const hrefs = [...xml.matchAll(/<(?:[a-z0-9]+:)?href>([^<]+)<\/(?:[a-z0-9]+:)?href>/gi)]
         .map(m => m[1])
-        .filter(h => h.includes(`synkro_${data_type}_`) && h.endsWith(".json") && (!own || !h.endsWith(own)));
+        .filter(h => {
+          const name = basename(h);
+          return name.startsWith(`synkro_${data_type}_`) && name.endsWith(".json") && name !== own;
+        });
 
       const packets: SyncPacket[] = [];
       for (const href of hrefs) {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { SyncEngine, PassphraseError } from "@/lib/sync/sync-engine";
-import { DEFAULT_SETTINGS, DEFAULT_STATE } from "@/lib/utils/storage";
+import { DEFAULT_SETTINGS, DEFAULT_STATE, getState } from "@/lib/utils/storage";
 import type {
   IBackend,
   DataType,
@@ -231,5 +231,36 @@ describe("SyncEngine.syncType — E2EE", () => {
     backend.files.set("bookmarks_peer1", await encPeer("their-different-one", "peer1", payload([link("B", "https://b.com")])));
 
     await expect(priv(engine).syncType("bookmarks", backend, DEFAULT_STATE)).rejects.toBeInstanceOf(PassphraseError);
+  });
+});
+
+describe("SyncEngine.syncType — manual conflicts (CO-7 / CO-8)", () => {
+  function manualEngine(): SyncEngine {
+    return new SyncEngine({ ...DEFAULT_SETTINGS, device_id: "me", conflict_strategy: "manual" }, () => {});
+  }
+
+  it("queues a conflict per diverging peer, each tagged with its device_id", async () => {
+    const engine = manualEngine();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    backend.files.set("bookmarks_peer1", await peerPacket(engine, "peer1", payload([link("B", "https://b.com")])));
+    backend.files.set("bookmarks_peer2", await peerPacket(engine, "peer2", payload([link("C", "https://c.com")])));
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    const conflicts = (await getState()).pending_conflicts;
+    expect(conflicts.map((c) => c.device_id).sort()).toEqual(["peer1", "peer2"]);
+  });
+
+  it("does not re-queue the same peer conflict on the next cycle (dedupe)", async () => {
+    const engine = manualEngine();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    backend.files.set("bookmarks_peer1", await peerPacket(engine, "peer1", payload([link("B", "https://b.com")])));
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    expect((await getState()).pending_conflicts).toHaveLength(1);
   });
 });

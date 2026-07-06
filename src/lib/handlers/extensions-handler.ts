@@ -23,10 +23,13 @@ export async function exportExtensions(): Promise<SyncExtension[]> {
 
       const filtered = extensions
         .filter((ext) => {
-          // Skip: self, Chrome built-ins, component extensions
-          if (ext.id === selfId) return false;
-          if (ext.installType === "other") return false; // built-in
-          if (ext.installType === "admin") return false;
+          if (ext.id === selfId) return false;             // don't sync ourselves
+          if (ext.type === "theme") return false;          // themes aren't installable "extensions"
+          if (ext.installType === "admin") return false;   // policy force-installs the user can't manage
+          // NOTE: previously "other" was also dropped as "built-in", but that also
+          // silently excluded sideloaded/externally-installed extensions. Chrome
+          // reports genuine dev/sideload installs as "development"/"sideload", so
+          // keep everything else and let the user see the full picture.
           return true;
         })
         .map((ext): SyncExtension => ({

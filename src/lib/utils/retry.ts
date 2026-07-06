@@ -14,7 +14,11 @@ export function defaultShouldRetry(err: Error): boolean {
     return err.status === 408 || err.status === 429 || err.status >= 500;
   }
   // fetch() rejects with a TypeError on network/CORS failures — treat as transient.
-  return err.name === "TypeError";
+  // But a bare `TypeError` is also how programming bugs surface (e.g. "x is not a
+  // function"); retrying those just burns ~90s of backoff and hides the real stack.
+  // Only retry TypeErrors whose message looks like a network failure.
+  if (err.name === "TypeError") return /fetch|network|load failed/i.test(err.message);
+  return false;
 }
 
 export interface RetryOptions {

@@ -62,9 +62,14 @@ src/
   checks the peer's verifier against the local passphrase and throws a
   `PassphraseError` (surfaced as an error state) on mismatch — so a mistyped
   passphrase fails loudly instead of silently forking devices into unreadable data.
-- **Flow** (`sync-engine.syncType`): pull peer file first (`download(type,
-  ownDeviceId)` excludes our own file) → if local empty: replace → else auto-merge
-  (pull remote in, push merged) unless strategy is `manual` (queue a conflict).
+- **Flow** (`sync-engine.syncType`): pull every peer file (`downloadAll(type,
+  ownDeviceId)` excludes our own) → auto-merge each peer in (additive + deletion-
+  aware, non-destructive) → push merged, unless strategy is `manual` (queue a
+  conflict per diverging peer). The merge always runs — even on a fresh device it
+  merges into the empty local tree (safer than a destructive replace, which would
+  wipe a new device's existing local bookmarks). The `replace`/`clearAndImport`
+  path exists but is not used by the live flow (tests only); a whole-tree overwrite
+  is intentionally never triggered automatically.
 - **Bookmarks** use a `{ tree, tombstones }` envelope (legacy bare-array still
   accepted). Merge is **additive + deletion-aware**: adds propagate, and deletions
   propagate via **tombstones** (`onRemoved` records `{url, deletedAt}`; merge

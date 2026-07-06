@@ -1,4 +1,4 @@
-import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncExtension } from "@/lib/types";
+import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncExtension, ConflictItem } from "@/lib/types";
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { exportBookmarkPayload, importBookmarks } from "@/lib/handlers/bookmarks-handler";
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
@@ -152,14 +152,25 @@ export class SyncEngine {
           logger.info("SyncEngine", `${dataType}: nothing to sync`);
         }
       } else if (!isEmpty && this.settings.conflict_strategy === "manual") {
-        // Manual: queue a conflict against the newest peer for the popup to resolve.
+        // Manual: queue a conflict for EACH diverging peer, not just the newest —
+        // otherwise with 3+ devices the other peers' differences are never surfaced.
+        // Dedupe by data_type + peer device so the same conflict doesn't pile up
+        // every cycle while it sits unresolved.
         const localPacket = await this.buildPacket(dataType, localPayload);
-        const { conflict } = this.resolver.resolve(localPacket, peers[0]);
-        if (conflict) {
-          const currentState = await getState();
+        const currentState = await getState();
+        const already = new Set(
+          currentState.pending_conflicts.map((c) => `${c.data_type}:${c.device_id}`)
+        );
+        const fresh: ConflictItem[] = [];
+        for (const peer of peers) {
+          if (already.has(`${dataType}:${peer.device_id}`)) continue;
+          const { conflict } = this.resolver.resolve(localPacket, peer);
+          if (conflict) fresh.push(conflict);
+        }
+        if (fresh.length) {
           await setState({
             status: "conflict",
-            pending_conflicts: [...currentState.pending_conflicts, conflict],
+            pending_conflicts: [...currentState.pending_conflicts, ...fresh],
           });
           if (this.settings.notifications_enabled) notifyConflict(dataType);
         }
@@ -396,6 +407,12 @@ export class SyncEngine {
         await importHistory(payload as never);
         break;
       case "sessions":
+        // Peer maps are keyed by device_id — refuse to upsert under an empty key,
+        // which would create a bogus peer entry the popup then lists.
+        if (!meta.device_id) {
+          logger.warn("applyRemote", "Skipping session with empty device_id");
+          break;
+        }
         // Persist the remote session, keyed by device_id, so every peer's session
         // survives (not just the newest) and the popup can list/restore each.
         await setRemoteSession({
@@ -406,6 +423,10 @@ export class SyncEngine {
         logger.info("applyRemote", `Stored remote session for ${meta.device_id}`);
         break;
       case "extensions": {
+        if (!meta.device_id) {
+          logger.warn("applyRemote", "Skipping extensions with empty device_id");
+          break;
+        }
         // Store per device (keyed by device_id) so the popup can union every peer's
         // list — "missing on this device" then reflects extensions installed on ANY
         // peer, not just the newest one.
@@ -443,7 +464,7 @@ export class SyncEngine {
         await this.applyPayload(
           conflict.data_type,
           conflict.remote_version,
-          { device_id: "", timestamp: conflict.timestamp },
+          { device_id: conflict.device_id, timestamp: conflict.timestamp },
           false
         );
       }

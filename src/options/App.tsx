@@ -9,6 +9,7 @@ import {
   Radio, Sliders, Shield, Save, Pencil, Key, Copy,
 } from "lucide-react";
 import { generateRecoveryKey } from "@/lib/crypto/encryption";
+import { normalizeRemoteExtensions } from "@/lib/utils/storage";
 
 // ─── Secret field ───────────────────────────────────────────────────────────
 // Masks a *saved* secret (token / password / passphrase): once a value exists, the
@@ -147,9 +148,10 @@ export default function OptionsApp() {
       if (s) setGdriveUser({ email: s.email ?? "", displayName: s.displayName ?? "" });
     });
     chrome.storage.local.get("synkro_remote_extensions", (r) => {
-      if (r["synkro_remote_extensions"]?.extensions) {
-        setRemoteExtensions(r["synkro_remote_extensions"].extensions);
-      }
+      // Use the normalizer: the value is a device-keyed map now, not the legacy
+      // single object — reading `.extensions` off the map returned nothing, so the
+      // options "missing on this device" list stayed empty (the popup was correct).
+      setRemoteExtensions(normalizeRemoteExtensions(r["synkro_remote_extensions"]));
     });
     chrome.management.getAll((exts) => setLocalExtIds(new Set(exts.map((e) => e.id))));
   }, [load]);
