@@ -55,7 +55,7 @@
 
 Found during post-build QA of the E2EE settings UI.
 
-- [ ] **1 — Don't reveal the passphrase's last 4 chars.** `SecretField` shows a
+- [x] **1 — Don't reveal the passphrase's last 4 chars.** `SecretField` shows a
       `••••last4` summary; fine for API tokens / WebDAV password (rotatable), but for
       the **E2EE passphrase** it leaks the ending, character classes, and (via dot
       count) the length — a screenshot / shoulder-surf disclosure. Unlike a token, the

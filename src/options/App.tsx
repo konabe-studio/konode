@@ -14,17 +14,24 @@ import { CWS_DETAIL_BASE } from "@/lib/constants";
 
 // ─── Secret field ───────────────────────────────────────────────────────────
 // Masks a *saved* secret (token / password / passphrase): once a value exists, the
-// raw string is no longer bound into the DOM — the field shows a •••• summary (last
-// 4 chars) until the user clicks Replace to enter a new one. The reveal toggle is
-// per-field, so unmasking one secret no longer unmasks the others.
+// raw string is no longer bound into the DOM — the field shows a •••• summary until
+// the user clicks Replace to enter a new one. The reveal toggle is per-field, so
+// unmasking one secret no longer unmasks the others.
+//
+// `sensitive` = the E2EE passphrase: unlike a rotatable API token / password, the
+// passphrase can't be cheaply changed (rotating means re-encrypting + re-keying every
+// device), so its summary is fully content-free — no last-4 tail and a fixed dot count
+// (no length leak). Screenshots / shoulder-surfing then reveal nothing.
 function SecretField({
   value,
   onChange,
   placeholder,
+  sensitive = false,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  sensitive?: boolean;
 }) {
   const hasSaved = value.length > 0;
   const [editing, setEditing] = useState(!hasSaved);
@@ -32,7 +39,9 @@ function SecretField({
   const [draft, setDraft] = useState("");
 
   if (hasSaved && !editing) {
-    const masked = "•".repeat(Math.min(Math.max(value.length - 4, 8), 24)) + value.slice(-4);
+    const masked = sensitive
+      ? "•".repeat(12)
+      : "•".repeat(Math.min(Math.max(value.length - 4, 8), 24)) + value.slice(-4);
     return (
       <div className="input-pw-wrap">
         <input className="field-input mono" type="text" value={masked} readOnly tabIndex={-1} />
@@ -899,6 +908,7 @@ export default function OptionsApp() {
                       <SecretField
                         value={settings.encryption_passphrase ?? ""}
                         placeholder="Choose a strong passphrase"
+                        sensitive
                         onChange={(v) => update({ encryption_passphrase: v })}
                       />
                       <button
