@@ -11,6 +11,7 @@ import {
 import { generateRecoveryKey } from "@/lib/crypto/encryption";
 import { KEYS, normalizeRemoteExtensions } from "@/lib/utils/storage";
 import { CWS_DETAIL_BASE } from "@/lib/constants";
+import { isSafeContentUrl } from "@/lib/utils/url";
 
 // ─── Secret field ───────────────────────────────────────────────────────────
 // Masks a *saved* secret (token / password / passphrase): once a value exists, the
@@ -311,11 +312,21 @@ export default function OptionsApp() {
   const exportData = async () => {
     setExportStatus("idle");
     try {
-      // Collect all syncable data
+      // Collect all syncable data. history/management are optional permissions —
+      // only query them when granted, so a user who never enabled those types still
+      // gets a working bookmarks export instead of the whole thing throwing.
+      const [hasHistory, hasMgmt] = await Promise.all([
+        chrome.permissions.contains({ permissions: ["history"] }),
+        chrome.permissions.contains({ permissions: ["management"] }),
+      ]);
       const [bookmarkTree, extensions, historyItems] = await Promise.all([
         chrome.bookmarks.getTree(),
-        new Promise<chrome.management.ExtensionInfo[]>((r) => chrome.management.getAll(r)),
-        chrome.history.search({ text: "", startTime: Date.now() - 30 * 24 * 60 * 60 * 1000, maxResults: 5000 }),
+        hasMgmt
+          ? new Promise<chrome.management.ExtensionInfo[]>((r) => chrome.management.getAll(r))
+          : Promise.resolve([] as chrome.management.ExtensionInfo[]),
+        hasHistory
+          ? chrome.history.search({ text: "", startTime: Date.now() - 30 * 24 * 60 * 60 * 1000, maxResults: 5000 })
+          : Promise.resolve([] as chrome.history.HistoryItem[]),
       ]);
 
       const bundle = {
@@ -375,6 +386,9 @@ export default function OptionsApp() {
           const walk = async (nodes: chrome.bookmarks.BookmarkTreeNode[], parentId: string) => {
             for (const node of nodes) {
               if (node.url) {
+                // Only recreate plain web URLs — never javascript:/data:/file: from a
+                // backup file (parity with the sync import guard).
+                if (!isSafeContentUrl(node.url)) continue;
                 try { await chrome.bookmarks.create({ parentId, title: node.title, url: node.url }); imported++; } catch { /* skip invalid */ }
               } else if (node.children) {
                 const f = await chrome.bookmarks.create({ parentId, title: node.title });
@@ -394,7 +408,7 @@ export default function OptionsApp() {
       // Import history
       if (Array.isArray(data.history)) {
         for (const item of data.history) {
-          if (item.url) try { await chrome.history.addUrl({ url: item.url }); } catch { /* skip */ }
+          if (item.url && isSafeContentUrl(item.url)) try { await chrome.history.addUrl({ url: item.url }); } catch { /* skip */ }
         }
       }
 

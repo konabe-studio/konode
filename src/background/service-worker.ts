@@ -2,7 +2,7 @@
 // Handles: alarm-based polling, bookmark/tab listeners, message routing
 
 import type { ExtensionMessage, ExtensionResponse } from "@/lib/types";
-import { getSettings, getState, setState, saveSettings } from "@/lib/utils/storage";
+import { getSettings, getState, setState, saveSettings, KEYS } from "@/lib/utils/storage";
 import { SyncEngine } from "@/lib/sync/sync-engine";
 import { registerBookmarkListeners } from "@/lib/handlers/bookmarks-handler";
 import { createBackend } from "@/lib/backends/abstract-backend";
@@ -146,7 +146,10 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
   switch (message.type) {
     case "SYNC_NOW": {
       if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
-      syncEngine.sync(message.payload?.data_type ? [message.payload.data_type] : undefined);
+      // Await the sync so the pending message response keeps the MV3 worker alive
+      // for its whole duration — otherwise a mid-sync suspension can skip the
+      // lock's finally and strand the persisted lock until its TTL (C2).
+      await syncEngine.sync(message.payload?.data_type ? [message.payload.data_type] : undefined);
       return { type: "OK" };
     }
 
@@ -215,7 +218,7 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
 
     case "CLEAR_HISTORY": {
       // Clears the local audit log shown in the popup.
-      await chrome.storage.local.set({ synkro_audit: [] });
+      await chrome.storage.local.set({ [KEYS.AUDIT_LOG]: [] });
       return { type: "OK" };
     }
 

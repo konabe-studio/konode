@@ -59,6 +59,7 @@ export default function OnboardingApp() {
   // manually-typed passphrase must be confirmed. A generated key (exact) skips it.
   const [encConfirm, setEncConfirm] = useState("");
   const [encGenerated, setEncGenerated] = useState("");
+  const [showEncPass, setShowEncPass] = useState(false);
 
   const next = () => {
     const idx = STEPS.indexOf(step);
@@ -478,13 +479,18 @@ export default function OnboardingApp() {
 
           {encEnabled ? (
             <div style={{ marginBottom: 12 }}>
-              <input
-                style={S.input}
-                type="text"
-                placeholder="Choose a passphrase, or generate a key →"
-                value={encPass}
-                onChange={(e) => setEncPass(e.target.value)}
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  style={{ ...S.input, width: "100%", paddingRight: 32 }}
+                  type={showEncPass ? "text" : "password"}
+                  placeholder="Choose a passphrase, or generate a key →"
+                  value={encPass}
+                  onChange={(e) => setEncPass(e.target.value)}
+                />
+                <button type="button" style={S.eyeBtn} onClick={() => setShowEncPass(v => !v)}>
+                  {showEncPass ? <EyeOff size={12} /> : <Eye size={12} />}
+                </button>
+              </div>
               {encPass.length > 0 && encPass !== encGenerated && (
                 <>
                   <input
@@ -501,7 +507,7 @@ export default function OnboardingApp() {
               )}
               <button
                 type="button"
-                onClick={() => { const k = generateRecoveryKey(); setEncPass(k); setEncGenerated(k); setEncConfirm(""); }}
+                onClick={() => { const k = generateRecoveryKey(); setEncPass(k); setEncGenerated(k); setEncConfirm(""); setShowEncPass(true); }}
                 style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                 <Key size={12} /> Generate a strong key
               </button>
