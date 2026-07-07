@@ -258,6 +258,20 @@ describe("SyncEngine.syncType — E2EE", () => {
     const last = backend.uploads[backend.uploads.length - 1];
     expect(last.encrypted).toBe(true);
   });
+
+  it("re-uploads encrypted when E2EE turns on even though the plaintext is unchanged (self-heal, Fix 1)", async () => {
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    const backend = new FakeBackend();
+    // Same device uploads plaintext first (records a plain-form upload tag).
+    await priv(makeEngine()).syncType("bookmarks", backend, DEFAULT_STATE);
+    expect(backend.uploads[backend.uploads.length - 1].encrypted).toBe(false);
+    // Now it turns E2EE on. The plaintext content is identical, but the encryption
+    // FORM differs — so it must re-upload (not skip on the unchanged checksum),
+    // encrypted this time. This is the root cause of the old mixed-state deadlock.
+    await priv(encEngine("me", "pw")).syncType("bookmarks", backend, DEFAULT_STATE);
+    expect(backend.uploads.length).toBe(2);
+    expect(backend.uploads[backend.uploads.length - 1].encrypted).toBe(true);
+  });
 });
 
 describe("SyncEngine.syncType — manual conflicts (CO-7 / CO-8)", () => {

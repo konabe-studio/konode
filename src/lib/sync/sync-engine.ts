@@ -346,14 +346,22 @@ export class SyncEngine {
     // Compute the (cheap) plaintext checksum BEFORE building the full packet, so an
     // unchanged encrypted sync doesn't pay the expensive PBKDF2 for encrypt+verifier
     // on every idle interval — only when there's actually something to upload.
-    const checksum = await sha256(JSON.stringify(payload));
-    if ((await getLastUploadChecksum(dataType)) === checksum) {
+    // Tag the record with the encryption FORM (enc/plain): the checksum is over the
+    // plaintext, so without the tag, toggling E2EE on wouldn't change the checksum and
+    // the device's own file would stay in its old form on the backend. An old bare
+    // checksum (no tag) won't match either form, so it forces one re-upload and then
+    // stabilizes — this is what lets an already-mixed group self-heal on the next sync
+    // without the user having to re-save settings.
+    const useE2ee =
+      this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
+    const tag = `${useE2ee ? "enc" : "plain"}:${await sha256(JSON.stringify(payload))}`;
+    if ((await getLastUploadChecksum(dataType)) === tag) {
       logger.info("SyncEngine", `${dataType}: unchanged since last upload — skipping`);
       return;
     }
     const packet = await this.buildPacket(dataType, payload);
     await backend.upload(packet);
-    await setLastUploadChecksum(dataType, packet.checksum);
+    await setLastUploadChecksum(dataType, tag);
   }
 
   private async buildPacket(dataType: DataType, payload: unknown): Promise<SyncPacket> {
@@ -545,7 +553,10 @@ export class SyncEngine {
           const payload = await this.buildPayload(conflict.data_type);
           const packet = await this.buildPacket(conflict.data_type, payload);
           await backend.upload(packet); // forced: conflict resolution overwrites remote
-          await setLastUploadChecksum(conflict.data_type, packet.checksum);
+          // Store the encryption-form-tagged record (see uploadIfChanged) so the next
+          // periodic sync doesn't see a format mismatch and re-upload needlessly.
+          const useE2ee = this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
+          await setLastUploadChecksum(conflict.data_type, `${useE2ee ? "enc" : "plain"}:${packet.checksum}`);
         } finally {
           await backend.disconnect();
         }
