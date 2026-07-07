@@ -49,12 +49,6 @@
     "http://localhost/*",
     "http://127.0.0.1/*"
   ],
-  "oauth2": {
-    "client_id": "290320131573-2d68ltqjda1ucdfgi3k6pj3e2fb18lnq.apps.googleusercontent.com",
-    "scopes": [
-      "https://www.googleapis.com/auth/drive.file"
-    ]
-  },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none';"
   }

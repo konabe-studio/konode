@@ -32,12 +32,19 @@ choices, Synkro may read:
 - **Browsing history** — visited URLs and titles, if you enable history sync.
 - **Open tabs / sessions** — the URLs and titles of your open tabs, if you enable
   session sync.
-- **Installed-extension list** — the names, IDs, and store links of your installed
-  extensions, if you enable extension-list sync (this surfaces which extensions are
-  "missing on this device"; Synkro cannot install or remove extensions).
+- **Installed-extension list** — the names, IDs, versions, and store links of your
+  installed extensions, if you enable extension-list sync (this surfaces which
+  extensions are "missing on this device"). Synkro **cannot install or remove**
+  extensions; it can enable or disable an already-installed extension only when you
+  click to do so from its popup.
 
 Synkro reads this data **only to sync it to the storage backend you selected.** It
 is not used for any other purpose.
+
+The browser permissions for the more sensitive types — **history**, **open tabs**,
+and the **extension list** — are **requested when you turn that type on**, not at
+install time. If you never enable them, Synkro never holds those permissions and
+never reads that data.
 
 ## Where your data goes
 
@@ -94,6 +101,11 @@ If you choose **not** to encrypt, your synced data (bookmarks, and any of histor
 open tabs, or the extension list you enable) is stored on your chosen backend in
 readable form. Choose encryption if your storage might be seen by anyone but you.
 
+Even with encryption on, a small amount of **metadata** in each sync file is not
+encrypted: the storage provider can see that Synkro sync files exist, roughly how
+many devices you sync (each has a random identifier), which data type each file
+holds, and when it was last written — but **not its contents**.
+
 ## Google API services (Limited Use)
 
 When you choose Google Drive, Synkro uses the **`drive.file`** scope, which grants
@@ -118,7 +130,9 @@ do not use it for advertising or any purpose other than providing the sync featu
 Because Synkro stores nothing on its own infrastructure, **you control retention**:
 
 - **On your device:** uninstalling the extension removes its local data, including
-  your stored credentials and settings.
+  your stored credentials and settings. Synkro also keeps a short **activity log**
+  (recent sync events) **on your device only** — it is never uploaded and is cleared
+  when you uninstall.
 - **On your backend:** you can delete the files Synkro created (in the `Synkro` /
   `synkro` folder of your Drive, repository, or WebDAV server) at any time, directly
   through that provider.
