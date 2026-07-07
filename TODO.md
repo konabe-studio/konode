@@ -63,7 +63,7 @@ Found during post-build QA of the E2EE settings UI.
       Fix: for the passphrase field use a content-free indicator (`Set ✓` / fixed dot
       count, not real length) + the reveal-eye on demand. Leave token/password fields
       as-is.
-- [ ] **2 — Confirm passphrase on entry (double-entry).** A mistyped passphrase
+- [x] **2 — Confirm passphrase on entry (double-entry).** A mistyped passphrase
       makes E2EE data unrecoverable, and every device must match. Today the `verifier`
       only catches a mismatch on a *second* device *after* upload — the first device
       happily encrypts everything with the typo. Add a set-time confirm field (or

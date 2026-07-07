@@ -136,6 +136,12 @@ export default function OptionsApp() {
 
   // Import/Export
   const [genKey, setGenKey] = useState<string | null>(null);
+  // Passphrase confirm (double-entry): a mistyped E2EE passphrase makes data
+  // unrecoverable, so a *new* manually-typed passphrase must be re-entered before
+  // Save. `initialPass` is what loaded from settings (an untouched passphrase needs
+  // no re-confirm); a generated key is exact by construction, so it skips confirm.
+  const [initialPass, setInitialPass] = useState("");
+  const [passConfirm, setPassConfirm] = useState("");
   const [exportStatus, setExportStatus] = useState<"idle" | "ok" | "error">("idle");
   const [importStatus, setImportStatus] = useState<"idle" | "ok" | "error">("idle");
   const [importCount, setImportCount] = useState(0);
@@ -146,7 +152,10 @@ export default function OptionsApp() {
 
   const load = useCallback(async () => {
     const res = await sendMessage({ type: "GET_SETTINGS" });
-    if (res.type === "SETTINGS") setSettings(res.payload);
+    if (res.type === "SETTINGS") {
+      setSettings(res.payload);
+      setInitialPass(res.payload.encryption_passphrase ?? "");
+    }
   }, []);
 
   useEffect(() => {
@@ -180,6 +189,13 @@ export default function OptionsApp() {
 
   const getBackend = (type: BackendType) => settings?.backends.find((b) => b.type === type);
 
+  // #2 double-entry: require a confirm only for a *new*, manually-typed passphrase —
+  // not an untouched saved one, and not a generated key (exact by construction).
+  const currentPass = settings?.encryption_passphrase ?? "";
+  const needsPassConfirm =
+    !!settings?.encryption_enabled && currentPass.length > 0 && currentPass !== initialPass && currentPass !== genKey;
+  const passMismatch = needsPassConfirm && passConfirm !== currentPass;
+
   // WebDAV hits an arbitrary user host that isn't in host_permissions, so we
   // request it at runtime (optional_host_permissions). Must run inside a user
   // gesture, so call it first — before any await — in the click handlers below.
@@ -196,6 +212,10 @@ export default function OptionsApp() {
 
   const save = async () => {
     if (!settings) return;
+    if (passMismatch) {
+      setTestStatus({ ok: false, message: "The two passphrases don't match — re-enter to confirm before saving." });
+      return;
+    }
     if (settings.active_backend === "webdav") {
       const granted = await requestWebdavHostPermission();
       if (!granted) {
@@ -911,6 +931,27 @@ export default function OptionsApp() {
                         sensitive
                         onChange={(v) => update({ encryption_passphrase: v })}
                       />
+                      {needsPassConfirm && (
+                        <div style={{ marginTop: 8 }}>
+                          <input
+                            className="field-input mono"
+                            type="password"
+                            value={passConfirm}
+                            placeholder="Confirm passphrase"
+                            autoComplete="off"
+                            onChange={(e) => setPassConfirm(e.target.value)}
+                          />
+                          {passMismatch ? (
+                            <div className="row-desc" style={{ marginTop: 4, color: "var(--danger)" }}>
+                              Passphrases don't match yet.
+                            </div>
+                          ) : (
+                            <div className="row-desc" style={{ marginTop: 4, color: "var(--accent)" }}>
+                              <CheckCircle2 size={11} style={{ verticalAlign: "-1px" }} /> Passphrases match.
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={() => { const k = generateRecoveryKey(); setGenKey(k); update({ encryption_passphrase: k }); }}
@@ -985,7 +1026,7 @@ export default function OptionsApp() {
               </div>
 
               <div className="action-row" style={{ marginTop: 20 }}>
-                <button className={`btn-save ${saveOk ? "saved" : ""}`} onClick={save} disabled={saving}>
+                <button className={`btn-save ${saveOk ? "saved" : ""}`} onClick={save} disabled={saving || passMismatch}>
                   {saving ? <Loader2 size={13} className="spin" /> : saveOk ? <CheckCircle2 size={13} /> : <Save size={13} />}
                   {saving ? "Saving…" : saveOk ? "Saved" : "Save changes"}
                 </button>

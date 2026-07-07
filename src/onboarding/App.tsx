@@ -55,6 +55,10 @@ export default function OnboardingApp() {
   // Encryption choice (made consciously on the "encrypt" step)
   const [encEnabled, setEncEnabled] = useState(false);
   const [encPass, setEncPass] = useState("");
+  // #2 double-entry: a mistyped passphrase makes E2EE data unrecoverable, so a
+  // manually-typed passphrase must be confirmed. A generated key (exact) skips it.
+  const [encConfirm, setEncConfirm] = useState("");
+  const [encGenerated, setEncGenerated] = useState("");
 
   const next = () => {
     const idx = STEPS.indexOf(step);
@@ -481,9 +485,23 @@ export default function OnboardingApp() {
                 value={encPass}
                 onChange={(e) => setEncPass(e.target.value)}
               />
+              {encPass.length > 0 && encPass !== encGenerated && (
+                <>
+                  <input
+                    style={{ ...S.input, marginTop: 8 }}
+                    type="password"
+                    placeholder="Confirm passphrase"
+                    value={encConfirm}
+                    onChange={(e) => setEncConfirm(e.target.value)}
+                  />
+                  {encConfirm.length > 0 && encConfirm !== encPass && (
+                    <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 4 }}>Passphrases don't match yet.</div>
+                  )}
+                </>
+              )}
               <button
                 type="button"
-                onClick={() => { const k = generateRecoveryKey(); setEncPass(k); }}
+                onClick={() => { const k = generateRecoveryKey(); setEncPass(k); setEncGenerated(k); setEncConfirm(""); }}
                 style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                 <Key size={12} /> Generate a strong key
               </button>
@@ -504,7 +522,7 @@ export default function OnboardingApp() {
           )}
           <div style={S.navRow}>
             <button style={S.btnSecondary} onClick={() => setStep("data")}>Back</button>
-            <button style={S.btnPrimary} onClick={finish} disabled={saving || (encEnabled && !encPass)}>
+            <button style={S.btnPrimary} onClick={finish} disabled={saving || (encEnabled && (!encPass || (encPass !== encGenerated && encConfirm !== encPass)))}>
               {saving ? <Loader2 size={14} className="spin" /> : <CheckCircle2 size={14} />}
               {saving ? "Setting up…" : "Finish & Sync"}
             </button>
