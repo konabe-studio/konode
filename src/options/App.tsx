@@ -995,8 +995,8 @@ export default function OptionsApp() {
                               Passphrases don't match yet.
                             </div>
                           ) : (
-                            <div className="row-desc" style={{ marginTop: 4, color: "var(--accent)" }}>
-                              <CheckCircle2 size={11} style={{ verticalAlign: "-1px" }} /> Passphrases match.
+                            <div className="row-desc" style={{ marginTop: 4, color: "var(--accent)", display: "flex", alignItems: "center", gap: 4 }}>
+                              <CheckCircle2 size={11} style={{ flexShrink: 0 }} /> Passphrases match.
                             </div>
                           )}
                         </div>
