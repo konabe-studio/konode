@@ -1133,38 +1133,8 @@ const STYLES = `
      Fonts on every open. Falls back to the system UI font. */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --sidebar-w: 200px; --content-max: 736px; --radius: 8px;
-    --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-    --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
-    --bg: #f7f8fa; --bg-sidebar: #ffffff; --bg-card: #ffffff; --bg-card-sel: #e7f5ef;
-    --bg-hover: #f1f3f5; --bg-input: #ffffff;
-    --border: #e6e8eb; --border-input: #d4d8dd;
-    --text-primary: #11151a; --text-secondary: #5b6470; --text-disabled: #aab2bd;
-    --text-link: #0e9e6e;
-    --nav-active-bg: #f1f3f5; --nav-active-text: #11151a; --nav-active-bar: #0e9e6e;
-    --accent: #0e9e6e; --accent-hover: #0c8a60; --accent-light: #e7f5ef;
-    --toggle-off: #d4d8dd; --toggle-on: #0e9e6e; --toggle-thumb: #ffffff;
-    --warn-bg: #fdf4e3; --warn-border: #b7791f; --warn-text: #7a4f08;
-    --danger: #dc2626; --success: #0e9e6e;
-    --shadow: 0 1px 2px rgba(17,21,26,.05), 0 0 0 1px rgba(17,21,26,.06);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0f1216; --bg-sidebar: #161a20; --bg-card: #161a20; --bg-card-sel: #173a30;
-      --bg-hover: #1e232b; --bg-input: #1e232b;
-      --border: #2a2f37; --border-input: #353b45;
-      --text-primary: #e6e9ee; --text-secondary: #97a0ad; --text-disabled: #6b7480;
-      --text-link: #34d399;
-      --nav-active-bg: #1e232b; --nav-active-text: #e6e9ee; --nav-active-bar: #34d399;
-      --accent: #34d399; --accent-hover: #5ee0b0; --accent-light: #173a30;
-      --toggle-off: #353b45; --toggle-on: #34d399;
-      --warn-bg: #3a2e10; --warn-border: #f5a524; --warn-text: #f5c97a;
-      --danger: #f87171; --success: #34d399;
-      --shadow: 0 1px 3px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.05);
-    }
-  }
+  /* Color/type/shape tokens live in src/theme.css (imported by main.tsx),
+     shared with the onboarding wizard. */
 
   html, body, #root { height: 100%; background: var(--bg); }
   .settings-root { display: flex; min-height: 100vh; font-family: var(--font); font-size: 13px; color: var(--text-primary); background: var(--bg); -webkit-font-smoothing: antialiased; }

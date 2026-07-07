@@ -673,24 +673,8 @@ const S: Record<string, React.CSSProperties> = {
 const CSS = `
   @font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/inter-400.woff2') format('woff2'); }
   @font-face { font-family: 'Inter'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/inter-500.woff2') format('woff2'); }
-  :root {
-    --bg: #f7f8fa; --bg-card: #fff; --bg-card-sel: #e7f5ef; --bg-input: #fff;
-    --bg-hover: #f1f3f5; --border: #e6e8eb; --border-input: #d4d8dd;
-    --text-primary: #11151a; --text-secondary: #5b6470; --text-link: #0e9e6e;
-    --accent: #0e9e6e; --accent-light: #e7f5ef; --toggle-off: #d4d8dd;
-    --success: #0e9e6e; --danger: #dc2626;
-    --shadow: 0 1px 2px rgba(17,21,26,.05), 0 0 0 1px rgba(17,21,26,.06);
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0f1216; --bg-card: #161a20; --bg-card-sel: #173a30; --bg-input: #1e232b;
-      --bg-hover: #1e232b; --border: #2a2f37; --border-input: #353b45;
-      --text-primary: #e6e9ee; --text-secondary: #97a0ad; --text-link: #34d399;
-      --accent: #34d399; --accent-light: #173a30; --toggle-off: #353b45;
-      --success: #34d399; --danger: #f87171;
-      --shadow: 0 1px 3px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.05);
-    }
-  }
+  /* Color tokens live in src/theme.css (imported by main.tsx), shared with the
+     options page. */
   html, body, #root { margin: 0; padding: 0; background: var(--bg); font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
   * { box-sizing: border-box; }
   .spin { animation: spin .8s linear infinite; display: inline-block; }
