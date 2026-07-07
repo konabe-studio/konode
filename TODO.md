@@ -51,6 +51,35 @@
 
 ---
 
+## 🔒 Security / E2EE hardening (pre-launch, do in order)
+
+Found during post-build QA of the E2EE settings UI.
+
+- [ ] **1 — Don't reveal the passphrase's last 4 chars.** `SecretField` shows a
+      `••••last4` summary; fine for API tokens / WebDAV password (rotatable), but for
+      the **E2EE passphrase** it leaks the ending, character classes, and (via dot
+      count) the length — a screenshot / shoulder-surf disclosure. Unlike a token, the
+      passphrase can't be cheaply rotated (rotating = re-encrypt + re-key every device).
+      Fix: for the passphrase field use a content-free indicator (`Set ✓` / fixed dot
+      count, not real length) + the reveal-eye on demand. Leave token/password fields
+      as-is.
+- [ ] **2 — Confirm passphrase on entry (double-entry).** A mistyped passphrase
+      makes E2EE data unrecoverable, and every device must match. Today the `verifier`
+      only catches a mismatch on a *second* device *after* upload — the first device
+      happily encrypts everything with the typo. Add a set-time confirm field (or
+      reveal-before-save) in options + onboarding E2EE blocks. ("Generate a strong key"
+      is typo-free; manual entry is not.)
+- [ ] **3 — Handle the E2EE on/off asymmetry across devices.** If device A has E2EE
+      on and B has it off: A reads B's plaintext and merges it, then re-uploads
+      encrypted — so B's data sits **unencrypted** on the backend (privacy promise
+      broken), while B throws `PassphraseError` every cycle reading A and never
+      converges. No "should be encrypted" signal exists, so B silently accepts
+      plaintext. Fix: persist an `e2ee_expected` marker in the Synkro folder (or peer
+      packets) and warn/block in the popup on a mixed state instead of silently
+      degrading. Deepest of the three (sync-engine + folder marker).
+
+---
+
 ## 🧭 Later / Nice-to-have
 
 - [ ] Firefox support (browser_specific_settings + polyfill)
@@ -58,6 +87,9 @@
 - [ ] Incremental bookmark diff for >10k bookmarks
 - [ ] Audit log export, keyboard shortcuts
 - [ ] Populate `bytes_transferred` (currently unused)
+- [ ] **BuyMeACoffee donate button** in Settings — plain external link only (no
+      BMC embed script/iframe; that would load third-party JS and break the
+      privacy-first, no-external-request stance). Keep it subtle.
 
 ---
 
