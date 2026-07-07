@@ -43,16 +43,29 @@ function SecretField({
       ? "•".repeat(12)
       : "•".repeat(Math.min(Math.max(value.length - 4, 8), 24)) + value.slice(-4);
     return (
-      <div className="input-pw-wrap">
-        <input className="field-input mono" type="text" value={masked} readOnly tabIndex={-1} />
-        <button
-          className="btn-eye"
-          type="button"
-          title="Replace"
-          onClick={() => { setDraft(""); setRevealed(false); setEditing(true); }}
-        >
-          <Pencil size={13} />
-        </button>
+      <div className="input-pw-wrap input-pw-wrap-2">
+        {/* Reveal shows the true value on demand (user-initiated) — the default
+            summary stays content-free for the passphrase, so a screenshot leaks
+            nothing, but the value is still peekable without having to overwrite it. */}
+        <input className="field-input mono" type="text" value={revealed ? value : masked} readOnly tabIndex={-1} />
+        <div className="btn-eye-group">
+          <button
+            className="btn-eye"
+            type="button"
+            title={revealed ? "Hide" : "Show"}
+            onClick={() => setRevealed((v) => !v)}
+          >
+            {revealed ? <EyeOff size={13} /> : <Eye size={13} />}
+          </button>
+          <button
+            className="btn-eye"
+            type="button"
+            title="Replace"
+            onClick={() => { setDraft(""); setRevealed(false); setEditing(true); }}
+          >
+            <Pencil size={13} />
+          </button>
+        </div>
       </div>
     );
   }
@@ -142,6 +155,8 @@ export default function OptionsApp() {
   // no re-confirm); a generated key is exact by construction, so it skips confirm.
   const [initialPass, setInitialPass] = useState("");
   const [passConfirm, setPassConfirm] = useState("");
+  // Require an explicit confirmation before disabling E2EE (a downgrade).
+  const [confirmDisableEnc, setConfirmDisableEnc] = useState(false);
   const [exportStatus, setExportStatus] = useState<"idle" | "ok" | "error">("idle");
   const [importStatus, setImportStatus] = useState<"idle" | "ok" | "error">("idle");
   const [importCount, setImportCount] = useState(0);
@@ -912,10 +927,44 @@ export default function OptionsApp() {
                   <label className="toggle-wrap">
                     <input type="checkbox" className="toggle-input"
                       checked={settings.encryption_enabled}
-                      onChange={(e) => update({ encryption_enabled: e.target.checked })} />
+                      onChange={(e) => {
+                        const next = e.target.checked;
+                        // Turning E2EE OFF is a downgrade — the next sync re-uploads
+                        // this device's data unencrypted. Require an explicit confirm
+                        // (don't flip the toggle yet) so it can't be switched off by a
+                        // stray click. Turning it on needs no confirm.
+                        if (!next && (settings.encryption_passphrase ?? "").length > 0) {
+                          setConfirmDisableEnc(true);
+                        } else {
+                          update({ encryption_enabled: next });
+                        }
+                      }} />
                     <span className="toggle-track"><span className="toggle-thumb" /></span>
                   </label>
                 </div>
+                {confirmDisableEnc && (
+                  <div className="settings-row" style={{ paddingTop: 0 }}>
+                    <div className="settings-row-left">
+                      <div className="row-desc" style={{ color: "var(--danger)" }}>
+                        Turn off encryption? Your synced data will be stored <b>unencrypted</b> on your
+                        backend from the next sync on. Every device must then also turn it off.
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                      <button className="btn-secondary" type="button" onClick={() => setConfirmDisableEnc(false)}>
+                        Cancel
+                      </button>
+                      <button
+                        className="btn-secondary"
+                        type="button"
+                        style={{ color: "var(--danger)", borderColor: "var(--danger)" }}
+                        onClick={() => { update({ encryption_enabled: false }); setConfirmDisableEnc(false); }}
+                      >
+                        Turn off
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {settings.encryption_enabled && (
                   <div className="settings-row">
                     <div className="settings-row-left">
@@ -1139,8 +1188,11 @@ const STYLES = `
 
   .input-pw-wrap { position: relative; }
   .input-pw-wrap .field-input { padding-right: 36px; }
+  .input-pw-wrap-2 .field-input { padding-right: 60px; }
   .btn-eye { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 2px; display: flex; align-items: center; }
   .btn-eye:hover { color: var(--text-primary); }
+  .btn-eye-group { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 2px; }
+  .btn-eye-group .btn-eye { position: static; transform: none; }
 
   .verify-row { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); margin-top: 5px; }
   .verify-row.ok { color: var(--success); }
