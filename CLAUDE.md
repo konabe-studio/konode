@@ -62,6 +62,11 @@ src/
   checks the peer's verifier against the local passphrase and throws a
   `PassphraseError` (surfaced as an error state) on mismatch — so a mistyped
   passphrase fails loudly instead of silently forking devices into unreadable data.
+  The **on/off asymmetry is guarded both ways**: an encrypted peer with no local
+  passphrase throws `PassphraseError`; a **plaintext peer while E2EE is on here**
+  throws `EncryptionMismatchError` (both re-thrown from the `syncType` fold, not
+  swallowed as "one bad peer") — so a mixed group is blocked/surfaced instead of
+  silently merging a peer whose data sits unencrypted on the backend.
 - **Flow** (`sync-engine.syncType`): pull every peer file (`downloadAll(type,
   ownDeviceId)` excludes our own) → auto-merge each peer in (additive + deletion-
   aware, non-destructive) → push merged, unless strategy is `manual` (queue a

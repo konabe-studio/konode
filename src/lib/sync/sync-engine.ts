@@ -37,6 +37,21 @@ export class PassphraseError extends Error {
   }
 }
 
+/**
+ * A peer is syncing UNencrypted data while E2EE is enabled on this device (or vice
+ * versa) — the devices disagree on encryption. Silently merging the plaintext peer
+ * would (a) mean trusting an unencrypted feed, and (b) leave that peer's data
+ * readable on the storage backend even though the user turned E2EE on here. Thrown
+ * so the mixed state is surfaced and blocked instead of silently degrading — the
+ * reverse case (encrypted peer, no passphrase here) already throws PassphraseError.
+ */
+export class EncryptionMismatchError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "EncryptionMismatchError";
+  }
+}
+
 // ─── Sync Engine ─────────────────────────────────────────────────────────
 
 export class SyncEngine {
@@ -189,9 +204,10 @@ export class SyncEngine {
           try {
             await this.applyRemote(dataType, peer, false);
           } catch (err) {
-            // A passphrase mismatch must NOT be swallowed — otherwise the devices
-            // diverge silently. Surface it loudly (outer catch → error state).
-            if (err instanceof PassphraseError) throw err;
+            // A passphrase mismatch or an encryption on/off mismatch must NOT be
+            // swallowed — otherwise the devices diverge silently (or a peer's data
+            // sits unencrypted). Surface it loudly (outer catch → error state).
+            if (err instanceof PassphraseError || err instanceof EncryptionMismatchError) throw err;
             // One bad peer file (corrupt JSON, checksum mismatch, import error) must
             // not abort the whole sync — skip it and fold in the rest.
             logger.warn(
@@ -345,6 +361,18 @@ export class SyncEngine {
     isLocalEmpty = false
   ): Promise<void> {
     let raw = packet.payload;
+    const localE2ee =
+      this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
+    // Mixed-state guard (the half PassphraseError doesn't cover): we're encrypting,
+    // but this peer's file is plaintext. Don't silently merge it — that peer's data
+    // is sitting unencrypted on the backend, breaking the E2EE promise for the group.
+    if (localE2ee && !packet.encrypted) {
+      throw new EncryptionMismatchError(
+        `Device ${packet.device_id.slice(0, 8)} is syncing unencrypted data, but end-to-end ` +
+          "encryption is on here. Enable E2EE on that device with the same passphrase, or turn " +
+          "it off here — mixing the two leaves that device's data unencrypted on your storage."
+      );
+    }
     if (packet.encrypted) {
       const pass = this.settings.encryption_passphrase;
       if (!pass) {

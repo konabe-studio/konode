@@ -69,7 +69,7 @@ Found during post-build QA of the E2EE settings UI.
       happily encrypts everything with the typo. Add a set-time confirm field (or
       reveal-before-save) in options + onboarding E2EE blocks. ("Generate a strong key"
       is typo-free; manual entry is not.)
-- [ ] **3 — Handle the E2EE on/off asymmetry across devices.** If device A has E2EE
+- [x] **3 — Handle the E2EE on/off asymmetry across devices.** If device A has E2EE
       on and B has it off: A reads B's plaintext and merges it, then re-uploads
       encrypted — so B's data sits **unencrypted** on the backend (privacy promise
       broken), while B throws `PassphraseError` every cycle reading A and never

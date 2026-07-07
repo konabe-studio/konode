@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { SyncEngine, PassphraseError } from "@/lib/sync/sync-engine";
+import { SyncEngine, PassphraseError, EncryptionMismatchError } from "@/lib/sync/sync-engine";
 import { DEFAULT_SETTINGS, DEFAULT_STATE, getState } from "@/lib/utils/storage";
 import type {
   IBackend,
@@ -231,6 +231,19 @@ describe("SyncEngine.syncType — E2EE", () => {
     backend.files.set("bookmarks_peer1", await encPeer("their-different-one", "peer1", payload([link("B", "https://b.com")])));
 
     await expect(priv(engine).syncType("bookmarks", backend, DEFAULT_STATE)).rejects.toBeInstanceOf(PassphraseError);
+  });
+
+  it("surfaces an EncryptionMismatchError and does not merge when a peer is plaintext but E2EE is on here", async () => {
+    const engine = encEngine("me", "my-passphrase");
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    // Peer packet built by a NON-encrypting engine → encrypted:false (E2EE off there).
+    backend.files.set("bookmarks_peer1", await peerPacket(makeEngine(), "peer1", payload([link("B", "https://b.com")])));
+
+    await expect(priv(engine).syncType("bookmarks", backend, DEFAULT_STATE)).rejects.toBeInstanceOf(EncryptionMismatchError);
+    // The plaintext peer must NOT be silently folded in, and we must not upload.
+    expect(await localUrls()).toEqual(["https://a.com"]);
+    expect(backend.uploads.length).toBe(0);
   });
 });
 
