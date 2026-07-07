@@ -143,6 +143,10 @@ export interface SyncSettings {
   sync_interval_seconds: number; // default: 60
   conflict_strategy: ConflictStrategy;
   history_days_limit: number; // default: 30
+  // Safety net: the bookmark merge refuses a peer deletion that would remove more
+  // than this % of local bookmarks (guards against a corrupt/oversized tombstone
+  // log wiping the tree). Default 60; raise it if you routinely delete in bulk.
+  bulk_delete_percent: number;
   auto_sync: boolean;
   sync_on_change: boolean;       // trigger sync immediately on bookmark change
   notifications_enabled: boolean;

@@ -482,7 +482,8 @@ export class SyncEngine {
         await importBookmarks(
           payload,
           isLocalEmpty ? "replace" : "merge",
-          this.settings.conflict_strategy
+          this.settings.conflict_strategy,
+          this.settings.bulk_delete_percent
         );
         break;
       case "history":

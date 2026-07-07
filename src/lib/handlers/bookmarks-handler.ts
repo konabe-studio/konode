@@ -165,7 +165,8 @@ export function normalizePayload(payload: unknown): BookmarkPayload {
 export async function importBookmarks(
   payload: unknown,
   strategy: "merge" | "replace" = "merge",
-  conflictStrategy: ConflictStrategy = "lww"
+  conflictStrategy: ConflictStrategy = "lww",
+  deletePercent = 60
 ): Promise<void> {
   const { tree, tombstones: remoteTombstones, moves: remoteMoves = [] } = normalizePayload(payload);
   importing = true;
@@ -181,7 +182,7 @@ export async function importBookmarks(
     if (strategy === "replace") {
       await clearAndImport(tree);
     } else {
-      await mergeBookmarks(tree, localTombstones, remoteTombstones, localMoves, remoteMoves, conflictStrategy);
+      await mergeBookmarks(tree, localTombstones, remoteTombstones, localMoves, remoteMoves, conflictStrategy, deletePercent);
     }
   } finally {
     importing = false;
@@ -276,6 +277,7 @@ async function mergeBookmarks(
   localMoves: MoveRecord[],
   remoteMoves: MoveRecord[],
   strategy: ConflictStrategy,
+  deletePercent = 60,
 ): Promise<void> {
   // Index local URL bookmarks (ids + newest dateAdded per URL).
   const localFlat = flattenNodes(await exportBookmarks()).filter((n) => n.url);
@@ -311,10 +313,14 @@ async function mergeBookmarks(
       if (loc.dateAdded <= dAt) toRemove.push(...loc.ids);
     }
   }
-  // Safety: refuse a mass-delete from a corrupt/oversized tombstone log.
-  const cap = Math.max(20, Math.floor(localFlat.length * 0.5));
+  // Safety: refuse a mass-delete from a corrupt/oversized tombstone log. The
+  // threshold is user-configurable (Settings → Advanced, default 60%): a floor of
+  // 20 keeps small trees from tripping it, and a normal bulk cleanup up to the
+  // percentage still propagates.
+  const pct = deletePercent > 0 ? deletePercent : 60;
+  const cap = Math.max(20, Math.floor((localFlat.length * pct) / 100));
   if (toRemove.length > cap) {
-    logger.warn("mergeBookmarks", `Skipped deleting ${toRemove.length} bookmarks (cap ${cap}) — tombstone data looks wrong`);
+    logger.warn("mergeBookmarks", `Skipped deleting ${toRemove.length} bookmarks (cap ${cap}, ${pct}% of ${localFlat.length}) — exceeds the mass-delete guard`);
   } else {
     for (const id of toRemove) {
       try { await chrome.bookmarks.remove(id); } catch (err) { logger.error("Bookmark delete (tombstone)", err); }

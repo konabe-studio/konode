@@ -87,8 +87,11 @@ src/
   accepted). Merge is **additive + deletion-aware**: adds propagate, and deletions
   propagate via **tombstones** (`onRemoved` records `{url, deletedAt}`; merge
   removes peer-tombstoned URLs and won't re-add them; tombstones GC'd after 90
-  days). Folder hierarchy is preserved. Safety: a merge that would delete >50% of
-  local bookmarks is refused.
+  days). Folder hierarchy is preserved. Safety: a merge whose peer deletions would
+  remove more than `settings.bulk_delete_percent` of local bookmarks (**default
+  60%**, user-adjustable 50–95% in Settings → Advanced; floor of 20 so small trees
+  aren't tripped) is skipped — guards against a corrupt/oversized tombstone log
+  wiping the tree, while a normal bulk cleanup up to the threshold still propagates.
 - **Conflict strategies** are now **per-item (per URL)**: `lww` (newest action
   wins), `prefer-local`, `prefer-remote`, `manual` (popup banner resolves).
 - **History** is additive + de-duped; restore is lossy by design (Chrome can't set

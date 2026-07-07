@@ -856,6 +856,29 @@ export default function OptionsApp() {
                 ))}
               </div>
 
+              <h2 className="section-title">Safety</h2>
+              <div className="settings-section">
+                <div className="settings-row">
+                  <div className="settings-row-left">
+                    <div>
+                      <div className="row-label">Max bulk delete from a peer</div>
+                      <div className="row-desc">
+                        A safety net: if a peer's deletions would remove more than this share of
+                        your local bookmarks, the merge skips them (guards against a corrupt sync
+                        wiping your tree). Raise it if you routinely delete in bulk.
+                      </div>
+                    </div>
+                  </div>
+                  <div className="slider-wrap">
+                    <input type="range" min={50} max={95} step={5}
+                      value={settings.bulk_delete_percent}
+                      onChange={(e) => update({ bulk_delete_percent: Number(e.target.value) })}
+                      className="slider" />
+                    <span className="slider-val">{settings.bulk_delete_percent}%</span>
+                  </div>
+                </div>
+              </div>
+
               <div className="action-row" style={{ marginTop: 20 }}>
                 <button className={`btn-save ${saveOk ? "saved" : ""}`} onClick={save} disabled={saving}>
                   {saving ? <Loader2 size={13} className="spin" /> : saveOk ? <CheckCircle2 size={13} /> : <Save size={13} />}

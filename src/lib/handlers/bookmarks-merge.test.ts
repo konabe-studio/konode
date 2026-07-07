@@ -117,6 +117,30 @@ describe("importBookmarks — merge", () => {
   });
 });
 
+describe("importBookmarks — mass-delete guard (configurable percent)", () => {
+  async function seedMany(n: number): Promise<void> {
+    for (let i = 0; i < n; i++) await seed(`S${i}`, `https://s${i}.com`);
+  }
+  // deletedAt far in the future so every matching local bookmark qualifies for deletion.
+  function tombstonesFor(n: number): BookmarkPayload["tombstones"] {
+    return Array.from({ length: n }, (_, i) => ({ url: `https://s${i}.com`, deletedAt: 9e15 }));
+  }
+
+  it("skips a peer deletion that exceeds the default 60% cap", async () => {
+    await seedMany(100);
+    // 70 of 100 tombstoned = 70% > 60% default → guard trips, nothing deleted.
+    await importBookmarks(payload([], tombstonesFor(70)), "merge", "lww");
+    expect((await localUrls()).length).toBe(100);
+  });
+
+  it("applies the same deletion when the configured percent is raised above it", async () => {
+    await seedMany(100);
+    // Same 70% delete, but deletePercent=80 → cap 80 → 70 ≤ 80 → deletions apply.
+    await importBookmarks(payload([], tombstonesFor(70)), "merge", "lww", 80);
+    expect((await localUrls()).length).toBe(30);
+  });
+});
+
 describe("importBookmarks — URL edit (no duplicate)", () => {
   it("tombstones the replaced url on edit so a peer doesn't resurrect it", async () => {
     // Capture the onChanged listener the handler registers (the fake's is a no-op).

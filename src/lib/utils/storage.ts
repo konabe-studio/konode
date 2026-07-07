@@ -46,6 +46,7 @@ export const DEFAULT_SETTINGS: SyncSettings = {
   sync_interval_seconds: 60,
   conflict_strategy: "lww",
   history_days_limit: 30,
+  bulk_delete_percent: 60,
   auto_sync: true,
   sync_on_change: true,
   notifications_enabled: true,
@@ -98,7 +99,10 @@ async function set(key: string, value: unknown): Promise<void> {
 // ─── Settings ──────────────────────────────────────────────────────────────
 
 export async function getSettings(): Promise<SyncSettings> {
-  return get<SyncSettings>(KEYS.SETTINGS, DEFAULT_SETTINGS);
+  // Merge over defaults so a settings object saved by an older build (missing a
+  // newly-added field like bulk_delete_percent) still gets a sane value.
+  const stored = await get<Partial<SyncSettings>>(KEYS.SETTINGS, DEFAULT_SETTINGS);
+  return { ...DEFAULT_SETTINGS, ...stored };
 }
 
 export async function saveSettings(partial: Partial<SyncSettings>): Promise<SyncSettings> {

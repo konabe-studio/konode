@@ -111,6 +111,41 @@ Found during post-build QA of the E2EE settings UI.
 
 ---
 
+## 🔎 From the 4-agent audit (2026-07-07)
+
+Ranked; all verified. `[x]` = fixed this pass.
+
+- [x] **Mass-delete guard too aggressive + silent** — a legit bulk delete (>50% of
+      local bookmarks) was silently refused, so deletions didn't propagate (hit live:
+      B kept 101 bookmarks, 54.5% tombstoned). Now `settings.bulk_delete_percent`
+      (default 60, adjustable 50–95% in Settings → Advanced) drives the cap.
+- [ ] **Manual "keep local" conflict never converges** — re-queues + re-notifies
+      every sync cycle forever (a keep-local resolution isn't sticky). `sync-engine.ts`
+      ~554. Needs a resolved-checksum record so it doesn't re-fire. (medium)
+- [ ] **Export backup broken without the History permission** — `exportData()` calls
+      `chrome.history.search` unconditionally in one `Promise.all`; on the default
+      config (history off) it rejects and nothing exports, not even bookmarks. Guard
+      each collector by `chrome.permissions.contains` / settle independently. (medium)
+- [ ] **Manual conflict path imports plaintext into an E2EE device** — the plaintext-
+      peer skip is only in the auto branch; `resolveConflict → applyRemote` has no
+      guard, so a manual resolve-remote can import an unauthenticated plaintext packet.
+      Mirror the auto-path guard. (low, but security-adjacent — pairs with the recent
+      E2EE hardening)
+- [ ] **Concurrent-sync race** — `this.isSyncing` is set after `await
+      acquireSyncLock()`; a tight double-trigger can double-run one type. Set the flag
+      synchronously before the await. (low)
+- [ ] **GitHub/WebDAV `downloadAll` swallow transient list errors** as "no peers"
+      (`if (!res.ok) return []` inside `withRetry` → never retries; Drive throws).
+      Throw `HttpError` on non-OK list, keep 404→[]. (low)
+- [ ] **Onboarding passphrase is cleartext** (`type="text"`) unlike the options field
+      — mask with a reveal toggle (mirror `SecretField`; also serves the generated-key
+      case). (low)
+- [ ] **SecretField shows empty after Generate on a fresh E2EE enable** — `editing`
+      state doesn't resync when the parent sets the value; render is misleadingly
+      empty though the key is saved. (low)
+
+---
+
 ## 🧭 Later / Nice-to-have
 
 - [ ] Firefox support (browser_specific_settings + polyfill)
