@@ -88,7 +88,14 @@ async function codeChallenge(verifier: string): Promise<string> {
 // ─── Token endpoint ───────────────────────────────────────────────────────────
 
 async function exchange(params: Record<string, string>): Promise<TokenResponse> {
-  const body = new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, ...params });
+  const body = new URLSearchParams({ client_id: CLIENT_ID, ...params });
+  // Only send a client_secret when one is configured. The preferred setup is a
+  // PUBLIC OAuth client with NO secret — PKCE's code_verifier is the proof — in
+  // which case CLIENT_SECRET is "" and this line drops out of the request. With the
+  // current Web-app client the secret is still present, so behavior is unchanged
+  // until the client is swapped (PR-H1): set the new public client_id + empty
+  // CLIENT_SECRET, and no code here changes.
+  if (CLIENT_SECRET) body.set("client_secret", CLIENT_SECRET);
   const res = await fetch(TOKEN_ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
