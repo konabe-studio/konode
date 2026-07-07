@@ -77,7 +77,6 @@ export const KEYS = {
   BOOKMARK_TOMBSTONES: "synkro_bm_tombstones",
   BOOKMARK_MOVES: "synkro_bm_moves",
   HIST_IMPORTED: "synkro_hist_imported",
-  TAB_CACHE: "synkro_tab_cache",
   REMOTE_SESSIONS: "synkro_remote_sessions",
   REMOTE_EXTENSIONS: "synkro_remote_extensions",
   UPLOAD_CHECKSUMS: "synkro_upload_checksums",
@@ -141,10 +140,6 @@ export async function appendAudit(entry: AuditEntry): Promise<void> {
   await set(KEYS.AUDIT_LOG, log.slice(0, 200));
 }
 
-export async function getAuditLog(): Promise<AuditEntry[]> {
-  return get<AuditEntry[]>(KEYS.AUDIT_LOG, []);
-}
-
 // ─── Caches ────────────────────────────────────────────────────────────────
 
 export async function getBookmarkCache<T>(): Promise<T | null> {
@@ -171,14 +166,6 @@ export async function getMoves(): Promise<MoveRecord[]> {
 
 export async function setMoves(list: MoveRecord[]): Promise<void> {
   await set(KEYS.BOOKMARK_MOVES, list);
-}
-
-export async function getTabCache<T>(): Promise<T | null> {
-  return get<T | null>(KEYS.TAB_CACHE, null);
-}
-
-export async function setTabCache<T>(data: T): Promise<void> {
-  await set(KEYS.TAB_CACHE, data);
 }
 
 // ─── Imported history (CO-6) ─────────────────────────────────────────────────

@@ -440,45 +440,6 @@ async function mergeBookmarks(
   logger.info("mergeBookmarks", `Merged +${added} / -${toRemove.length} / moved ${moved} (folders preserved)`);
 }
 
-// ─── Diff ────────────────────────────────────────────────────────────────
-
-export interface BookmarkDiff {
-  added: SyncBookmark[];
-  removed: SyncBookmark[];
-  modified: SyncBookmark[];
-}
-
-export async function diffBookmarks(
-  previous: SyncBookmark[]
-): Promise<BookmarkDiff> {
-  const current = await exportBookmarks();
-  const currentFlat = flattenNodes(current);
-  const previousFlat = flattenNodes(previous);
-
-  const prevMap = new Map(previousFlat.map((n) => [n.id, n]));
-  const currMap = new Map(currentFlat.map((n) => [n.id, n]));
-
-  const added = currentFlat.filter((n) => !prevMap.has(n.id));
-  const removed = previousFlat.filter((n) => !currMap.has(n.id));
-  const modified = currentFlat.filter((n) => {
-    const prev = prevMap.get(n.id);
-    return prev && (prev.title !== n.title || prev.url !== n.url);
-  });
-
-  return { added, removed, modified };
-}
-
-// ─── Cache ───────────────────────────────────────────────────────────────
-
-export async function updateBookmarkCache(): Promise<void> {
-  const tree = await exportBookmarks();
-  await setBookmarkCache(tree);
-}
-
-export async function getLastBookmarkSnapshot(): Promise<SyncBookmark[] | null> {
-  return getBookmarkCache<SyncBookmark[]>();
-}
-
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
 function flattenNodes(nodes: SyncBookmark[]): SyncBookmark[] {

@@ -49,28 +49,3 @@ export async function exportExtensions(): Promise<SyncExtension[]> {
   });
 }
 
-// ─── Diff (what's missing on this device) ────────────────────────────────────
-
-export interface ExtensionDiff {
-  missing: SyncExtension[];   // on remote, not installed locally
-  extra: SyncExtension[];     // installed locally, not on remote
-  disabled: SyncExtension[];  // installed but disabled locally
-}
-
-export async function diffExtensions(
-  remote: SyncExtension[]
-): Promise<ExtensionDiff> {
-  const local = await exportExtensions();
-  const localIds = new Set(local.map((e) => e.id));
-  const remoteIds = new Set(remote.map((e) => e.id));
-
-  const missing = remote.filter(
-    (e) => !localIds.has(e.id) && e.type === "extension"
-  );
-  const extra = local.filter((e) => !remoteIds.has(e.id));
-  const disabled = local.filter(
-    (e) => remoteIds.has(e.id) && !e.enabled
-  );
-
-  return { missing, extra, disabled };
-}

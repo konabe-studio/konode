@@ -69,20 +69,3 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
   await addImportedHistoryUrls(importedUrls);
   logger.info("importHistory", `Added ${added} new history entries (skipped existing)`);
 }
-
-// ─── Diff (only new entries since last sync) ───────────────────────────────
-
-export async function getHistorySince(since: number): Promise<SyncHistoryItem[]> {
-  const items = await chrome.history.search({
-    text: "",
-    startTime: since,
-    maxResults: 1000,
-  });
-
-  return items.map((item) => ({
-    url: item.url!,
-    title: item.title,
-    lastVisitTime: item.lastVisitTime ?? Date.now(),
-    visitCount: item.visitCount ?? 1,
-  }));
-}

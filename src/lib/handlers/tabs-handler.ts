@@ -2,7 +2,6 @@ import type { SyncSession } from "@/lib/types";
 
 type TabInfo = { url: string; title?: string; pinned: boolean; favIconUrl?: string };
 import { logger } from "@/lib/utils/logger";
-import { setTabCache, getTabCache } from "@/lib/utils/storage";
 import { isSafeContentUrl } from "@/lib/utils/url";
 
 // ─── Export Current Tabs ──────────────────────────────────────────────────
@@ -50,15 +49,4 @@ export async function importSession(session: SyncSession): Promise<void> {
       logger.error(`Tab open: ${tab.url}`, err);
     }
   }
-}
-
-// ─── Cache ────────────────────────────────────────────────────────────────
-
-export async function updateTabCache(): Promise<void> {
-  const tabs = await exportCurrentTabs();
-  await setTabCache(tabs);
-}
-
-export async function getLastTabSnapshot(): Promise<TabInfo[] | null> {
-  return getTabCache<TabInfo[]>();
 }

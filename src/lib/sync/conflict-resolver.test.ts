@@ -60,15 +60,6 @@ describe("ConflictResolver", () => {
     expect(conflict?.remote_version).toBeNull();
     expect(conflict?.remote_packet).toBe(remote);
   });
-
-  it("mergeArraysByUrl de-dupes by url", () => {
-    const r = new ConflictResolver("lww");
-    const merged = r.mergeArraysByUrl(
-      [{ url: "a" }, { url: "b" }],
-      [{ url: "b" }, { url: "c" }]
-    );
-    expect(merged.map((x) => x.url)).toEqual(["a", "b", "c"]);
-  });
 });
 
 describe("orderPeersByTime", () => {

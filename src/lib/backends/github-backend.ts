@@ -20,12 +20,6 @@ export function normalizeRepoSlug(input: string | undefined): string {
     .replace(/^\/+|\/+$/g, "");
 }
 
-export interface GitHubUserInfo {
-  login: string;
-  name: string;
-  avatarUrl: string;
-}
-
 export class GitHubBackend implements IBackend {
   readonly type = "github" as const;
 
@@ -53,15 +47,6 @@ export class GitHubBackend implements IBackend {
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
     };
-  }
-
-  async getUser(): Promise<GitHubUserInfo | null> {
-    try {
-      const res = await fetch(`${GITHUB_API}/user`, { headers: this.headers() });
-      if (!res.ok) return null;
-      const d = await res.json();
-      return { login: d.login ?? "", name: d.name ?? d.login ?? "", avatarUrl: d.avatar_url ?? "" };
-    } catch { return null; }
   }
 
   async connect(): Promise<void> {
