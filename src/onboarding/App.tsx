@@ -44,7 +44,7 @@ export default function OnboardingApp() {
   // Data types
   const [dataTypes, setDataTypes] = useState({
     bookmarks: true,
-    extensions: true,
+    extensions: false, // opt-in: the extension list is fingerprint-grade data
     history: false,
     sessions: false,
   });

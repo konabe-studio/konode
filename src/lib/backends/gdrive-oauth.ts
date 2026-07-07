@@ -168,9 +168,11 @@ export async function interactiveSignIn(): Promise<GDriveSession> {
     savedAt: Date.now(),
   };
   await saveGDriveSession(session);
+  // Don't persist the account email in the audit log (PR-L2) — the signed-in
+  // account is already shown in the UI; the log just needs the outcome.
   logger.info(
     "GDrive.oauth",
-    `Signed in as ${user.email || "(unknown)"} — refresh token ${tok.refresh_token ? "stored" : "MISSING (re-consent needed)"}`
+    `Signed in — refresh token ${tok.refresh_token ? "stored" : "MISSING (re-consent needed)"}`
   );
   return session;
 }

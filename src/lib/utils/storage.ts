@@ -40,7 +40,9 @@ function detectDeviceName(): string {
 export const DEFAULT_SETTINGS: SyncSettings = {
   device_id: crypto.randomUUID(),
   device_label: detectDeviceName(),
-  enabled_types: ["bookmarks", "extensions"],
+  // Bookmarks only by default. The extension list is fingerprint-grade data and
+  // history/tabs are sensitive, so those are opt-in (turned on in onboarding/settings).
+  enabled_types: ["bookmarks"],
   backends: [],
   active_backend: null,
   sync_interval_seconds: 60,

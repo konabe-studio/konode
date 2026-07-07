@@ -37,7 +37,9 @@ export class WebDAVBackend implements IBackend {
     // Refuse to send Basic-auth credentials over plaintext http:// (loopback aside).
     if (!isSecureBackendUrl(this.w.url)) throw new Error(INSECURE_URL_MSG);
     await this.ensureFolder();
-    logger.info("WebDAV connected", this.baseUrl);
+    // Log the host only (not the full URL/path) — the audit log is device-local
+    // but shouldn't persist more backend detail than needed (PR-L2).
+    logger.info("WebDAV connected", new URL(this.w.url).hostname);
   }
 
   async disconnect(): Promise<void> {}

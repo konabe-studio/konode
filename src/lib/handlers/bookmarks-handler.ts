@@ -113,7 +113,7 @@ async function recordUrlChange(id: string, newUrl: string | undefined): Promise<
   const now = Date.now();
   const current = await getTombstones();
   await setTombstones(mergeTombstoneLists(current, [{ url: oldUrl, deletedAt: now }]));
-  logger.info("Tombstones", `Recorded URL-change deletion for ${oldUrl}`);
+  logger.info("Tombstones", "Recorded a URL-change deletion");
 }
 
 /** Record a move (per URL) for a moved bookmark/folder subtree, so the new

@@ -52,7 +52,7 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
     if (!item.url || known.has(item.url)) continue;
     // Only add plain web URLs from a remote packet — never javascript:/data:/file:.
     if (!isSafeContentUrl(item.url)) {
-      logger.warn("importHistory", `Skipping unsafe URL: ${item.url}`);
+      logger.warn("importHistory", "Skipping an unsafe URL");
       continue;
     }
     try {

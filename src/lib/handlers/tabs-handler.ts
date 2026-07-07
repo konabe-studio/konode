@@ -40,7 +40,7 @@ export async function importSession(session: SyncSession): Promise<void> {
     // Never open a non-web URL from a remote packet (javascript:/data:/file: are
     // an injection/exfiltration vector); only http(s) tabs are restored.
     if (!isSafeContentUrl(tab.url)) {
-      logger.warn("importSession", `Skipping unsafe tab URL: ${tab.url}`);
+      logger.warn("importSession", "Skipping an unsafe tab URL");
       continue;
     }
     try {
