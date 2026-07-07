@@ -159,17 +159,20 @@ export class GitHubBackend implements IBackend {
   }
 
   private async getFileSHA(path: string, branch: string): Promise<string | null> {
-    try {
-      const res = await fetch(
-        `${GITHUB_API}/repos/${this.repoSlug}/contents/${path}?ref=${branch}`,
-        // GitHub sends `Cache-Control: max-age=60` on contents reads, so the browser
-        // HTTP cache can hand back a stale SHA right after a write — which then makes
-        // the next PUT 409 ("does not match"). `no-store` forces a fresh read.
-        { headers: this.headers(), cache: "no-store" }
-      );
-      if (!res.ok) return null;
-      return (await res.json()).sha ?? null;
-    } catch { return null; }
+    const res = await fetch(
+      `${GITHUB_API}/repos/${this.repoSlug}/contents/${path}?ref=${branch}`,
+      // GitHub sends `Cache-Control: max-age=60` on contents reads, so the browser
+      // HTTP cache can hand back a stale SHA right after a write — which then makes
+      // the next PUT 409 ("does not match"). `no-store` forces a fresh read.
+      { headers: this.headers(), cache: "no-store" }
+    );
+    // 404 = the file doesn't exist yet → create it (no sha). Any OTHER non-ok
+    // (500, 403 rate-limit, network blip) is NOT "no file" — throw so the upload's
+    // withRetry can back off and re-read, instead of silently omitting the sha and
+    // turning a transient read failure into a spurious 409/422 create attempt.
+    if (res.status === 404) return null;
+    if (!res.ok) throw new HttpError(res.status, `GitHub SHA read failed: ${res.status}`);
+    return (await res.json()).sha ?? null;
   }
 
   async downloadAll(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket[]> {

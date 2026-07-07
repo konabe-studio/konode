@@ -200,6 +200,43 @@ describe("SyncEngine.syncType — bookmarks", () => {
   });
 });
 
+describe("SyncEngine.syncType — concurrent moves (C3)", () => {
+  it("converges a 3-device concurrent move to the newest move's folder, no duplicate", async () => {
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    // Local: X lives in "LocalF".
+    const lf = await chrome.bookmarks.create({ parentId: "1", title: "LocalF" });
+    await chrome.bookmarks.create({ parentId: lf.id, title: "X", url: "https://x.com" });
+
+    const now = Date.now();
+    const movePayload = (folderTitle: string, at: number): BookmarkPayload => ({
+      tree: [{ id: "0", parentId: null, title: "", dateAdded: 0, children: [
+        { id: "1", parentId: "0", title: "Bookmarks bar", dateAdded: 0, children: [
+          { id: `f-${folderTitle}`, parentId: "1", title: folderTitle, dateAdded: 1, children: [link("X", "https://x.com")] },
+        ] },
+        { id: "2", parentId: "0", title: "Other bookmarks", dateAdded: 0, children: [] },
+        { id: "3", parentId: "0", title: "Mobile bookmarks", dateAdded: 0, children: [] },
+      ] }],
+      tombstones: [],
+      moves: [{ url: "https://x.com", at }],
+    });
+
+    // Peer B moved X to BFolder (older); peer C moved it to CFolder (newer).
+    backend.files.set("bookmarks_peerB", await peerPacket(engine, "peerB", movePayload("BFolder", now - 10_000)));
+    backend.files.set("bookmarks_peerC", await peerPacket(engine, "peerC", movePayload("CFolder", now - 1_000)));
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    // Newest move wins → X ends up under CFolder, exactly once.
+    const bar = await chrome.bookmarks.getChildren("1");
+    const cFolder = bar.find((c) => !c.url && c.title === "CFolder");
+    expect(cFolder).toBeTruthy();
+    const cKids = await chrome.bookmarks.getChildren(cFolder!.id);
+    expect(cKids.some((c) => c.url === "https://x.com")).toBe(true);
+    expect((await localUrls()).filter((u) => u === "https://x.com")).toHaveLength(1);
+  });
+});
+
 describe("SyncEngine.syncType — E2EE", () => {
   function encEngine(deviceId: string, passphrase: string): SyncEngine {
     return new SyncEngine(
