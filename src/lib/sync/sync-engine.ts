@@ -12,6 +12,7 @@ import {
   setRemoteExtensions,
   getLastUploadChecksum,
   setLastUploadChecksum,
+  clearUploadChecksums,
   acquireSyncLock,
   releaseSyncLock,
 } from "@/lib/utils/storage";
@@ -57,6 +58,12 @@ export class EncryptionMismatchError extends Error {
 export class SyncEngine {
   public isSyncing = false;
   private resolver: ConflictResolver;
+  // Peers we couldn't safely consume this sync because they disagree on encryption
+  // (plaintext peer while we encrypt, encrypted peer we can't decrypt, or a wrong
+  // passphrase). Keyed by device_id so the same peer isn't reported once per data
+  // type. Non-fatal: we skip merging that peer but still upload our own file, so the
+  // group self-heals once every device uses the same E2EE setting + passphrase.
+  private encryptionWarnings = new Map<string, string>();
 
   constructor(
     private settings: SyncSettings,
@@ -65,9 +72,18 @@ export class SyncEngine {
     this.resolver = new ConflictResolver(settings.conflict_strategy);
   }
 
-  updateSettings(settings: SyncSettings): void {
+  async updateSettings(settings: SyncSettings): Promise<void> {
+    // Encryption state/passphrase change → forget the last-upload checksums so the
+    // next sync re-uploads every type in the new encryption form. The checksum is
+    // over the plaintext payload, so without this, toggling E2EE on wouldn't change
+    // the checksum and the device's own file would stay plaintext on the backend
+    // forever (peers then keep seeing it as an unencrypted device).
+    const encChanged =
+      this.settings.encryption_enabled !== settings.encryption_enabled ||
+      this.settings.encryption_passphrase !== settings.encryption_passphrase;
     this.settings = settings;
     this.resolver.updateStrategy(settings.conflict_strategy);
+    if (encChanged) await clearUploadChecksums();
   }
 
   // ─── Main Entry Point ─────────────────────────────────────────────────
@@ -101,6 +117,7 @@ export class SyncEngine {
     }
 
     this.isSyncing = true;
+    this.encryptionWarnings.clear();
     const state = await setState({ status: "syncing", last_error: null });
     this.onStateChange(state);
 
@@ -115,12 +132,19 @@ export class SyncEngine {
         await this.syncType(dataType, backend, state);
       }
 
+      // A device that disagrees on encryption isn't a hard failure — we still synced
+      // and re-uploaded our own (correctly-encrypted) data, so the group self-heals
+      // once it's aligned. Surface it as a visible error message so the user fixes
+      // the misconfig, but only after the upload has happened (never before — that's
+      // what used to deadlock the group into mutually-stale plaintext files).
+      const warnings = [...this.encryptionWarnings.values()];
       const newState = await setState({
-        status: "success",
+        status: warnings.length ? "error" : "success",
         last_sync: new Date().toISOString(),
+        last_error: warnings.length ? warnings.join(" ") : null,
       });
       this.onStateChange(newState);
-      logger.info("SyncEngine", "Sync complete");
+      logger.info("SyncEngine", warnings.length ? `Sync complete with ${warnings.length} encryption warning(s)` : "Sync complete");
 
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
@@ -204,10 +228,17 @@ export class SyncEngine {
           try {
             await this.applyRemote(dataType, peer, false);
           } catch (err) {
-            // A passphrase mismatch or an encryption on/off mismatch must NOT be
-            // swallowed — otherwise the devices diverge silently (or a peer's data
-            // sits unencrypted). Surface it loudly (outer catch → error state).
-            if (err instanceof PassphraseError || err instanceof EncryptionMismatchError) throw err;
+            // An encryption disagreement (plaintext peer while we encrypt, encrypted
+            // peer we can't decrypt, or a wrong passphrase) must NOT be swallowed
+            // silently — but it must NOT abort before our own upload either, or the
+            // group deadlocks into mutually-stale files that never get re-encrypted.
+            // So: skip merging this peer, record a per-device warning, keep folding
+            // the rest, and let sync() upload our own file + surface the warning.
+            if (err instanceof PassphraseError || err instanceof EncryptionMismatchError) {
+              this.encryptionWarnings.set(peer.device_id, err.message);
+              logger.warn("SyncEngine", `Encryption mismatch — skipping peer ${peer.device_id}: ${err.message}`);
+              continue;
+            }
             // One bad peer file (corrupt JSON, checksum mismatch, import error) must
             // not abort the whole sync — skip it and fold in the rest.
             logger.warn(

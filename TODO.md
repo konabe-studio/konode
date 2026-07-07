@@ -74,9 +74,28 @@ Found during post-build QA of the E2EE settings UI.
       encrypted — so B's data sits **unencrypted** on the backend (privacy promise
       broken), while B throws `PassphraseError` every cycle reading A and never
       converges. No "should be encrypted" signal exists, so B silently accepts
-      plaintext. Fix: persist an `e2ee_expected` marker in the Synkro folder (or peer
-      packets) and warn/block in the popup on a mixed state instead of silently
-      degrading. Deepest of the three (sync-engine + folder marker).
+      plaintext. First cut surfaced `EncryptionMismatchError`; QA found it **hard-
+      aborted before upload → deadlock** (see #4).
+- [x] **4 — Fix the E2EE mixed-state deadlock (found in #3 QA).** Two bugs combined
+      so two devices with the *same* passphrase still each reported the other as
+      plaintext forever: (a) `uploadIfChanged` keys only on the *plaintext* checksum,
+      so enabling E2EE never re-uploaded the device's own file encrypted; (b) the
+      mismatch **threw and aborted the sync before the upload**, so no device ever
+      replaced its stale plaintext file. Fix: `updateSettings` clears the upload
+      checksums on any encryption/passphrase change (forces a re-upload in the new
+      form); the mismatch is now **non-fatal** — skip merging that peer, record a
+      per-device warning, keep folding the rest, and **still upload our own** file,
+      surfaced by `sync()` as a visible (self-healing) warning. Group converges within
+      a cycle once every device uses the same setting + passphrase.
+      _Optional later:_ an `e2ee_expected` folder marker for group consensus + a
+      clearer "this group is encrypted" message and central passphrase-mismatch check.
+- [x] **5 — Peek a saved passphrase (reveal eye).** After save + reload the field
+      only offered Replace (pencil) — no way to view the stored passphrase without
+      overwriting it. Added a reveal (eye) toggle to the saved-secret summary; the
+      default stays content-free (per #1), revealed on demand.
+- [x] **6 — Confirm before turning E2EE OFF.** Disabling encryption is a downgrade
+      (next sync re-uploads unencrypted). The toggle now requires an explicit
+      Cancel / Turn-off confirmation instead of flipping on a stray click.
 
 ---
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { SyncEngine, PassphraseError, EncryptionMismatchError } from "@/lib/sync/sync-engine";
+import { SyncEngine } from "@/lib/sync/sync-engine";
 import { DEFAULT_SETTINGS, DEFAULT_STATE, getState } from "@/lib/utils/storage";
 import type {
   IBackend,
@@ -44,6 +44,7 @@ class FakeBackend implements IBackend {
 type EnginePrivate = {
   syncType(dataType: DataType, backend: IBackend, state: SyncState): Promise<void>;
   buildPacket(dataType: DataType, payload: unknown): Promise<SyncPacket>;
+  encryptionWarnings: Map<string, string>;
 };
 function priv(engine: SyncEngine): EnginePrivate {
   return engine as unknown as EnginePrivate;
@@ -225,25 +226,37 @@ describe("SyncEngine.syncType — E2EE", () => {
     expect(last.verifier).toBeTruthy();
   });
 
-  it("surfaces a PassphraseError when a peer used a DIFFERENT passphrase (no silent fork)", async () => {
+  it("skips (does not merge) a peer with a DIFFERENT passphrase and records a warning — no silent fork", async () => {
     const engine = encEngine("me", "my-passphrase");
     const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
     backend.files.set("bookmarks_peer1", await encPeer("their-different-one", "peer1", payload([link("B", "https://b.com")])));
 
-    await expect(priv(engine).syncType("bookmarks", backend, DEFAULT_STATE)).rejects.toBeInstanceOf(PassphraseError);
+    // Non-fatal: no throw. The undecryptable peer is skipped, not merged...
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+    expect(await localUrls()).toEqual(["https://a.com"]);
+    // ...but the mismatch is recorded (surfaced by sync() as a visible warning)...
+    expect(priv(engine).encryptionWarnings.has("peer1")).toBe(true);
+    // ...and we still re-upload our own (encrypted) file, so the group can self-heal.
+    const last = backend.uploads[backend.uploads.length - 1];
+    expect(last.encrypted).toBe(true);
   });
 
-  it("surfaces an EncryptionMismatchError and does not merge when a peer is plaintext but E2EE is on here", async () => {
+  it("skips a plaintext peer while E2EE is on here, warns, but still re-uploads encrypted (self-heal, no deadlock)", async () => {
     const engine = encEngine("me", "my-passphrase");
     const backend = new FakeBackend();
     await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
     // Peer packet built by a NON-encrypting engine → encrypted:false (E2EE off there).
     backend.files.set("bookmarks_peer1", await peerPacket(makeEngine(), "peer1", payload([link("B", "https://b.com")])));
 
-    await expect(priv(engine).syncType("bookmarks", backend, DEFAULT_STATE)).rejects.toBeInstanceOf(EncryptionMismatchError);
-    // The plaintext peer must NOT be silently folded in, and we must not upload.
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+    // The plaintext peer must NOT be silently folded in...
     expect(await localUrls()).toEqual(["https://a.com"]);
-    expect(backend.uploads.length).toBe(0);
+    expect(priv(engine).encryptionWarnings.has("peer1")).toBe(true);
+    // ...but we DO upload our own encrypted file — this is what breaks the old
+    // deadlock where neither device ever replaced its stale plaintext file.
+    const last = backend.uploads[backend.uploads.length - 1];
+    expect(last.encrypted).toBe(true);
   });
 });
 

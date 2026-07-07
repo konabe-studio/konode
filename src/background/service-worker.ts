@@ -164,8 +164,9 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
       const updated = await saveSettings(message.payload);
       setLoggerDebug(updated.debug_mode);
 
-      // Reinit engine with new settings
-      syncEngine?.updateSettings(updated);
+      // Reinit engine with new settings (awaited: an encryption/passphrase change
+      // clears the upload checksums so the next sync re-uploads in the new form).
+      await syncEngine?.updateSettings(updated);
 
       // Reconfigure alarm if interval changed
       if ("sync_interval_seconds" in message.payload || "auto_sync" in message.payload) {

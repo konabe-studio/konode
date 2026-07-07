@@ -300,3 +300,14 @@ export async function setLastUploadChecksum(dataType: DataType, checksum: string
   const map = { ...((r[KEYS.UPLOAD_CHECKSUMS] as Record<string, string>) ?? {}), [dataType]: checksum };
   await set(KEYS.UPLOAD_CHECKSUMS, map);
 }
+
+/**
+ * Forget every "last uploaded" checksum so the next sync re-uploads all data types.
+ * Called when encryption is toggled or the passphrase changes: the checksum is over
+ * the *plaintext* payload, so an encryption change alone wouldn't otherwise trigger a
+ * re-upload — the device's own file would keep sitting on the backend in its previous
+ * (e.g. plaintext) form even though E2EE is now on.
+ */
+export async function clearUploadChecksums(): Promise<void> {
+  await chrome.storage.local.remove(KEYS.UPLOAD_CHECKSUMS);
+}
