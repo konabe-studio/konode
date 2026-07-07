@@ -416,17 +416,22 @@ export class SyncEngine {
   ): Promise<void> {
     let raw = packet.payload;
     if (packet.encrypted) {
-      const pass = this.settings.encryption_passphrase;
-      if (!pass) {
-        // A peer is end-to-end encrypted but E2EE is off/unset here. This is the
-        // actionable half of the asymmetry, and this IS the device that can fix it:
-        // surface a non-fatal nudge (recorded by the syncType fold, shown after our
-        // own upload) rather than silently staying out of the encrypted group.
+      // Only participate in the encrypted group when E2EE is actually ACTIVE here
+      // (enabled AND a passphrase set) — NOT merely when a passphrase lingers in
+      // settings. A device that turned E2EE off keeps its passphrase, but it must
+      // not silently decrypt an encrypted peer: doing so absorbed the group's data
+      // and re-published it in plaintext, and hid the fact that this device had
+      // dropped out of the encrypted group (C1). Surface it as an actionable nudge
+      // on THIS device (the one that can fix it) instead of a silent partition.
+      const localE2ee =
+        this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
+      if (!localE2ee) {
         throw new EncryptionMismatchError(
           "Some of your devices are end-to-end encrypted. Enable E2EE with the same " +
             "passphrase here (Settings → Advanced) to sync with them."
         );
       }
+      const pass = this.settings.encryption_passphrase!;
       // Check the peer's passphrase verifier first, so a mismatch is reported as a
       // clear "passphrases don't match" error rather than a silent decrypt skip.
       if (packet.verifier && !(await verifyPassphrase(pass, packet.verifier))) {

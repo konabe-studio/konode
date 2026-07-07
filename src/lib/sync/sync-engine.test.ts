@@ -273,6 +273,24 @@ describe("SyncEngine.syncType — E2EE", () => {
     expect(backend.uploads[backend.uploads.length - 1].encrypted).toBe(false);
   });
 
+  it("does NOT decrypt an encrypted peer when E2EE is off but a passphrase lingers (C1 downgrade)", async () => {
+    // Turning E2EE off keeps the passphrase in settings; the device must still NOT
+    // silently decrypt+absorb the encrypted group and re-publish it in plaintext.
+    const engine = new SyncEngine(
+      { ...DEFAULT_SETTINGS, device_id: "me", conflict_strategy: "lww",
+        encryption_enabled: false, encryption_passphrase: "shared-pass" },
+      () => {}
+    );
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    backend.files.set("bookmarks_peer1", await encPeer("shared-pass", "peer1", payload([link("B", "https://b.com")])));
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+    expect(await localUrls()).toEqual(["https://a.com"]);              // encrypted peer NOT absorbed
+    expect(priv(engine).encryptionWarnings.has("peer1")).toBe(true);  // warned on this device
+    expect(backend.uploads[backend.uploads.length - 1].encrypted).toBe(false); // own file stays plaintext
+  });
+
   it("re-uploads encrypted when E2EE turns on even though the plaintext is unchanged (self-heal, Fix 1)", async () => {
     await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
     const backend = new FakeBackend();
