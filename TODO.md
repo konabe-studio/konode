@@ -96,6 +96,18 @@ Found during post-build QA of the E2EE settings UI.
 - [x] **6 — Confirm before turning E2EE OFF.** Disabling encryption is a downgrade
       (next sync re-uploads unencrypted). The toggle now requires an explicit
       Cancel / Turn-off confirmation instead of flipping on a stray click.
+- [x] **7 — Orphan plaintext files warned forever (found in live QA).** A removed
+      device's file lingers on the backend; a pre-E2EE plaintext orphan made every
+      E2EE-on device warn every cycle with no way to clear it (confirmed against the
+      Drive dump: two orphans from Jun 22 / Jul 5 vs. two live encrypted devices).
+      Fix without a marker file (would need file get/put in all 3 backends): derive
+      the group's encryption intent from peers' `encrypted` flags. E2EE on + plaintext
+      peer → **skip silently** (stale/orphan, not merged, no warning); E2EE off +
+      encrypted peer → non-fatal **nudge** on the device that can fix it; encrypted
+      peer + wrong passphrase → `PassphraseError`. All non-fatal, still upload own.
+      _Optional later:_ a real `e2ee_expected` marker for proactive leak-blocking at
+      the source (an E2EE-off device refusing to upload plaintext into an encrypted
+      group) — needs a generic named-file primitive on each backend.
 
 ---
 

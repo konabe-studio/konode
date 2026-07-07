@@ -242,7 +242,7 @@ describe("SyncEngine.syncType — E2EE", () => {
     expect(last.encrypted).toBe(true);
   });
 
-  it("skips a plaintext peer while E2EE is on here, warns, but still re-uploads encrypted (self-heal, no deadlock)", async () => {
+  it("SILENTLY skips a plaintext peer while E2EE is on here (stale/orphan file must not warn forever)", async () => {
     const engine = encEngine("me", "my-passphrase");
     const backend = new FakeBackend();
     await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
@@ -250,13 +250,27 @@ describe("SyncEngine.syncType — E2EE", () => {
     backend.files.set("bookmarks_peer1", await peerPacket(makeEngine(), "peer1", payload([link("B", "https://b.com")])));
 
     await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
-    // The plaintext peer must NOT be silently folded in...
+    // The plaintext peer is neither merged...
     expect(await localUrls()).toEqual(["https://a.com"]);
+    // ...NOR warned about — it's a stale/orphan file, not this device's problem.
+    expect(priv(engine).encryptionWarnings.size).toBe(0);
+    // We still upload our own encrypted file.
+    expect(backend.uploads[backend.uploads.length - 1].encrypted).toBe(true);
+  });
+
+  it("nudges (non-fatal) to enable E2EE when E2EE is off here but a peer is encrypted", async () => {
+    const engine = makeEngine(); // E2EE off, device "me"
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    backend.files.set("bookmarks_peer1", await encPeer("group-passphrase", "peer1", payload([link("B", "https://b.com")])));
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+    // The encrypted peer can't be read here, so it's skipped (not merged)...
+    expect(await localUrls()).toEqual(["https://a.com"]);
+    // ...but the user is nudged on THIS device (the one that can enable E2EE)...
     expect(priv(engine).encryptionWarnings.has("peer1")).toBe(true);
-    // ...but we DO upload our own encrypted file — this is what breaks the old
-    // deadlock where neither device ever replaced its stale plaintext file.
-    const last = backend.uploads[backend.uploads.length - 1];
-    expect(last.encrypted).toBe(true);
+    // ...and this device still uploads its own (plaintext) file — non-fatal.
+    expect(backend.uploads[backend.uploads.length - 1].encrypted).toBe(false);
   });
 
   it("re-uploads encrypted when E2EE turns on even though the plaintext is unchanged (self-heal, Fix 1)", async () => {

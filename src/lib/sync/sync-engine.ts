@@ -39,12 +39,13 @@ export class PassphraseError extends Error {
 }
 
 /**
- * A peer is syncing UNencrypted data while E2EE is enabled on this device (or vice
- * versa) — the devices disagree on encryption. Silently merging the plaintext peer
- * would (a) mean trusting an unencrypted feed, and (b) leave that peer's data
- * readable on the storage backend even though the user turned E2EE on here. Thrown
- * so the mixed state is surfaced and blocked instead of silently degrading — the
- * reverse case (encrypted peer, no passphrase here) already throws PassphraseError.
+ * E2EE is off/unset on THIS device, but a peer's file is end-to-end encrypted — so
+ * the group is encrypted and this device is the odd one out. Surfaced as a non-fatal
+ * nudge (recorded by the syncType fold, shown after our own upload) on the device
+ * that can actually fix it, rather than silently staying out of the encrypted group.
+ * The mirror case (we're encrypted, a peer is plaintext) is handled in the fold by
+ * skipping the plaintext peer silently — it's usually a stale/orphan file and not
+ * this device's problem, so it must not warn forever.
  */
 export class EncryptionMismatchError extends Error {
   constructor(message: string) {
@@ -224,7 +225,21 @@ export class SyncEngine {
         // so any snapshot-style store ends on the most recent peer. Per-strategy
         // deletion handling (lww/prefer-local/prefer-remote) lives inside the
         // bookmark merge.
+        const localE2ee =
+          this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
         for (const peer of [...peers].reverse()) {
+          // We're encrypted, this peer's file is plaintext. It's either a stale/orphan
+          // file (a device that was removed → its file lingers forever) or a device
+          // that simply hasn't enabled E2EE yet. Either way it's not something we merge
+          // into our encrypted world, and it's NOT this device's actionable problem —
+          // the plaintext device gets nudged to enable E2EE on its own sync. So skip
+          // it SILENTLY: this is what stops an abandoned plaintext file from warning
+          // forever. (The reverse — we're plaintext, a peer is encrypted — is surfaced
+          // below as a non-fatal "enable E2EE here" nudge, on the device that can fix it.)
+          if (localE2ee && !peer.encrypted) {
+            logger.debug("SyncEngine", `Skipping plaintext peer ${peer.device_id} (E2EE on here) — stale/unencrypted, not merged`);
+            continue;
+          }
           try {
             await this.applyRemote(dataType, peer, false);
           } catch (err) {
@@ -400,24 +415,16 @@ export class SyncEngine {
     isLocalEmpty = false
   ): Promise<void> {
     let raw = packet.payload;
-    const localE2ee =
-      this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
-    // Mixed-state guard (the half PassphraseError doesn't cover): we're encrypting,
-    // but this peer's file is plaintext. Don't silently merge it — that peer's data
-    // is sitting unencrypted on the backend, breaking the E2EE promise for the group.
-    if (localE2ee && !packet.encrypted) {
-      throw new EncryptionMismatchError(
-        `Device ${packet.device_id.slice(0, 8)} is syncing unencrypted data, but end-to-end ` +
-          "encryption is on here. Enable E2EE on that device with the same passphrase, or turn " +
-          "it off here — mixing the two leaves that device's data unencrypted on your storage."
-      );
-    }
     if (packet.encrypted) {
       const pass = this.settings.encryption_passphrase;
       if (!pass) {
-        throw new PassphraseError(
-          "A peer's synced data is encrypted, but no passphrase is set on this device. " +
-            "Enable encryption with the SAME passphrase as your other devices in Settings → Advanced."
+        // A peer is end-to-end encrypted but E2EE is off/unset here. This is the
+        // actionable half of the asymmetry, and this IS the device that can fix it:
+        // surface a non-fatal nudge (recorded by the syncType fold, shown after our
+        // own upload) rather than silently staying out of the encrypted group.
+        throw new EncryptionMismatchError(
+          "Some of your devices are end-to-end encrypted. Enable E2EE with the same " +
+            "passphrase here (Settings → Advanced) to sync with them."
         );
       }
       // Check the peer's passphrase verifier first, so a mismatch is reported as a

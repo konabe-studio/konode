@@ -60,13 +60,21 @@ src/
   download** before import — a missing/short checksum is rejected. `verifier`
   (present only when encrypted) is a passphrase verifier: on download the engine
   checks the peer's verifier against the local passphrase and throws a
-  `PassphraseError` (surfaced as an error state) on mismatch — so a mistyped
-  passphrase fails loudly instead of silently forking devices into unreadable data.
-  The **on/off asymmetry is guarded both ways**: an encrypted peer with no local
-  passphrase throws `PassphraseError`; a **plaintext peer while E2EE is on here**
-  throws `EncryptionMismatchError` (both re-thrown from the `syncType` fold, not
-  swallowed as "one bad peer") — so a mixed group is blocked/surfaced instead of
-  silently merging a peer whose data sits unencrypted on the backend.
+  `PassphraseError` on mismatch — so a mistyped passphrase fails loudly instead of
+  silently forking devices into unreadable data.
+  **Encryption disagreements are non-fatal and self-healing** (no marker file — the
+  group's intent is read from peers' `encrypted` flags): mismatches are recorded as
+  per-device warnings in the `syncType` fold and surfaced by `sync()` *after* the
+  device uploads its own (correctly-encrypted) file, so the group never deadlocks.
+  Three cases: (a) **E2EE on here, peer plaintext** → the peer is **skipped
+  silently** — it's usually a stale/orphan file (a removed device's file lingers
+  forever) and isn't this device's problem, so it must not warn forever; (b) **E2EE
+  off here, peer encrypted** → a non-fatal `EncryptionMismatchError` **nudge** ("enable
+  E2EE here") on the device that can actually fix it; (c) **encrypted peer, wrong
+  passphrase** → `PassphraseError` (a live, actionable problem). Enabling/rotating
+  E2EE clears the upload checksums and the upload record is tagged with the encryption
+  form (`enc:`/`plain:`), so a device always re-uploads in the current form and a
+  previously-mixed group converges on the next sync.
 - **Flow** (`sync-engine.syncType`): pull every peer file (`downloadAll(type,
   ownDeviceId)` excludes our own) → auto-merge each peer in (additive + deletion-
   aware, non-destructive) → push merged, unless strategy is `manual` (queue a
