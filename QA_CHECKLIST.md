@@ -53,7 +53,7 @@ shows up in a real browser and across devices.
 
 ## D. Data types & permissions (PR-6)
 - [x] Fresh onboarding → **only Bookmarks** is pre-checked (extensions NOT default-on)
-- [ ] Enabling **history / sessions / extensions** triggers the permission prompt at that moment
+- [x] Enabling **history / sessions / extensions** triggers the permission prompt at that moment
 - [x] **Sessions:** restore a peer's tabs from the popup
 - [x] **Extensions:** the "missing on this device" list populates in **both** the popup and the **options** page
 
@@ -66,12 +66,12 @@ shows up in a real browser and across devices.
 ## F. Lifecycle & reliability (C2, CO-4)
 - [x] **Sync now** → badge goes syncing → success; never sticks on "syncing"
 - [x] Leave the browser idle a few minutes, then change a bookmark → still syncs (SW woke from cold)
-- [ ] Interrupt/close during a sync, reopen → no permanently stuck "syncing" badge
+- [x] Interrupt/close during a sync, reopen → no permanently stuck "syncing" badge
 - [x] **Audit log** (popup): shows recent events; **no account email / raw URLs** in the detail (PR-L2); "Clear" empties it
 
 ## G. Conflicts
-- [ ] Set strategy to **Manual**, diverge two peers → a conflict banner appears; resolving local/remote works
-- [ ] With 3 peers diverging on manual → a banner per peer (not just the newest)
+- [x] Set strategy to **Manual**, diverge two peers → a conflict banner appears; resolving local/remote works
+- [x] With 3 peers diverging on manual → a banner per peer (not just the newest)
 
 ---
 
