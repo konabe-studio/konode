@@ -1,19 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { sendMessage } from "@/lib/utils/messaging";
 import { interactiveSignIn } from "@/lib/backends/gdrive-oauth";
 import type { BackendType, SyncSettings } from "@/lib/types";
 import {
   Radio, Cloud, Server, Github, Bookmark,
   Clock, Puzzle, Globe, CheckCircle2, ArrowRight,
-  Loader2, XCircle, Eye, EyeOff, Lock, Key,
+  Loader2, XCircle, Eye, EyeOff, Lock, Key, Copy, Check,
 } from "lucide-react";
 import { generateRecoveryKey } from "@/lib/crypto/encryption";
 
 // ─── Steps ────────────────────────────────────────────────────────────────
 
-type Step = "welcome" | "backend" | "data" | "encrypt" | "done";
+type Step = "welcome" | "backend" | "data" | "encrypt" | "syncing" | "done";
 
 const STEPS: Step[] = ["welcome", "backend", "data", "encrypt", "done"];
+
+// Icon + label for the live sync-progress list (#3) — matches the data-types step.
+const TYPE_META: Record<"bookmarks" | "extensions" | "history" | "sessions", { Icon: typeof Bookmark; label: string }> = {
+  bookmarks:  { Icon: Bookmark, label: "Bookmarks" },
+  extensions: { Icon: Puzzle,   label: "Extensions" },
+  history:    { Icon: Clock,    label: "History" },
+  sessions:   { Icon: Globe,    label: "Sessions" },
+};
 
 // ─── App ──────────────────────────────────────────────────────────────────
 
@@ -60,6 +68,57 @@ export default function OnboardingApp() {
   const [encConfirm, setEncConfirm] = useState("");
   const [encGenerated, setEncGenerated] = useState("");
   const [showEncPass, setShowEncPass] = useState(false);
+  // #2: one-click copy of the passphrase (a mistyped/forgotten passphrase makes
+  // E2EE data unrecoverable, so make it trivial to save). Brief check-mark feedback.
+  const [passCopied, setPassCopied] = useState(false);
+  const copyPass = async () => {
+    try {
+      await navigator.clipboard.writeText(encPass);
+      setPassCopied(true);
+      setTimeout(() => setPassCopied(false), 1500);
+    } catch { /* clipboard unavailable — no-op */ }
+  };
+
+  // #3: post-finish live sync progress. STATE_UPDATE only fires at sync start/end,
+  // so we poll GET_STATE and light up each enabled type as its sync_counts entry
+  // climbs past the baseline captured when the user hit Finish.
+  const [syncCounts, setSyncCounts] = useState<Record<string, number>>({});
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncTimedOut, setSyncTimedOut] = useState(false);
+  const baselineRef = useRef<Record<string, number>>({});
+  const enabledTypes = (["bookmarks", "extensions", "history", "sessions"] as const).filter((k) => dataTypes[k]);
+
+  useEffect(() => {
+    if (step !== "syncing") return;
+    let cancelled = false;
+    let elapsed = 0;
+    const POLL_MS = 600;
+    const TIMEOUT_MS = 20000;
+    const id = setInterval(async () => {
+      const res = await sendMessage({ type: "GET_STATE" }).catch(() => null);
+      if (cancelled || !res || res.type !== "STATE") return;
+      const st = res.payload;
+      setSyncCounts(st.sync_counts);
+      if (st.status === "error" && st.last_error) {
+        clearInterval(id);
+        setSyncError(st.last_error);
+        return;
+      }
+      const base = baselineRef.current;
+      const allDone = enabledTypes.every((t) => (st.sync_counts[t] ?? 0) > (base[t] ?? 0));
+      if (allDone) {
+        clearInterval(id);
+        setTimeout(() => { if (!cancelled) setStep("done"); }, 500);
+        return;
+      }
+      elapsed += POLL_MS;
+      if (elapsed >= TIMEOUT_MS) {
+        clearInterval(id);
+        setSyncTimedOut(true);
+      }
+    }, POLL_MS);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [step]);
 
   const next = () => {
     const idx = STEPS.indexOf(step);
@@ -145,10 +204,16 @@ export default function OnboardingApp() {
         },
       });
 
-      // Trigger first sync
-      await sendMessage({ type: "SYNC_NOW" });
-
-      setStep("done");
+      // Capture pre-sync counts, show the live progress step, then start the first
+      // sync WITHOUT awaiting — the "syncing" step polls GET_STATE and moves to
+      // "done" when every enabled type's count has climbed (or surfaces an error).
+      const stRes = await sendMessage({ type: "GET_STATE" });
+      baselineRef.current = stRes.type === "STATE" ? { ...stRes.payload.sync_counts } : {};
+      setSyncCounts(baselineRef.current);
+      setSyncError(null);
+      setSyncTimedOut(false);
+      setStep("syncing");
+      void sendMessage({ type: "SYNC_NOW" }).catch(() => {});
     } finally {
       setSaving(false);
     }
@@ -197,7 +262,7 @@ export default function OnboardingApp() {
       <style>{CSS}</style>
 
       {/* Progress */}
-      {step !== "done" && (
+      {step !== "done" && step !== "syncing" && (
         <div style={S.progress}>
           {STEPS.filter(s => s !== "done").map((s, i) => (
             <div key={s} style={{
@@ -383,7 +448,7 @@ export default function OnboardingApp() {
           <div style={S.navRow}>
             <button style={S.btnSecondary} onClick={() => setStep("welcome")}>Back</button>
             <button
-              style={{ ...S.btnPrimary, opacity: canProceedBackend() ? 1 : 0.45, cursor: canProceedBackend() ? "pointer" : "not-allowed" }}
+              style={{ ...S.btnPrimary, flex: 1, opacity: canProceedBackend() ? 1 : 0.45, cursor: canProceedBackend() ? "pointer" : "not-allowed" }}
               onClick={next}
               disabled={!canProceedBackend()}
             >
@@ -441,7 +506,7 @@ export default function OnboardingApp() {
           )}
           <div style={S.navRow}>
             <button style={S.btnSecondary} onClick={() => setStep("backend")}>Back</button>
-            <button style={S.btnPrimary} onClick={() => setStep("encrypt")}>
+            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={() => setStep("encrypt")}>
               Continue <ArrowRight size={14} />
             </button>
           </div>
@@ -481,15 +546,27 @@ export default function OnboardingApp() {
             <div style={{ marginBottom: 12 }}>
               <div style={{ position: "relative" }}>
                 <input
-                  style={{ ...S.input, width: "100%", paddingRight: 32 }}
+                  style={{ ...S.input, width: "100%", paddingRight: encPass ? 60 : 34 }}
                   type={showEncPass ? "text" : "password"}
                   placeholder="Choose a passphrase, or generate a key →"
                   value={encPass}
                   onChange={(e) => setEncPass(e.target.value)}
                 />
-                <button type="button" style={S.eyeBtn} onClick={() => setShowEncPass(v => !v)}>
-                  {showEncPass ? <EyeOff size={12} /> : <Eye size={12} />}
-                </button>
+                <div style={S.inputBtnGroup}>
+                  {encPass && (
+                    <button
+                      type="button"
+                      style={{ ...S.iconBtn, color: passCopied ? "var(--accent)" : "var(--text-secondary)" }}
+                      onClick={copyPass}
+                      title={passCopied ? "Copied" : "Copy passphrase"}
+                    >
+                      {passCopied ? <Check size={13} /> : <Copy size={13} />}
+                    </button>
+                  )}
+                  <button type="button" style={S.iconBtn} onClick={() => setShowEncPass(v => !v)} title={showEncPass ? "Hide" : "Show"}>
+                    {showEncPass ? <EyeOff size={13} /> : <Eye size={13} />}
+                  </button>
+                </div>
               </div>
               {encPass.length > 0 && encPass !== encGenerated && (
                 <>
@@ -528,11 +605,70 @@ export default function OnboardingApp() {
           )}
           <div style={S.navRow}>
             <button style={S.btnSecondary} onClick={() => setStep("data")}>Back</button>
-            <button style={S.btnPrimary} onClick={finish} disabled={saving || (encEnabled && (!encPass || (encPass !== encGenerated && encConfirm !== encPass)))}>
+            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={finish} disabled={saving || (encEnabled && (!encPass || (encPass !== encGenerated && encConfirm !== encPass)))}>
               {saving ? <Loader2 size={14} className="spin" /> : <CheckCircle2 size={14} />}
               {saving ? "Setting up…" : "Finish & Sync"}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ── Syncing (live progress) ── */}
+      {step === "syncing" && (
+        <div style={S.card}>
+          <h1 style={S.h1}>{syncError ? "Couldn't finish the first sync" : "Syncing your data…"}</h1>
+          <p style={S.subtitle}>
+            {syncError
+              ? "Your settings are saved. Open Settings to fix this, or finish and let Synkro retry in the background."
+              : "Synkro is running its first sync. This also runs in the background — you don't have to wait here."}
+          </p>
+
+          <div style={S.dataList}>
+            {enabledTypes.map((key) => {
+              const done = (syncCounts[key] ?? 0) > (baselineRef.current[key] ?? 0);
+              const { Icon, label } = TYPE_META[key];
+              return (
+                <div key={key} style={{ ...S.dataRow, cursor: "default" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <Icon size={16} color={done ? "var(--accent)" : "var(--text-secondary)"} />
+                    <div style={{ fontSize: 13, color: "var(--text-primary)" }}>{label}</div>
+                  </div>
+                  {done ? (
+                    <CheckCircle2 size={16} color="var(--accent)" />
+                  ) : syncError ? (
+                    <XCircle size={15} color="var(--text-disabled)" />
+                  ) : (
+                    <Loader2 size={15} className="spin" color="var(--text-secondary)" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {syncError && (
+            <div style={{ ...S.errorRow, marginBottom: 12 }}><XCircle size={12} /> {syncError}</div>
+          )}
+          {syncTimedOut && !syncError && (
+            <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 12, lineHeight: 1.5 }}>
+              This is taking longer than usual — a large history can do that. The sync keeps running in the background, so you can finish now.
+            </div>
+          )}
+
+          {(syncError || syncTimedOut) && (
+            <div style={S.navRow}>
+              {syncError && (
+                <button style={{ ...S.btnPrimary, flex: 1 }} onClick={() => chrome.runtime.openOptionsPage()}>
+                  Open Settings
+                </button>
+              )}
+              <button
+                style={syncError ? S.btnSecondary : { ...S.btnPrimary, flex: 1 }}
+                onClick={() => setStep("done")}
+              >
+                {syncError ? "Finish anyway" : "Finish"} <ArrowRight size={14} />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -583,46 +719,47 @@ const S: Record<string, React.CSSProperties> = {
   card: {
     width: "100%", maxWidth: 480,
     background: "var(--bg-card)",
-    borderRadius: 8,
-    padding: "32px 32px 28px",
-    boxShadow: "var(--shadow)",
-    border: "1px solid var(--border)",
+    borderRadius: 20,
+    padding: "36px 36px 30px",
+    boxShadow: "0 1px 2px rgba(17,21,26,.04), 0 12px 28px -8px rgba(17,21,26,.12), 0 0 0 1px rgba(17,21,26,.05)",
     marginTop: 20,
   },
   logoWrap: {
-    width: 56, height: 56, borderRadius: 14,
+    width: 56, height: 56, borderRadius: 16,
     background: "var(--accent)",
     display: "flex", alignItems: "center", justifyContent: "center",
-    marginBottom: 20,
+    marginBottom: 22,
+    boxShadow: "0 6px 16px -4px rgba(18,183,106,.45)",
   },
-  h1: { fontSize: 22, fontWeight: 600, color: "var(--text-primary)", margin: "0 0 8px" },
-  subtitle: { fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.55, margin: "0 0 24px" },
-  featureList: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 },
+  h1: { fontSize: 24, fontWeight: 600, letterSpacing: "-0.02em", color: "var(--text-primary)", margin: "0 0 8px" },
+  subtitle: { fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.55, margin: "0 0 24px" },
+  featureList: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 28 },
   featureRow: { display: "flex", alignItems: "center", gap: 10 },
   btnPrimary: {
     display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
-    width: "100%", padding: "11px 20px", borderRadius: 6, border: "none",
+    width: "100%", height: 44, padding: "0 20px", borderRadius: 14, border: "none",
     background: "var(--accent)", color: "white",
-    fontSize: 14, fontWeight: 500, cursor: "pointer",
-    fontFamily: "inherit", transition: "background .15s",
+    fontSize: 14, fontWeight: 600, cursor: "pointer",
+    fontFamily: "inherit", transition: "background .15s, box-shadow .15s",
+    boxShadow: "0 1px 2px rgba(18,183,106,.30)",
   },
   btnSecondary: {
-    display: "inline-flex", alignItems: "center", gap: 6,
-    padding: "9px 16px", borderRadius: 6,
+    display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, flexShrink: 0,
+    height: 44, padding: "0 18px", borderRadius: 14,
     border: "1px solid var(--border-input)", background: "var(--bg-card)",
-    fontSize: 13, color: "var(--text-secondary)", cursor: "pointer", fontFamily: "inherit",
+    fontSize: 14, fontWeight: 500, color: "var(--text-secondary)", cursor: "pointer", fontFamily: "inherit",
   },
   btnGoogle: {
     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-    width: "100%", padding: "8px 14px", borderRadius: 4,
+    width: "100%", height: 40, padding: "0 14px", borderRadius: 12,
     border: "1px solid var(--border-input)", background: "var(--bg-card)",
     fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
     color: "var(--text-primary)",
   },
   backendList: { display: "flex", flexDirection: "column", gap: 0, marginBottom: 24,
-    borderRadius: 6, overflow: "hidden", boxShadow: "var(--shadow)" },
+    borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 2px rgba(17,21,26,.04), 0 0 0 1px rgba(17,21,26,.07)" },
   backendCard: {
-    padding: "12px 14px", cursor: "pointer",
+    padding: "14px 16px", cursor: "pointer",
     borderBottom: "1px solid var(--border)",
     background: "var(--bg-card)", transition: "background .1s",
   },
@@ -641,9 +778,9 @@ const S: Record<string, React.CSSProperties> = {
   },
   authPanel: { marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 8 },
   input: {
-    width: "100%", padding: "7px 10px",
+    width: "100%", padding: "10px 12px",
     background: "var(--bg-input)", border: "1px solid var(--border-input)",
-    borderRadius: 4, fontSize: 12, color: "var(--text-primary)", outline: "none",
+    borderRadius: 12, fontSize: 13, color: "var(--text-primary)", outline: "none",
     fontFamily: "inherit",
   },
   eyeBtn: {
@@ -651,14 +788,22 @@ const S: Record<string, React.CSSProperties> = {
     background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)",
     display: "flex", alignItems: "center",
   },
+  inputBtnGroup: {
+    position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
+    display: "flex", alignItems: "center", gap: 2,
+  },
+  iconBtn: {
+    background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)",
+    display: "flex", alignItems: "center", padding: 4, borderRadius: 8,
+  },
   verifiedRow: { display: "flex", alignItems: "center", gap: 6, fontSize: 12 },
   verifyRow: { display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--text-secondary)" },
   errorRow: { display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "var(--danger)" },
   dataList: { display: "flex", flexDirection: "column", gap: 0, marginBottom: 24,
-    borderRadius: 6, overflow: "hidden", boxShadow: "var(--shadow)" },
+    borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 2px rgba(17,21,26,.04), 0 0 0 1px rgba(17,21,26,.07)" },
   dataRow: {
     display: "flex", alignItems: "center", justifyContent: "space-between",
-    padding: "12px 14px", borderBottom: "1px solid var(--border)",
+    padding: "14px 16px", borderBottom: "1px solid var(--border)",
     background: "var(--bg-card)", cursor: "pointer", transition: "background .1s",
   },
   toggleTrack: { width: 34, height: 18, borderRadius: 9, position: "relative", transition: "background .2s", flexShrink: 0 },
@@ -667,7 +812,7 @@ const S: Record<string, React.CSSProperties> = {
     background: "white", borderRadius: "50%", transition: "transform .18s",
     boxShadow: "0 1px 2px rgba(0,0,0,.2)",
   },
-  navRow: { display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 },
+  navRow: { display: "flex", alignItems: "stretch", gap: 12, marginTop: 20 },
 };
 
 const CSS = `

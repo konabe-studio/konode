@@ -6,7 +6,7 @@ import {
   Cloud, Github, Server, Bookmark, Clock,
   Globe, Puzzle, AlertTriangle, CheckCircle2, XCircle,
   Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
-  Radio, Sliders, Shield, Save, Pencil, Key, Copy,
+  Radio, Sliders, Shield, Save, Pencil, Key, Copy, Check,
 } from "lucide-react";
 import { generateRecoveryKey } from "@/lib/crypto/encryption";
 import { KEYS, normalizeRemoteExtensions } from "@/lib/utils/storage";
@@ -38,6 +38,14 @@ function SecretField({
   const [editing, setEditing] = useState(!hasSaved);
   const [revealed, setRevealed] = useState(false);
   const [draft, setDraft] = useState("");
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* clipboard unavailable — no-op */ }
+  };
 
   if (hasSaved && !editing) {
     const masked = sensitive
@@ -57,6 +65,15 @@ function SecretField({
             onClick={() => setRevealed((v) => !v)}
           >
             {revealed ? <EyeOff size={13} /> : <Eye size={13} />}
+          </button>
+          <button
+            className="btn-eye"
+            type="button"
+            title={copied ? "Copied" : "Copy"}
+            style={copied ? { color: "var(--accent)" } : undefined}
+            onClick={copy}
+          >
+            {copied ? <Check size={13} /> : <Copy size={13} />}
           </button>
           <button
             className="btn-eye"
@@ -1069,10 +1086,10 @@ export default function OptionsApp() {
                   </div>
                 )}
                 {!settings.encryption_enabled && (
-                  <div className="settings-row" style={{ paddingTop: 0 }}>
+                  <div className="settings-row" style={{ background: "var(--warn-bg)" }}>
                     <div className="settings-row-left">
-                      <AlertTriangle size={14} className="row-icon" style={{ color: "var(--text-secondary)" }} />
-                      <div className="row-desc">
+                      <AlertTriangle size={14} className="row-icon" style={{ color: "var(--warn-border)" }} />
+                      <div className="row-desc" style={{ color: "var(--warn-text)" }}>
                         Encryption is off — your synced data (bookmarks, history, sessions, extensions) is stored
                         <b> unencrypted</b> on your backend. Turn it on to encrypt everything before it leaves this device.
                       </div>
@@ -1167,13 +1184,13 @@ const STYLES = `
   .row-label { font-size: 13px; color: var(--text-primary); }
   .row-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; line-height: 1.45; }
 
-  .card-list { background: var(--bg-card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+  .card-list { background: var(--bg-card); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
   .backend-card { padding: 13px 16px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background .1s; background: var(--bg-card); }
   .backend-card:last-child { border-bottom: none; }
   .backend-card:hover { background: var(--bg-hover); }
   .backend-card.selected { background: var(--bg-card-sel); }
   .backend-card-header { display: flex; align-items: flex-start; gap: 12px; }
-  .backend-icon-wrap { width: 30px; height: 30px; background: var(--bg-hover); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); flex-shrink: 0; margin-top: 1px; }
+  .backend-icon-wrap { width: 30px; height: 30px; background: var(--bg-hover); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); flex-shrink: 0; margin-top: 1px; }
   .backend-card.selected .backend-icon-wrap { background: var(--accent); color: white; }
   .backend-info { flex: 1; min-width: 0; }
   .backend-name { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-primary); margin-bottom: 2px; }
@@ -1187,15 +1204,15 @@ const STYLES = `
   .field-group { margin-top: 10px; }
   .field-label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; }
   .field-label .optional { opacity: .7; }
-  .field-input { width: 100%; padding: 7px 10px; background: var(--bg-input); border: 1px solid var(--border-input); border-radius: 4px; font-family: var(--font); font-size: 13px; color: var(--text-primary); outline: none; transition: border-color .15s, box-shadow .15s; }
+  .field-input { width: 100%; padding: 9px 12px; background: var(--bg-input); border: 1px solid var(--border-input); border-radius: 12px; font-family: var(--font); font-size: 13px; color: var(--text-primary); outline: none; transition: border-color .15s, box-shadow .15s; }
   .field-input.mono { font-family: var(--font-mono); font-size: 12px; }
-  .field-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(14,158,110,.18); }
-  .field-input-inline { padding: 6px 10px; width: 180px; background: var(--bg-input); border: 1px solid var(--border-input); border-radius: 4px; font-family: var(--font); font-size: 13px; color: var(--text-primary); outline: none; }
-  .field-input-inline:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(14,158,110,.18); }
+  .field-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(18,183,106,.18); }
+  .field-input-inline { padding: 8px 10px; width: 180px; background: var(--bg-input); border: 1px solid var(--border-input); border-radius: 12px; font-family: var(--font); font-size: 13px; color: var(--text-primary); outline: none; }
+  .field-input-inline:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(18,183,106,.18); }
 
   .input-pw-wrap { position: relative; }
   .input-pw-wrap .field-input { padding-right: 36px; }
-  .input-pw-wrap-2 .field-input { padding-right: 60px; }
+  .input-pw-wrap-2 .field-input { padding-right: 86px; }
   .btn-eye { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 2px; display: flex; align-items: center; }
   .btn-eye:hover { color: var(--text-primary); }
   .btn-eye-group { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 2px; }
@@ -1210,10 +1227,10 @@ const STYLES = `
   .account-name { font-size: 13px; font-weight: 500; color: var(--text-primary); }
   .account-email { font-size: 12px; color: var(--text-secondary); }
 
-  .btn-connect-google { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 8px 16px; background: var(--bg-card); border: 1px solid var(--border-input); border-radius: 4px; cursor: pointer; font-family: var(--font); font-size: 13px; font-weight: 500; color: var(--text-primary); transition: background .1s, border-color .1s; }
+  .btn-connect-google { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 9px 16px; background: var(--bg-card); border: 1px solid var(--border-input); border-radius: 12px; cursor: pointer; font-family: var(--font); font-size: 13px; font-weight: 500; color: var(--text-primary); transition: background .1s, border-color .1s; }
   .btn-connect-google:hover { background: var(--bg-hover); border-color: var(--accent); }
   .btn-connect-google:disabled { opacity: .55; cursor: not-allowed; }
-  .btn-disconnect { display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: var(--radius); border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; font-family: var(--font); font-size: 12px; color: var(--text-secondary); transition: color .1s, border-color .1s, background .1s; white-space: nowrap; }
+  .btn-disconnect { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 12px; border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; font-family: var(--font); font-size: 12px; color: var(--text-secondary); transition: color .1s, border-color .1s, background .1s; white-space: nowrap; }
   .btn-disconnect:hover { color: var(--danger); border-color: var(--danger); }
   .config-hint { font-size: 11px; color: var(--text-secondary); margin-top: 7px; line-height: 1.4; }
   .config-hint code { font-family: var(--font-mono); font-size: 11px; background: var(--bg-hover); padding: 1px 3px; border-radius: 2px; }
@@ -1241,17 +1258,17 @@ const STYLES = `
   .slider-val { font-size: 12px; font-family: var(--font-mono); color: var(--text-secondary); min-width: 30px; text-align: right; }
   .mono-value { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); }
 
-  .btn-secondary { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 4px; border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; font-family: var(--font); font-size: 13px; color: var(--text-secondary); transition: background .1s, border-color .1s, color .1s; white-space: nowrap; }
+  .btn-secondary { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; font-family: var(--font); font-size: 13px; color: var(--text-secondary); transition: background .1s, border-color .1s, color .1s; white-space: nowrap; }
   .btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--accent); }
   .btn-secondary:disabled { opacity: .5; cursor: not-allowed; }
-  .btn-save { display: inline-flex; align-items: center; gap: 7px; padding: 8px 18px; border-radius: 4px; border: none; background: var(--accent); color: white; font-family: var(--font); font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s; white-space: nowrap; }
+  .btn-save { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 12px; border: none; background: var(--accent); color: white; font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
   .btn-save:hover { background: var(--accent-hover); }
   .btn-save.saved { background: var(--success); }
   .btn-save:disabled { opacity: .6; cursor: not-allowed; }
-  .btn-install { display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 4px; background: var(--accent); color: white; font-size: 12px; font-weight: 500; text-decoration: none; flex-shrink: 0; transition: background .1s; }
+  .btn-install { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 10px; background: var(--accent); color: white; font-size: 12px; font-weight: 600; text-decoration: none; flex-shrink: 0; transition: background .1s; }
   .btn-install:hover { background: var(--accent-hover); }
 
-  .notice-warn { display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px; margin-top: 14px; background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: var(--radius); font-size: 12px; color: var(--warn-text); line-height: 1.5; }
+  .notice-warn { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; margin-top: 14px; background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 12px; font-size: 12px; color: var(--warn-text); line-height: 1.5; }
   .notice-warn svg { margin-top: 1px; flex-shrink: 0; color: var(--warn-border); }
   .notice-warn a { color: var(--text-link); }
 
