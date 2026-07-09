@@ -196,5 +196,11 @@ brand concept (`BRAND.md`) and apply it everywhere.
       noise/glow/DM Sans removed). Popup: active-streams icon grid, content-fit
       height with a pinned header, wordmark dropped. Fonts (Inter + JetBrains Mono)
       now **self-hosted** — no external Google Fonts fetch.
+- [ ] **Settings menu layout — adopt the Proton Pass settings pattern.** Replace the
+      current Settings (`src/options/App.tsx`) layout with Proton Pass's settings
+      structure: a top horizontal tab bar (General / Security / …) over grouped,
+      titled setting cards, each row a label + one-line description on the left and its
+      control on the right. Map our sections (backend, data types, device, advanced /
+      E2EE) onto that grid so the options page reads as intentional, not generic.
 - [ ] **Website** (privacy-first story, backends, open source)
 - [ ] **Pitch deck**
