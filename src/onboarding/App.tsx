@@ -68,6 +68,9 @@ export default function OnboardingApp() {
   const [encConfirm, setEncConfirm] = useState("");
   const [encGenerated, setEncGenerated] = useState("");
   const [showEncPass, setShowEncPass] = useState(false);
+  // Set once the user hits Finish with E2EE on but the passphrase not (correctly)
+  // filled — drives the red border + inline error (clears itself as they fix it).
+  const [encTouched, setEncTouched] = useState(false);
   // #2: one-click copy of the passphrase (a mistyped/forgotten passphrase makes
   // E2EE data unrecoverable, so make it trivial to save). Brief check-mark feedback.
   const [passCopied, setPassCopied] = useState(false);
@@ -87,6 +90,11 @@ export default function OnboardingApp() {
   const [syncTimedOut, setSyncTimedOut] = useState(false);
   const baselineRef = useRef<Record<string, number>>({});
   const enabledTypes = (["bookmarks", "extensions", "history", "sessions"] as const).filter((k) => dataTypes[k]);
+
+  // E2EE validation (a generated key is exact, so it skips the double-entry confirm).
+  const confirmNeeded = encEnabled && encPass.length > 0 && encPass !== encGenerated;
+  const passMissing = encEnabled && !encPass;
+  const confirmMismatch = confirmNeeded && encConfirm !== encPass;
 
   useEffect(() => {
     if (step !== "syncing") return;
@@ -135,6 +143,14 @@ export default function OnboardingApp() {
 
   const finish = async () => {
     setSetupError(null);
+
+    // E2EE chosen but the passphrase is empty / not confirmed — surface it (red
+    // border + inline error) instead of silently doing nothing on click.
+    if (passMissing || confirmMismatch) {
+      setEncTouched(true);
+      return;
+    }
+
     // WebDAV reaches an arbitrary host not in host_permissions — request it now,
     // while we still have the click's user gesture (before any await).
     if (backend === "webdav") {
@@ -546,11 +562,12 @@ export default function OnboardingApp() {
             <div style={{ marginBottom: 12 }}>
               <div style={{ position: "relative" }}>
                 <input
-                  style={{ ...S.input, width: "100%", paddingRight: encPass ? 60 : 34 }}
+                  style={{ ...S.input, width: "100%", paddingRight: encPass ? 60 : 34, ...(encTouched && passMissing ? { borderColor: "var(--danger)" } : {}) }}
                   type={showEncPass ? "text" : "password"}
                   placeholder="Choose a passphrase, or generate a key →"
                   value={encPass}
                   onChange={(e) => setEncPass(e.target.value)}
+                  aria-invalid={encTouched && passMissing}
                 />
                 <div style={S.inputBtnGroup}>
                   {encPass && (
@@ -568,17 +585,25 @@ export default function OnboardingApp() {
                   </button>
                 </div>
               </div>
-              {encPass.length > 0 && encPass !== encGenerated && (
+              {encTouched && passMissing && (
+                <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 4 }}>
+                  Enter a passphrase, or generate a key.
+                </div>
+              )}
+              {confirmNeeded && (
                 <>
                   <input
-                    style={{ ...S.input, marginTop: 8 }}
+                    style={{ ...S.input, marginTop: 8, ...((encTouched || encConfirm.length > 0) && confirmMismatch ? { borderColor: "var(--danger)" } : {}) }}
                     type="password"
                     placeholder="Confirm passphrase"
                     value={encConfirm}
                     onChange={(e) => setEncConfirm(e.target.value)}
+                    aria-invalid={(encTouched || encConfirm.length > 0) && confirmMismatch}
                   />
-                  {encConfirm.length > 0 && encConfirm !== encPass && (
-                    <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 4 }}>Passphrases don't match yet.</div>
+                  {(encTouched || encConfirm.length > 0) && confirmMismatch && (
+                    <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 4 }}>
+                      {encConfirm.length === 0 ? "Confirm your passphrase." : "Passphrases don't match yet."}
+                    </div>
                   )}
                 </>
               )}
@@ -605,7 +630,7 @@ export default function OnboardingApp() {
           )}
           <div style={S.navRow}>
             <button style={S.btnSecondary} onClick={() => setStep("data")}>Back</button>
-            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={finish} disabled={saving || (encEnabled && (!encPass || (encPass !== encGenerated && encConfirm !== encPass)))}>
+            <button style={{ ...S.btnPrimary, flex: 1 }} onClick={finish} disabled={saving}>
               {saving ? <Loader2 size={14} className="spin" /> : <CheckCircle2 size={14} />}
               {saving ? "Setting up…" : "Finish & Sync"}
             </button>
