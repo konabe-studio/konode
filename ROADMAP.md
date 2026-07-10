@@ -40,9 +40,33 @@ on any Chromium browser.
 All feature / polish / QA items are done — the remaining work is the **publishing
 phase** (see *Before publishing* below).
 
+## Platform priority (2026-07-10)
+Sequenced by where our value prop is strongest, not by raw browser size:
+
+1. **Chromium-first launch.** The "own your storage" pitch is *strongest here*:
+   Chromium's only native sync is Google's cloud (no self-host), and the biggest
+   privacy audience is Chromium-based — Brave alone is 100M+ MAU (growing ~2.5M/mo),
+   plus ungoogled-chromium / Helium, all of which we already support (the PKCE Drive
+   flow exists specifically because `getAuthToken` fails on Brave). Ship a strong
+   Chrome Web Store listing first.
+2. **Firefox as a fast-follow (v1.1), ~1–2 wk.** Not a volume play (Firefox desktop
+   is ~4% and shrinking, and its native Sync is self-hostable, so our edge is weaker
+   there) — but it's exactly our ICP, it's floccus/xBrowserSync's home turf, AMO +
+   r/firefox is a high-fit channel, and only then is the "every browser" claim true.
+   Key work: browser-agnostic bookmark-root resolution (Chrome ids "1/2/3" vs
+   Firefox `toolbar_____`/`menu________`), a Firefox manifest (`background.scripts`
+   event page + `browser_specific_settings`), per-browser OAuth redirect
+   registration, `management`-API graceful degradation, and AMO packaging/review.
+3. **Backend expansion, tiered by auth cost.** Cheapest first:
+   - *Presets over the existing WebDAV backend* (Nextcloud / Synology / pCloud /
+     kDrive / ownCloud) — near-zero code, mostly docs. Already functional.
+   - *Token / basic-auth backends* (Dropbox token, S3-compatible, Backblaze B2) —
+     WebDAV/GitHub-class, ~0.5–1.5 d each, and they port to Firefox trivially.
+   - *OAuth (PKCE) backends* (Dropbox OAuth, OneDrive/Graph) — ~2–4 d each (provider
+     app registration + redirect + refresh + QA, per browser).
+   - *Mega* — heavier (~3–5 d; own crypto SDK to bundle).
+
 ## Later / nice-to-have
-- Firefox support (`browser_specific_settings` + the `browser.*` polyfill).
-- Mega backend.
 - Incremental diff for >10k bookmarks; history sync performance (the full-history
   dedup scan is the current bottleneck on the ~5s sync tail).
 - Optional OAuth proxy (serverless) to avoid shipping the Google client secret.

@@ -155,10 +155,40 @@ addressed earlier (`f3998f1`/`af174ce`) and are now checked off. `[x]` = done.
 
 ---
 
+## 🌐 Platform & backend expansion (prioritized 2026-07-10)
+
+Sequenced by where the value prop is strongest (see `ROADMAP.md → Platform priority`).
+
+**1. Chromium-first launch** — strongest pitch (no self-hostable native sync on
+Chromium) + biggest privacy audience already supported (Brave 100M+ MAU, ungoogled,
+Helium). Nail the Chrome Web Store listing first (see *Before publishing*).
+
+**2. Firefox support — fast-follow (v1.1), ~1–2 wk.** ICP fit + floccus/xBrowserSync
+turf + AMO/r/firefox channel; makes "every browser" true. Not a volume play (~4% and
+shrinking; native Firefox Sync is self-hostable so our edge is weaker). Tasks:
+- [ ] Browser-agnostic **bookmark-root resolution** — remove the Chrome `id === "2"`
+      assumptions (`bookmarks-handler.ts:362`, `options/App.tsx:420`); map to Firefox
+      roots (`toolbar_____`/`menu________`/`unfiled_____`). *(the key port task)*
+- [ ] **Firefox manifest** variant — `background.scripts` event page (not
+      `service_worker`) + `browser_specific_settings` (gecko id, min version); build step.
+- [ ] **Per-browser OAuth redirect** — Firefox `getRedirectURL()` differs from
+      `*.chromiumapp.org`; register the Firefox redirect for Drive (+ any OAuth backend).
+- [ ] **`management` API** graceful degradation on Firefox (extension-list feature).
+- [ ] `web-ext` packaging + **AMO submission** (source upload + review).
+
+**3. Backend expansion — tiered by auth cost (cheapest first):**
+- [ ] **WebDAV presets** (Nextcloud / Synology / pCloud / kDrive / ownCloud) — already
+      work via the WebDAV backend; add presets + docs (~0 code).
+- [ ] **Token/basic backends** (Dropbox token, S3-compatible, Backblaze B2) —
+      WebDAV/GitHub-class, ~0.5–1.5 d each; port to Firefox trivially.
+- [ ] **OAuth backends** (Dropbox OAuth, OneDrive/Graph) — ~2–4 d each (provider app
+      registration + redirect + refresh + QA, per browser).
+- [ ] **Mega backend** — heavier (~3–5 d; own crypto SDK to bundle).
+
+---
+
 ## 🧭 Later / Nice-to-have
 
-- [ ] Firefox support (browser_specific_settings + polyfill)
-- [ ] Mega backend
 - [ ] Incremental bookmark diff for >10k bookmarks
 - [ ] Audit log export, keyboard shortcuts
 - [ ] Populate `bytes_transferred` (currently unused)
