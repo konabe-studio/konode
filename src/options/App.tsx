@@ -1169,6 +1169,9 @@ const STYLES = `
      shared with the onboarding wizard. */
 
   html, body, #root { height: 100%; background: var(--bg); }
+  /* Always reserve the vertical scrollbar gutter so switching between a short tab
+     (no scrollbar) and a tall one (scrollbar) doesn't shift the centered layout. */
+  html { scrollbar-gutter: stable; }
   .settings-root { display: flex; flex-direction: column; min-height: 100vh; font-family: var(--font); font-size: 13px; color: var(--text-primary); background: var(--bg); -webkit-font-smoothing: antialiased; }
 
   /* Top horizontal tab bar (Proton Pass settings pattern): brand at the left,
