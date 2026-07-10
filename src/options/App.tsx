@@ -490,23 +490,25 @@ export default function OptionsApp() {
 
       {/* ── Top tab bar ── */}
       <header className="topbar">
-        <div className="topbar-brand">
-          <div className="topbar-logo"><Radio size={14} /></div>
-          <span className="topbar-title">Synkro</span>
+        <div className="topbar-inner">
+          <div className="topbar-brand">
+            <div className="topbar-logo"><Radio size={14} /></div>
+            <span className="topbar-title">Synkro</span>
+          </div>
+          <nav className="tabbar">
+            {NAV.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                className={`tab-item ${activeNav === id ? "active" : ""}`}
+                onClick={() => setActiveNav(id)}
+                aria-current={activeNav === id ? "page" : undefined}
+              >
+                <Icon size={15} />
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
         </div>
-        <nav className="tabbar">
-          {NAV.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              className={`tab-item ${activeNav === id ? "active" : ""}`}
-              onClick={() => setActiveNav(id)}
-              aria-current={activeNav === id ? "page" : undefined}
-            >
-              <Icon size={15} />
-              <span>{label}</span>
-            </button>
-          ))}
-        </nav>
       </header>
 
       {/* ── Content ── */}
@@ -1171,7 +1173,8 @@ const STYLES = `
 
   /* Top horizontal tab bar (Proton Pass settings pattern): brand at the left,
      horizontal tabs that scroll on narrow widths, active tab underlined in accent. */
-  .topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 24px; background: var(--bg-sidebar); border-bottom: 1px solid var(--border); }
+  .topbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: center; align-items: center; height: 56px; padding: 0 24px; background: var(--bg-sidebar); border-bottom: 1px solid var(--border); }
+  .topbar-inner { display: flex; align-items: center; gap: 24px; width: 100%; max-width: var(--content-max); height: 100%; }
   .topbar-brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
   .topbar-logo { width: 24px; height: 24px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
   .topbar-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
