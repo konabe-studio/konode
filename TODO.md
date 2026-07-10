@@ -196,10 +196,13 @@ The functionality is done; the last step before launch is making it *look*
 intentional — so the UI doesn't read as generic / AI-generated. Build on a single
 brand concept (`BRAND.md`) and apply it everywhere.
 
-- [ ] **Brand concept** — positioning, personality, logo direction, color palette,
-      typography, voice, anti-"AI-slop" principles (see `BRAND.md`)
-- [ ] **Logo** — wordmark + mark + app icons (16 / 32 / 48 / 128)
-- [ ] **Brand guidelines** — the system, with do/don't
+- [x] **Brand concept** — positioning, personality, logo direction, color palette,
+      typography, voice, anti-"AI-slop" principles → written in `BRAND.md`.
+- [x] **Logo** — peer-triangle mesh mark chosen. Master `public/icons/icon.svg`, app
+      icons `icon{16,32,48,128}.png`, horizontal lockup `public/icons/wordmark.svg`;
+      in-app `MeshMark` glyph replaces the placeholder in options + onboarding.
+- [x] **Brand guidelines** — the system + do/don't captured in `BRAND.md` (logo
+      construction, color/contrast, type, voice, asset checklist).
 - [x] **UI pass** — popup, options **and** onboarding re-skinned to the new design
       system with system light/dark (`sk-*` tokens, signal-green accent, pulse;
       noise/glow/DM Sans removed). Popup: active-streams icon grid, content-fit

@@ -1,0 +1,10 @@
+<svg width="176" height="56" viewBox="0 0 176 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(8,8) scale(0.3125)">
+    <rect width="128" height="128" rx="28" fill="#12b76a"/>
+    <path d="M64 34 L40 80 M64 34 L88 80 M40 80 L88 80" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="64" cy="34" r="11" fill="#ffffff"/>
+    <circle cx="40" cy="80" r="11" fill="#ffffff"/>
+    <circle cx="88" cy="80" r="11" fill="#ffffff"/>
+  </g>
+  <text x="60" y="37" font-family="Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="28" font-weight="600" letter-spacing="-0.6" fill="#11151a">Synkro</text>
+</svg>

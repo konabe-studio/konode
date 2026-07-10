@@ -3,10 +3,23 @@ import { sendMessage } from "@/lib/utils/messaging";
 import { interactiveSignIn } from "@/lib/backends/gdrive-oauth";
 import type { BackendType, SyncSettings } from "@/lib/types";
 import {
-  Radio, Cloud, Server, Github, Bookmark,
+  Cloud, Server, Github, Bookmark,
   Clock, Puzzle, Globe, CheckCircle2, ArrowRight,
   Loader2, XCircle, Eye, EyeOff, Lock, Key, Copy, Check,
 } from "lucide-react";
+// Synkro brand mark — the peer-mesh triangle (3 linked nodes, no center = no server).
+// Just the glyph; the container supplies the green tile.
+function MeshMark({ size = 14, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="24 17 80 80" fill="none" aria-hidden="true">
+      <path d="M64 34 L40 80 M64 34 L88 80 M40 80 L88 80" stroke={color} strokeWidth="7" strokeLinecap="round" />
+      <circle cx="64" cy="34" r="11" fill={color} />
+      <circle cx="40" cy="80" r="11" fill={color} />
+      <circle cx="88" cy="80" r="11" fill={color} />
+    </svg>
+  );
+}
+
 import { generateRecoveryKey } from "@/lib/crypto/encryption";
 
 // ─── Steps ────────────────────────────────────────────────────────────────
@@ -293,7 +306,7 @@ export default function OnboardingApp() {
       {step === "welcome" && (
         <div style={S.card}>
           <div style={S.logoWrap}>
-            <Radio size={28} color="white" />
+            <MeshMark size={32} color="white" />
           </div>
           <h1 style={S.h1}>Welcome to Synkro</h1>
           <p style={S.subtitle}>

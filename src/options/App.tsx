@@ -6,8 +6,21 @@ import {
   Cloud, Github, Server, Bookmark, Clock,
   Globe, Puzzle, AlertTriangle, CheckCircle2, XCircle,
   Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
-  Radio, Sliders, Shield, Save, Pencil, Key, Copy, Check,
+  Sliders, Shield, Save, Pencil, Key, Copy, Check,
 } from "lucide-react";
+// Synkro brand mark — the peer-mesh triangle (3 linked nodes, no center = no server).
+// Just the glyph; the container supplies the green tile.
+function MeshMark({ size = 14, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="24 17 80 80" fill="none" aria-hidden="true">
+      <path d="M64 34 L40 80 M64 34 L88 80 M40 80 L88 80" stroke={color} strokeWidth="7" strokeLinecap="round" />
+      <circle cx="64" cy="34" r="11" fill={color} />
+      <circle cx="40" cy="80" r="11" fill={color} />
+      <circle cx="88" cy="80" r="11" fill={color} />
+    </svg>
+  );
+}
+
 import { generateRecoveryKey } from "@/lib/crypto/encryption";
 import { KEYS, normalizeRemoteExtensions } from "@/lib/utils/storage";
 import { CWS_DETAIL_BASE } from "@/lib/constants";
@@ -492,7 +505,7 @@ export default function OptionsApp() {
       <header className="topbar">
         <div className="topbar-inner">
           <div className="topbar-brand">
-            <div className="topbar-logo"><Radio size={14} /></div>
+            <div className="topbar-logo"><MeshMark size={14} /></div>
             <span className="topbar-title">Synkro</span>
           </div>
           <nav className="tabbar">
