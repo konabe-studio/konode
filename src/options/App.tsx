@@ -488,26 +488,26 @@ export default function OptionsApp() {
     <div className="settings-root">
       <style>{STYLES}</style>
 
-      {/* ── Sidebar ── */}
-      <nav className="sidebar">
-        <div className="sidebar-header">
-          <div className="sidebar-logo"><Radio size={14} /></div>
-          <span className="sidebar-title">Synkro</span>
+      {/* ── Top tab bar ── */}
+      <header className="topbar">
+        <div className="topbar-brand">
+          <div className="topbar-logo"><Radio size={14} /></div>
+          <span className="topbar-title">Synkro</span>
         </div>
-        <ul className="nav-list">
+        <nav className="tabbar">
           {NAV.map(({ id, label, icon: Icon }) => (
-            <li key={id}>
-              <button
-                className={`nav-item ${activeNav === id ? "active" : ""}`}
-                onClick={() => setActiveNav(id)}
-              >
-                <Icon size={16} />
-                <span>{label}</span>
-              </button>
-            </li>
+            <button
+              key={id}
+              className={`tab-item ${activeNav === id ? "active" : ""}`}
+              onClick={() => setActiveNav(id)}
+              aria-current={activeNav === id ? "page" : undefined}
+            >
+              <Icon size={15} />
+              <span>{label}</span>
+            </button>
           ))}
-        </ul>
-      </nav>
+        </nav>
+      </header>
 
       {/* ── Content ── */}
       <main className="content">
@@ -726,6 +726,7 @@ export default function OptionsApp() {
               <p className="page-subtitle">Choose what gets synced across your devices.</p>
 
               <div className="settings-section">
+                <div className="settings-card-head">Data to sync</div>
                 {DATA_TYPE_META.map(({ type, Icon, label, desc }) => (
                   <div key={type} className="settings-row">
                     <div className="settings-row-left">
@@ -745,8 +746,8 @@ export default function OptionsApp() {
                 ))}
               </div>
 
-              <h2 className="section-title">History</h2>
               <div className="settings-section">
+                <div className="settings-card-head">History</div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div>
@@ -766,8 +767,8 @@ export default function OptionsApp() {
 
               {missingExtensions.length > 0 && (
                 <>
-                  <h2 className="section-title">Missing extensions ({missingExtensions.length})</h2>
                   <div className="settings-section">
+                    <div className="settings-card-head">Missing extensions ({missingExtensions.length})</div>
                     {missingExtensions.map((ext) => (
                       <div key={ext.id} className="settings-row">
                         <div className="settings-row-left">
@@ -809,8 +810,8 @@ export default function OptionsApp() {
               <h1 className="page-title">Device</h1>
               <p className="page-subtitle">Identify this device in the sync network.</p>
 
-              <h2 className="section-title">Identity</h2>
               <div className="settings-section">
+                <div className="settings-card-head">Identity</div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div>
@@ -834,8 +835,8 @@ export default function OptionsApp() {
                 </div>
               </div>
 
-              <h2 className="section-title">Sync behaviour</h2>
               <div className="settings-section">
+                <div className="settings-card-head">Sync behaviour</div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div><div className="row-label">Sync on change</div><div className="row-desc">Instantly sync bookmarks and tabs when they change. Recommended.</div></div>
@@ -880,8 +881,8 @@ export default function OptionsApp() {
                 </div>
               </div>
 
-              <h2 className="section-title">Conflict resolution</h2>
               <div className="settings-section">
+                <div className="settings-card-head">Conflict resolution</div>
                 {([
                   { value: "lww",           label: "Last Write Wins",  desc: "Most recent change always wins." },
                   { value: "prefer-local",  label: "Prefer Local",     desc: "Local changes override remote." },
@@ -899,8 +900,8 @@ export default function OptionsApp() {
                 ))}
               </div>
 
-              <h2 className="section-title">Safety</h2>
               <div className="settings-section">
+                <div className="settings-card-head">Safety</div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div>
@@ -937,8 +938,8 @@ export default function OptionsApp() {
               <h1 className="page-title">Advanced</h1>
               <p className="page-subtitle">Encryption and developer options.</p>
 
-              <h2 className="section-title">Import / Export</h2>
               <div className="settings-section">
+                <div className="settings-card-head">Import / Export</div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div>
@@ -977,8 +978,8 @@ export default function OptionsApp() {
                 </div>
               </div>
 
-              <h2 className="section-title">Encryption</h2>
               <div className="settings-section">
+                <div className="settings-card-head">Encryption</div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div>
@@ -1110,8 +1111,8 @@ export default function OptionsApp() {
                 )}
               </div>
 
-              <h2 className="section-title">Developer</h2>
               <div className="settings-section">
+                <div className="settings-card-head">Developer</div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div><div className="row-label">Debug mode</div><div className="row-desc">Verbose logging to the console.</div></div>
@@ -1124,8 +1125,8 @@ export default function OptionsApp() {
                 </div>
               </div>
 
-              <h2 className="section-title">About</h2>
               <div className="settings-section">
+                <div className="settings-card-head">About</div>
                 <div className="settings-row">
                   <div className="settings-row-left"><div><div className="row-label">Version</div></div></div>
                   <span className="mono-value">0.1.0</span>
@@ -1166,26 +1167,31 @@ const STYLES = `
      shared with the onboarding wizard. */
 
   html, body, #root { height: 100%; background: var(--bg); }
-  .settings-root { display: flex; min-height: 100vh; font-family: var(--font); font-size: 13px; color: var(--text-primary); background: var(--bg); -webkit-font-smoothing: antialiased; }
+  .settings-root { display: flex; flex-direction: column; min-height: 100vh; font-family: var(--font); font-size: 13px; color: var(--text-primary); background: var(--bg); -webkit-font-smoothing: antialiased; }
 
-  .sidebar { width: var(--sidebar-w); background: var(--bg-sidebar); border-right: 1px solid var(--border); position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; }
-  .sidebar-header { display: flex; align-items: center; gap: 10px; padding: 18px 20px 14px; }
-  .sidebar-logo { width: 24px; height: 24px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
-  .sidebar-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
-  .nav-list { list-style: none; padding: 4px 0; }
-  .nav-item { display: flex; align-items: center; gap: 14px; width: 100%; padding: 9px 20px; border: none; background: transparent; color: var(--text-secondary); font-family: var(--font); font-size: 13px; cursor: pointer; text-align: left; position: relative; transition: background .1s, color .1s; }
-  .nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
-  .nav-item.active { background: var(--nav-active-bg); color: var(--nav-active-text); font-weight: 500; }
-  .nav-item.active::before { content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px; background: var(--nav-active-bar); border-radius: 0 2px 2px 0; }
+  /* Top horizontal tab bar (Proton Pass settings pattern): brand at the left,
+     horizontal tabs that scroll on narrow widths, active tab underlined in accent. */
+  .topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 24px; height: 56px; padding: 0 24px; background: var(--bg-sidebar); border-bottom: 1px solid var(--border); }
+  .topbar-brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .topbar-logo { width: 24px; height: 24px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
+  .topbar-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+  .tabbar { display: flex; align-items: stretch; height: 100%; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+  .tabbar::-webkit-scrollbar { display: none; }
+  .tab-item { display: flex; align-items: center; gap: 8px; padding: 0 14px; border: none; background: transparent; color: var(--text-secondary); font-family: var(--font); font-size: 13px; cursor: pointer; white-space: nowrap; position: relative; border-bottom: 2px solid transparent; transition: color .1s, border-color .1s; }
+  .tab-item:hover { color: var(--text-primary); }
+  .tab-item.active { color: var(--nav-active-text); font-weight: 500; border-bottom-color: var(--nav-active-bar); }
 
-  .content { margin-left: var(--sidebar-w); flex: 1; display: flex; justify-content: center; padding: 32px 24px 60px; min-height: 100vh; }
+  .content { flex: 1; display: flex; justify-content: center; padding: 28px 24px 60px; }
   .content-inner { width: 100%; max-width: var(--content-max); }
   .section-wrap { padding-bottom: 16px; }
   .page-title { font-size: 20px; font-weight: 400; color: var(--text-primary); margin-bottom: 4px; }
   .page-subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5; }
-  .section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--text-secondary); margin: 28px 0 8px; }
+  /* Card header lives INSIDE the section so the whole group reads as one titled
+     card (a single shadow/ring — no seam from stacking two shadowed elements). */
+  .settings-card-head { padding: 13px 16px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--text-primary); background: var(--bg-card); }
+  .settings-card-head .head-sub { display: block; font-size: 12px; font-weight: 400; color: var(--text-secondary); margin-top: 2px; line-height: 1.45; }
 
-  .settings-section { background: var(--bg-card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+  .settings-section { background: var(--bg-card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); margin-bottom: 16px; }
   .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 16px; border-bottom: 1px solid var(--border); min-height: 52px; background: var(--bg-card); transition: background .1s; }
   .settings-row:last-child { border-bottom: none; }
   .settings-row:hover:not(.row-disabled) { background: var(--bg-hover); }
