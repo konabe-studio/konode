@@ -82,6 +82,7 @@ export const KEYS = {
   REMOTE_SESSIONS: "synkro_remote_sessions",
   REMOTE_EXTENSIONS: "synkro_remote_extensions",
   UPLOAD_CHECKSUMS: "synkro_upload_checksums",
+  RESOLVED_CONFLICTS: "synkro_resolved_conflicts",
   SYNC_LOCK: "synkro_sync_lock",
   GDRIVE_SESSION: "synkro_gdrive_session",
 } as const;
@@ -303,4 +304,23 @@ export async function setLastUploadChecksum(dataType: DataType, checksum: string
  */
 export async function clearUploadChecksums(): Promise<void> {
   await chrome.storage.local.remove(KEYS.UPLOAD_CHECKSUMS);
+}
+
+// ─── Resolved manual conflicts (make a resolution sticky) ───────────────────
+// Under the `manual` strategy the engine queues a conflict per diverging peer.
+// Resolving one (keep-local OR keep-remote) doesn't change the *peer's* file on
+// the backend, so it still diverges from ours next cycle — without this record the
+// same conflict re-queues and re-notifies forever. We remember the peer CHECKSUM we
+// resolved against, keyed by `${data_type}:${device_id}`; the queue loop skips a peer
+// whose current checksum still matches. If the peer's data genuinely changes later,
+// its checksum changes, this record no longer matches, and a fresh conflict surfaces.
+// Bounded by peer-count × data-types (tiny), so no GC needed.
+
+export async function getResolvedConflicts(): Promise<Record<string, string>> {
+  return get<Record<string, string>>(KEYS.RESOLVED_CONFLICTS, {});
+}
+
+export async function setResolvedConflict(key: string, checksum: string): Promise<void> {
+  const map = { ...(await getResolvedConflicts()), [key]: checksum };
+  await set(KEYS.RESOLVED_CONFLICTS, map);
 }

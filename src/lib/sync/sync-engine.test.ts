@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { SyncEngine } from "@/lib/sync/sync-engine";
-import { DEFAULT_SETTINGS, DEFAULT_STATE, getState } from "@/lib/utils/storage";
+import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState } from "@/lib/utils/storage";
 import type {
   IBackend,
   DataType,
@@ -371,5 +371,60 @@ describe("SyncEngine.syncType — manual conflicts (CO-7 / CO-8)", () => {
     await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
 
     expect((await getState()).pending_conflicts).toHaveLength(1);
+  });
+
+  it("does not re-queue a RESOLVED conflict on the next cycle (sticky resolution)", async () => {
+    const engine = manualEngine();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    backend.files.set("bookmarks_peer1", await peerPacket(engine, "peer1", payload([link("B", "https://b.com")])));
+
+    // First cycle queues the conflict; the user resolves it (keep local).
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+    const conflict = (await getState()).pending_conflicts[0];
+    await engine.resolveConflict(conflict.id, "local");
+    expect((await getState()).pending_conflicts).toHaveLength(0);
+
+    // Peer's file is unchanged (still diverging), but we already resolved against
+    // this exact content — the next cycle must NOT re-queue and re-notify.
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+    expect((await getState()).pending_conflicts).toHaveLength(0);
+  });
+
+  it("re-queues if the peer's content changes after a resolution", async () => {
+    const engine = manualEngine();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    backend.files.set("bookmarks_peer1", await peerPacket(engine, "peer1", payload([link("B", "https://b.com")])));
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+    await engine.resolveConflict((await getState()).pending_conflicts[0].id, "local");
+    expect((await getState()).pending_conflicts).toHaveLength(0);
+
+    // The peer edits its bookmarks → new checksum → a fresh conflict must surface.
+    backend.files.set("bookmarks_peer1", await peerPacket(engine, "peer1", payload([link("C", "https://c.com")])));
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+    expect((await getState()).pending_conflicts).toHaveLength(1);
+  });
+
+  it("refuses a manual resolve-remote of a PLAINTEXT peer while E2EE is on (no silent downgrade)", async () => {
+    const engine = new SyncEngine(
+      { ...DEFAULT_SETTINGS, device_id: "me", conflict_strategy: "manual",
+        encryption_enabled: true, encryption_passphrase: "pw" },
+      () => {}
+    );
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    // A plaintext peer packet (built by a non-E2EE engine → encrypted: false).
+    const plainPeer = await peerPacket(makeEngine(), "peer1", payload([link("B", "https://b.com")]));
+    await setState({
+      pending_conflicts: [{
+        id: "c1", data_type: "bookmarks", device_id: "peer1",
+        local_version: null, remote_version: null, remote_packet: plainPeer,
+        timestamp: new Date().toISOString(), resolved: false,
+      }],
+    });
+
+    await expect(engine.resolveConflict("c1", "remote")).rejects.toThrow(/not end-to-end encrypted/);
+    expect(await localUrls()).toEqual(["https://a.com"]); // nothing imported
   });
 });

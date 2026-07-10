@@ -39,6 +39,18 @@ function SecretField({
   const [revealed, setRevealed] = useState(false);
   const [draft, setDraft] = useState("");
   const [copied, setCopied] = useState(false);
+  // The parent can set the value out-of-band (e.g. "Generate a strong key" fills the
+  // passphrase without going through our input). Our keystrokes keep draft === value,
+  // so a divergence while editing means an external set — collapse to the saved
+  // summary so the field isn't misleadingly empty (`draft` would still be "").
+  useEffect(() => {
+    if (editing && value && value !== draft) {
+      setEditing(false);
+      setDraft("");
+      setRevealed(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(value);

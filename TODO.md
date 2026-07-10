@@ -113,36 +113,45 @@ Found during post-build QA of the E2EE settings UI.
 
 ## 🔎 From the 4-agent audit (2026-07-07)
 
-Ranked; all verified. `[x]` = fixed this pass.
+Ranked; all verified. **Backlog cleared 2026-07-10** — the 5 open items fixed
+(`resolveConflict` sticky-resolution, plaintext-import guard, sync race, backend
+list-error propagation, SecretField post-generate render); the other 2 were already
+addressed earlier (`f3998f1`/`af174ce`) and are now checked off. `[x]` = done.
 
 - [x] **Mass-delete guard too aggressive + silent** — a legit bulk delete (>50% of
       local bookmarks) was silently refused, so deletions didn't propagate (hit live:
       B kept 101 bookmarks, 54.5% tombstoned). Now `settings.bulk_delete_percent`
       (default 60, adjustable 50–95% in Settings → Advanced) drives the cap.
-- [ ] **Manual "keep local" conflict never converges** — re-queues + re-notifies
-      every sync cycle forever (a keep-local resolution isn't sticky). `sync-engine.ts`
-      ~554. Needs a resolved-checksum record so it doesn't re-fire. (medium)
-- [ ] **Export backup broken without the History permission** — `exportData()` calls
-      `chrome.history.search` unconditionally in one `Promise.all`; on the default
-      config (history off) it rejects and nothing exports, not even bookmarks. Guard
-      each collector by `chrome.permissions.contains` / settle independently. (medium)
-- [ ] **Manual conflict path imports plaintext into an E2EE device** — the plaintext-
-      peer skip is only in the auto branch; `resolveConflict → applyRemote` has no
-      guard, so a manual resolve-remote can import an unauthenticated plaintext packet.
-      Mirror the auto-path guard. (low, but security-adjacent — pairs with the recent
-      E2EE hardening)
-- [ ] **Concurrent-sync race** — `this.isSyncing` is set after `await
-      acquireSyncLock()`; a tight double-trigger can double-run one type. Set the flag
-      synchronously before the await. (low)
-- [ ] **GitHub/WebDAV `downloadAll` swallow transient list errors** as "no peers"
-      (`if (!res.ok) return []` inside `withRetry` → never retries; Drive throws).
-      Throw `HttpError` on non-OK list, keep 404→[]. (low)
-- [ ] **Onboarding passphrase is cleartext** (`type="text"`) unlike the options field
-      — mask with a reveal toggle (mirror `SecretField`; also serves the generated-key
-      case). (low)
-- [ ] **SecretField shows empty after Generate on a fresh E2EE enable** — `editing`
-      state doesn't resync when the parent sets the value; render is misleadingly
-      empty though the key is saved. (low)
+- [x] **Manual "keep local" conflict never converges** — re-queued + re-notified
+      every sync cycle forever (a resolution wasn't sticky; a resolve doesn't rewrite
+      the peer's file, so it kept diverging). Fixed: `resolveConflict` records the peer
+      CHECKSUM it resolved against (`synkro_resolved_conflicts`, keyed
+      `data_type:device_id`); the manual queue loop skips a peer still matching that
+      checksum. A genuine later change on the peer → new checksum → fresh conflict.
+      Covers keep-local AND keep-remote. (medium)
+- [x] **Export backup broken without the History permission** — already fixed in
+      `f3998f1`: `exportData()` guards history/management by
+      `chrome.permissions.contains` and each collector settles independently, so a
+      history-off config still exports bookmarks. (medium)
+- [x] **Manual conflict path imports plaintext into an E2EE device** — the plaintext-
+      peer skip was only in the auto branch. Fixed: `applyRemote` now throws
+      `EncryptionMismatchError` on a plaintext packet while E2EE is active here, so a
+      manual resolve-remote can't silently downgrade the device. Choke-point guard —
+      the auto path still skips plaintext peers before it. (low, security-adjacent)
+- [x] **Concurrent-sync race** — `this.isSyncing` was set after `await
+      acquireSyncLock()`. Fixed: the flag is now claimed synchronously right after the
+      guard check (before any await), reset on every early return. (low)
+- [x] **GitHub/WebDAV `downloadAll` swallow transient list errors** as "no peers".
+      Fixed: both now `return []` only on 404 (folder absent) and throw `HttpError` on
+      any other non-OK, so `withRetry` retries and a persistent failure surfaces
+      instead of masquerading as an empty group. (low)
+- [x] **Onboarding passphrase is cleartext** — already fixed in `f3998f1`: the
+      onboarding field masks with `type={showEncPass ? "text" : "password"}` + a reveal
+      toggle and confirm field (validation added in `af174ce`). (low)
+- [x] **SecretField shows empty after Generate on a fresh E2EE enable** — `editing`
+      state didn't resync when the parent set the value out-of-band. Fixed: an effect
+      collapses to the saved (masked) summary when `value` changes externally while
+      editing (our keystrokes keep `draft === value`, so typing isn't disturbed). (low)
 
 ---
 

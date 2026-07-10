@@ -166,7 +166,12 @@ export class GitHubBackend implements IBackend {
         `${GITHUB_API}/repos/${this.repoSlug}/contents/${this.path}?ref=${this.branch}`,
         { headers: this.headers(), cache: "no-store" }
       );
-      if (!res.ok) return [];
+      // 404 = the sync folder doesn't exist yet (no peers). Any other non-OK is a
+      // transient/real error — throw so withRetry retries it and a persistent failure
+      // surfaces, instead of silently masquerading as "no peers" (which would hide the
+      // peers' data and let this device overwrite the group with its own).
+      if (res.status === 404) return [];
+      if (!res.ok) throw new HttpError(res.status, `GitHub list failed: ${res.status}`);
       const files: Array<{ name: string }> = await res.json();
       const own = excludeDeviceId ? `synkro_${data_type}_${excludeDeviceId}.json` : null;
       const matches = files.filter(

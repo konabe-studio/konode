@@ -13,6 +13,8 @@ import {
   getLastUploadChecksum,
   setLastUploadChecksum,
   clearUploadChecksums,
+  getResolvedConflicts,
+  setResolvedConflict,
   acquireSyncLock,
   releaseSyncLock,
 } from "@/lib/utils/storage";
@@ -94,9 +96,15 @@ export class SyncEngine {
       logger.warn("SyncEngine", "Already syncing, skipping");
       return;
     }
+    // Claim the in-memory guard SYNCHRONOUSLY, before any await, so a tight
+    // double-trigger can't both pass the check above and double-run one data type.
+    // (It used to be set only after `await acquireSyncLock`, leaving that window
+    // open.) Reset on every early return below so a no-op sync doesn't wedge it on.
+    this.isSyncing = true;
 
     if (!this.settings.active_backend) {
       logger.warn("SyncEngine", "No active backend configured");
+      this.isSyncing = false;
       return;
     }
 
@@ -105,6 +113,7 @@ export class SyncEngine {
     );
     if (!backendConfig) {
       logger.warn("SyncEngine", "Active backend config not found");
+      this.isSyncing = false;
       return;
     }
 
@@ -114,10 +123,10 @@ export class SyncEngine {
     // worker instance; this guards across suspend/recreate.
     if (!(await acquireSyncLock(SYNC_LOCK_TTL_MS))) {
       logger.warn("SyncEngine", "Another sync holds the lock — skipping");
+      this.isSyncing = false;
       return;
     }
 
-    this.isSyncing = true;
     this.encryptionWarnings.clear();
     const state = await setState({ status: "syncing", last_error: null });
     this.onStateChange(state);
@@ -204,9 +213,17 @@ export class SyncEngine {
         const already = new Set(
           currentState.pending_conflicts.map((c) => `${c.data_type}:${c.device_id}`)
         );
+        // A resolution (keep-local OR keep-remote) doesn't rewrite the peer's file,
+        // so the peer still diverges from us next cycle. Skip a peer we've already
+        // resolved against *this exact content* (matched by checksum) so the same
+        // conflict doesn't re-queue and re-notify forever. A genuine later change on
+        // the peer yields a new checksum, so a fresh conflict still surfaces.
+        const resolved = await getResolvedConflicts();
         const fresh: ConflictItem[] = [];
         for (const peer of peers) {
-          if (already.has(`${dataType}:${peer.device_id}`)) continue;
+          const key = `${dataType}:${peer.device_id}`;
+          if (already.has(key)) continue;
+          if (resolved[key] === peer.checksum) continue;
           const { conflict } = this.resolver.resolve(localPacket, peer);
           if (conflict) fresh.push(conflict);
         }
@@ -414,6 +431,19 @@ export class SyncEngine {
     packet: SyncPacket,
     isLocalEmpty = false
   ): Promise<void> {
+    const localE2ee =
+      this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
+    // Refuse to import a plaintext peer while E2EE is active here. The auto-merge
+    // path already skips plaintext peers before calling applyRemote (they're stale/
+    // orphan files), so this is the guard for the MANUAL resolve-remote path —
+    // without it a manual "keep remote" could pull an unauthenticated plaintext
+    // packet into an encrypted device, silently downgrading it. Mirrors the auto skip.
+    if (!packet.encrypted && localE2ee) {
+      throw new EncryptionMismatchError(
+        `Device ${packet.device_id.slice(0, 8)}'s data is not end-to-end encrypted. ` +
+          "Enable E2EE with the same passphrase there before merging it, so this device stays encrypted."
+      );
+    }
     let raw = packet.payload;
     if (packet.encrypted) {
       // Only participate in the encrypted group when E2EE is actually ACTIVE here
@@ -423,8 +453,6 @@ export class SyncEngine {
       // and re-published it in plaintext, and hid the fact that this device had
       // dropped out of the encrypted group (C1). Surface it as an actionable nudge
       // on THIS device (the one that can fix it) instead of a silent partition.
-      const localE2ee =
-        this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
       if (!localE2ee) {
         throw new EncryptionMismatchError(
           "Some of your devices are end-to-end encrypted. Enable E2EE with the same " +
@@ -574,6 +602,16 @@ export class SyncEngine {
           await backend.disconnect();
         }
       }
+    }
+
+    // Remember the peer content we just resolved against so the same conflict
+    // doesn't re-queue every cycle (the resolution doesn't rewrite the peer's file,
+    // so it keeps diverging from ours). Keyed by data_type:device_id → peer checksum.
+    if (conflict.remote_packet?.checksum) {
+      await setResolvedConflict(
+        `${conflict.data_type}:${conflict.device_id}`,
+        conflict.remote_packet.checksum
+      );
     }
 
     const remaining = state.pending_conflicts.filter((c) => c.id !== id);

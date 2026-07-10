@@ -79,7 +79,12 @@ export class WebDAVBackend implements IBackend {
         cache: "no-store",
       });
 
-      if (!res.ok) return [];
+      // 404 = the sync folder doesn't exist yet (no peers). A successful PROPFIND is
+      // 207 Multi-Status (res.ok covers it). Any other non-OK is transient/real —
+      // throw so withRetry retries and a persistent failure surfaces, instead of
+      // silently masquerading as "no peers" (which would hide the peers' data).
+      if (res.status === 404) return [];
+      if (!res.ok) throw new HttpError(res.status, `WebDAV list failed: ${res.status}`);
 
       const xml = await res.text();
       // Extract hrefs from PROPFIND response. Match any namespace prefix
