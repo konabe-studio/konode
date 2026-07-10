@@ -210,7 +210,7 @@ export default function PopupApp() {
           <span className={`text-sm font-medium ${statusCfg.color}`}>{statusCfg.label}</span>
         </div>
         <div className="flex items-center gap-2">
-          {lastSync && <span className="font-mono text-[13px] tabular-nums text-sk-muted">{lastSync}</span>}
+          {lastSync && <span className="font-mono text-[14px] tabular-nums text-sk-muted">{lastSync}</span>}
           <button
             onClick={openOptions}
             aria-label="Settings"
@@ -250,13 +250,13 @@ export default function PopupApp() {
                 <div className="flex gap-1.5">
                   <button
                     onClick={() => resolveConflict(c.id, "local")}
-                    className="flex-1 rounded-box border border-sk-hairline bg-sk-surface py-1.5 text-[11px] text-sk-muted transition-colors hover:text-sk-text"
+                    className="flex-1 rounded-box border border-sk-hairline bg-sk-surface py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text"
                   >
                     Keep local
                   </button>
                   <button
                     onClick={() => resolveConflict(c.id, "remote")}
-                    className="flex-1 rounded-box border border-sk-hairline bg-sk-surface py-1.5 text-[11px] text-sk-muted transition-colors hover:text-sk-text"
+                    className="flex-1 rounded-box border border-sk-hairline bg-sk-surface py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text"
                   >
                     Use remote
                   </button>
@@ -299,7 +299,7 @@ export default function PopupApp() {
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
       {/* ── Active streams (live per-type status) ── */}
       <section className="mt-4">
-        <h2 className="mb-2 pl-0.5 font-mono text-[11px] font-medium tracking-[0.08em] text-sk-subtle">
+        <h2 className="mb-2 pl-0.5 font-mono text-[12px] font-medium tracking-[0.08em] text-sk-subtle">
           ACTIVE STREAMS
         </h2>
         <div className="grid grid-cols-4 gap-2.5">
@@ -345,16 +345,16 @@ export default function PopupApp() {
 
       {/* ── Missing extensions ── */}
       {missingExtensions.length > 0 && (
-        <div className="flex items-center justify-between px-0.5 pb-0.5 pt-[11px]">
-          <span className="text-[13px]">
+        <div className="flex items-center justify-between px-0.5 pb-0.5 pt-[12px]">
+          <span className="text-[14px]">
             <span className="font-medium text-sk-warn">{missingExtensions.length}</span> missing extensions
           </span>
           <button
             onClick={openAllMissing}
-            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-sk-text hover:underline hover:underline-offset-2"
+            className="inline-flex items-center gap-1.5 text-[14px] font-medium text-sk-text hover:underline hover:underline-offset-2"
           >
             Open all
-            <ExternalLink size={13} strokeWidth={2} />
+            <ExternalLink size={14} strokeWidth={2} />
           </button>
         </div>
       )}
@@ -362,15 +362,15 @@ export default function PopupApp() {
       {/* ── Restore sessions (one per peer device) ── */}
       {remoteSessions.length > 0 && (
         <section className="mt-4">
-          <h2 className="mb-2 pl-0.5 font-mono text-[11px] font-medium tracking-[0.08em] text-sk-subtle">
+          <h2 className="mb-2 pl-0.5 font-mono text-[12px] font-medium tracking-[0.08em] text-sk-subtle">
             SESSIONS FROM OTHER DEVICES
           </h2>
           <div className="space-y-1.5">
             {remoteSessions.map((entry) => (
               <div key={entry.session.id} className="flex items-center gap-2 px-0.5 py-0.5">
                 <div className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px]">{entry.session.label || "Unknown device"}</span>
-                  <span className="font-mono text-[11px] text-sk-subtle">
+                  <span className="block truncate text-[14px]">{entry.session.label || "Unknown device"}</span>
+                  <span className="font-mono text-[12px] text-sk-subtle">
                     {entry.session.tabs.length} tab{entry.session.tabs.length === 1 ? "" : "s"}
                     {entry.timestamp &&
                       ` · ${new Date(entry.timestamp).toLocaleString([], {
@@ -409,7 +409,7 @@ export default function PopupApp() {
         </div>
         <button
           onClick={openOptions}
-          className="text-[13px] font-medium text-sk-text hover:underline hover:underline-offset-2"
+          className="text-[14px] font-medium text-sk-text hover:underline hover:underline-offset-2"
         >
           Configure →
         </button>

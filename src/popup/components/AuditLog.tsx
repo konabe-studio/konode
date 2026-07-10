@@ -26,7 +26,7 @@ export function AuditLog() {
         aria-expanded={open}
         className="flex w-full items-center justify-between p-0.5 text-sk-subtle"
       >
-        <span className="font-mono text-[11px] font-medium uppercase tracking-[0.08em]">Audit log</span>
+        <span className="font-mono text-[12px] font-medium uppercase tracking-[0.08em]">Audit log</span>
         <ChevronDown
           size={14}
           strokeWidth={2}
@@ -38,21 +38,21 @@ export function AuditLog() {
       {open && (
         <div className="mt-2.5 space-y-1.5 animate-fade-in">
           {entries.length === 0 ? (
-            <p className="py-2 text-center font-mono text-[11px] text-sk-subtle">No entries yet</p>
+            <p className="py-2 text-center font-mono text-[12px] text-sk-subtle">No entries yet</p>
           ) : (
             <button
               onClick={clearLog}
-              className="ml-auto flex items-center gap-1 text-[11px] text-sk-subtle transition-colors hover:text-sk-danger"
+              className="ml-auto flex items-center gap-1 text-[12px] text-sk-subtle transition-colors hover:text-sk-danger"
             >
-              <Trash2 size={11} /> Clear log
+              <Trash2 size={12} /> Clear log
             </button>
           )}
           {entries.slice(0, 20).map((e, i) => (
-            <div key={`${e.timestamp}-${i}`} className="flex items-start gap-2 font-mono text-[11px]">
+            <div key={`${e.timestamp}-${i}`} className="flex items-start gap-2 font-mono text-[12px]">
               {e.ok ? (
-                <CheckCircle2 size={11} className="mt-0.5 shrink-0 text-sk-signal" />
+                <CheckCircle2 size={12} className="mt-0.5 shrink-0 text-sk-signal" />
               ) : (
-                <XCircle size={11} className="mt-0.5 shrink-0 text-sk-danger" />
+                <XCircle size={12} className="mt-0.5 shrink-0 text-sk-danger" />
               )}
               <div className="min-w-0 flex-1">
                 <span className="block truncate text-sk-text">{e.action}</span>

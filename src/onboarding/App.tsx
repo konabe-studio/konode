@@ -308,12 +308,12 @@ export default function OnboardingApp() {
             ].map(([icon, text]) => (
               <div key={text} style={S.featureRow}>
                 <span>{icon}</span>
-                <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>{text}</span>
+                <span style={{ color: "var(--text-secondary)", fontSize: 14 }}>{text}</span>
               </div>
             ))}
           </div>
           <button style={S.btnPrimary} onClick={next}>
-            Get started <ArrowRight size={15} />
+            Get started <ArrowRight size={16} />
           </button>
         </div>
       )}
@@ -345,7 +345,7 @@ export default function OnboardingApp() {
                   {gdriveUser ? (
                     <div style={S.verifiedRow}>
                       <CheckCircle2 size={14} color="var(--success)" />
-                      <span style={{ color: "var(--success)", fontSize: 13 }}>
+                      <span style={{ color: "var(--success)", fontSize: 14 }}>
                         {gdriveUser.displayName} ({gdriveUser.email})
                       </span>
                     </div>
@@ -439,11 +439,11 @@ export default function OnboardingApp() {
                     </button>
                   </div>
                   {githubChecking && (
-                    <div style={S.verifyRow}><Loader2 size={11} className="spin" /> Verifying…</div>
+                    <div style={S.verifyRow}><Loader2 size={12} className="spin" /> Verifying…</div>
                   )}
                   {githubUser && !githubChecking && (
                     <div style={{ ...S.verifyRow, color: "var(--success)" }}>
-                      <CheckCircle2 size={11} /> @{githubUser.login}
+                      <CheckCircle2 size={12} /> @{githubUser.login}
                     </div>
                   )}
                   <input style={{ ...S.input, fontFamily: "monospace" }}
@@ -452,7 +452,7 @@ export default function OnboardingApp() {
                   <a
                     href="https://github.com/settings/personal-access-tokens/new"
                     target="_blank" rel="noreferrer"
-                    style={{ fontSize: 11, color: "var(--text-link)", textDecoration: "none", marginTop: 4, display: "inline-block" }}
+                    style={{ fontSize: 12, color: "var(--text-link)", textDecoration: "none", marginTop: 4, display: "inline-block" }}
                   >
                     Create a fine-grained token (only this repo) →
                   </a>
@@ -468,7 +468,7 @@ export default function OnboardingApp() {
               onClick={next}
               disabled={!canProceedBackend()}
             >
-              Continue <ArrowRight size={15} />
+              Continue <ArrowRight size={16} />
             </button>
           </div>
         </div>
@@ -500,8 +500,8 @@ export default function OnboardingApp() {
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <Icon size={16} color={dataTypes[key] ? "var(--accent)" : "var(--text-secondary)"} />
                   <div>
-                    <div style={{ fontSize: 13, color: "var(--text-primary)" }}>{label}</div>
-                    <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>{desc}</div>
+                    <div style={{ fontSize: 14, color: "var(--text-primary)" }}>{label}</div>
+                    <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{desc}</div>
                   </div>
                 </div>
                 <div style={{
@@ -549,8 +549,8 @@ export default function OnboardingApp() {
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <Lock size={16} color={encEnabled ? "var(--accent)" : "var(--text-secondary)"} />
               <div>
-                <div style={{ fontSize: 13, color: "var(--text-primary)" }}>End-to-end encryption</div>
-                <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>AES-256-GCM. Recommended.</div>
+                <div style={{ fontSize: 14, color: "var(--text-primary)" }}>End-to-end encryption</div>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>AES-256-GCM. Recommended.</div>
               </div>
             </div>
             <div style={{ ...S.toggleTrack, background: encEnabled ? "var(--accent)" : "var(--toggle-off)" }}>
@@ -577,16 +577,16 @@ export default function OnboardingApp() {
                       onClick={copyPass}
                       title={passCopied ? "Copied" : "Copy passphrase"}
                     >
-                      {passCopied ? <Check size={13} /> : <Copy size={13} />}
+                      {passCopied ? <Check size={14} /> : <Copy size={14} />}
                     </button>
                   )}
                   <button type="button" style={S.iconBtn} onClick={() => setShowEncPass(v => !v)} title={showEncPass ? "Hide" : "Show"}>
-                    {showEncPass ? <EyeOff size={13} /> : <Eye size={13} />}
+                    {showEncPass ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
               </div>
               {encTouched && passMissing && (
-                <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 4 }}>
+                <div style={{ fontSize: 12, color: "var(--danger)", marginTop: 4 }}>
                   Enter a passphrase, or generate a key.
                 </div>
               )}
@@ -601,7 +601,7 @@ export default function OnboardingApp() {
                     aria-invalid={(encTouched || encConfirm.length > 0) && confirmMismatch}
                   />
                   {(encTouched || encConfirm.length > 0) && confirmMismatch && (
-                    <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 4 }}>
+                    <div style={{ fontSize: 12, color: "var(--danger)", marginTop: 4 }}>
                       {encConfirm.length === 0 ? "Confirm your passphrase." : "Passphrases don't match yet."}
                     </div>
                   )}
@@ -613,13 +613,13 @@ export default function OnboardingApp() {
                 style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                 <Key size={12} /> Generate a strong key
               </button>
-              <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 10, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 10, lineHeight: 1.5 }}>
                 <b>Save this passphrase.</b> It never leaves your device and can't be recovered if lost —
                 and every device must use the same one.
               </div>
             </div>
           ) : (
-            <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 12, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 12, lineHeight: 1.5 }}>
               Your data will be stored <b>unencrypted</b> on your backend. Fine for storage you fully trust;
               you can turn encryption on later in Settings.
             </div>
@@ -656,14 +656,14 @@ export default function OnboardingApp() {
                 <div key={key} style={{ ...S.dataRow, cursor: "default" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <Icon size={16} color={done ? "var(--accent)" : "var(--text-secondary)"} />
-                    <div style={{ fontSize: 13, color: "var(--text-primary)" }}>{label}</div>
+                    <div style={{ fontSize: 14, color: "var(--text-primary)" }}>{label}</div>
                   </div>
                   {done ? (
                     <CheckCircle2 size={16} color="var(--accent)" />
                   ) : syncError ? (
-                    <XCircle size={15} color="var(--text-disabled)" />
+                    <XCircle size={16} color="var(--text-disabled)" />
                   ) : (
-                    <Loader2 size={15} className="spin" color="var(--text-secondary)" />
+                    <Loader2 size={16} className="spin" color="var(--text-secondary)" />
                   )}
                 </div>
               );
@@ -674,7 +674,7 @@ export default function OnboardingApp() {
             <div style={{ ...S.errorRow, marginBottom: 12 }}><XCircle size={12} /> {syncError}</div>
           )}
           {syncTimedOut && !syncError && (
-            <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 12, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 12, lineHeight: 1.5 }}>
               This is taking longer than usual — a large history can do that. The sync keeps running in the background, so you can finish now.
             </div>
           )}
@@ -708,12 +708,12 @@ export default function OnboardingApp() {
             The first sync is running in the background.
           </p>
           <div style={{ ...S.featureList, marginBottom: 24 }}>
-            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Backend connected</span></div>
-            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Automatic background sync</span></div>
-            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Adjust everything in Settings</span></div>
+            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 14, color: "var(--text-secondary)" }}>Backend connected</span></div>
+            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 14, color: "var(--text-secondary)" }}>Automatic background sync</span></div>
+            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 14, color: "var(--text-secondary)" }}>Adjust everything in Settings</span></div>
           </div>
           <button style={S.btnPrimary} onClick={() => window.close()}>
-            Close <ArrowRight size={15} />
+            Close <ArrowRight size={16} />
           </button>
           <button
             style={{ ...S.btnSecondary, marginTop: 8, width: "100%", justifyContent: "center" }}
@@ -778,7 +778,7 @@ const S: Record<string, React.CSSProperties> = {
     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
     width: "100%", height: 40, padding: "0 14px", borderRadius: 12,
     border: "1px solid var(--border-input)", background: "var(--bg-card)",
-    fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
+    fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
     color: "var(--text-primary)",
   },
   backendList: { display: "flex", flexDirection: "column", gap: 0, marginBottom: 24,
@@ -790,10 +790,10 @@ const S: Record<string, React.CSSProperties> = {
   },
   backendSelected: { background: "var(--bg-card-sel)" },
   backendHeader: { display: "flex", alignItems: "flex-start", gap: 10 },
-  backendName: { fontSize: 13, fontWeight: 500, color: "var(--text-primary)", marginBottom: 1 },
-  backendDesc: { fontSize: 11, color: "var(--text-secondary)" },
+  backendName: { fontSize: 14, fontWeight: 500, color: "var(--text-primary)", marginBottom: 2 },
+  backendDesc: { fontSize: 12, color: "var(--text-secondary)" },
   radio: {
-    width: 15, height: 15, borderRadius: "50%",
+    width: 16, height: 16, borderRadius: "50%",
     border: "2px solid var(--border-input)", marginLeft: "auto", marginTop: 2, flexShrink: 0,
     background: "var(--bg-card)",
   },
@@ -805,7 +805,7 @@ const S: Record<string, React.CSSProperties> = {
   input: {
     width: "100%", padding: "10px 12px",
     background: "var(--bg-input)", border: "1px solid var(--border-input)",
-    borderRadius: 12, fontSize: 13, color: "var(--text-primary)", outline: "none",
+    borderRadius: 12, fontSize: 14, color: "var(--text-primary)", outline: "none",
     fontFamily: "inherit",
   },
   eyeBtn: {
@@ -822,8 +822,8 @@ const S: Record<string, React.CSSProperties> = {
     display: "flex", alignItems: "center", padding: 4, borderRadius: 8,
   },
   verifiedRow: { display: "flex", alignItems: "center", gap: 6, fontSize: 12 },
-  verifyRow: { display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--text-secondary)" },
-  errorRow: { display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "var(--danger)" },
+  verifyRow: { display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--text-secondary)" },
+  errorRow: { display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--danger)" },
   dataList: { display: "flex", flexDirection: "column", gap: 0, marginBottom: 24,
     borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 2px rgba(17,21,26,.04), 0 0 0 1px rgba(17,21,26,.07)" },
   dataRow: {
@@ -831,7 +831,7 @@ const S: Record<string, React.CSSProperties> = {
     padding: "14px 16px", borderBottom: "1px solid var(--border)",
     background: "var(--bg-card)", cursor: "pointer", transition: "background .1s",
   },
-  toggleTrack: { width: 34, height: 18, borderRadius: 9, position: "relative", transition: "background .2s", flexShrink: 0 },
+  toggleTrack: { width: 34, height: 18, borderRadius: 10, position: "relative", transition: "background .2s", flexShrink: 0 },
   toggleThumb: {
     position: "absolute", top: 2, left: 2, width: 14, height: 14,
     background: "white", borderRadius: "50%", transition: "transform .18s",
