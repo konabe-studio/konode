@@ -1219,7 +1219,7 @@ const STYLES = `
   .backend-info { flex: 1; min-width: 0; }
   .backend-name { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-primary); margin-bottom: 2px; }
   .backend-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
-  .badge-active { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; background: var(--accent); color: white; padding: 2px 6px; border-radius: 4px; }
+  .badge-active { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; background: var(--accent-solid); color: var(--on-accent); padding: 2px 6px; border-radius: 4px; }
   .radio-circle { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border-input); flex-shrink: 0; margin-top: 4px; background: var(--bg-card); transition: border-color .15s; }
   .radio-circle.checked { border-color: var(--accent); background: radial-gradient(circle at center, var(--accent) 38%, transparent 42%); }
 
@@ -1285,12 +1285,12 @@ const STYLES = `
   .btn-secondary { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; font-family: var(--font); font-size: 14px; color: var(--text-secondary); transition: background .1s, border-color .1s, color .1s; white-space: nowrap; }
   .btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--accent); }
   .btn-secondary:disabled { opacity: .5; cursor: not-allowed; }
-  .btn-save { display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 12px; border: none; background: var(--accent); color: white; font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
-  .btn-save:hover { background: var(--accent-hover); }
-  .btn-save.saved { background: var(--success); }
+  .btn-save { display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 12px; border: none; background: var(--accent-solid); color: var(--on-accent); font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
+  .btn-save:hover { background: var(--accent-solid-hover); }
+  .btn-save.saved { background: var(--accent-solid); }
   .btn-save:disabled { opacity: .6; cursor: not-allowed; }
-  .btn-install { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 10px; background: var(--accent); color: white; font-size: 12px; font-weight: 600; text-decoration: none; flex-shrink: 0; transition: background .1s; }
-  .btn-install:hover { background: var(--accent-hover); }
+  .btn-install { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 10px; background: var(--accent-solid); color: var(--on-accent); font-size: 12px; font-weight: 600; text-decoration: none; flex-shrink: 0; transition: background .1s; }
+  .btn-install:hover { background: var(--accent-solid-hover); }
 
   .notice-warn { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; margin-top: 14px; background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 12px; font-size: 12px; color: var(--warn-text); line-height: 1.5; }
   .notice-warn svg { margin-top: 1px; flex-shrink: 0; color: var(--warn-border); }

@@ -19,6 +19,12 @@
   --text-link: #0e9d5a;
   --nav-active-bg: #f1f3f5; --nav-active-text: #11151a; --nav-active-bar: #12b76a;
   --accent: #12b76a; --accent-hover: #0e9d5a; --accent-light: #e7f7ef;
+  /* Solid fills UNDER white text (buttons, badges). The brand --accent is too light
+     for white text (~2.6:1, below WCAG AA) — white edges blur into the green and read
+     like a shadow/outline on the label. A deeper green fixes contrast (~4.8:1) and
+     renders the text crisp. In dark mode the accent is a bright mint, so white would
+     be even worse there → keep the bright fill but flip to near-black text. */
+  --accent-solid: #0b8348; --accent-solid-hover: #0a7540; --on-accent: #ffffff;
   --toggle-off: #d4d8dd; --toggle-on: #12b76a; --toggle-thumb: #ffffff;
   --warn-bg: #fdf4e3; --warn-border: #b7791f; --warn-text: #7a4f08;
   --danger: #dc2626; --success: #12b76a;
@@ -34,6 +40,7 @@
     --text-link: #34d399;
     --nav-active-bg: #1e232b; --nav-active-text: #e6e9ee; --nav-active-bar: #34d399;
     --accent: #34d399; --accent-hover: #5ee0b0; --accent-light: #173a30;
+    --accent-solid: #34d399; --accent-solid-hover: #5ee0b0; --on-accent: #05271c;
     --toggle-off: #353b45; --toggle-on: #34d399;
     --warn-bg: #3a2e10; --warn-border: #f5a524; --warn-text: #f5c97a;
     --danger: #f87171; --success: #34d399;

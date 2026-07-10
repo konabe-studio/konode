@@ -763,7 +763,7 @@ const S: Record<string, React.CSSProperties> = {
   btnPrimary: {
     display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
     width: "100%", height: 44, padding: "0 20px", borderRadius: 14, border: "none",
-    background: "var(--accent)", color: "white",
+    background: "var(--accent-solid)", color: "var(--on-accent)",
     fontSize: 14, fontWeight: 600, cursor: "pointer",
     fontFamily: "inherit", transition: "background .15s, box-shadow .15s",
     boxShadow: "0 1px 2px rgba(18,183,106,.30)",
