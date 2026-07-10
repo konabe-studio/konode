@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Konode — browser sync to storage you own</title>
+  <meta name="description" content="Sync bookmarks, tabs, history & extensions to storage you own — Google Drive, GitHub, or WebDAV. No servers, no tracking. Optional end-to-end encryption. Open source." />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon128.png" />
+  <link rel="stylesheet" href="style.css" />
+  <meta property="og:title" content="Konode — browser sync to storage you own" />
+  <meta property="og:description" content="Sync bookmarks, tabs, history & extensions to your own Google Drive, GitHub, or WebDAV. No servers, no tracking." />
+  <meta property="og:type" content="website" />
+</head>
+<body>
+  <header class="site">
+    <div class="wrap">
+      <a class="brand" href="/"><img src="icon.svg" alt="" /> Konode</a>
+      <nav class="nav">
+        <a href="#sync">Sync</a>
+        <a href="#storage">Storage</a>
+        <a href="#privacy">Privacy</a>
+        <a href="https://github.com/benstone326/Konode">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" style="border-top:none">
+      <div class="wrap">
+        <img class="mark" src="icon.svg" alt="Konode" />
+        <h1>Your browser, everywhere —<br />on storage you own.</h1>
+        <p class="lead">
+          Konode keeps your bookmarks, tabs, history, and installed-extension list in
+          sync across your browsers — but your data goes to <strong>your own</strong>
+          Google Drive, GitHub, or WebDAV server. No Konode account, no Konode server,
+          no tracking.
+        </p>
+        <div class="cta">
+          <!-- TODO: swap primary to the Chrome Web Store URL once published -->
+          <a class="btn btn-primary" href="https://github.com/benstone326/Konode">View on GitHub</a>
+          <span class="soon">Chrome Web Store — coming soon</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="sync">
+      <div class="wrap">
+        <h2>Sync what matters</h2>
+        <p class="sub">Turn on only what you want. Nothing is read unless you enable it and grant the matching permission.</p>
+        <div class="grid cols-4">
+          <div class="card"><div class="k"><span class="dot"></span>Bookmarks</div><div class="d">Two-way, folders preserved, deletions that actually propagate — no resurrecting old bookmarks.</div></div>
+          <div class="card"><div class="k"><span class="dot"></span>Tabs &amp; sessions</div><div class="d">Restore another device's open tabs on demand.</div></div>
+          <div class="card"><div class="k"><span class="dot"></span>History</div><div class="d">A synced, de-duplicated browsing-history list.</div></div>
+          <div class="card"><div class="k"><span class="dot"></span>Extensions</div><div class="d">See which extensions are missing on a device, with install links.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="storage">
+      <div class="wrap">
+        <h2>Storage you control</h2>
+        <p class="sub">Pick one backend and sign in with your own account. Your data is written straight from your browser to it.</p>
+        <div class="grid cols-3">
+          <div class="card"><div class="k">Google Drive</div><div class="d">Sign in once. Konode only ever touches the files it creates (the <code>drive.file</code> scope) — never the rest of your Drive.</div></div>
+          <div class="card"><div class="k">GitHub</div><div class="d">A fine-grained token scoped to a single private repository.</div></div>
+          <div class="card"><div class="k">WebDAV</div><div class="d">Nextcloud, ownCloud, pCloud, Synology, kDrive — any WebDAV server.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="privacy">
+      <div class="wrap">
+        <h2>Private by design</h2>
+        <p class="sub">The whole point: Konode is the pipe, not the destination.</p>
+        <div class="grid cols-2">
+          <div class="card"><div class="k"><span class="dot"></span>No server, no database</div><div class="d">Konode runs no infrastructure. Your data goes only to the storage you chose — we never receive it.</div></div>
+          <div class="card"><div class="k"><span class="dot"></span>No tracking, no ads</div><div class="d">No analytics, no telemetry, no fingerprinting. Ever.</div></div>
+          <div class="card"><div class="k"><span class="dot"></span>Optional end-to-end encryption</div><div class="d">AES-256-GCM: encrypt everything before it leaves your browser, so even your storage provider can't read it.</div></div>
+          <div class="card"><div class="k"><span class="dot"></span>Open source</div><div class="d">The code is public and auditable. Credentials stay on your device; delete your data any time, straight from your provider.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap" style="text-align:center">
+        <h2>Works on any Chromium browser</h2>
+        <p class="sub">Chrome, Brave, ungoogled-chromium, Helium and more. Firefox is on the way.</p>
+        <div class="cta" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+          <a class="btn btn-primary" href="https://github.com/benstone326/Konode">View on GitHub</a>
+          <a class="btn btn-ghost" href="privacy.html">Privacy policy</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site">
+    <div class="wrap">
+      <div>© <span id="y">2026</span> Konode · an open-source project by Kōnabe Studio</div>
+      <div class="links">
+        <a href="https://github.com/benstone326/Konode">GitHub</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="https://github.com/benstone326/Konode/blob/main/LICENSE">License</a>
+      </div>
+    </div>
+  </footer>
+  <script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>
