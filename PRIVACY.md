@@ -1,4 +1,4 @@
-# Synkro — Privacy Policy
+# Konode — Privacy Policy
 
 _Last updated: [EFFECTIVE DATE — e.g. June 23, 2026]_
 
@@ -8,25 +8,25 @@ _Last updated: [EFFECTIVE DATE — e.g. June 23, 2026]_
 
 ## The short version
 
-Synkro is a browser extension that syncs your own browser data to storage **you
+Konode is a browser extension that syncs your own browser data to storage **you
 control**. We do not run any servers, we do not have a database, and we never
 receive your data. Everything you sync goes directly from your browser to the
 storage backend **you** choose and sign in to (Google Drive, GitHub, or a WebDAV
 server). We don't track you, show ads, or use analytics.
 
-In plain terms: **your data stays yours.** Synkro is the pipe, not the destination.
+In plain terms: **your data stays yours.** Konode is the pipe, not the destination.
 
 ## Who this policy covers
 
-This policy applies to the **Synkro** browser extension ("Synkro", "we", "us"),
+This policy applies to the **Konode** browser extension ("Konode", "we", "us"),
 published by **[PUBLISHER NAME — e.g. Kōnabe Studio]**. It explains what data the
 extension touches, where that data goes, and what we do — and don't do — with it.
 
-## What data Synkro accesses
+## What data Konode accesses
 
-Synkro only accesses the data types **you turn on**. Nothing is read or synced
+Konode only accesses the data types **you turn on**. Nothing is read or synced
 unless you enable it and grant the matching browser permission. Depending on your
-choices, Synkro may read:
+choices, Konode may read:
 
 - **Bookmarks** — your bookmark tree (folders, titles, URLs), so it can be synced.
 - **Browsing history** — visited URLs and titles, if you enable history sync.
@@ -34,21 +34,21 @@ choices, Synkro may read:
   session sync.
 - **Installed-extension list** — the names, IDs, versions, and store links of your
   installed extensions, if you enable extension-list sync (this surfaces which
-  extensions are "missing on this device"). Synkro **cannot install or remove**
+  extensions are "missing on this device"). Konode **cannot install or remove**
   extensions; it can enable or disable an already-installed extension only when you
   click to do so from its popup.
 
-Synkro reads this data **only to sync it to the storage backend you selected.** It
+Konode reads this data **only to sync it to the storage backend you selected.** It
 is not used for any other purpose.
 
 The browser permissions for the more sensitive types — **history**, **open tabs**,
 and the **extension list** — are **requested when you turn that type on**, not at
-install time. If you never enable them, Synkro never holds those permissions and
+install time. If you never enable them, Konode never holds those permissions and
 never reads that data.
 
 ## Where your data goes
 
-When you set up Synkro, you choose **one** storage backend and sign in to it with
+When you set up Konode, you choose **one** storage backend and sign in to it with
 your own account:
 
 - **Google Drive** (via Google sign-in),
@@ -56,13 +56,13 @@ your own account:
 - a **WebDAV server** (your own, or a provider you use).
 
 Your synced data is written **directly from your browser to that backend, under your
-own account.** Synkro operates **no servers of its own** and therefore never
+own account.** Konode operates **no servers of its own** and therefore never
 receives, stores, processes, or has access to your synced data. We cannot see your
 bookmarks, history, tabs, or extension list.
 
 Each backend is operated by a third party (Google, GitHub, or your WebDAV provider).
 Once your data is stored there, it is also subject to **that provider's** privacy
-policy and terms. Synkro is not affiliated with these providers.
+policy and terms. Konode is not affiliated with these providers.
 
 ## Your credentials
 
@@ -88,31 +88,31 @@ against an attacker who already controls your device.
 
 ## Optional end-to-end encryption
 
-Synkro offers **optional** end-to-end encryption (AES-256-GCM, with a key derived
+Konode offers **optional** end-to-end encryption (AES-256-GCM, with a key derived
 from a passphrase you set). During setup you make an **explicit choice** whether to
 turn it on — it is **off by default**, but nothing is uploaded until you have
 consciously decided. When you enable it, your synced data is encrypted on your
 device **before** it is uploaded, so the contents are unreadable to the storage
 provider and to anyone who obtains the stored files. You hold the passphrase; if you
 lose it, the encrypted data cannot be recovered, and every device must use the same
-passphrase (Synkro warns you on a mismatch rather than silently failing).
+passphrase (Konode warns you on a mismatch rather than silently failing).
 
 If you choose **not** to encrypt, your synced data (bookmarks, and any of history,
 open tabs, or the extension list you enable) is stored on your chosen backend in
 readable form. Choose encryption if your storage might be seen by anyone but you.
 
 Even with encryption on, a small amount of **metadata** in each sync file is not
-encrypted: the storage provider can see that Synkro sync files exist, roughly how
+encrypted: the storage provider can see that Konode sync files exist, roughly how
 many devices you sync (each has a random identifier), which data type each file
 holds, and when it was last written — but **not its contents**.
 
 ## Google API services (Limited Use)
 
-When you choose Google Drive, Synkro uses the **`drive.file`** scope, which grants
-access **only to the files Synkro itself creates** in your Drive — it cannot see or
+When you choose Google Drive, Konode uses the **`drive.file`** scope, which grants
+access **only to the files Konode itself creates** in your Drive — it cannot see or
 touch any of your other Drive files.
 
-Synkro's use and transfer of information received from Google APIs adheres to the
+Konode's use and transfer of information received from Google APIs adheres to the
 [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy),
 including the **Limited Use** requirements. We use this access solely to read and
 write your sync files at your direction; we do not transfer or sell this data, and we
@@ -127,19 +127,19 @@ do not use it for advertising or any purpose other than providing the sync featu
 
 ## Data retention and deletion
 
-Because Synkro stores nothing on its own infrastructure, **you control retention**:
+Because Konode stores nothing on its own infrastructure, **you control retention**:
 
 - **On your device:** uninstalling the extension removes its local data, including
-  your stored credentials and settings. Synkro also keeps a short **activity log**
+  your stored credentials and settings. Konode also keeps a short **activity log**
   (recent sync events) **on your device only** — it is never uploaded and is cleared
   when you uninstall.
-- **On your backend:** you can delete the files Synkro created (in the `Synkro` /
-  `synkro` folder of your Drive, repository, or WebDAV server) at any time, directly
+- **On your backend:** you can delete the files Konode created (in the `Konode` /
+  `konode` folder of your Drive, repository, or WebDAV server) at any time, directly
   through that provider.
 
 ## Children's privacy
 
-Synkro is a general-purpose utility and is not directed at children. It does not
+Konode is a general-purpose utility and is not directed at children. It does not
 knowingly collect data from children.
 
 ## Your rights (GDPR and similar)
@@ -158,8 +158,8 @@ extension's listing.
 
 ## Contact
 
-Questions about this policy or Synkro's data handling:
+Questions about this policy or Konode's data handling:
 **[CONTACT EMAIL — e.g. hello@konabe.studio]**
 
-_This policy is published at **[PUBLISHED URL]** and linked from the Synkro Chrome
+_This policy is published at **[PUBLISHED URL]** and linked from the Konode Chrome
 Web Store listing and the Google OAuth consent screen._

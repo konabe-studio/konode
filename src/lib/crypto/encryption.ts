@@ -1,5 +1,5 @@
 /**
- * Synkro Encryption Module
+ * Konode Encryption Module
  * Sprint 2 — End-to-End Encryption via Web Crypto API (AES-256-GCM)
  *
  * Design:
@@ -127,10 +127,10 @@ export async function decrypt(
 /**
  * Creates a verifier string to check if a passphrase is correct
  * without storing the passphrase itself. Store this alongside encrypted data.
- * Format: base64(salt + encrypt("synkro-verify", passphrase))
+ * Format: base64(salt + encrypt("konode-verify", passphrase))
  */
 export async function createKeyVerifier(passphrase: string): Promise<string> {
-  return encrypt("synkro-verify-v1", passphrase);
+  return encrypt("konode-verify-v1", passphrase);
 }
 
 export async function verifyPassphrase(
@@ -139,7 +139,7 @@ export async function verifyPassphrase(
 ): Promise<boolean> {
   try {
     const result = await decrypt(verifier, passphrase);
-    return result === "synkro-verify-v1";
+    return result === "konode-verify-v1";
   } catch {
     return false;
   }

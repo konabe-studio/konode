@@ -1,4 +1,4 @@
-// ─── Synkro Service Worker (MV3) ─────────────────────────────────────────
+// ─── Konode Service Worker (MV3) ─────────────────────────────────────────
 // Handles: alarm-based polling, bookmark/tab listeners, message routing
 
 import type { ExtensionMessage, ExtensionResponse } from "@/lib/types";
@@ -85,11 +85,11 @@ function updateBadge(status: string): void {
 // ─── Alarm ───────────────────────────────────────────────────────────────
 
 async function setupSyncAlarm(intervalSeconds: number): Promise<void> {
-  await chrome.alarms.clear("synkro-sync");
+  await chrome.alarms.clear("konode-sync");
   // 0.5 min (30s) is Chrome's hard floor for background alarms — independent of
   // the storage backend (Drive/GitHub/WebDAV are all poll-only, no push), so the
   // receiving side can't pull faster than this regardless of what's configured.
-  chrome.alarms.create("synkro-sync", {
+  chrome.alarms.create("konode-sync", {
     periodInMinutes: Math.max(0.5, intervalSeconds / 60),
   });
 }
@@ -99,7 +99,7 @@ async function setupSyncAlarm(intervalSeconds: number): Promise<void> {
 function onBookmarkChange(): void {
   // Backstop: a one-shot alarm survives SW suspension (Chrome floors it at ~30s),
   // so a change is never lost even if the fast path below doesn't get to run.
-  chrome.alarms.create("synkro-bookmark-sync", { delayInMinutes: 0.5 });
+  chrome.alarms.create("konode-bookmark-sync", { delayInMinutes: 0.5 });
 
   // Fast path: the worker is awake right now (the event just fired), so sync
   // almost immediately. A short debounce coalesces bursts (e.g. deleting a
@@ -117,7 +117,7 @@ function onBookmarkChange(): void {
       !syncEngine.isSyncing
     ) {
       // We're handling it now — drop the backstop so it doesn't double-sync.
-      await chrome.alarms.clear("synkro-bookmark-sync");
+      await chrome.alarms.clear("konode-bookmark-sync");
       await syncEngine.sync(["bookmarks"]);
     }
     // If a sync is already running, leave the alarm to pick this change up next.
@@ -176,7 +176,7 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
         if (updated.auto_sync) {
           await setupSyncAlarm(updated.sync_interval_seconds);
         } else {
-          await chrome.alarms.clear("synkro-sync");
+          await chrome.alarms.clear("konode-sync");
         }
       }
 
@@ -232,10 +232,10 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   await ensureInit();
   if (!syncEngine) return;
-  if (alarm.name === "synkro-sync") {
+  if (alarm.name === "konode-sync") {
     logger.info("Alarm", "Periodic sync triggered");
     await syncEngine.sync();
-  } else if (alarm.name === "synkro-bookmark-sync") {
+  } else if (alarm.name === "konode-bookmark-sync") {
     const settings = await getSettings();
     if (
       settings.sync_on_change &&

@@ -203,7 +203,7 @@ export default function PopupApp() {
         <div className="flex items-center gap-2.5">
           <span className="relative flex h-2 w-2 items-center justify-center">
             {pulsing && (
-              <span className={`absolute h-2 w-2 rounded-full border-[1.5px] ${statusCfg.ring} animate-synkro-pulse`} />
+              <span className={`absolute h-2 w-2 rounded-full border-[1.5px] ${statusCfg.ring} animate-konode-pulse`} />
             )}
             <span className={`h-2 w-2 rounded-full ${statusCfg.dot}`} />
           </span>
@@ -229,7 +229,7 @@ export default function PopupApp() {
               onClick={load}
               className="flex w-full items-center justify-center gap-2 rounded-box border border-sk-hairline bg-sk-raised px-3 py-2 text-[12px] text-sk-danger transition-colors hover:bg-sk-tint"
             >
-              <AlertCircle size={12} /> Couldn't reach Synkro — tap to retry
+              <AlertCircle size={12} /> Couldn't reach Konode — tap to retry
             </button>
           )}
 

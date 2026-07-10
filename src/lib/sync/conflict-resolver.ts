@@ -106,8 +106,8 @@ export function notifyConflict(dataType: DataType): void {
   chrome.notifications.create(`conflict-${Date.now()}`, {
     type: "basic",
     iconUrl: "icons/icon48.png",
-    title: "Synkro: Sync Conflict",
-    message: `A conflict was detected in ${dataType}. Open Synkro to resolve it.`,
+    title: "Konode: Sync Conflict",
+    message: `A conflict was detected in ${dataType}. Open Konode to resolve it.`,
     priority: 1,
   });
 }

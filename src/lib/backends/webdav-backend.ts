@@ -22,7 +22,7 @@ export class WebDAVBackend implements IBackend {
   }
 
   private get baseUrl(): string {
-    return this.w.url.replace(/\/$/, "") + "/" + (this.w.path ?? "synkro").replace(/^\//, "");
+    return this.w.url.replace(/\/$/, "") + "/" + (this.w.path ?? "konode").replace(/^\//, "");
   }
 
   private headers(): HeadersInit {
@@ -58,7 +58,7 @@ export class WebDAVBackend implements IBackend {
 
   async upload(packet: SyncPacket): Promise<void> {
     await withRetry(async () => {
-      const filename = `${this.baseUrl}/synkro_${packet.data_type}_${packet.device_id}.json`;
+      const filename = `${this.baseUrl}/konode_${packet.data_type}_${packet.device_id}.json`;
       const res = await fetch(filename, {
         method: "PUT",
         headers: this.headers(),
@@ -89,7 +89,7 @@ export class WebDAVBackend implements IBackend {
       const xml = await res.text();
       // Extract hrefs from PROPFIND response. Match any namespace prefix
       // (d:href, D:href, lp1:href, or bare href) — servers differ.
-      const own = excludeDeviceId ? `synkro_${data_type}_${excludeDeviceId}.json` : null;
+      const own = excludeDeviceId ? `konode_${data_type}_${excludeDeviceId}.json` : null;
       // Compare the DECODED basename exactly — hrefs can be percent-encoded and an
       // `endsWith(own)` substring check could both miss our own file and wrongly
       // exclude a peer whose name ends with the same suffix.
@@ -101,7 +101,7 @@ export class WebDAVBackend implements IBackend {
         .map(m => m[1])
         .filter(h => {
           const name = basename(h);
-          return name.startsWith(`synkro_${data_type}_`) && name.endsWith(".json") && name !== own;
+          return name.startsWith(`konode_${data_type}_`) && name.endsWith(".json") && name !== own;
         });
 
       const packets: SyncPacket[] = [];

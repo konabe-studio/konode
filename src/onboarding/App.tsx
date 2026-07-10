@@ -7,7 +7,7 @@ import {
   Clock, Puzzle, Globe, CheckCircle2, ArrowRight,
   Loader2, XCircle, Eye, EyeOff, Lock, Key, Copy, Check,
 } from "lucide-react";
-// Synkro brand mark — the peer-mesh triangle (3 linked nodes, no center = no server).
+// Konode brand mark — the peer-mesh triangle (3 linked nodes, no center = no server).
 // Just the glyph; the container supplies the green tile.
 function MeshMark({ size = 14, color = "currentColor" }: { size?: number; color?: string }) {
   return (
@@ -175,7 +175,7 @@ export default function OnboardingApp() {
         granted = false;
       }
       if (!granted) {
-        setSetupError("Synkro needs permission to reach your WebDAV server. Please allow it to continue.");
+        setSetupError("Konode needs permission to reach your WebDAV server. Please allow it to continue.");
         return;
       }
     }
@@ -308,7 +308,7 @@ export default function OnboardingApp() {
           <div style={S.logoWrap}>
             <MeshMark size={32} color="white" />
           </div>
-          <h1 style={S.h1}>Welcome to Synkro</h1>
+          <h1 style={S.h1}>Welcome to Konode</h1>
           <p style={S.subtitle}>
             Privacy-first browser sync. Your bookmarks, sessions, and extensions — synced to your own storage. No middlemen.
           </p>
@@ -335,7 +335,7 @@ export default function OnboardingApp() {
       {step === "backend" && (
         <div style={S.card}>
           <h1 style={S.h1}>Choose your storage</h1>
-          <p style={S.subtitle}>Where should Synkro store your data?</p>
+          <p style={S.subtitle}>Where should Konode store your data?</p>
 
           <div style={S.backendList}>
             {/* Google Drive */}
@@ -460,7 +460,7 @@ export default function OnboardingApp() {
                     </div>
                   )}
                   <input style={{ ...S.input, fontFamily: "monospace" }}
-                    placeholder="username/synkro-sync"
+                    placeholder="username/konode-sync"
                     value={githubRepo} onChange={(e) => setGithubRepo(e.target.value)} />
                   <a
                     href="https://github.com/settings/personal-access-tokens/new"
@@ -546,7 +546,7 @@ export default function OnboardingApp() {
         <div style={S.card}>
           <h1 style={S.h1}>Encrypt your data?</h1>
           <p style={S.subtitle}>
-            Your choice — Synkro works either way. Encryption scrambles everything on this device
+            Your choice — Konode works either way. Encryption scrambles everything on this device
             before it's uploaded, so your storage provider can never read it.
           </p>
 
@@ -657,8 +657,8 @@ export default function OnboardingApp() {
           <h1 style={S.h1}>{syncError ? "Couldn't finish the first sync" : "Syncing your data…"}</h1>
           <p style={S.subtitle}>
             {syncError
-              ? "Your settings are saved. Open Settings to fix this, or finish and let Synkro retry in the background."
-              : "Synkro is running its first sync. This also runs in the background — you don't have to wait here."}
+              ? "Your settings are saved. Open Settings to fix this, or finish and let Konode retry in the background."
+              : "Konode is running its first sync. This also runs in the background — you don't have to wait here."}
           </p>
 
           <div style={S.dataList}>
@@ -716,7 +716,7 @@ export default function OnboardingApp() {
           <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
           <h1 style={S.h1}>You're all set!</h1>
           <p style={S.subtitle}>
-            Synkro is now syncing your browser data to{" "}
+            Konode is now syncing your browser data to{" "}
             <strong>{backend === "gdrive" ? "Google Drive" : backend === "github" ? "GitHub" : "WebDAV"}</strong>.
             The first sync is running in the background.
           </p>

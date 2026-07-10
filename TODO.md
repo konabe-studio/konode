@@ -1,4 +1,4 @@
-# Synkro — TODO & Roadmap
+# Konode — TODO & Roadmap
 
 > Last updated: 2026-06-19
 
@@ -37,10 +37,10 @@
       converge in one cycle. Per-strategy deletion handling lives in the bookmark
       merge. (Cost scales with device count — N peer fetches per data type/sync.)
 - [x] **Session manager UI** — popup lists each peer device's session (name, tab
-      count, last-synced) with a per-device Restore button. `synkro_remote_sessions`
+      count, last-synced) with a per-device Restore button. `konode_remote_sessions`
       is now a device-keyed map, so every peer's session survives (sessions now
       aggregate across all peers, not newest-peer-wins).
-- [x] Aggregate **extensions** across *all* peers — `synkro_remote_extensions` is a
+- [x] Aggregate **extensions** across *all* peers — `konode_remote_extensions` is a
       device-keyed map; the popup unions every peer's list (deduped by id). All four
       data types now merge across all peers.
 - [ ] Backend "newest version" selection on GitHub/WebDAV (needs commit/mtime, not list order)
@@ -125,7 +125,7 @@ addressed earlier (`f3998f1`/`af174ce`) and are now checked off. `[x]` = done.
 - [x] **Manual "keep local" conflict never converges** — re-queued + re-notified
       every sync cycle forever (a resolution wasn't sticky; a resolve doesn't rewrite
       the peer's file, so it kept diverging). Fixed: `resolveConflict` records the peer
-      CHECKSUM it resolved against (`synkro_resolved_conflicts`, keyed
+      CHECKSUM it resolved against (`konode_resolved_conflicts`, keyed
       `data_type:device_id`); the manual queue loop skips a peer still matching that
       checksum. A genuine later change on the peer → new checksum → fresh conflict.
       Covers keep-local AND keep-remote. (medium)
@@ -173,7 +173,7 @@ addressed earlier (`f3998f1`/`af174ce`) and are now checked off. `[x]` = done.
 - [x] **Test GitHub sync end-to-end** (fine-grained PAT) — two-way sync verified
       (fixed a repo-URL parse + a stale-SHA 409 along the way)
 - [x] **Test WebDAV sync end-to-end** (basic auth) — verified on pCloud (free tier):
-      `synkro/` folder + files appear, two-way sync works
+      `konode/` folder + files appear, two-way sync works
 - [~] **Privacy policy** — first draft written (`PRIVACY.md`); fill the
       `[BRACKETED]` placeholders (publisher, contact email, date), have it reviewed,
       then host it at a public URL (e.g. GitHub Pages or the studio site)

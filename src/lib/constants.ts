@@ -15,7 +15,7 @@ export const CWS_DETAIL_BASE = "https://chrome.google.com/webstore/detail/";
 
 /** Toolbar badge color per sync status. The service worker can't read the UI's
  *  CSS custom properties, so the palette is mirrored here as plain values.
- *  `success` is the Synkro signal green (kept in sync with the UI accent). */
+ *  `success` is the Konode signal green (kept in sync with the UI accent). */
 export const BADGE_COLORS: Record<SyncStatus, string> = {
   idle: "#71717a",
   syncing: "#fbbf24",

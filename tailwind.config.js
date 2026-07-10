@@ -29,7 +29,7 @@ export default {
           muted: "#a1a1aa",
           subtle: "#71717a",
         },
-        // Synkro design-system tokens (popup). Map to CSS vars in index.css that
+        // Konode design-system tokens (popup). Map to CSS vars in index.css that
         // flip on prefers-color-scheme. Prefixed `sk-` so they don't clash with the
         // existing dark tokens above (which options/onboarding still use).
         sk: {
@@ -64,7 +64,7 @@ export default {
         "spin-slow": "spin 3s linear infinite",
         "fade-in": "fadeIn 0.3s ease forwards",
         "slide-up": "slideUp 0.3s ease forwards",
-        "synkro-pulse": "synkro-pulse 2s ease-out infinite",
+        "konode-pulse": "konode-pulse 2s ease-out infinite",
       },
       keyframes: {
         fadeIn: {
@@ -75,7 +75,7 @@ export default {
           "0%": { opacity: "0", transform: "translateY(6px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
-        "synkro-pulse": {
+        "konode-pulse": {
           "0%": { transform: "scale(1)", opacity: "0.45" },
           "70%,100%": { transform: "scale(3.2)", opacity: "0" },
         },

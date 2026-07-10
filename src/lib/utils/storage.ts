@@ -68,23 +68,23 @@ export const DEFAULT_STATE: SyncState = {
 // ─── Keys ──────────────────────────────────────────────────────────────────
 
 // The single source of truth for every chrome.storage.local key. Exported so the
-// UI reads/writes go through KEYS.* instead of re-typing raw "synkro_*" strings
+// UI reads/writes go through KEYS.* instead of re-typing raw "konode_*" strings
 // (a mistyped/legacy literal is what left the options "missing extensions" list
 // silently empty).
 export const KEYS = {
-  SETTINGS: "synkro_settings",
-  STATE: "synkro_state",
-  AUDIT_LOG: "synkro_audit",
-  BOOKMARK_CACHE: "synkro_bm_cache",
-  BOOKMARK_TOMBSTONES: "synkro_bm_tombstones",
-  BOOKMARK_MOVES: "synkro_bm_moves",
-  HIST_IMPORTED: "synkro_hist_imported",
-  REMOTE_SESSIONS: "synkro_remote_sessions",
-  REMOTE_EXTENSIONS: "synkro_remote_extensions",
-  UPLOAD_CHECKSUMS: "synkro_upload_checksums",
-  RESOLVED_CONFLICTS: "synkro_resolved_conflicts",
-  SYNC_LOCK: "synkro_sync_lock",
-  GDRIVE_SESSION: "synkro_gdrive_session",
+  SETTINGS: "konode_settings",
+  STATE: "konode_state",
+  AUDIT_LOG: "konode_audit",
+  BOOKMARK_CACHE: "konode_bm_cache",
+  BOOKMARK_TOMBSTONES: "konode_bm_tombstones",
+  BOOKMARK_MOVES: "konode_bm_moves",
+  HIST_IMPORTED: "konode_hist_imported",
+  REMOTE_SESSIONS: "konode_remote_sessions",
+  REMOTE_EXTENSIONS: "konode_remote_extensions",
+  UPLOAD_CHECKSUMS: "konode_upload_checksums",
+  RESOLVED_CONFLICTS: "konode_resolved_conflicts",
+  SYNC_LOCK: "konode_sync_lock",
+  GDRIVE_SESSION: "konode_gdrive_session",
 } as const;
 
 // ─── Generic Helpers ───────────────────────────────────────────────────────
@@ -215,7 +215,7 @@ export async function releaseSyncLock(): Promise<void> {
 // ─── Remote sessions (one per peer device) ──────────────────────────────────
 
 /**
- * Normalizes the `synkro_remote_sessions` value into an array, newest first.
+ * Normalizes the `konode_remote_sessions` value into an array, newest first.
  * Accepts the current device-keyed map, the legacy single-object shape, and
  * empty/undefined. Pure so the popup can use it synchronously after a
  * `chrome.storage.local.get` callback.
@@ -251,7 +251,7 @@ export async function setRemoteSession(entry: RemoteSessionEntry): Promise<void>
 // ─── Remote extensions (aggregated across all peers) ────────────────────────
 
 /**
- * Normalizes the `synkro_remote_extensions` value into a **deduped union** of every
+ * Normalizes the `konode_remote_extensions` value into a **deduped union** of every
  * peer device's installed-extension list (first occurrence per id wins). Accepts the
  * current device-keyed map, the legacy single-object shape, and empty/undefined.
  * Pure so the popup can use it synchronously after a `chrome.storage.local.get`.

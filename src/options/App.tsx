@@ -8,7 +8,7 @@ import {
   Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
   Sliders, Shield, Save, Pencil, Key, Copy, Check,
 } from "lucide-react";
-// Synkro brand mark — the peer-mesh triangle (3 linked nodes, no center = no server).
+// Konode brand mark — the peer-mesh triangle (3 linked nodes, no center = no server).
 // Just the glyph; the container supplies the green tile.
 function MeshMark({ size = 14, color = "currentColor" }: { size?: number; color?: string }) {
   return (
@@ -388,7 +388,7 @@ export default function OptionsApp() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `synkro-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `konode-backup-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -410,7 +410,7 @@ export default function OptionsApp() {
       // Support both old format (bundle.bookmarks) and new (bundle.data.bookmarks)
       const data = bundle.data ?? bundle;
 
-      if (!bundle.version) throw new Error("Invalid Synkro backup file");
+      if (!bundle.version) throw new Error("Invalid Konode backup file");
 
       let imported = 0;
 
@@ -422,7 +422,7 @@ export default function OptionsApp() {
         if (other) {
           const importFolder = await chrome.bookmarks.create({
             parentId: other.id,
-            title: `Synkro Import ${new Date().toLocaleDateString()}`,
+            title: `Konode Import ${new Date().toLocaleDateString()}`,
           });
 
           const walk = async (nodes: chrome.bookmarks.BookmarkTreeNode[], parentId: string) => {
@@ -506,7 +506,7 @@ export default function OptionsApp() {
         <div className="topbar-inner">
           <div className="topbar-brand">
             <div className="topbar-logo"><MeshMark size={14} /></div>
-            <span className="topbar-title">Synkro</span>
+            <span className="topbar-title">Konode</span>
           </div>
           <nav className="tabbar">
             {NAV.map(({ id, label, icon: Icon }) => (
@@ -595,7 +595,7 @@ export default function OptionsApp() {
                                 {gdriveConnecting ? "Connecting…" : "Sign in with Google"}
                               </button>
                               {gdriveError && <div className="error-row"><XCircle size={12} /> {gdriveError}</div>}
-                              <p className="config-hint">Only <code>drive.file</code> scope — Synkro can only access files it creates.</p>
+                              <p className="config-hint">Only <code>drive.file</code> scope — Konode can only access files it creates.</p>
                             </div>
                           )}
                           {gdriveUser && (
@@ -605,7 +605,7 @@ export default function OptionsApp() {
                                 className="field-input"
                                 value={getBackend("gdrive")?.gdrive?.folderId ?? ""}
                                 onChange={(e) => updateBackend("gdrive", { gdrive: { folderId: e.target.value } })}
-                                placeholder="Leave blank — auto-creates a 'Synkro' folder"
+                                placeholder="Leave blank — auto-creates a 'Konode' folder"
                               />
                             </div>
                           )}
@@ -974,10 +974,10 @@ export default function OptionsApp() {
                       <div className="row-label">Import backup</div>
                       <div className="row-desc">
                         {importStatus === "ok"
-                          ? `✓ Imported ${importCount} bookmarks into "Synkro Import" folder.`
+                          ? `✓ Imported ${importCount} bookmarks into "Konode Import" folder.`
                           : importStatus === "error"
                           ? "Invalid or unsupported file format."
-                          : "Restore from a Synkro JSON backup. Bookmarks added to a new folder."}
+                          : "Restore from a Konode JSON backup. Bookmarks added to a new folder."}
                       </div>
                     </div>
                   </div>
@@ -1150,7 +1150,7 @@ export default function OptionsApp() {
                   <div className="settings-row-left">
                     <div><div className="row-label">Source code</div><div className="row-desc">No telemetry. No external servers.</div></div>
                   </div>
-                  <a href="https://github.com/benstone326/Synkro" target="_blank" rel="noreferrer" className="link-external">
+                  <a href="https://github.com/benstone326/Konode" target="_blank" rel="noreferrer" className="link-external">
                     <Github size={12} /> GitHub <ExternalLink size={10} />
                   </a>
                 </div>

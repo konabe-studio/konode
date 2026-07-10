@@ -11,9 +11,9 @@ import {
 describe("encryption", () => {
   it("round-trips a plaintext payload", async () => {
     const pass = "correct horse battery staple";
-    const enc = await encrypt("hello synkro", pass);
+    const enc = await encrypt("hello konode", pass);
     expect(enc).not.toContain("hello"); // ciphertext, not plaintext
-    expect(await decrypt(enc, pass)).toBe("hello synkro");
+    expect(await decrypt(enc, pass)).toBe("hello konode");
   });
 
   it("fails to decrypt with the wrong passphrase", async () => {

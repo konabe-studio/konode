@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Synkro. Format loosely follows
+All notable changes to Konode. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); the project is pre-1.0.
 
 ## [Unreleased] — 0.1.0
@@ -25,10 +25,10 @@ The first working build, hardened over a review + fix pass. Highlights:
 - **Session-manager UI** — the popup now lists the open-tab session of **each** peer
   device (name, tab count, last-synced time) with a per-device Restore button,
   instead of a single "Restore tabs from another device" button. Remote sessions are
-  stored device-keyed (`synkro_remote_sessions` is now a map), so every peer's
+  stored device-keyed (`konode_remote_sessions` is now a map), so every peer's
   session survives instead of only the newest. Sessions carry the device label so
   the list is human-readable.
-- **Cross-peer extension aggregation** — `synkro_remote_extensions` is now device-keyed
+- **Cross-peer extension aggregation** — `konode_remote_extensions` is now device-keyed
   too; the popup unions every peer's installed-extension list (deduped by id), so
   "missing on this device" reflects extensions installed on **any** other device, not
   just the most recently synced one.
@@ -99,7 +99,7 @@ The first working build, hardened over a review + fix pass. Highlights:
 ### Fixed
 - **Bookmark moves now propagate.** The URL-keyed merge ignored a bookmark's
   folder, so moving one between folders didn't sync. Added a per-URL move log
-  (`synkro_bm_moves`, recorded on `onMoved`) carried in the payload; the merge
+  (`konode_bm_moves`, recorded on `onMoved`) carried in the payload; the merge
   relocates a locally-present bookmark to the peer's folder with last-write-wins
   (prefer-local keeps local placement; prefer-remote always adopts the peer's).
   The merge also passes the **position/index** from the peer's tree to

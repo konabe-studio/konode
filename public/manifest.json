@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Synkro",
+  "name": "Konode",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAot/n/1Oj+Rz2Zr+ZJaaC7Gp7AsmWzrDA2n7e+1ha8iuMjTQQfSyBAE7p9plx8I/+/uqnqfIT7bQg3V1chIaOAAzgmCI8CWbaC7yG+xKTZgreu4Fo1sv+qoPls4Wgvstpggv+6YartZk1YxU1VVQsUasWUTe8aGeEO7vLGi+OXJKl80GykFxOQ+uZPtoOYWTUJgtkSreVa/CZBOx1tW+3+Oy0IHO/9ajim0eXme9X7Whg/raER+RqOMBLkE0uS2cdSi9h0ikWD9W8SUKwd1/TUFSL7SnSOile9JLAYJStWWQA228dOu869dwWWpcE5I/Xw9TJIJ3YIlrB4GtaZTZPAwIDAQAB",
   "version": "0.1.0",
   "description": "Privacy-first browser sync to your own storage \u2014 Google Drive, WebDAV, GitHub.",

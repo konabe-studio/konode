@@ -1,12 +1,12 @@
-# CLAUDE.md — Synkro project guide
+# CLAUDE.md — Konode project guide
 
 Context for any AI/dev session picking up this repo. Read this first, then
 `SESSION_HANDOFF.md` for the live cursor (what's in flight right now).
 
-## What Synkro is
+## What Konode is
 
 A **Manifest V3 Chrome extension** that syncs browser data to **storage the user
-owns** — no Synkro server, no telemetry. Works on any Chromium browser (tested on
+owns** — no Konode server, no telemetry. Works on any Chromium browser (tested on
 Brave and Helium; also Chrome, ungoogled-chromium).
 
 - **Data types:** bookmarks, history, sessions (open tabs), installed-extension list.
@@ -51,8 +51,8 @@ src/
 
 ## Sync model (important)
 
-- **Per device, per data type** a file `synkro_<type>_<device_id>.json` is written
-  to the backend's `Synkro` folder. `device_id` is a random UUID per install.
+- **Per device, per data type** a file `konode_<type>_<device_id>.json` is written
+  to the backend's `Konode` folder. `device_id` is a random UUID per install.
 - **Packet** = `SyncPacket { version, device_id, timestamp, data_type, checksum
   (SHA-256 of plaintext), encrypted, payload, verifier? }`. When E2EE is on, `payload`
   is the base64 `salt+iv+ciphertext`; checksum stays over plaintext so identical content
@@ -121,9 +121,9 @@ src/
 
 ## Storage keys (`chrome.storage.local`)
 
-`synkro_settings`, `synkro_state`, `synkro_audit`, `synkro_bm_cache`,
-`synkro_bm_tombstones`, `synkro_gdrive_session`, `synkro_remote_extensions`,
-`synkro_remote_sessions`. The last two are **device-keyed maps**
+`konode_settings`, `konode_state`, `konode_audit`, `konode_bm_cache`,
+`konode_bm_tombstones`, `konode_gdrive_session`, `konode_remote_extensions`,
+`konode_remote_sessions`. The last two are **device-keyed maps**
 (`{ [device_id]: { device_id, timestamp, session|extensions } }`) — one entry per
 peer device, so the popup can list every peer's session and union every peer's
 extension list. Legacy single-object shape still read by the normalizers.

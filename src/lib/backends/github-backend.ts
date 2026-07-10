@@ -36,7 +36,7 @@ export class GitHubBackend implements IBackend {
   }
 
   private get branch(): string { return this.gh.branch ?? "main"; }
-  private get path(): string { return this.gh.path ?? "synkro"; }
+  private get path(): string { return this.gh.path ?? "konode"; }
   /** `owner/repo`, tolerant of a pasted URL / `.git` suffix / trailing slash. */
   private get repoSlug(): string { return normalizeRepoSlug(this.gh.repo); }
 
@@ -62,7 +62,7 @@ export class GitHubBackend implements IBackend {
     await this.ensureRepoInitialized();
 
     const branch = this.gh.branch ?? "main";
-    const filename = `${this.path}/synkro_${packet.data_type}_${packet.device_id}.json`;
+    const filename = `${this.path}/konode_${packet.data_type}_${packet.device_id}.json`;
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(packet, null, 2))));
 
     await withRetry(
@@ -133,8 +133,8 @@ export class GitHubBackend implements IBackend {
         method: "PUT",
         headers: this.headers(),
         body: JSON.stringify({
-          message: "chore: initialize Synkro sync repository",
-          content: btoa("# Synkro Sync\n\nThis repository is used by the Synkro browser extension to sync browser data.\n"),
+          message: "chore: initialize Konode sync repository",
+          content: btoa("# Konode Sync\n\nThis repository is used by the Konode browser extension to sync browser data.\n"),
           branch: "main",
         }),
       });
@@ -173,9 +173,9 @@ export class GitHubBackend implements IBackend {
       if (res.status === 404) return [];
       if (!res.ok) throw new HttpError(res.status, `GitHub list failed: ${res.status}`);
       const files: Array<{ name: string }> = await res.json();
-      const own = excludeDeviceId ? `synkro_${data_type}_${excludeDeviceId}.json` : null;
+      const own = excludeDeviceId ? `konode_${data_type}_${excludeDeviceId}.json` : null;
       const matches = files.filter(
-        f => f.name.includes(`synkro_${data_type}_`) && f.name.endsWith(".json") && f.name !== own
+        f => f.name.includes(`konode_${data_type}_`) && f.name.endsWith(".json") && f.name !== own
       );
       // Fetch each via the authenticated Contents API (Accept: raw); the public
       // download_url is unauthenticated and 404s/HTMLs on private repos.

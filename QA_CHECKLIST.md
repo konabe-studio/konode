@@ -1,4 +1,4 @@
-# Synkro — manual QA checklist (Sprint E–G)
+# Konode — manual QA checklist (Sprint E–G)
 
 Runtime verification for the audit-fix work (E2EE hardening, backend guards,
 lifecycle, dead-code sweep, token unification). Automated coverage is green

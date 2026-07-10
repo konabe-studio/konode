@@ -101,7 +101,7 @@ async function recordRemovedTombstones(node: chrome.bookmarks.BookmarkTreeNode):
  *  that still holds the old url re-adds it on the next merge — leaving a duplicate
  *  next to the edited bookmark. Record a tombstone for the old url so the edit is
  *  treated as delete(old)+add(new) and the old url is suppressed everywhere.
- *  The old url comes from the last-synced snapshot (synkro_bm_cache), which is
+ *  The old url comes from the last-synced snapshot (konode_bm_cache), which is
  *  exactly what peers still hold. */
 async function recordUrlChange(id: string, newUrl: string | undefined): Promise<void> {
   if (importing || !newUrl) return;

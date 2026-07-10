@@ -1,8 +1,8 @@
-# Synkro
+# Konode
 
 > Privacy-first browser sync to your own storage — no middlemen, no telemetry.
 
-Synkro is a Manifest V3 Chrome extension that syncs your browser data (bookmarks, sessions, history, installed-extension list) to storage you control. Supports **Google Drive**, **GitHub**, and **WebDAV**.
+Konode is a Manifest V3 Chrome extension that syncs your browser data (bookmarks, sessions, history, installed-extension list) to storage you control. Supports **Google Drive**, **GitHub**, and **WebDAV**.
 
 ---
 
@@ -13,7 +13,7 @@ Synkro is a Manifest V3 Chrome extension that syncs your browser data (bookmarks
 - **History** — sync recent history with a configurable day limit *(restore is best-effort: Chrome can't restore original visit times)*
 - **Installed extensions** — sync the list and surface what's missing on each device
 - **Conflict resolution** — Last Write Wins, Prefer Local, Prefer Remote, or Manual (resolve from the popup)
-- **Zero telemetry** — no Synkro server, no analytics; data goes only to the storage you choose
+- **Zero telemetry** — no Konode server, no analytics; data goes only to the storage you choose
 - **E2EE** — optional AES-256-GCM encryption: turn it on in Settings → Advanced and your data is encrypted before it leaves the device
 
 ---
@@ -42,7 +42,7 @@ Synkro is a Manifest V3 Chrome extension that syncs your browser data (bookmarks
 ## Project Structure
 
 ```
-synkro/
+konode/
 ├── manifest.json
 ├── popup.html
 ├── options.html
@@ -140,7 +140,7 @@ All sync data is stored as `SyncPacket` JSON files in your backend:
 }
 ```
 
-Files are named `synkro_{data_type}_{device_id}.json`. When E2EE is enabled,
+Files are named `konode_{data_type}_{device_id}.json`. When E2EE is enabled,
 `encrypted` is `true` and `payload` is the AES-256-GCM blob (salt + IV +
 ciphertext, base64); the `checksum` is still computed over the plaintext so
 identical content matches across devices. The checksum is verified on download
@@ -171,11 +171,11 @@ Chrome extensions **cannot access** the browser's native password store. This is
 
 ## Privacy & Security
 
-- No data is ever sent to Synkro servers (there are none). Your data goes only to the storage backend you configure (Google Drive, GitHub, or your WebDAV server).
+- No data is ever sent to Konode servers (there are none). Your data goes only to the storage backend you configure (Google Drive, GitHub, or your WebDAV server).
 - **Optional E2EE**: enable it in Settings → Advanced to encrypt every payload (AES-256-GCM, PBKDF2-SHA256) before it leaves the device. Without it, data is stored as plaintext on your chosen backend.
 - The synced data includes your **installed-extension list** (used to flag missing extensions on other devices).
 - Credentials (Drive access token, GitHub token, WebDAV password) and your E2EE passphrase are stored in `chrome.storage.local` on this device only. They are never uploaded. Note `chrome.storage.local` is not encrypted at rest — prefer a fine-grained GitHub token (single repo) and a WebDAV app password.
-- Google Drive OAuth is scoped to `drive.file` (only files Synkro creates).
+- Google Drive OAuth is scoped to `drive.file` (only files Konode creates).
 - `history`, `tabs`, and `management` are requested as **optional permissions**, only when you enable those data types.
 - Audit log stored locally, last 200 entries. Rate limiting + exponential backoff (transient errors only) on all backend calls.
 

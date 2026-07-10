@@ -1,21 +1,21 @@
-# BRAND.md — Synkro brand system
+# BRAND.md — Konode brand system
 
-The single source for how Synkro looks and sounds. The functional UI already uses
+The single source for how Konode looks and sounds. The functional UI already uses
 these tokens (`src/theme.css`, `src/index.css`); this file is the *why* behind them
 and the rules for the pre-launch assets (logo, store listing, website).
 
-> Synkro is an independent, open-source project (publisher: **Kōnabe Studio**). It is
+> Konode is an independent, open-source project (publisher: **Kōnabe Studio**). It is
 > not affiliated with any employer's products — keep its identity its own.
 
 ---
 
 ## 1. Positioning
 
-**Synkro syncs your browser to storage you already own — no server, no telemetry.**
+**Konode syncs your browser to storage you already own — no server, no telemetry.**
 
 Bookmarks, history, open tabs and your extension list, kept in step across every
 Chromium browser, stored in *your* Google Drive / WebDAV / GitHub, optionally
-end-to-end encrypted. Nothing ever touches a Synkro server, because there isn't one.
+end-to-end encrypted. Nothing ever touches a Konode server, because there isn't one.
 
 - **Category:** browser sync utility (MV3 extension).
 - **For:** privacy-conscious people and developers who distrust vendor cloud sync and
@@ -75,7 +75,7 @@ glyph (white, on the green tile) in the options top bar and the onboarding heade
 **Construction rules (whichever mark wins):**
 - Mark sits on the brand-green rounded-square app tile (radius ≈ 22% of the tile),
   white (or negative-space) glyph. Corner radius and padding scale with the tile.
-- Wordmark: "Synkro" set in Inter, weight 500–600, tight tracking (≈ -0.02em),
+- Wordmark: "Konode" set in Inter, weight 500–600, tight tracking (≈ -0.02em),
   sentence-case (capital S only). Mark + wordmark lockup with the mark's height ≈
   cap-height × 1.4, gap ≈ 0.4× mark width.
 - Minimum clear space around the lockup = the mark's corner radius on all sides.
@@ -120,7 +120,7 @@ American English. Clear, plain, friendly-but-not-cute. Short sentences. Say what
 software does and what it does *not* do (no server, no telemetry) — that restraint is
 the pitch.
 
-- **Do:** "Synkro stores your data in your own Google Drive. We never see it."
+- **Do:** "Konode stores your data in your own Google Drive. We never see it."
 - **Don't:** "Experience seamless, next-gen synchronization in the cloud!"
 - Buttons are verbs ("Save changes", "Test connection"). Errors are specific and
   actionable ("Your encryption passphrase doesn't match your other devices").

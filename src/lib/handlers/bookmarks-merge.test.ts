@@ -149,7 +149,7 @@ describe("importBookmarks — URL edit (no duplicate)", () => {
     (chrome.bookmarks.onChanged as any).addListener = (cb: never) => { onChanged = cb; };
     registerBookmarkListeners(() => {});
 
-    // Local: create A, then export — this snapshots the tree into synkro_bm_cache,
+    // Local: create A, then export — this snapshots the tree into konode_bm_cache,
     // which is the state peers still hold (id → https://a.com).
     const a = await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
     await exportBookmarkPayload();

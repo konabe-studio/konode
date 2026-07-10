@@ -5,7 +5,7 @@ High-level direction. Granular tasks live in `TODO.md`; what's in flight is in
 
 ## Vision
 A privacy-first browser sync that puts the user's data on storage **they own**
-(Google Drive / GitHub / WebDAV), with **no Synkro server** and **no telemetry**.
+(Google Drive / GitHub / WebDAV), with **no Konode server** and **no telemetry**.
 Native-sync parity (add + delete propagate both ways) with optional E2EE, working
 on any Chromium browser.
 
@@ -19,10 +19,10 @@ on any Chromium browser.
 - **Tests + lint + CI** — Vitest + ESLint + GitHub Actions (verify green after `npm install`).
 - **True multi-device merge (3+ devices)** — `downloadAll()` + fold every peer per sync.
 - **Session-manager UI** — the popup lists each peer device's session with a
-  per-device Restore button; `synkro_remote_sessions` is a device-keyed map so
+  per-device Restore button; `konode_remote_sessions` is a device-keyed map so
   sessions aggregate across all peers.
 - **Cross-peer data merge for every type** — extensions now aggregate across all
-  peers too (`synkro_remote_extensions` is device-keyed; the popup unions the lists),
+  peers too (`konode_remote_extensions` is device-keyed; the popup unions the lists),
   so bookmarks, history, sessions and extensions all merge across all devices.
 - **Newest-peer ordering** — the engine sorts peers newest-first by packet
   `timestamp` (`orderPeersByTime`), so `peers[0]` (the LWW/manual-conflict baseline)

@@ -1,4 +1,4 @@
-/* ─── Synkro shared design tokens (options + onboarding) ────────────────────
+/* ─── Konode shared design tokens (options + onboarding) ────────────────────
    Single source for the full-page UIs' color/typography/shape variables. Both
    the options page and the onboarding wizard consume these via var(--…) — the
    block used to be duplicated verbatim in each App's inline <style>. Values are

@@ -81,7 +81,7 @@ export interface SyncSession {
   }>;
 }
 
-/** A peer device's stored session, keyed by device_id in `synkro_remote_sessions`. */
+/** A peer device's stored session, keyed by device_id in `konode_remote_sessions`. */
 export interface RemoteSessionEntry {
   device_id: string;
   timestamp: string; // ISO-8601, from SyncPacket.timestamp
@@ -101,7 +101,7 @@ export interface SyncExtension {
   type: "extension" | "theme" | "app";
 }
 
-/** A peer device's stored extension list, keyed by device_id in `synkro_remote_extensions`. */
+/** A peer device's stored extension list, keyed by device_id in `konode_remote_extensions`. */
 export interface RemoteExtensionEntry {
   device_id: string;
   timestamp: string; // ISO-8601, from SyncPacket.timestamp
@@ -121,14 +121,14 @@ export interface BackendConfig {
     url: string;
     username: string;
     password: string;
-    path?: string; // subfolder, default "synkro"
+    path?: string; // subfolder, default "konode"
   };
   // GitHub
   github?: {
     token?: string;
     repo?: string; // "owner/repo"
     branch?: string;
-    path?: string; // subfolder in repo, default "synkro"
+    path?: string; // subfolder in repo, default "konode"
   };
 }
 

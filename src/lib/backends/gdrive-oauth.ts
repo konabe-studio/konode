@@ -12,7 +12,7 @@
  *
  * The client_secret below is NOT confidential: Google issues it for a "Web
  * application" client, and for an installed app it necessarily ships in the
- * bundle (extractable). It is scoped to drive.file (only Synkro's own files) and
+ * bundle (extractable). It is scoped to drive.file (only Konode's own files) and
  * can be rotated in the Google Cloud Console at any time.
  */
 
@@ -206,5 +206,5 @@ export async function getAccessToken(interactive = false): Promise<string> {
   }
 
   if (interactive) return (await interactiveSignIn()).access_token;
-  throw new Error("Google session expired — open Synkro and sign in again.");
+  throw new Error("Google session expired — open Konode and sign in again.");
 }

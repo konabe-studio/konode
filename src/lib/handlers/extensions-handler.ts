@@ -9,7 +9,7 @@ import { CWS_DETAIL_BASE } from "@/lib/constants";
 
 /**
  * Exports installed extensions using chrome.management API.
- * Filters out: themes, built-in Chrome extensions, and Synkro itself.
+ * Filters out: themes, built-in Chrome extensions, and Konode itself.
  */
 export async function exportExtensions(): Promise<SyncExtension[]> {
   return new Promise((resolve, reject) => {

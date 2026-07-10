@@ -60,7 +60,7 @@
   }
 }
 
-/* ── Synkro design-system theme (popup) ───────────────────────────────────
+/* ── Konode design-system theme (popup) ───────────────────────────────────
    Light defaults; flips to dark on the OS/browser preference. Only the popup
    opts in (via .sk-body + the sk-* Tailwind classes), so options/onboarding
    keep their existing dark styling. */
@@ -96,7 +96,7 @@
   }
 }
 
-@keyframes synkro-pulse {
+@keyframes konode-pulse {
   0% { transform: scale(1); opacity: 0.45; }
   70%, 100% { transform: scale(3.2); opacity: 0; }
 }

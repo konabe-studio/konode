@@ -1,6 +1,6 @@
 import { appendAudit } from "./storage";
 
-const PREFIX = "[Synkro]";
+const PREFIX = "[Konode]";
 
 // Gates logger.debug — set from settings.debug_mode (see service worker) so the
 // "Debug mode" toggle actually controls verbose console output instead of being
