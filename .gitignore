@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-firefox/
 *.local
 .env
 .DS_Store

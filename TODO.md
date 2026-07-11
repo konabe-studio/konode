@@ -176,10 +176,16 @@ shrinking; native Firefox Sync is self-hostable so our edge is weaker). Tasks:
       converted to promises; SW `onMessage` now returns a promise (the polyfill ignores
       `sendResponse` + `return true`). Tests alias the polyfill to a stub. **Not yet
       runtime-verified on Firefox** (needs the maintainer's manual load).
-- [ ] **Firefox manifest** variant — `background.scripts` event page (not
-      `service_worker`) + `browser_specific_settings` (gecko id, min version); build step.
-- [ ] **Per-browser OAuth redirect** — Firefox `getRedirectURL()` differs from
-      `*.chromiumapp.org`; register the Firefox redirect for Drive (+ any OAuth backend).
+- [x] **Firefox manifest** variant + build — `npm run build:firefox` → `dist-firefox/`
+      (`scripts/make-firefox-manifest.mjs`: event-page `background.scripts`, drops the
+      Chrome `key`, adds `browser_specific_settings.gecko`). ⚠️ gecko id
+      `konode@konode.org` + `strict_min_version 128.0` are **placeholders to confirm
+      before the first AMO upload**. Not yet runtime-verified on Firefox.
+- [~] **Per-browser OAuth redirect** — code is already browser-agnostic
+      (`browser.identity.getRedirectURL("gdrive")` returns the right per-browser URL).
+      Remaining is a **maintainer action**: register the Firefox redirect
+      (`https://<id>.extensions.allizom.org/gdrive` — read the exact value from a
+      Firefox run) in the Google Cloud Console alongside the Chromium one.
 - [ ] **`management` API** graceful degradation on Firefox (extension-list feature).
 - [ ] `web-ext` packaging + **AMO submission** (source upload + review).
 

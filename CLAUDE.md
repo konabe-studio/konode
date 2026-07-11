@@ -32,6 +32,14 @@ service worker automatically.
 > (single ES entry, `emptyOutDir:false` so it doesn't wipe the UI build). `public/`
 > (manifest + icons) is copied to `dist/` by Vite.
 
+**Firefox build:** `npm run build:firefox` → `dist-firefox/`. Same two Vite builds
+with `--outDir dist-firefox`, then `scripts/make-firefox-manifest.mjs` overwrites the
+copied Chrome manifest with the Firefox variant (event-page `background.scripts`
+instead of `service_worker`, no Chrome `key`, `browser_specific_settings.gecko`).
+Runtime APIs are browser-agnostic via `lib/utils/ext.ts` (`webextension-polyfill`),
+so the same TS builds for both. Load `dist-firefox/` via `about:debugging` →
+"Load Temporary Add-on". **Not yet runtime-verified on Firefox.**
+
 ## Architecture
 
 ```
