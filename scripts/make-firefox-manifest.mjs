@@ -27,8 +27,8 @@ const repoRoot = resolve(here, "..");
 const srcPath = resolve(repoRoot, "public/manifest.json");
 const outPath = resolve(repoRoot, process.argv[2] ?? "dist-firefox/manifest.json");
 
-// ⚠️ MUST be confirmed before the first AMO upload — changing it after publish
-// creates a brand-new listing. Tracks the planned brand domain (konode.org).
+// Confirmed add-on id (2026-07-11). STABLE — changing it after the first AMO
+// upload creates a brand-new listing. Tracks the planned brand domain (konode.org).
 const GECKO_ID = "konode@konode.org";
 const STRICT_MIN_VERSION = "128.0";
 

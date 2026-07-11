@@ -178,9 +178,9 @@ shrinking; native Firefox Sync is self-hostable so our edge is weaker). Tasks:
       runtime-verified on Firefox** (needs the maintainer's manual load).
 - [x] **Firefox manifest** variant + build — `npm run build:firefox` → `dist-firefox/`
       (`scripts/make-firefox-manifest.mjs`: event-page `background.scripts`, drops the
-      Chrome `key`, adds `browser_specific_settings.gecko`). ⚠️ gecko id
-      `konode@konode.org` + `strict_min_version 128.0` are **placeholders to confirm
-      before the first AMO upload**. Not yet runtime-verified on Firefox.
+      Chrome `key`, adds `browser_specific_settings.gecko`). gecko id
+      `konode@konode.org` **confirmed** (stable — don't change after first AMO upload);
+      `strict_min_version 128.0`. Not yet runtime-verified on Firefox.
 - [~] **Per-browser OAuth redirect** — code is already browser-agnostic
       (`browser.identity.getRedirectURL("gdrive")` returns the right per-browser URL).
       Remaining is a **maintainer action**: register the Firefox redirect
