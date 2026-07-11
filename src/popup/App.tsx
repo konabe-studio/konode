@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { SyncState, SyncSettings, DataType, SyncExtension, RemoteSessionEntry } from "@/lib/types";
 import { sendMessage } from "@/lib/utils/messaging";
+import { browser } from "@/lib/utils/ext";
 import { KEYS, normalizeRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/storage";
 import { STATE_UPDATE } from "@/lib/constants";
 import { AuditLog } from "./components/AuditLog";
@@ -93,23 +94,22 @@ export default function PopupApp() {
   useEffect(() => {
     load();
 
-    chrome.storage.local.get(KEYS.REMOTE_EXTENSIONS, (r) => {
+    void (async () => {
+      const r = await browser.storage.local.get(KEYS.REMOTE_EXTENSIONS);
       // Union of every peer device's extension list (deduped by id).
       const remote = normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]);
       if (!remote.length) return;
       // "management" is an optional permission now — only query if it was granted.
-      chrome.permissions.contains({ permissions: ["management"] }, (hasMgmt) => {
-        if (!hasMgmt) return;
-        chrome.management.getAll((local) => {
-          const localIds = new Set(local.map((e) => e.id));
-          setMissingExtensions(
-            remote.filter((e) => !localIds.has(e.id) && e.type === "extension")
-          );
-        });
-      });
-    });
+      const hasMgmt = await browser.permissions.contains({ permissions: ["management"] });
+      if (!hasMgmt) return;
+      const local = await browser.management.getAll();
+      const localIds = new Set(local.map((e) => e.id));
+      setMissingExtensions(
+        remote.filter((e) => !localIds.has(e.id) && e.type === "extension")
+      );
+    })();
 
-    chrome.storage.local.get(KEYS.REMOTE_SESSIONS, (r) => {
+    void browser.storage.local.get(KEYS.REMOTE_SESSIONS).then((r) => {
       setRemoteSessions(normalizeRemoteSessions(r[KEYS.REMOTE_SESSIONS]));
     });
 
@@ -155,8 +155,8 @@ export default function PopupApp() {
     const handler = (msg: { type: string; payload: SyncState }) => {
       if (msg.type === STATE_UPDATE) setState(msg.payload);
     };
-    chrome.runtime.onMessage.addListener(handler);
-    return () => chrome.runtime.onMessage.removeListener(handler);
+    browser.runtime.onMessage.addListener(handler);
+    return () => browser.runtime.onMessage.removeListener(handler);
   }, []);
 
   const handleSyncNow = async () => {
@@ -164,11 +164,11 @@ export default function PopupApp() {
     // State will update via STATE_UPDATE messages from background
   };
 
-  const openOptions = () => chrome.runtime.openOptionsPage();
+  const openOptions = () => browser.runtime.openOptionsPage();
 
   const openAllMissing = () => {
     missingExtensions.forEach((ext) => {
-      chrome.tabs.create({ url: ext.storeUrl, active: false });
+      browser.tabs.create({ url: ext.storeUrl, active: false });
     });
   };
 

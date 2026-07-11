@@ -18,6 +18,7 @@
 
 import { logger } from "@/lib/utils/logger";
 import { KEYS } from "@/lib/utils/storage";
+import { browser } from "@/lib/utils/ext";
 
 const CLIENT_ID = "290320131573-l79rlp36rgmuc5bkisoqfcjc4k9t58dq.apps.googleusercontent.com";
 const CLIENT_SECRET = "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";
@@ -43,22 +44,22 @@ interface TokenResponse {
 }
 
 function redirectUri(): string {
-  return chrome.identity.getRedirectURL("gdrive");
+  return browser.identity.getRedirectURL("gdrive");
 }
 
 // ─── Session storage ────────────────────────────────────────────────────────
 
 export async function loadGDriveSession(): Promise<GDriveSession | null> {
-  const r = await chrome.storage.local.get(STORAGE_KEY);
+  const r = await browser.storage.local.get(STORAGE_KEY);
   return (r[STORAGE_KEY] as GDriveSession | undefined) ?? null;
 }
 
 async function saveGDriveSession(s: GDriveSession): Promise<void> {
-  await chrome.storage.local.set({ [STORAGE_KEY]: s });
+  await browser.storage.local.set({ [STORAGE_KEY]: s });
 }
 
 export async function clearGDriveSession(): Promise<void> {
-  await chrome.storage.local.remove(STORAGE_KEY);
+  await browser.storage.local.remove(STORAGE_KEY);
 }
 
 export async function getStoredGDriveUser(): Promise<{ email: string; displayName: string } | null> {
@@ -136,15 +137,15 @@ export async function interactiveSignIn(): Promise<GDriveSession> {
     // offline + consent → Google returns (and keeps returning) a refresh token.
     `&access_type=offline&prompt=consent`;
 
-  const responseUrl = await new Promise<string>((resolve, reject) => {
-    chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, (url) => {
-      if (chrome.runtime.lastError || !url) {
-        reject(new Error(chrome.runtime.lastError?.message ?? "Sign-in cancelled"));
-      } else {
-        resolve(url);
-      }
-    });
-  });
+  // The polyfill returns a promise that resolves to the redirect URL (and rejects
+  // on cancel / error) on both Chromium and Firefox — no chrome.runtime.lastError.
+  let responseUrl: string | undefined;
+  try {
+    responseUrl = await browser.identity.launchWebAuthFlow({ url: authUrl, interactive: true });
+  } catch (err) {
+    throw new Error(err instanceof Error ? err.message : "Sign-in cancelled");
+  }
+  if (!responseUrl) throw new Error("Sign-in cancelled");
 
   const parsed = new URL(responseUrl);
   const code = parsed.searchParams.get("code");

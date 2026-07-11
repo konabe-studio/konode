@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { sendMessage } from "@/lib/utils/messaging";
+import { browser } from "@/lib/utils/ext";
 import { interactiveSignIn } from "@/lib/backends/gdrive-oauth";
 import type { BackendType, SyncSettings } from "@/lib/types";
 import {
@@ -170,7 +171,7 @@ export default function OnboardingApp() {
       let granted = false;
       try {
         const origin = new URL(webdavUrl).origin + "/*";
-        granted = await chrome.permissions.request({ origins: [origin] });
+        granted = await browser.permissions.request({ origins: [origin] });
       } catch {
         granted = false;
       }
@@ -188,7 +189,7 @@ export default function OnboardingApp() {
     if (dataTypes.extensions) optPerms.push("management");
     if (optPerms.length) {
       try {
-        const ok = await chrome.permissions.request({ permissions: optPerms });
+        const ok = await browser.permissions.request({ permissions: optPerms });
         if (!ok) {
           setSetupError("Some permissions were declined. Grant them, or turn off those data types, to continue.");
           return;
@@ -695,7 +696,7 @@ export default function OnboardingApp() {
           {(syncError || syncTimedOut) && (
             <div style={S.navRow}>
               {syncError && (
-                <button style={{ ...S.btnPrimary, flex: 1 }} onClick={() => chrome.runtime.openOptionsPage()}>
+                <button style={{ ...S.btnPrimary, flex: 1 }} onClick={() => browser.runtime.openOptionsPage()}>
                   Open Settings
                 </button>
               )}
@@ -730,7 +731,7 @@ export default function OnboardingApp() {
           </button>
           <button
             style={{ ...S.btnSecondary, marginTop: 8, width: "100%", justifyContent: "center" }}
-            onClick={() => chrome.runtime.openOptionsPage()}
+            onClick={() => browser.runtime.openOptionsPage()}
           >
             Open Settings
           </button>

@@ -3,11 +3,12 @@ import type { SyncSession } from "@/lib/types";
 type TabInfo = { url: string; title?: string; pinned: boolean; favIconUrl?: string };
 import { logger } from "@/lib/utils/logger";
 import { isSafeContentUrl } from "@/lib/utils/url";
+import { browser } from "@/lib/utils/ext";
 
 // ─── Export Current Tabs ──────────────────────────────────────────────────
 
 export async function exportCurrentTabs(): Promise<TabInfo[]> {
-  const tabs = await chrome.tabs.query({});
+  const tabs = await browser.tabs.query({});
   return tabs
     .filter((t) => t.url && !t.url.startsWith("chrome://") && !t.url.startsWith("chrome-extension://"))
     .map((t) => ({
@@ -44,7 +45,7 @@ export async function importSession(session: SyncSession): Promise<void> {
       continue;
     }
     try {
-      await chrome.tabs.create({ url: tab.url, pinned: tab.pinned, active: false });
+      await browser.tabs.create({ url: tab.url, pinned: tab.pinned, active: false });
     } catch (err) {
       logger.error(`Tab open: ${tab.url}`, err);
     }

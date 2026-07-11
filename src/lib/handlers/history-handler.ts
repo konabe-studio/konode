@@ -2,6 +2,7 @@ import type { SyncHistoryItem } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import { isSafeContentUrl } from "@/lib/utils/url";
 import { getImportedHistoryUrls, addImportedHistoryUrls } from "@/lib/utils/storage";
+import { browser } from "@/lib/utils/ext";
 
 const EXPORT_MAX_RESULTS = 5000;
 
@@ -10,7 +11,7 @@ const EXPORT_MAX_RESULTS = 5000;
 export async function exportHistory(daysLimit = 30): Promise<SyncHistoryItem[]> {
   const startTime = Date.now() - daysLimit * 24 * 60 * 60 * 1000;
 
-  const items = await chrome.history.search({
+  const items = await browser.history.search({
     text: "",
     startTime,
     maxResults: EXPORT_MAX_RESULTS,
@@ -43,7 +44,7 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
   // restore is therefore inherently lossy (export/backup is the faithful path).
   // We at least de-dup against existing local URLs so repeated syncs don't keep
   // re-adding the same pages and inflating their visit counts.
-  const existing = await chrome.history.search({ text: "", startTime: 0, maxResults: 100000 });
+  const existing = await browser.history.search({ text: "", startTime: 0, maxResults: 100000 });
   const known = new Set(existing.map((h) => h.url));
 
   let added = 0;
@@ -56,7 +57,7 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
       continue;
     }
     try {
-      await chrome.history.addUrl({ url: item.url });
+      await browser.history.addUrl({ url: item.url });
       known.add(item.url);
       importedUrls.push(item.url);
       added++;

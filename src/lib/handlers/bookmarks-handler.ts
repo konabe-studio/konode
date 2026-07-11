@@ -6,15 +6,18 @@ import {
   getMoves, setMoves,
 } from "@/lib/utils/storage";
 import { defaultOtherRootId, matchLocalRoot } from "@/lib/utils/bookmark-roots";
+import { browser } from "@/lib/utils/ext";
+
+type BookmarkNode = chrome.bookmarks.BookmarkTreeNode;
 
 // ─── Read ─────────────────────────────────────────────────────────────────
 
 export async function exportBookmarks(): Promise<SyncBookmark[]> {
-  const tree = await chrome.bookmarks.getTree();
+  const tree = await browser.bookmarks.getTree();
   return tree.map(mapNode);
 }
 
-function mapNode(node: chrome.bookmarks.BookmarkTreeNode): SyncBookmark {
+function mapNode(node: BookmarkNode): SyncBookmark {
   return {
     id: node.id,
     parentId: node.parentId ?? null,
@@ -82,10 +85,10 @@ export function mergeMoveLists(a: MoveRecord[], b: MoveRecord[]): MoveRecord[] {
 }
 
 /** Record tombstones for every URL in a removed bookmark/folder subtree. */
-async function recordRemovedTombstones(node: chrome.bookmarks.BookmarkTreeNode): Promise<void> {
+async function recordRemovedTombstones(node: BookmarkNode): Promise<void> {
   if (importing) return;
   const urls: string[] = [];
-  const walk = (n: chrome.bookmarks.BookmarkTreeNode) => {
+  const walk = (n: BookmarkNode) => {
     if (n.url) urls.push(n.url);
     n.children?.forEach(walk);
   };
@@ -123,8 +126,8 @@ async function recordMove(id: string): Promise<void> {
   if (importing) return;
   const urls: string[] = [];
   try {
-    const sub = await chrome.bookmarks.getSubTree(id);
-    const walk = (n: chrome.bookmarks.BookmarkTreeNode) => {
+    const sub = await browser.bookmarks.getSubTree(id);
+    const walk = (n: BookmarkNode) => {
       if (n.url) urls.push(n.url);
       n.children?.forEach(walk);
     };
@@ -210,7 +213,7 @@ async function clearAndImport(tree: SyncBookmark[]): Promise<void> {
   // Get the local root folders. Ids are browser-specific (Chrome numbers them
   // "1"/"2"/"3"; Firefox uses "toolbar_____"/"unfiled_____"/…) — bookmark-roots.ts
   // maps between them by kind, so nothing here hardcodes Chrome ids.
-  const localTree = await chrome.bookmarks.getTree();
+  const localTree = await browser.bookmarks.getTree();
   const localRoots = localTree[0]?.children ?? [];
 
   // Clear all children from each local root folder
@@ -218,7 +221,7 @@ async function clearAndImport(tree: SyncBookmark[]): Promise<void> {
     if (root.children) {
       for (const child of root.children) {
         try {
-          await chrome.bookmarks.removeTree(child.id);
+          await browser.bookmarks.removeTree(child.id);
         } catch { /* system folders may be protected */ }
       }
     }
@@ -248,13 +251,13 @@ async function restoreNode(
 ): Promise<void> {
   try {
     if (node.url) {
-      await chrome.bookmarks.create({
+      await browser.bookmarks.create({
         parentId,
         title: node.title,
         url: node.url,
       });
     } else {
-      const folder = await chrome.bookmarks.create({
+      const folder = await browser.bookmarks.create({
         parentId,
         title: node.title,
       });
@@ -320,7 +323,7 @@ async function mergeBookmarks(
     logger.warn("mergeBookmarks", `Skipped deleting ${toRemove.length} bookmarks (cap ${cap}, ${pct}% of ${localFlat.length}) — exceeds the mass-delete guard`);
   } else {
     for (const id of toRemove) {
-      try { await chrome.bookmarks.remove(id); } catch (err) { logger.error("Bookmark delete (tombstone)", err); }
+      try { await browser.bookmarks.remove(id); } catch (err) { logger.error("Bookmark delete (tombstone)", err); }
     }
   }
 
@@ -352,7 +355,7 @@ async function mergeBookmarks(
     return (remoteMoveAt.get(url) ?? 0) > (localMoveAt.get(url) ?? 0); // lww: newer move wins
   };
 
-  const localRoots = (await chrome.bookmarks.getTree())[0]?.children ?? [];
+  const localRoots = (await browser.bookmarks.getTree())[0]?.children ?? [];
   const otherId = defaultOtherRootId(localRoots);
   if (!otherId) {
     logger.warn("mergeBookmarks", "No writable root folder found");
@@ -380,7 +383,7 @@ async function mergeBookmarks(
           try {
             const targetId = await ensureParent();
             if (loc.parentId !== targetId || loc.index !== index) {
-              await chrome.bookmarks.move(loc.id, { parentId: targetId, index });
+              await browser.bookmarks.move(loc.id, { parentId: targetId, index });
               moved++;
             }
           } catch (err) {
@@ -392,7 +395,7 @@ async function mergeBookmarks(
       if (suppressedByDeletion(node.url)) return;
       try {
         const parentId = await ensureParent();
-        await chrome.bookmarks.create({ parentId, index, title: node.title, url: node.url });
+        await browser.bookmarks.create({ parentId, index, title: node.title, url: node.url });
         addedUrls.add(node.url);
         added++;
       } catch (err) {
@@ -405,11 +408,11 @@ async function mergeBookmarks(
       const ensureThis = async (): Promise<string> => {
         if (folderId) return folderId;
         const parentId = await ensureParent();
-        const children = await chrome.bookmarks.getChildren(parentId);
+        const children = await browser.bookmarks.getChildren(parentId);
         const existing = children.find((c) => !c.url && c.title === node.title);
         folderId = existing
           ? existing.id
-          : (await chrome.bookmarks.create({ parentId, index, title: node.title })).id;
+          : (await browser.bookmarks.create({ parentId, index, title: node.title })).id;
         return folderId;
       };
       let i = 0;
@@ -467,19 +470,19 @@ function pruneEmptyFolders(tree: SyncBookmark[]): SyncBookmark[] {
 export type BookmarkChangeCallback = () => void;
 
 export function registerBookmarkListeners(onChange: BookmarkChangeCallback): void {
-  chrome.bookmarks.onCreated.addListener(onChange);
-  chrome.bookmarks.onChanged.addListener((id, changeInfo) => {
+  browser.bookmarks.onCreated.addListener(onChange);
+  browser.bookmarks.onChanged.addListener((id, changeInfo) => {
     // A URL edit is a delete(old)+add(new) in the URL-keyed sync model — record a
     // tombstone for the replaced url so a peer doesn't resurrect it as a duplicate.
     void recordUrlChange(id, changeInfo.url);
     onChange();
   });
-  chrome.bookmarks.onMoved.addListener((id) => {
+  browser.bookmarks.onMoved.addListener((id) => {
     // Record the move (per URL, timestamped) so the new placement propagates.
     void recordMove(id);
     onChange();
   });
-  chrome.bookmarks.onRemoved.addListener((_id, removeInfo) => {
+  browser.bookmarks.onRemoved.addListener((_id, removeInfo) => {
     // Record a tombstone so the deletion propagates instead of resurrecting.
     void recordRemovedTombstones(removeInfo.node);
     onChange();

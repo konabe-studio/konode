@@ -26,6 +26,7 @@ import { KEYS, normalizeRemoteExtensions } from "@/lib/utils/storage";
 import { CWS_DETAIL_BASE } from "@/lib/constants";
 import { isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
+import { browser } from "@/lib/utils/ext";
 
 // ─── Secret field ───────────────────────────────────────────────────────────
 // Masks a *saved* secret (token / password / passphrase): once a value exists, the
@@ -219,19 +220,20 @@ export default function OptionsApp() {
 
   useEffect(() => {
     load();
-    chrome.storage.local.get(KEYS.GDRIVE_SESSION, (r) => {
+    void browser.storage.local.get(KEYS.GDRIVE_SESSION).then((r) => {
       // A stored session means we have a refresh token — show the account
       // regardless of access-token age (it renews silently).
       const s = r[KEYS.GDRIVE_SESSION];
       if (s) setGdriveUser({ email: s.email ?? "", displayName: s.displayName ?? "" });
     });
-    chrome.storage.local.get(KEYS.REMOTE_EXTENSIONS, (r) => {
+    void browser.storage.local.get(KEYS.REMOTE_EXTENSIONS).then((r) => {
       // Use the normalizer: the value is a device-keyed map now, not the legacy
       // single object — reading `.extensions` off the map returned nothing, so the
       // options "missing on this device" list stayed empty (the popup was correct).
       setRemoteExtensions(normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]));
     });
-    chrome.management.getAll((exts) => setLocalExtIds(new Set(exts.map((e) => e.id))));
+    // "management" is optional — this may reject if not granted; ignore then.
+    void browser.management.getAll().then((exts) => setLocalExtIds(new Set(exts.map((e) => e.id)))).catch(() => {});
   }, [load]);
 
   const update = (partial: Partial<SyncSettings>) =>
@@ -263,7 +265,7 @@ export default function OptionsApp() {
     if (!url) return false;
     try {
       const origin = new URL(url).origin + "/*";
-      return await chrome.permissions.request({ origins: [origin] });
+      return await browser.permissions.request({ origins: [origin] });
     } catch {
       return false;
     }
@@ -317,7 +319,7 @@ export default function OptionsApp() {
     if (enabling) {
       const perm = PERM_FOR_TYPE[type];
       if (perm) {
-        const granted = await chrome.permissions.request({ permissions: [perm] });
+        const granted = await browser.permissions.request({ permissions: [perm] });
         if (!granted) return; // leave it off if the user declined the permission
       }
     }
@@ -345,7 +347,7 @@ export default function OptionsApp() {
   };
 
   const disconnectGDrive = () => {
-    chrome.storage.local.remove(KEYS.GDRIVE_SESSION);
+    void browser.storage.local.remove(KEYS.GDRIVE_SESSION);
     setGdriveUser(null);
     if (settings?.active_backend === "gdrive") update({ active_backend: null });
   };
@@ -359,16 +361,16 @@ export default function OptionsApp() {
       // only query them when granted, so a user who never enabled those types still
       // gets a working bookmarks export instead of the whole thing throwing.
       const [hasHistory, hasMgmt] = await Promise.all([
-        chrome.permissions.contains({ permissions: ["history"] }),
-        chrome.permissions.contains({ permissions: ["management"] }),
+        browser.permissions.contains({ permissions: ["history"] }),
+        browser.permissions.contains({ permissions: ["management"] }),
       ]);
       const [bookmarkTree, extensions, historyItems] = await Promise.all([
-        chrome.bookmarks.getTree(),
+        browser.bookmarks.getTree(),
         hasMgmt
-          ? new Promise<chrome.management.ExtensionInfo[]>((r) => chrome.management.getAll(r))
+          ? browser.management.getAll()
           : Promise.resolve([] as chrome.management.ExtensionInfo[]),
         hasHistory
-          ? chrome.history.search({ text: "", startTime: Date.now() - 30 * 24 * 60 * 60 * 1000, maxResults: 5000 })
+          ? browser.history.search({ text: "", startTime: Date.now() - 30 * 24 * 60 * 60 * 1000, maxResults: 5000 })
           : Promise.resolve([] as chrome.history.HistoryItem[]),
       ]);
 
@@ -379,7 +381,7 @@ export default function OptionsApp() {
         data: {
           bookmarks: bookmarkTree,
           extensions: extensions
-            .filter(e => e.id !== chrome.runtime.id && e.installType !== "other" && e.installType !== "admin")
+            .filter(e => e.id !== browser.runtime.id && e.installType !== "other" && e.installType !== "admin")
             .map(e => ({ id: e.id, name: e.name, version: e.version, enabled: e.enabled, storeUrl: `${CWS_DETAIL_BASE}${e.id}` })),
           history: historyItems.map(h => ({ url: h.url, title: h.title, lastVisitTime: h.lastVisitTime, visitCount: h.visitCount })),
         },
@@ -417,11 +419,11 @@ export default function OptionsApp() {
 
       // Import bookmarks
       if (data.bookmarks) {
-        const roots = (await chrome.bookmarks.getTree())[0]?.children ?? [];
+        const roots = (await browser.bookmarks.getTree())[0]?.children ?? [];
         const otherId = defaultOtherRootId(roots); // browser-agnostic "Other bookmarks"
 
         if (otherId) {
-          const importFolder = await chrome.bookmarks.create({
+          const importFolder = await browser.bookmarks.create({
             parentId: otherId,
             title: `Konode Import ${new Date().toLocaleDateString()}`,
           });
@@ -432,9 +434,9 @@ export default function OptionsApp() {
                 // Only recreate plain web URLs — never javascript:/data:/file: from a
                 // backup file (parity with the sync import guard).
                 if (!isSafeContentUrl(node.url)) continue;
-                try { await chrome.bookmarks.create({ parentId, title: node.title, url: node.url }); imported++; } catch { /* skip invalid */ }
+                try { await browser.bookmarks.create({ parentId, title: node.title, url: node.url }); imported++; } catch { /* skip invalid */ }
               } else if (node.children) {
-                const f = await chrome.bookmarks.create({ parentId, title: node.title });
+                const f = await browser.bookmarks.create({ parentId, title: node.title });
                 await walk(node.children, f.id);
               }
             }
@@ -451,7 +453,7 @@ export default function OptionsApp() {
       // Import history
       if (Array.isArray(data.history)) {
         for (const item of data.history) {
-          if (item.url && isSafeContentUrl(item.url)) try { await chrome.history.addUrl({ url: item.url }); } catch { /* skip */ }
+          if (item.url && isSafeContentUrl(item.url)) try { await browser.history.addUrl({ url: item.url }); } catch { /* skip */ }
         }
       }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { KEYS, type AuditEntry } from "@/lib/utils/storage";
 import { sendMessage } from "@/lib/utils/messaging";
+import { browser } from "@/lib/utils/ext";
 import { CheckCircle2, XCircle, ChevronDown, Trash2 } from "lucide-react";
 
 export function AuditLog() {
@@ -9,7 +10,7 @@ export function AuditLog() {
 
   useEffect(() => {
     if (!open) return;
-    chrome.storage.local.get(KEYS.AUDIT_LOG, (result) => {
+    void browser.storage.local.get(KEYS.AUDIT_LOG).then((result) => {
       setEntries((result[KEYS.AUDIT_LOG] as AuditEntry[]) ?? []);
     });
   }, [open]);

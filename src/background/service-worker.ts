@@ -8,6 +8,7 @@ import { registerBookmarkListeners } from "@/lib/handlers/bookmarks-handler";
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { logger, setLoggerDebug } from "@/lib/utils/logger";
 import { BADGE_COLORS, STATE_UPDATE } from "@/lib/constants";
+import { browser } from "@/lib/utils/ext";
 
 // ─── State ────────────────────────────────────────────────────────────────
 
@@ -42,7 +43,7 @@ async function init(): Promise<void> {
     // Push live status to any open popup/options view. chrome.extension.getViews
     // does not exist in an MV3 service worker, so just broadcast — sendMessage
     // rejects when no view is listening, which is expected; swallow it.
-    chrome.runtime.sendMessage({ type: STATE_UPDATE, payload: state }).catch(() => {});
+    browser.runtime.sendMessage({ type: STATE_UPDATE, payload: state }).catch(() => {});
   });
 
   // Bookmark listeners are registered once at the top level (see bottom of file),
@@ -73,11 +74,11 @@ function ensureInit(): Promise<void> {
 // ─── Badge ────────────────────────────────────────────────────────────────
 
 function updateBadge(status: string): void {
-  chrome.action.setBadgeBackgroundColor({
+  browser.action.setBadgeBackgroundColor({
     color: BADGE_COLORS[status as keyof typeof BADGE_COLORS] ?? BADGE_COLORS.idle,
   });
 
-  chrome.action.setBadgeText({
+  browser.action.setBadgeText({
     text: status === "syncing" ? "↑" : status === "error" ? "!" : "",
   });
 }
@@ -85,11 +86,11 @@ function updateBadge(status: string): void {
 // ─── Alarm ───────────────────────────────────────────────────────────────
 
 async function setupSyncAlarm(intervalSeconds: number): Promise<void> {
-  await chrome.alarms.clear("konode-sync");
+  await browser.alarms.clear("konode-sync");
   // 0.5 min (30s) is Chrome's hard floor for background alarms — independent of
   // the storage backend (Drive/GitHub/WebDAV are all poll-only, no push), so the
   // receiving side can't pull faster than this regardless of what's configured.
-  chrome.alarms.create("konode-sync", {
+  browser.alarms.create("konode-sync", {
     periodInMinutes: Math.max(0.5, intervalSeconds / 60),
   });
 }
@@ -99,7 +100,7 @@ async function setupSyncAlarm(intervalSeconds: number): Promise<void> {
 function onBookmarkChange(): void {
   // Backstop: a one-shot alarm survives SW suspension (Chrome floors it at ~30s),
   // so a change is never lost even if the fast path below doesn't get to run.
-  chrome.alarms.create("konode-bookmark-sync", { delayInMinutes: 0.5 });
+  browser.alarms.create("konode-bookmark-sync", { delayInMinutes: 0.5 });
 
   // Fast path: the worker is awake right now (the event just fired), so sync
   // almost immediately. A short debounce coalesces bursts (e.g. deleting a
@@ -117,7 +118,7 @@ function onBookmarkChange(): void {
       !syncEngine.isSyncing
     ) {
       // We're handling it now — drop the backstop so it doesn't double-sync.
-      await chrome.alarms.clear("konode-bookmark-sync");
+      await browser.alarms.clear("konode-bookmark-sync");
       await syncEngine.sync(["bookmarks"]);
     }
     // If a sync is already running, leave the alarm to pick this change up next.
@@ -126,20 +127,14 @@ function onBookmarkChange(): void {
 
 // ─── Message Handler ──────────────────────────────────────────────────────
 
-chrome.runtime.onMessage.addListener(
-  (message: ExtensionMessage, _sender, sendResponse) => {
-    handleMessage(message)
-      .then((response) => sendResponse(response))
-      .catch((err) => {
-        sendResponse({
-          type: "ERROR",
-          payload: err instanceof Error ? err.message : "Unknown error",
-        } satisfies ExtensionResponse);
-      });
-
-    return true; // Keep channel open for async response
-  }
-);
+// Return a Promise for the async response. The polyfill (and Firefox natively)
+// resolve the sender's sendMessage promise with the value this resolves to —
+// unlike raw Chrome's sendResponse + `return true`, which the polyfill ignores.
+browser.runtime.onMessage.addListener(((message: ExtensionMessage): Promise<ExtensionResponse> =>
+  handleMessage(message).catch((err): ExtensionResponse => ({
+    type: "ERROR",
+    payload: err instanceof Error ? err.message : "Unknown error",
+  }))) as Parameters<typeof browser.runtime.onMessage.addListener>[0]);
 
 async function handleMessage(message: ExtensionMessage): Promise<ExtensionResponse> {
   await ensureInit();
@@ -176,7 +171,7 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
         if (updated.auto_sync) {
           await setupSyncAlarm(updated.sync_interval_seconds);
         } else {
-          await chrome.alarms.clear("konode-sync");
+          await browser.alarms.clear("konode-sync");
         }
       }
 
@@ -206,19 +201,13 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
     }
 
     case "SET_EXTENSION_ENABLED": {
-      await new Promise<void>((resolve, reject) =>
-        chrome.management.setEnabled(message.payload.id, message.payload.enabled, () =>
-          chrome.runtime.lastError
-            ? reject(new Error(chrome.runtime.lastError.message))
-            : resolve()
-        )
-      );
+      await browser.management.setEnabled(message.payload.id, message.payload.enabled);
       return { type: "OK" };
     }
 
     case "CLEAR_HISTORY": {
       // Clears the local audit log shown in the popup.
-      await chrome.storage.local.set({ [KEYS.AUDIT_LOG]: [] });
+      await browser.storage.local.set({ [KEYS.AUDIT_LOG]: [] });
       return { type: "OK" };
     }
 
@@ -229,7 +218,7 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
 
 // ─── Alarm Handler ────────────────────────────────────────────────────────
 
-chrome.alarms.onAlarm.addListener(async (alarm) => {
+browser.alarms.onAlarm.addListener(async (alarm) => {
   await ensureInit();
   if (!syncEngine) return;
   if (alarm.name === "konode-sync") {
@@ -250,15 +239,15 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────
 
-chrome.runtime.onInstalled.addListener(async (details) => {
+browser.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === "install") {
     logger.info("Install", "First install — opening onboarding");
-    chrome.tabs.create({ url: chrome.runtime.getURL("onboarding.html") });
+    browser.tabs.create({ url: browser.runtime.getURL("onboarding.html") });
   }
   await ensureInit();
 });
 
-chrome.runtime.onStartup.addListener(async () => {
+browser.runtime.onStartup.addListener(async () => {
   await ensureInit();
 });
 

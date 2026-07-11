@@ -5,6 +5,7 @@ import type {
   DataType,
 } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
+import { browser } from "@/lib/utils/ext";
 
 // ─── Conflict Resolver ────────────────────────────────────────────────────
 
@@ -103,7 +104,7 @@ export function orderPeersByTime(packets: SyncPacket[]): SyncPacket[] {
 // ─── Notify helper ───────────────────────────────────────────────────────
 
 export function notifyConflict(dataType: DataType): void {
-  chrome.notifications.create(`conflict-${Date.now()}`, {
+  browser.notifications.create(`conflict-${Date.now()}`, {
     type: "basic",
     iconUrl: "icons/icon48.png",
     title: "Konode: Sync Conflict",

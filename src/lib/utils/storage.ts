@@ -8,6 +8,7 @@ import type {
   SyncState,
   Tombstone,
 } from "@/lib/types";
+import { browser } from "@/lib/utils/ext";
 
 // ─── Device name detection ─────────────────────────────────────────────────
 
@@ -90,12 +91,12 @@ export const KEYS = {
 // ─── Generic Helpers ───────────────────────────────────────────────────────
 
 async function get<T>(key: string, fallback: T): Promise<T> {
-  const result = await chrome.storage.local.get(key);
+  const result = await browser.storage.local.get(key);
   return (result[key] as T) ?? fallback;
 }
 
 async function set(key: string, value: unknown): Promise<void> {
-  await chrome.storage.local.set({ [key]: value });
+  await browser.storage.local.set({ [key]: value });
 }
 
 // ─── Settings ──────────────────────────────────────────────────────────────
@@ -234,13 +235,13 @@ export function normalizeRemoteSessions(raw: unknown): RemoteSessionEntry[] {
 }
 
 export async function getRemoteSessions(): Promise<RemoteSessionEntry[]> {
-  const r = await chrome.storage.local.get(KEYS.REMOTE_SESSIONS);
+  const r = await browser.storage.local.get(KEYS.REMOTE_SESSIONS);
   return normalizeRemoteSessions(r[KEYS.REMOTE_SESSIONS]);
 }
 
 /** Upserts one peer's session into the device-keyed map (upgrades legacy shape). */
 export async function setRemoteSession(entry: RemoteSessionEntry): Promise<void> {
-  const r = await chrome.storage.local.get(KEYS.REMOTE_SESSIONS);
+  const r = await browser.storage.local.get(KEYS.REMOTE_SESSIONS);
   const cur = r[KEYS.REMOTE_SESSIONS] as Record<string, RemoteSessionEntry> | undefined;
   const map: Record<string, RemoteSessionEntry> =
     cur && typeof cur === "object" && !("session" in cur) ? { ...cur } : {};
@@ -273,7 +274,7 @@ export function normalizeRemoteExtensions(raw: unknown): SyncExtension[] {
 
 /** Upserts one peer's extension list into the device-keyed map (upgrades legacy shape). */
 export async function setRemoteExtensions(entry: RemoteExtensionEntry): Promise<void> {
-  const r = await chrome.storage.local.get(KEYS.REMOTE_EXTENSIONS);
+  const r = await browser.storage.local.get(KEYS.REMOTE_EXTENSIONS);
   const cur = r[KEYS.REMOTE_EXTENSIONS] as Record<string, RemoteExtensionEntry> | undefined;
   const map: Record<string, RemoteExtensionEntry> =
     cur && typeof cur === "object" && !("extensions" in cur) ? { ...cur } : {};
@@ -285,12 +286,12 @@ export async function setRemoteExtensions(entry: RemoteExtensionEntry): Promise<
 
 /** Checksum of the payload this device last uploaded for a data type, if any. */
 export async function getLastUploadChecksum(dataType: DataType): Promise<string | null> {
-  const r = await chrome.storage.local.get(KEYS.UPLOAD_CHECKSUMS);
+  const r = await browser.storage.local.get(KEYS.UPLOAD_CHECKSUMS);
   return (r[KEYS.UPLOAD_CHECKSUMS] as Record<string, string> | undefined)?.[dataType] ?? null;
 }
 
 export async function setLastUploadChecksum(dataType: DataType, checksum: string): Promise<void> {
-  const r = await chrome.storage.local.get(KEYS.UPLOAD_CHECKSUMS);
+  const r = await browser.storage.local.get(KEYS.UPLOAD_CHECKSUMS);
   const map = { ...((r[KEYS.UPLOAD_CHECKSUMS] as Record<string, string>) ?? {}), [dataType]: checksum };
   await set(KEYS.UPLOAD_CHECKSUMS, map);
 }
@@ -303,7 +304,7 @@ export async function setLastUploadChecksum(dataType: DataType, checksum: string
  * (e.g. plaintext) form even though E2EE is now on.
  */
 export async function clearUploadChecksums(): Promise<void> {
-  await chrome.storage.local.remove(KEYS.UPLOAD_CHECKSUMS);
+  await browser.storage.local.remove(KEYS.UPLOAD_CHECKSUMS);
 }
 
 // ─── Resolved manual conflicts (make a resolution sticky) ───────────────────

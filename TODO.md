@@ -166,9 +166,10 @@ Helium). Nail the Chrome Web Store listing first (see *Before publishing*).
 **2. Firefox support — fast-follow (v1.1), ~1–2 wk.** ICP fit + floccus/xBrowserSync
 turf + AMO/r/firefox channel; makes "every browser" true. Not a volume play (~4% and
 shrinking; native Firefox Sync is self-hostable so our edge is weaker). Tasks:
-- [ ] Browser-agnostic **bookmark-root resolution** — remove the Chrome `id === "2"`
-      assumptions (`bookmarks-handler.ts:362`, `options/App.tsx:420`); map to Firefox
-      roots (`toolbar_____`/`menu________`/`unfiled_____`). *(the key port task)*
+- [x] Browser-agnostic **bookmark-root resolution** — done in `lib/utils/bookmark-roots.ts`
+      (`rootKind`/`defaultOtherRootId`/`matchLocalRoot`, mapping Chrome `1/2/3` ⇄ Firefox
+      `toolbar_____`/`menu________`/`unfiled_____`/`mobile______` by kind). Replaced the
+      `id === "2"` assumptions in `bookmarks-handler.ts` + `options/App.tsx`; 12 unit tests.
 - [ ] **Firefox manifest** variant — `background.scripts` event page (not
       `service_worker`) + `browser_specific_settings` (gecko id, min version); build step.
 - [ ] **Per-browser OAuth redirect** — Firefox `getRedirectURL()` differs from
