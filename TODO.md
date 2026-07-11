@@ -170,6 +170,12 @@ shrinking; native Firefox Sync is self-hostable so our edge is weaker). Tasks:
       (`rootKind`/`defaultOtherRootId`/`matchLocalRoot`, mapping Chrome `1/2/3` ⇄ Firefox
       `toolbar_____`/`menu________`/`unfiled_____`/`mobile______` by kind). Replaced the
       `id === "2"` assumptions in `bookmarks-handler.ts` + `options/App.tsx`; 12 unit tests.
+- [x] **Promise-normalized extension API** — added `webextension-polyfill` +
+      `lib/utils/ext.ts` (`browser`, cast to `typeof chrome`). Every runtime `chrome.*`
+      routes through `browser.*`; callback APIs (storage/management/permissions/identity)
+      converted to promises; SW `onMessage` now returns a promise (the polyfill ignores
+      `sendResponse` + `return true`). Tests alias the polyfill to a stub. **Not yet
+      runtime-verified on Firefox** (needs the maintainer's manual load).
 - [ ] **Firefox manifest** variant — `background.scripts` event page (not
       `service_worker`) + `browser_specific_settings` (gecko id, min version); build step.
 - [ ] **Per-browser OAuth redirect** — Firefox `getRedirectURL()` differs from
