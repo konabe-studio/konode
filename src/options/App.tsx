@@ -25,6 +25,7 @@ import { generateRecoveryKey } from "@/lib/crypto/encryption";
 import { KEYS, normalizeRemoteExtensions } from "@/lib/utils/storage";
 import { CWS_DETAIL_BASE } from "@/lib/constants";
 import { isSafeContentUrl } from "@/lib/utils/url";
+import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
 
 // ─── Secret field ───────────────────────────────────────────────────────────
 // Masks a *saved* secret (token / password / passphrase): once a value exists, the
@@ -417,11 +418,11 @@ export default function OptionsApp() {
       // Import bookmarks
       if (data.bookmarks) {
         const roots = (await chrome.bookmarks.getTree())[0]?.children ?? [];
-        const other = roots.find(r => r.id === "2") ?? roots[1];
+        const otherId = defaultOtherRootId(roots); // browser-agnostic "Other bookmarks"
 
-        if (other) {
+        if (otherId) {
           const importFolder = await chrome.bookmarks.create({
-            parentId: other.id,
+            parentId: otherId,
             title: `Konode Import ${new Date().toLocaleDateString()}`,
           });
 

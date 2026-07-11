@@ -5,6 +5,7 @@ import {
   getTombstones, setTombstones,
   getMoves, setMoves,
 } from "@/lib/utils/storage";
+import { defaultOtherRootId, matchLocalRoot } from "@/lib/utils/bookmark-roots";
 
 // ─── Read ─────────────────────────────────────────────────────────────────
 
@@ -206,7 +207,9 @@ async function clearAndImport(tree: SyncBookmark[]): Promise<void> {
     await setBookmarkCache(await exportBookmarks());
   } catch { /* best effort */ }
 
-  // Get the local root folders (Bookmarks bar = "1", Other bookmarks = "2", Mobile = "3")
+  // Get the local root folders. Ids are browser-specific (Chrome numbers them
+  // "1"/"2"/"3"; Firefox uses "toolbar_____"/"unfiled_____"/…) — bookmark-roots.ts
+  // maps between them by kind, so nothing here hardcodes Chrome ids.
   const localTree = await chrome.bookmarks.getTree();
   const localRoots = localTree[0]?.children ?? [];
 
@@ -221,21 +224,15 @@ async function clearAndImport(tree: SyncBookmark[]): Promise<void> {
     }
   }
 
-  // Match remote roots to local roots by Chrome's stable IDs ("1"/"2"/"3"),
-  // then by title, then by position — never by localized title alone.
-  const localRootIds = new Set(localRoots.map((r) => r.id));
-  const localRootByTitle = new Map(localRoots.map((r) => [r.title.toLowerCase(), r.id]));
-  const localRootIdList = localRoots.map((r) => r.id);
-
+  // Match remote roots to local roots by kind (bar/other/mobile/menu), then exact
+  // id, then title, then position — so a Chrome tree restores cleanly onto Firefox
+  // and vice-versa. See matchLocalRoot in bookmark-roots.ts.
   for (let i = 0; i < remoteRoots.length; i++) {
     const remoteRoot = remoteRoots[i];
     if (!remoteRoot) continue;
 
-    const localRootId =
-      (localRootIds.has(remoteRoot.id) ? remoteRoot.id : undefined) ??
-      localRootByTitle.get(remoteRoot.title?.toLowerCase()) ??
-      localRootIdList[i] ??
-      localRootIdList[1]; // fallback to "Other bookmarks"
+    const localRootId = matchLocalRoot(remoteRoot, localRoots, i);
+    if (!localRootId) continue;
 
     for (const child of remoteRoot.children ?? []) {
       await restoreNode(child, localRootId);
@@ -356,10 +353,7 @@ async function mergeBookmarks(
   };
 
   const localRoots = (await chrome.bookmarks.getTree())[0]?.children ?? [];
-  const localRootIds = new Set(localRoots.map((r) => r.id));
-  const localRootByTitle = new Map(localRoots.map((r) => [r.title.toLowerCase(), r.id]));
-  const otherId =
-    localRoots.find((r) => r.id === "2")?.id ?? localRoots[1]?.id ?? localRoots[0]?.id;
+  const otherId = defaultOtherRootId(localRoots);
   if (!otherId) {
     logger.warn("mergeBookmarks", "No writable root folder found");
     return;
@@ -424,12 +418,10 @@ async function mergeBookmarks(
   };
 
   const remoteRoots = remoteTree[0]?.children ?? remoteTree;
-  for (const remoteRoot of remoteRoots) {
+  for (let r = 0; r < remoteRoots.length; r++) {
+    const remoteRoot = remoteRoots[r];
     if (!remoteRoot) continue;
-    const targetRootId =
-      (localRootIds.has(remoteRoot.id) ? remoteRoot.id : undefined) ??
-      localRootByTitle.get(remoteRoot.title?.toLowerCase()) ??
-      otherId;
+    const targetRootId = matchLocalRoot(remoteRoot, localRoots, r) ?? otherId;
     let i = 0;
     for (const child of remoteRoot.children ?? []) {
       await mergeNode(child, () => Promise.resolve(targetRootId), i);
