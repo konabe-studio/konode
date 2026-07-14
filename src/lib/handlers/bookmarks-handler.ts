@@ -5,7 +5,7 @@ import {
   getTombstones, setTombstones,
   getMoves, setMoves,
 } from "@/lib/utils/storage";
-import { defaultOtherRootId, matchLocalRoot } from "@/lib/utils/bookmark-roots";
+import { defaultOtherRootId, matchLocalRoot, matchLocalRootEx } from "@/lib/utils/bookmark-roots";
 import { browser } from "@/lib/utils/ext";
 
 type BookmarkNode = chrome.bookmarks.BookmarkTreeNode;
@@ -84,7 +84,16 @@ export function mergeMoveLists(a: MoveRecord[], b: MoveRecord[]): MoveRecord[] {
   return gcMoves([...a, ...b]);
 }
 
-/** Record tombstones for every URL in a removed bookmark/folder subtree. */
+/** URLs present anywhere in the CURRENT local tree (called after a mutation). */
+async function localUrlSet(): Promise<Set<string>> {
+  return new Set(flattenNodes(await exportBookmarks()).filter((n) => n.url).map((n) => n.url as string));
+}
+
+/** Record tombstones for every URL in a removed bookmark/folder subtree — but only
+ *  for URLs whose LAST local copy was just removed. Deleting one of several
+ *  identical-URL bookmarks must NOT tombstone the URL: the tombstone is URL-keyed,
+ *  so it would delete every copy on every peer (and the surviving local copy, being
+ *  older than the tombstone, wouldn't re-propagate → the devices diverge). */
 async function recordRemovedTombstones(node: BookmarkNode): Promise<void> {
   if (importing) return;
   const urls: string[] = [];
@@ -94,10 +103,13 @@ async function recordRemovedTombstones(node: BookmarkNode): Promise<void> {
   };
   walk(node);
   if (!urls.length) return;
+  const remaining = await localUrlSet();
+  const gone = [...new Set(urls)].filter((url) => !remaining.has(url));
+  if (!gone.length) return; // every removed URL still has another local copy
   const now = Date.now();
   const current = await getTombstones();
-  await setTombstones(mergeTombstoneLists(current, urls.map((url) => ({ url, deletedAt: now }))));
-  logger.info("Tombstones", `Recorded ${urls.length} deletion(s)`);
+  await setTombstones(mergeTombstoneLists(current, gone.map((url) => ({ url, deletedAt: now }))));
+  logger.info("Tombstones", `Recorded ${gone.length} deletion(s)`);
 }
 
 /** Editing a bookmark's URL fires onChanged (NOT onRemoved), so no tombstone is
@@ -114,6 +126,9 @@ async function recordUrlChange(id: string, newUrl: string | undefined): Promise<
   const prev = flattenNodes(cache).find((n) => n.id === id);
   const oldUrl = prev?.url;
   if (!oldUrl || oldUrl === newUrl) return;
+  // Same guard as deletion: don't tombstone the old url if another local bookmark
+  // still holds it (editing one of several identical-URL copies).
+  if ((await localUrlSet()).has(oldUrl)) return;
   const now = Date.now();
   const current = await getTombstones();
   await setTombstones(mergeTombstoneLists(current, [{ url: oldUrl, deletedAt: now }]));
@@ -373,13 +388,15 @@ async function mergeBookmarks(
   // no tombstone of their own), nothing triggers its creation, so it stays gone.
   // `index` = the node's position among its siblings in the REMOTE tree, so adds
   // and moves land at the peer's position instead of always at the end of the folder.
-  const mergeNode = async (node: SyncBookmark, ensureParent: () => Promise<string>, index: number): Promise<void> => {
+  const mergeNode = async (node: SyncBookmark, ensureParent: () => Promise<string>, index: number, rootConfident: boolean): Promise<void> => {
     if (node.url) {
       if (addedUrls.has(node.url)) return;
       const loc = placement.get(node.url);
       if (loc) {
-        // Already local → relocate to the peer's folder/position if its placement wins.
-        if (shouldMove(node.url)) {
+        // Already local → relocate to the peer's folder/position if its placement
+        // wins AND we could confidently map the peer's root. Without confidence a
+        // "move" would displace the bookmark into the default root — skip it.
+        if (shouldMove(node.url) && rootConfident) {
           try {
             const targetId = await ensureParent();
             if (loc.parentId !== targetId || loc.index !== index) {
@@ -416,7 +433,7 @@ async function mergeBookmarks(
         return folderId;
       };
       let i = 0;
-      for (const child of node.children ?? []) { await mergeNode(child, ensureThis, i); i++; }
+      for (const child of node.children ?? []) { await mergeNode(child, ensureThis, i, rootConfident); i++; }
     }
   };
 
@@ -424,10 +441,15 @@ async function mergeBookmarks(
   for (let r = 0; r < remoteRoots.length; r++) {
     const remoteRoot = remoteRoots[r];
     if (!remoteRoot) continue;
-    const targetRootId = matchLocalRoot(remoteRoot, localRoots, r) ?? otherId;
+    // `confident` is false only when the peer root fell back to position/default
+    // (unmappable) — moves are gated on it so a reposition from such a peer can't
+    // displace an existing bookmark into the default root. See bookmark-roots.ts.
+    const match = matchLocalRootEx(remoteRoot, localRoots, r);
+    const targetRootId = match.id ?? otherId;
+    const rootConfident = match.confident;
     let i = 0;
     for (const child of remoteRoot.children ?? []) {
-      await mergeNode(child, () => Promise.resolve(targetRootId), i);
+      await mergeNode(child, () => Promise.resolve(targetRootId), i, rootConfident);
       i++;
     }
   }

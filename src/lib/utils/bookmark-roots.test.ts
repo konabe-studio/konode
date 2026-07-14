@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rootKind, defaultOtherRootId, matchLocalRoot } from "./bookmark-roots";
+import { rootKind, defaultOtherRootId, matchLocalRoot, matchLocalRootEx } from "./bookmark-roots";
 
 // Chrome numbers its roots; Firefox uses stable guids.
 const CHROME_ROOTS = [
@@ -76,5 +76,22 @@ describe("matchLocalRoot", () => {
     const local = [{ id: "x" }, { id: "y" }, { id: "z" }];
     expect(matchLocalRoot({ id: "zzz" }, local, 2)).toBe("z");   // by index
     expect(matchLocalRoot({ id: "zzz" }, local, 9)).toBe("y");   // out of range → default (2nd)
+  });
+});
+
+describe("matchLocalRootEx — confidence", () => {
+  it("kind / id / title matches are confident", () => {
+    expect(matchLocalRootEx(CHROME_ROOTS[0], FIREFOX_ROOTS, 0).confident).toBe(true); // by kind
+    expect(matchLocalRootEx(CHROME_ROOTS[0], CHROME_ROOTS, 0).confident).toBe(true);  // by id/kind
+    expect(matchLocalRootEx({ id: "zzz", title: "work" }, [{ id: "y", title: "Work" }], 5).confident).toBe(true); // by title
+  });
+  it("position / default fallback is NOT confident", () => {
+    const r = matchLocalRootEx({ id: "zzz" }, [{ id: "x" }, { id: "y" }, { id: "z" }], 2);
+    expect(r.id).toBe("z");        // still resolves (by position)
+    expect(r.confident).toBe(false);
+  });
+  it("a Firefox-only menu root on Chrome is not a confident match", () => {
+    // no "menu" kind on Chrome, title differs → position/default → not confident
+    expect(matchLocalRootEx(FIREFOX_ROOTS[1], CHROME_ROOTS, 1).confident).toBe(false);
   });
 });

@@ -47,6 +47,10 @@ manifest.browser_specific_settings = {
   gecko: {
     id: GECKO_ID,
     strict_min_version: STRICT_MIN_VERSION,
+    // Konode has no server and no telemetry — nothing is collected by us or
+    // Mozilla; all data goes to storage the user owns. Declare that explicitly
+    // (Mozilla's data-consent key; clears the AMO/web-ext "missing" notice).
+    data_collection_permissions: { required: ["none"] },
   },
 };
 

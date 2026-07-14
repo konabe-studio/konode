@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { importBookmarks, exportBookmarkPayload, registerBookmarkListeners } from "@/lib/handlers/bookmarks-handler";
+import { getTombstones } from "@/lib/utils/storage";
 import type { BookmarkPayload, SyncBookmark } from "@/lib/types";
 
 // These exercise the real merge/replace logic against the in-memory
@@ -48,6 +49,70 @@ async function localUrls(): Promise<string[]> {
   tree.forEach(walk);
   return urls.sort();
 }
+
+describe("importBookmarks — cross-browser move safety (confidence gate)", () => {
+  // A peer we can't confidently map to a local root (foreign id, mismatched title —
+  // e.g. a peer on an older build) sends a MOVE for a bookmark we already hold.
+  // Without the gate the merge would yank it into the default root; with the gate
+  // it stays put. Local fake is Chrome-shaped ("1"/"2"/"3"); the peer root is Firefox.
+  const foreignRootPayload = (childrenBar: SyncBookmark[], moves: BookmarkPayload["moves"]): BookmarkPayload => ({
+    tree: [{
+      id: "root________", parentId: null, title: "", dateAdded: 0,
+      children: [
+        // Firefox-style root id "menu________" (kind "menu" — no Chrome equivalent)
+        // with a non-matching title → matchLocalRoot falls to position/default (not
+        // confident). Using "menu" avoids a cross-browser KIND match to the bar.
+        { id: "menu________", parentId: "root________", title: "Bookmarks Menu", dateAdded: 0, children: childrenBar },
+      ],
+    }],
+    tombstones: [],
+    moves,
+  });
+
+  it("does NOT relocate an existing bookmark when the peer root is unmappable", async () => {
+    await seed("X", "https://x.com", "2"); // local: in "Other bookmarks"
+    // Peer's foreign root resolves (via the position/default fallback) to the bar
+    // "1" and carries a newer move for X. The gate must keep X in "2", not yank it.
+    await importBookmarks(
+      foreignRootPayload([link("X", "https://x.com")], [{ url: "https://x.com", at: Date.now() }]),
+      "merge",
+      "lww",
+    );
+    expect((await chrome.bookmarks.getChildren("2")).map((c) => c.url)).toContain("https://x.com");
+    expect((await chrome.bookmarks.getChildren("1")).map((c) => c.url)).not.toContain("https://x.com");
+    expect(await localUrls()).toEqual(["https://x.com"]); // not displaced, no dup
+  });
+
+  it("still ADDS a genuinely new bookmark from an unmappable peer", async () => {
+    await importBookmarks(foreignRootPayload([link("New", "https://new.com")], []), "merge", "lww");
+    expect(await localUrls()).toEqual(["https://new.com"]);
+  });
+});
+
+describe("tombstones — duplicate-URL safety", () => {
+  it("deleting ONE of two identical-URL bookmarks records NO tombstone; deleting the last one does", async () => {
+    let onRemoved: ((id: string, info: { node: chrome.bookmarks.BookmarkTreeNode }) => void) | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (chrome.bookmarks.onRemoved as any).addListener = (cb: never) => { onRemoved = cb; };
+    registerBookmarkListeners(() => {});
+
+    const url = "https://dup.com";
+    const a = await chrome.bookmarks.create({ parentId: "1", title: "Dup", url });
+    const b = await chrome.bookmarks.create({ parentId: "1", title: "Dup", url });
+
+    // Remove the FIRST copy — a copy still remains, so no tombstone.
+    await chrome.bookmarks.remove(a.id);
+    onRemoved!(a.id, { node: { id: a.id, title: "Dup", url } as chrome.bookmarks.BookmarkTreeNode });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(await getTombstones()).toEqual([]);
+
+    // Remove the LAST copy — now genuinely gone, so a tombstone is recorded.
+    await chrome.bookmarks.remove(b.id);
+    onRemoved!(b.id, { node: { id: b.id, title: "Dup", url } as chrome.bookmarks.BookmarkTreeNode });
+    await new Promise((r) => setTimeout(r, 0));
+    expect((await getTombstones()).map((t) => t.url)).toEqual([url]);
+  });
+});
 
 describe("importBookmarks — merge", () => {
   it("additively adds new remote bookmarks without duplicating existing ones", async () => {

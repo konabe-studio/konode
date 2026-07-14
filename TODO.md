@@ -181,13 +181,27 @@ shrinking; native Firefox Sync is self-hostable so our edge is weaker). Tasks:
       Chrome `key`, adds `browser_specific_settings.gecko`). gecko id
       `konode@konode.org` **confirmed** (stable — don't change after first AMO upload);
       `strict_min_version 128.0`. Not yet runtime-verified on Firefox.
-- [~] **Per-browser OAuth redirect** — code is already browser-agnostic
-      (`browser.identity.getRedirectURL("gdrive")` returns the right per-browser URL).
-      Remaining is a **maintainer action**: register the Firefox redirect
-      (`https://<id>.extensions.allizom.org/gdrive` — read the exact value from a
-      Firefox run) in the Google Cloud Console alongside the Chromium one.
-- [ ] **`management` API** graceful degradation on Firefox (extension-list feature).
-- [ ] `web-ext` packaging + **AMO submission** (source upload + review).
+- [x] **Per-browser OAuth redirect** — code is browser-agnostic; the Firefox redirect
+      (`https://7a110f3c29a633744585eb6a2ec57ff9586b4528.extensions.allizom.org/gdrive`,
+      STABLE via the gecko id) was **registered in the Google OAuth client** →
+      Drive sign-in verified on Waterfox 140.
+- [x] **Runtime-verified on Waterfox 140** — onboarding/popup/options, Drive OAuth, first
+      sync, session restore, history all work. (2026-07-14)
+- [x] **`management` API** graceful degradation — optional perm + promise form; a
+      missing/denied `management` is swallowed.
+- [x] **web-ext packaging** — `npm run package:firefox` → `web-ext-artifacts/*.zip`;
+      `npm run lint:firefox` (0 errors / 0 notices). **AMO submission** still a maintainer action.
+- [x] **Cross-root move guard** — `matchLocalRootEx.confident`; an unmappable peer root
+      can no longer displace an existing bookmark into the default root on a move.
+- [x] **Duplicate-URL tombstone guard** — deleting one of several identical-URL bookmarks
+      no longer tombstones (deletes) the URL on every peer.
+- [x] **`data_collection_permissions: none`** in the Firefox manifest (honest no-collection).
+- [ ] **Folder / position sync** *(separate session)* — folder repositions don't propagate
+      (URL-keyed move log; `ensureThis` never repositions an existing folder). Plan:
+      path-keyed folder move-log (LWW). Caveats: rename / duplicate-title fragility.
+- [ ] **Extension cross-store UX** *(optional)* — tag SyncExtension with source browser;
+      install links only for same-browser peers (CWS ids don't resolve on Firefox).
+- [ ] **AMO submission** — `npm run package:firefox` → zip; submit + upload source.
 
 **3. Backend expansion — tiered by auth cost (cheapest first):**
 - [ ] **WebDAV presets** (Nextcloud / Synology / pCloud / kDrive / ownCloud) — already

@@ -10,6 +10,8 @@
     "build:firefox": "npm run build:firefox:ui && npm run build:firefox:sw && node scripts/make-firefox-manifest.mjs dist-firefox/manifest.json",
     "build:firefox:ui": "vite build --outDir dist-firefox",
     "build:firefox:sw": "vite build --config vite.sw.config.ts --outDir dist-firefox",
+    "lint:firefox": "web-ext lint --source-dir dist-firefox",
+    "package:firefox": "npm run build:firefox && web-ext build --source-dir dist-firefox --artifacts-dir web-ext-artifacts --overwrite-dest",
     "dev": "vite build --watch",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
@@ -37,6 +39,7 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.19.0",
     "vite": "^5.3.4",
-    "vitest": "^2.1.9"
+    "vitest": "^2.1.9",
+    "web-ext": "^8.3.0"
   }
 }

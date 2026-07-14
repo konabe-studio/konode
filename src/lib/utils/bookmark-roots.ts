@@ -48,30 +48,46 @@ export function defaultOtherRootId(roots: RootLike[]): string | undefined {
 }
 
 /**
- * Match a remote root to the local root it should merge into:
+ * Match a remote root to the local root it should merge into, and report whether
+ * the match was CONFIDENT. Resolution order:
  *   1. by KIND — so a Chrome "Bookmarks bar" ("1") maps to Firefox's toolbar and
  *      vice-versa, even though the ids and titles differ across browsers;
  *   2. by exact id — same-browser fast path when kinds don't resolve;
  *   3. by (localized) title;
- *   4. by position, then the default writable root.
+ *   → the above are `confident: true`.
+ *   4. by position, then the default writable root — `confident: false` (a guess).
  * A Firefox-only "menu" root syncing to Chrome has no local kind match and lands
  * in "Other bookmarks" via the tail fallbacks — the sensible degrade.
+ *
+ * `confident` matters when RELOCATING an existing bookmark (a move): a positional/
+ * default guess must NOT yank a bookmark across roots (e.g. a peer on an older
+ * build, or a non-standard root id + mismatched titles, would otherwise displace it
+ * into "Other bookmarks"). Placing a NEW bookmark via the guess is fine.
  */
+export function matchLocalRootEx(
+  remoteRoot: RootLike,
+  localRoots: RootLike[],
+  index: number,
+): { id: string | undefined; confident: boolean } {
+  const kind = rootKind(remoteRoot.id);
+  if (kind) {
+    const byKind = localRoots.find((r) => rootKind(r.id) === kind);
+    if (byKind) return { id: byKind.id, confident: true };
+  }
+  if (localRoots.some((r) => r.id === remoteRoot.id)) return { id: remoteRoot.id, confident: true };
+  const title = remoteRoot.title?.toLowerCase();
+  if (title) {
+    const byTitle = localRoots.find((r) => r.title?.toLowerCase() === title);
+    if (byTitle) return { id: byTitle.id, confident: true };
+  }
+  return { id: localRoots[index]?.id ?? defaultOtherRootId(localRoots), confident: false };
+}
+
+/** Convenience wrapper returning just the resolved local root id (guess included). */
 export function matchLocalRoot(
   remoteRoot: RootLike,
   localRoots: RootLike[],
   index: number,
 ): string | undefined {
-  const kind = rootKind(remoteRoot.id);
-  if (kind) {
-    const byKind = localRoots.find((r) => rootKind(r.id) === kind);
-    if (byKind) return byKind.id;
-  }
-  if (localRoots.some((r) => r.id === remoteRoot.id)) return remoteRoot.id;
-  const title = remoteRoot.title?.toLowerCase();
-  if (title) {
-    const byTitle = localRoots.find((r) => r.title?.toLowerCase() === title);
-    if (byTitle) return byTitle.id;
-  }
-  return localRoots[index]?.id ?? defaultOtherRootId(localRoots);
+  return matchLocalRootEx(remoteRoot, localRoots, index).id;
 }
