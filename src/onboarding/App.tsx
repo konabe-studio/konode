@@ -6,7 +6,7 @@ import type { BackendType, SyncSettings } from "@/lib/types";
 import {
   Cloud, Server, Github, Bookmark,
   Clock, Puzzle, Globe, CheckCircle2, ArrowRight,
-  Loader2, XCircle, Eye, EyeOff, Lock, Key, Copy, Check,
+  Loader2, XCircle, Eye, EyeOff, Lock, Key,
 } from "lucide-react";
 // Konode brand mark — the peer-mesh triangle (3 linked nodes, no center = no server).
 // Just the glyph; the container supplies the green tile.
@@ -85,16 +85,10 @@ export default function OnboardingApp() {
   // Set once the user hits Finish with E2EE on but the passphrase not (correctly)
   // filled — drives the red border + inline error (clears itself as they fix it).
   const [encTouched, setEncTouched] = useState(false);
-  // #2: one-click copy of the passphrase (a mistyped/forgotten passphrase makes
-  // E2EE data unrecoverable, so make it trivial to save). Brief check-mark feedback.
-  const [passCopied, setPassCopied] = useState(false);
-  const copyPass = async () => {
-    try {
-      await navigator.clipboard.writeText(encPass);
-      setPassCopied(true);
-      setTimeout(() => setPassCopied(false), 1500);
-    } catch { /* clipboard unavailable — no-op */ }
-  };
+  // Note: no copy-passphrase button here (unlike Settings). Onboarding is where the
+  // passphrase is first CONFIRMED by re-typing; a copy button would let the user
+  // paste it into the confirm field and defeat the double-entry check. Settings —
+  // where the passphrase is already set — keeps copy for saving/rotating it.
 
   // #3: post-finish live sync progress. STATE_UPDATE only fires at sync start/end,
   // so we poll GET_STATE and light up each enabled type as its sync_counts entry
@@ -576,7 +570,7 @@ export default function OnboardingApp() {
             <div style={{ marginBottom: 12 }}>
               <div style={{ position: "relative" }}>
                 <input
-                  style={{ ...S.input, width: "100%", paddingRight: encPass ? 60 : 34, ...(encTouched && passMissing ? { borderColor: "var(--danger)" } : {}) }}
+                  style={{ ...S.input, width: "100%", paddingRight: 34, ...(encTouched && passMissing ? { borderColor: "var(--danger)" } : {}) }}
                   type={showEncPass ? "text" : "password"}
                   placeholder="Choose a passphrase, or generate a key →"
                   value={encPass}
@@ -584,16 +578,6 @@ export default function OnboardingApp() {
                   aria-invalid={encTouched && passMissing}
                 />
                 <div style={S.inputBtnGroup}>
-                  {encPass && (
-                    <button
-                      type="button"
-                      style={{ ...S.iconBtn, color: passCopied ? "var(--accent)" : "var(--text-secondary)" }}
-                      onClick={copyPass}
-                      title={passCopied ? "Copied" : "Copy passphrase"}
-                    >
-                      {passCopied ? <Check size={14} /> : <Copy size={14} />}
-                    </button>
-                  )}
                   <button type="button" style={S.iconBtn} onClick={() => setShowEncPass(v => !v)} title={showEncPass ? "Hide" : "Show"}>
                     {showEncPass ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
