@@ -335,6 +335,76 @@ describe("importBookmarks — moves", () => {
   });
 });
 
+describe("importBookmarks — folder repositions", () => {
+  async function seedFolderWithLink(title: string, url: string): Promise<void> {
+    const f = await chrome.bookmarks.create({ parentId: "1", title });
+    await chrome.bookmarks.create({ parentId: f.id, title, url });
+  }
+
+  it("repositions a folder to the peer's index when the peer's folder-move is newer (lww)", async () => {
+    await seedFolderWithLink("A", "https://a.com");   // idx 0
+    await seedFolderWithLink("GDD", "https://g.com");  // idx 1
+    await seedFolderWithLink("B", "https://b.com");   // idx 2
+
+    // Peer reordered GDD to the front (index 0) with a newer folder-move; its tree
+    // carries no bookmark changes, so only the reposition should apply.
+    const future = Date.now() + 60_000;
+    const p: BookmarkPayload = {
+      ...payload([]),
+      folderMoves: [{ path: ["bar", "GDD"], index: 0, at: future }],
+    };
+    await importBookmarks(p, "merge", "lww");
+
+    const order = (await chrome.bookmarks.getChildren("1")).filter((c) => !c.url).map((c) => c.title);
+    expect(order).toEqual(["GDD", "A", "B"]);
+    expect(await localUrls()).toEqual(["https://a.com", "https://b.com", "https://g.com"]); // no churn
+  });
+
+  it("does NOT reposition a folder without a newer folder-move (stale record)", async () => {
+    await seedFolderWithLink("A", "https://a.com");
+    await seedFolderWithLink("GDD", "https://g.com");
+
+    const past = Date.now() - 60_000; // older than any local move → loses lww
+    const p: BookmarkPayload = { ...payload([]), folderMoves: [{ path: ["bar", "GDD"], index: 0, at: past }] };
+    // Seed a NEWER local folder-move for the same path so the peer's record loses.
+    const { setFolderMoves } = await import("@/lib/utils/storage");
+    await setFolderMoves([{ path: ["bar", "GDD"], index: 1, at: Date.now() }]);
+    await importBookmarks(p, "merge", "lww");
+
+    const order = (await chrome.bookmarks.getChildren("1")).filter((c) => !c.url).map((c) => c.title);
+    expect(order).toEqual(["A", "GDD"]); // unchanged
+  });
+
+  it("prefer-local ignores the peer's folder reposition", async () => {
+    await seedFolderWithLink("A", "https://a.com");
+    await seedFolderWithLink("GDD", "https://g.com");
+
+    const future = Date.now() + 60_000;
+    const p: BookmarkPayload = { ...payload([]), folderMoves: [{ path: ["bar", "GDD"], index: 0, at: future }] };
+    await importBookmarks(p, "merge", "prefer-local");
+
+    const order = (await chrome.bookmarks.getChildren("1")).filter((c) => !c.url).map((c) => c.title);
+    expect(order).toEqual(["A", "GDD"]); // local placement wins
+  });
+
+  it("prunes the empty shell left when a cross-parent bookmark move empties a folder", async () => {
+    // Local: X lives in "Old". The peer moved X into "New" (different parent).
+    const old = await chrome.bookmarks.create({ parentId: "1", title: "Old" });
+    await chrome.bookmarks.create({ parentId: old.id, title: "X", url: "https://x.com" });
+
+    const future = Date.now() + 60_000;
+    const p: BookmarkPayload = {
+      ...payload([folder("New", [link("X", "https://x.com")])]),
+      moves: [{ url: "https://x.com", at: future }],
+    };
+    await importBookmarks(p, "merge", "lww");
+
+    const barFolders = (await chrome.bookmarks.getChildren("1")).filter((c) => !c.url).map((c) => c.title);
+    expect(barFolders).toEqual(["New"]);       // "Old" shell pruned
+    expect(await localUrls()).toEqual(["https://x.com"]); // X relocated, no duplicate
+  });
+});
+
 describe("importBookmarks — replace", () => {
   it("clears local and restores the remote tree", async () => {
     await seed("A", "https://a.com");

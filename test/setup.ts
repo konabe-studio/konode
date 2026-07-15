@@ -35,7 +35,7 @@ function bmChildren(parentId) {
 
 function bmBuild(id) {
   const n = bmNodes.get(id);
-  const node = { id: n.id, parentId: n.parentId, title: n.title, dateAdded: n.dateAdded };
+  const node = { id: n.id, parentId: n.parentId, title: n.title, dateAdded: n.dateAdded, index: n.index };
   if (typeof n.url === "string") node.url = n.url;
   else node.children = bmChildren(id).map((c) => bmBuild(c.id));
   return node;
@@ -69,8 +69,10 @@ function makeBookmarks() {
     },
     move: (id, dest) => {
       const n = bmNodes.get(id);
-      if (n && dest && dest.parentId) {
-        const target = dest.parentId;
+      if (n && dest) {
+        // Chrome keeps the node in its current parent when parentId is omitted
+        // (a same-folder reorder), so default target to the node's current parent.
+        const target = dest.parentId ?? n.parentId;
         const siblings = bmChildren(target).filter((s) => s.id !== id);
         const idx = typeof dest.index === "number" ? Math.min(dest.index, siblings.length) : siblings.length;
         for (const s of siblings) if ((s.index ?? 0) >= idx) s.index = (s.index ?? 0) + 1; // shift to insert

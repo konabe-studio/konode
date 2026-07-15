@@ -100,6 +100,16 @@ src/
   60%**, user-adjustable 50–95% in Settings → Advanced; floor of 20 so small trees
   aren't tripped) is skipped — guards against a corrupt/oversized tombstone log
   wiping the tree, while a normal bulk cleanup up to the threshold still propagates.
+- **Bookmark moves** propagate via a URL-keyed move-log (`konode_bm_moves`, LWW) —
+  a relocated bookmark follows the winning peer's folder + index. **Folder reorders**
+  (a folder repositioned among its siblings) use a separate **path-keyed** move-log
+  (`konode_bm_folder_moves`, `FolderMoveRecord { path:[rootKind,…titles], index, at }`,
+  LWW): the merge resolves the path to the local folder and moves it to the peer's
+  index (Step C). Only pure reorders are recorded; a **cross-parent folder move**
+  relocates its bookmarks via the URL move-log and the emptied folder shell is pruned
+  on the receiver (Step D — only folders that merge itself emptied). Path resolution
+  fails safe. Not handled (by design): folder rename, duplicate sibling titles, and
+  relocating a moved folder as a single node (bookmarks move; the folder node doesn't).
 - **Conflict strategies** are now **per-item (per URL)**: `lww` (newest action
   wins), `prefer-local`, `prefer-remote`, `manual` (popup banner resolves).
 - **History** is additive + de-duped; restore is lossy by design (Chrome can't set
@@ -130,7 +140,8 @@ src/
 ## Storage keys (`chrome.storage.local`)
 
 `konode_settings`, `konode_state`, `konode_audit`, `konode_bm_cache`,
-`konode_bm_tombstones`, `konode_gdrive_session`, `konode_remote_extensions`,
+`konode_bm_tombstones`, `konode_bm_moves`, `konode_bm_folder_moves`,
+`konode_gdrive_session`, `konode_remote_extensions`,
 `konode_remote_sessions`. The last two are **device-keyed maps**
 (`{ [device_id]: { device_id, timestamp, session|extensions } }`) — one entry per
 peer device, so the popup can list every peer's session and union every peer's

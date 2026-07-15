@@ -48,12 +48,26 @@ export interface MoveRecord {
   at: number; // epoch ms
 }
 
+// A folder-reposition marker. Folders carry no URL, so the URL-keyed MoveRecord
+// can't describe a folder that was reordered among its siblings. `path` is the
+// browser-agnostic identity — `[rootKind, ...ancestorTitles, folderTitle]` (e.g.
+// ["bar","Work","GDD"]) — and `index` is the folder's new position under its
+// parent. Propagated with LWW like MoveRecord. Only pure reorders (same parent)
+// are recorded; a cross-parent folder move relocates its bookmarks via the URL
+// move-log and the emptied shell is cleaned up on the receiver.
+export interface FolderMoveRecord {
+  path: string[];
+  index: number;
+  at: number; // epoch ms
+}
+
 // Bookmark sync payload: the live tree plus the device's deletion log.
 // (Older packets are a bare SyncBookmark[] — handled for backward compatibility.)
 export interface BookmarkPayload {
   tree: SyncBookmark[];
   tombstones: Tombstone[];
   moves?: MoveRecord[]; // optional for back-compat with packets written before move-sync
+  folderMoves?: FolderMoveRecord[]; // optional for back-compat (added with folder-reorder sync)
 }
 
 // ─── History ───────────────────────────────────────────────────────────────

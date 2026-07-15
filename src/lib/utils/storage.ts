@@ -1,5 +1,6 @@
 import type {
   DataType,
+  FolderMoveRecord,
   MoveRecord,
   RemoteExtensionEntry,
   RemoteSessionEntry,
@@ -79,6 +80,7 @@ export const KEYS = {
   BOOKMARK_CACHE: "konode_bm_cache",
   BOOKMARK_TOMBSTONES: "konode_bm_tombstones",
   BOOKMARK_MOVES: "konode_bm_moves",
+  BOOKMARK_FOLDER_MOVES: "konode_bm_folder_moves",
   HIST_IMPORTED: "konode_hist_imported",
   REMOTE_SESSIONS: "konode_remote_sessions",
   REMOTE_EXTENSIONS: "konode_remote_extensions",
@@ -170,6 +172,17 @@ export async function getMoves(): Promise<MoveRecord[]> {
 
 export async function setMoves(list: MoveRecord[]): Promise<void> {
   await set(KEYS.BOOKMARK_MOVES, list);
+}
+
+// Per-path "folder last repositioned at" log, so a folder reordered among its
+// siblings propagates with LWW (a folder has no URL, so the URL move-log above
+// can't describe it — see FolderMoveRecord).
+export async function getFolderMoves(): Promise<FolderMoveRecord[]> {
+  return get<FolderMoveRecord[]>(KEYS.BOOKMARK_FOLDER_MOVES, []);
+}
+
+export async function setFolderMoves(list: FolderMoveRecord[]): Promise<void> {
+  await set(KEYS.BOOKMARK_FOLDER_MOVES, list);
 }
 
 // ─── Imported history (CO-6) ─────────────────────────────────────────────────

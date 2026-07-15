@@ -196,9 +196,20 @@ shrinking; native Firefox Sync is self-hostable so our edge is weaker). Tasks:
 - [x] **Duplicate-URL tombstone guard** — deleting one of several identical-URL bookmarks
       no longer tombstones (deletes) the URL on every peer.
 - [x] **`data_collection_permissions: none`** in the Firefox manifest (honest no-collection).
-- [ ] **Folder / position sync** *(separate session)* — folder repositions don't propagate
-      (URL-keyed move log; `ensureThis` never repositions an existing folder). Plan:
-      path-keyed folder move-log (LWW). Caveats: rename / duplicate-title fragility.
+- [x] **Folder reposition + empty-shell cleanup** — a **path-keyed folder move-log**
+      (`konode_bm_folder_moves`, `FolderMoveRecord { path:[rootKind,…titles], index, at }`,
+      LWW like the URL move-log) propagates a folder REORDERED among its siblings; on
+      merge (Step C) the path resolves to the local folder and moves it to the peer's
+      index. Only pure reorders (same parent) are recorded — a cross-parent folder move
+      relocates its bookmarks via the URL move-log and the emptied shell is pruned on the
+      receiver (Step D, bottom-up, only folders WE emptied). Path resolution fails safe
+      (skips) when the root kind / a segment is absent locally. Caveats (documented, not
+      handled): rename → path no longer matches; duplicate sibling titles → path collision.
+      4 new tests; 110 green.
+- [ ] **Full folder-node relocation** *(optional follow-up)* — a folder MOVED to a
+      different parent still leaves the folder node itself behind (its bookmarks relocate
+      + the shell is pruned, so no data loss, but the folder isn't relocated as a unit).
+      Needs old-path identity tracking across the move — deferred for the fragility.
 - [ ] **Extension cross-store UX** *(optional)* — tag SyncExtension with source browser;
       install links only for same-browser peers (CWS ids don't resolve on Firefox).
 - [ ] **AMO submission** — `npm run package:firefox` → zip; submit + upload source.
