@@ -22,7 +22,7 @@ const DATA_TYPE_META: Record<DataType, { label: string; icon: typeof Bookmark }>
 
 const STATUS_CONFIG = {
   idle:     { color: "text-sk-muted",  dot: "bg-sk-subtle", ring: "border-sk-subtle", label: "Ready"    },
-  syncing:  { color: "text-sk-text",   dot: "bg-sk-signal", ring: "border-sk-signal", label: "Syncing…" },
+  syncing:  { color: "text-sk-warn",   dot: "bg-sk-warn",   ring: "border-sk-warn",   label: "Syncing…" },
   success:  { color: "text-sk-text",   dot: "bg-sk-signal", ring: "border-sk-signal", label: "Synced"   },
   error:    { color: "text-sk-danger", dot: "bg-sk-danger", ring: "border-sk-danger", label: "Error"    },
   conflict: { color: "text-sk-warn",   dot: "bg-sk-warn",   ring: "border-sk-warn",   label: "Conflict" },
