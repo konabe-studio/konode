@@ -51,14 +51,22 @@ export interface MoveRecord {
 // A folder-reposition marker. Folders carry no URL, so the URL-keyed MoveRecord
 // can't describe a folder that was reordered among its siblings. `path` is the
 // browser-agnostic identity — `[rootKind, ...ancestorTitles, folderTitle]` (e.g.
-// ["bar","Work","GDD"]) — and `index` is the folder's new position under its
-// parent. Propagated with LWW like MoveRecord. Only pure reorders (same parent)
-// are recorded; a cross-parent folder move relocates its bookmarks via the URL
-// move-log and the emptied shell is cleaned up on the receiver.
+// ["bar","Work","GDD"]). Propagated with LWW like MoveRecord. Only pure reorders
+// (same parent) are recorded; a cross-parent folder move relocates its bookmarks
+// via the URL move-log and the emptied shell is cleaned up on the receiver.
+//
+// Placement is ANCHOR-based, not absolute: `prev`/`next` are the keys of the
+// siblings immediately before/after the folder at move time (a bookmark → `u:<url>`,
+// a folder → `f:<title>`), so the receiver positions the folder relative to a shared
+// sibling — an absolute index doesn't translate when the two devices have different
+// (device-local) siblings. `index` is kept only as a last-resort fallback when
+// neither anchor exists locally.
 export interface FolderMoveRecord {
   path: string[];
-  index: number;
-  at: number; // epoch ms
+  index: number;   // fallback only (absolute position on the source device)
+  at: number;      // epoch ms
+  prev?: string;   // sibling key immediately before the folder (undefined = it's first)
+  next?: string;   // sibling key immediately after the folder (undefined = it's last)
 }
 
 // Bookmark sync payload: the live tree plus the device's deletion log.

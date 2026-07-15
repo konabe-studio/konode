@@ -103,9 +103,17 @@ src/
 - **Bookmark moves** propagate via a URL-keyed move-log (`konode_bm_moves`, LWW) —
   a relocated bookmark follows the winning peer's folder + index. **Folder reorders**
   (a folder repositioned among its siblings) use a separate **path-keyed** move-log
-  (`konode_bm_folder_moves`, `FolderMoveRecord { path:[rootKind,…titles], index, at }`,
-  LWW): the merge resolves the path to the local folder and moves it to the peer's
-  index (Step C). Only pure reorders are recorded; a **cross-parent folder move**
+  (`konode_bm_folder_moves`, `FolderMoveRecord { path:[rootKind,…titles], index, at,
+  prev?, next? }`, LWW): the merge resolves the path to the local folder and
+  repositions it (Step C). Placement is **anchor-based**, not by absolute index — an
+  absolute index doesn't translate when the two devices have different device-local
+  siblings (the real bug: a folder at index 7 on one browser vs 6 on the other). `prev`/
+  `next` are the keys of the siblings on either side at move time (a bookmark → `u:<url>`,
+  a folder → `f:<title>`); the receiver places the folder right after `prev` (or before
+  `next`), falling back to the absolute `index` only when neither anchor exists locally.
+  `moveToIndex` reads back and nudges once to absorb Chromium's same-parent move quirk
+  (a downward move lands one slot short; Firefox uses the final-index convention). Only
+  pure reorders are recorded; a **cross-parent folder move**
   relocates its bookmarks via the URL move-log and the emptied folder shell is pruned
   on the receiver (Step D — only folders that merge itself emptied). Path resolution
   fails safe. Not handled (by design): folder rename, duplicate sibling titles, and

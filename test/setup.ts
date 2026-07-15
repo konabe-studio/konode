@@ -73,11 +73,15 @@ function makeBookmarks() {
         // Chrome keeps the node in its current parent when parentId is omitted
         // (a same-folder reorder), so default target to the node's current parent.
         const target = dest.parentId ?? n.parentId;
+        // Model the real remove-then-insert: pull the node out, re-pack the rest to
+        // contiguous indices, then splice in at the requested FINAL index. (dest.index
+        // is the final-array position — Firefox's convention; the handler's moveToIndex
+        // corrects Chromium's pre-removal-array quirk against the real browser.)
         const siblings = bmChildren(target).filter((s) => s.id !== id);
-        const idx = typeof dest.index === "number" ? Math.min(dest.index, siblings.length) : siblings.length;
-        for (const s of siblings) if ((s.index ?? 0) >= idx) s.index = (s.index ?? 0) + 1; // shift to insert
+        const idx = typeof dest.index === "number" ? Math.max(0, Math.min(dest.index, siblings.length)) : siblings.length;
+        siblings.splice(idx, 0, n);
+        siblings.forEach((s, i) => { s.index = i; });
         n.parentId = target;
-        n.index = idx;
       }
       return Promise.resolve(n ? bmBuild(id) : undefined);
     },

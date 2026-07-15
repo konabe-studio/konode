@@ -197,15 +197,17 @@ shrinking; native Firefox Sync is self-hostable so our edge is weaker). Tasks:
       no longer tombstones (deletes) the URL on every peer.
 - [x] **`data_collection_permissions: none`** in the Firefox manifest (honest no-collection).
 - [x] **Folder reposition + empty-shell cleanup** — a **path-keyed folder move-log**
-      (`konode_bm_folder_moves`, `FolderMoveRecord { path:[rootKind,…titles], index, at }`,
-      LWW like the URL move-log) propagates a folder REORDERED among its siblings; on
-      merge (Step C) the path resolves to the local folder and moves it to the peer's
-      index. Only pure reorders (same parent) are recorded — a cross-parent folder move
-      relocates its bookmarks via the URL move-log and the emptied shell is pruned on the
-      receiver (Step D, bottom-up, only folders WE emptied). Path resolution fails safe
-      (skips) when the root kind / a segment is absent locally. Caveats (documented, not
-      handled): rename → path no longer matches; duplicate sibling titles → path collision.
-      4 new tests; 110 green.
+      (`konode_bm_folder_moves`, `FolderMoveRecord { path:[rootKind,…titles], index, at,
+      prev?, next? }`, LWW like the URL move-log) propagates a folder REORDERED among its
+      siblings; on merge (Step C) the path resolves to the local folder and it's
+      repositioned **anchor-based** — right after the peer's `prev` sibling (or before
+      `next`), keyed by url/title so it maps across devices with different device-local
+      siblings; absolute `index` is a last-resort fallback. `moveToIndex` corrects
+      Chromium's same-parent move quirk (downward move lands one short). Only pure reorders
+      recorded — a cross-parent folder move relocates its bookmarks via the URL move-log
+      and the emptied shell is pruned on the receiver (Step D, bottom-up, only folders WE
+      emptied). Path/anchor resolution fails safe. Caveats (documented, not handled):
+      rename → path no longer matches; duplicate sibling titles → collision. 6 tests; 112 green.
 - [ ] **Full folder-node relocation** *(optional follow-up)* — a folder MOVED to a
       different parent still leaves the folder node itself behind (its bookmarks relocate
       + the shell is pruned, so no data loss, but the folder isn't relocated as a unit).
