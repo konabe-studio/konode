@@ -335,6 +335,32 @@ describe("importBookmarks — moves", () => {
   });
 });
 
+describe("importBookmarks — bookmark reposition placement (anchor-based)", () => {
+  it("places a moved bookmark after its peer's neighbor, not at the peer's absolute index", async () => {
+    // Local order differs from the peer's, so an absolute index would misplace X.
+    await seed("B", "https://b.com"); // idx 0
+    await seed("A", "https://a.com"); // idx 1
+    await seed("X", "https://m.com"); // idx 2  ← the one that moves
+    await seed("C", "https://c.com"); // idx 3
+
+    // Peer bar is [A, B, X]: X sits immediately AFTER B (anchor prev = B). Its absolute
+    // index on the peer is 2 — applied blindly that would drop X after A (→ [B,A,X,C]).
+    const future = Date.now() + 60_000;
+    const p: BookmarkPayload = {
+      ...payload([
+        link("A", "https://a.com"),
+        link("B", "https://b.com"),
+        link("X", "https://m.com"),
+      ]),
+      moves: [{ url: "https://m.com", at: future }],
+    };
+    await importBookmarks(p, "merge", "lww");
+
+    const order = (await chrome.bookmarks.getChildren("1")).map((c) => c.title);
+    expect(order).toEqual(["B", "X", "A", "C"]); // X anchored right after B, not by index
+  });
+});
+
 describe("importBookmarks — folder repositions", () => {
   async function seedFolderWithLink(title: string, url: string): Promise<void> {
     const f = await chrome.bookmarks.create({ parentId: "1", title });
