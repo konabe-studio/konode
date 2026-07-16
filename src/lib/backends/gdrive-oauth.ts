@@ -10,18 +10,21 @@
  * are minted by a plain HTTPS POST to the token endpoint — no UI, no browser
  * session needed — which works identically on every Chromium browser.
  *
- * The client_secret below is NOT confidential: Google issues it for a "Web
- * application" client, and for an installed app it necessarily ships in the
- * bundle (extractable). It is scoped to drive.file (only Konode's own files) and
- * can be rotated in the Google Cloud Console at any time.
+ * The client_secret is injected at BUILD TIME from VITE_GOOGLE_CLIENT_SECRET (a
+ * gitignored .env) — never committed, so the public source stays clean and Google's
+ * secret-scanning has nothing to flag. It still ships inside the packaged extension
+ * (extractable), which is acceptable for an installed app: it's scoped to drive.file
+ * (only Konode's own files) and can be rotated in the Google Cloud Console at any
+ * time. A source build without the var yields an empty secret — supply your own
+ * OAuth client to use the Drive backend from a self-built copy.
  */
 
 import { logger } from "@/lib/utils/logger";
 import { KEYS } from "@/lib/utils/storage";
 import { browser } from "@/lib/utils/ext";
 
-const CLIENT_ID = "290320131573-l79rlp36rgmuc5bkisoqfcjc4k9t58dq.apps.googleusercontent.com";
-const CLIENT_SECRET = "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";
+const CLIENT_ID = "754300898931-2gejbfi1k9ul3lct0n09ke128gtv4j8l.apps.googleusercontent.com";
+const CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET ?? "";
 const AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 const SCOPE = "https://www.googleapis.com/auth/drive.file";
@@ -90,12 +93,10 @@ async function codeChallenge(verifier: string): Promise<string> {
 
 async function exchange(params: Record<string, string>): Promise<TokenResponse> {
   const body = new URLSearchParams({ client_id: CLIENT_ID, ...params });
-  // Only send a client_secret when one is configured. The preferred setup is a
-  // PUBLIC OAuth client with NO secret — PKCE's code_verifier is the proof — in
-  // which case CLIENT_SECRET is "" and this line drops out of the request. With the
-  // current Web-app client the secret is still present, so behavior is unchanged
-  // until the client is swapped (PR-H1): set the new public client_id + empty
-  // CLIENT_SECRET, and no code here changes.
+  // Only send a client_secret when one is configured. The Web-app client requires it
+  // for the token exchange (PKCE alone isn't accepted for a Web client), so official
+  // builds inject it via VITE_GOOGLE_CLIENT_SECRET. A source build without the var
+  // sends no secret (and would need its own public/desktop OAuth client to work).
   if (CLIENT_SECRET) body.set("client_secret", CLIENT_SECRET);
   const res = await fetch(TOKEN_ENDPOINT, {
     method: "POST",
