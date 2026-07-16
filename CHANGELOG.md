@@ -1,9 +1,91 @@
 # Changelog
 
 All notable changes to Konode. Format loosely follows
-[Keep a Changelog](https://keepachangelog.com/); the project is pre-1.0.
+[Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased] — 0.1.0
+## [1.0.0] — 2026-07-16
+
+First release-ready build: E2EE hardened end-to-end, Firefox supported, the
+brand applied everywhere, and the store-submission docs in place.
+
+### Security / E2EE hardening
+- **Stopped uploading the passphrase verifier** — `encrypt("konode-verify-v1")`
+  on third-party storage was an offline brute-force oracle on the passphrase.
+  A mismatch now surfaces via the payload's GCM decrypt failure (same loud
+  `PassphraseError`); legacy peers' verifiers are still checked on download.
+- **Passphrase strength floor** — a new manually-typed E2EE passphrase must be
+  ≥12 characters (options + onboarding, with an honest "guessable offline"
+  explanation); generated keys and already-saved passphrases are unaffected.
+  PRIVACY.md and the README now document the offline-guessing threat model.
+- **E2EE mixed-state self-healing** — encryption disagreements between devices
+  no longer hard-abort or deadlock the group: the device uploads its own
+  (correctly-encrypted) file first, mismatches are per-device warnings, an
+  orphaned plaintext file is skipped silently instead of warning forever, and
+  enabling/rotating E2EE forces a re-upload in the new form so a mixed group
+  converges in one cycle.
+- **No plaintext downgrade paths** — a device with E2EE off no longer decrypts
+  encrypted peers (it gets an "enable E2EE here" nudge instead of silently
+  re-publishing the group's data in plaintext), and a manual conflict-resolve
+  can't import a plaintext packet into an encrypted device.
+- **Passphrase UX** — double-entry confirm for new passphrases (options +
+  onboarding), content-free saved-secret masking, reveal-on-demand eye,
+  explicit confirmation before turning E2EE off.
+- **Leaked OAuth client retired** — the Google OAuth client secret briefly
+  committed to source now lives in a gitignored `.env` and is injected at build
+  time (`VITE_GOOGLE_CLIENT_SECRET`); the exposed client was deleted in the
+  Google Cloud Console and replaced with a fresh one.
+
+### Added
+- **Firefox support** — runtime APIs routed through `webextension-polyfill`,
+  browser-agnostic bookmark-root resolution (Chrome `1/2/3` ⇄ Firefox
+  `toolbar_____`/`menu________`/`unfiled_____` by kind), a Firefox manifest
+  variant (`npm run build:firefox` → `dist-firefox/`, event-page background,
+  gecko id `konode@konode.org`, `data_collection_permissions: none`), web-ext
+  packaging + lint, and a per-browser OAuth redirect. Runtime-verified on
+  Waterfox 140 (onboarding, Drive OAuth, sync, session restore, history).
+- **Folder reorder sync** — a folder repositioned among its siblings propagates
+  via a path-keyed move-log with **anchor-based** placement (lands next to the
+  same neighbor on every device, not at a raw index that doesn't translate);
+  cross-parent folder moves relocate their bookmarks and the emptied shell is
+  pruned on the receiver.
+- **Configurable mass-delete guard** — the bookmark bulk-delete safety cap is a
+  setting (default 60%, 50–95% in Settings → Advanced) instead of a hard 50%,
+  so a legitimate bulk cleanup propagates while a corrupt tombstone log still
+  can't wipe a tree.
+- **Per-device sessions & extensions everywhere** — the popup lists every peer
+  device's session with per-device restore, and unions every peer's extension
+  list.
+- **Brand** — peer-mesh logo mark, reproducible icon generation, full UI
+  re-skin (popup, options, onboarding) with system light/dark, self-hosted
+  fonts, and the Proton-Pass-style top-tab settings layout.
+- **Docs for launch** — marketing README with screenshot, GETTING_STARTED,
+  TROUBLESHOOTING, PRIVACY.md (near-final), STORE_LISTING.md (CWS listing +
+  OAuth consent copy), MPL-2.0 LICENSE, build-fingerprint verification script
+  (`npm run checksum`).
+
+### Fixed
+- **Move-to-last-position convergence** — Chromium's same-parent move quirk
+  (an index measured against the pre-removal array) made "move to the end"
+  land one slot short forever; the corrective nudge now clamps to the child
+  count so it actually reaches the last slot.
+- **Cross-root move safety** — a peer root that can't be confidently mapped
+  (e.g. an older build's foreign id) can no longer yank an existing bookmark
+  into the default root.
+- **Duplicate-URL deletion safety** — deleting one of several identical-URL
+  bookmarks no longer tombstones (deletes) the URL on every peer.
+- **Audit backlog cleared** (4-agent review, 2026-07-07): sticky manual
+  conflict resolutions (no more re-notify loop), the sync-lock race, backend
+  list errors no longer masquerade as "no peers", export works without the
+  history permission, SecretField renders the generated key.
+
+### Tooling
+- CI now **enforces** lint (`continue-on-error` removed), runs `npm ci` from
+  the committed lockfile, and `eslint-plugin-react-hooks` is wired in
+  (rules-of-hooks as an error, exhaustive-deps advisory).
+- Single-source version (`scripts/sync-version.mjs` stamps the manifests from
+  `package.json`).
+
+## [0.1.0]
 
 The first working build, hardened over a review + fix pass. Highlights:
 
