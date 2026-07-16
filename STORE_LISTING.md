@@ -140,25 +140,37 @@ asked for it.
 - **Developer contact:** `[FILL]`
 - **Scopes:** `https://www.googleapis.com/auth/drive.file` only (non-sensitive).
 
-### Privacy-policy hosting note
+### Privacy-policy hosting & verification — two valid paths
 
-Two different bars apply:
+Konode requests only `drive.file`, a **non-sensitive** scope. That means app
+verification is **not mandatory**: the app can be published to production
+without it, and users see no "unverified app" warning. The only thing that
+requires more is **brand verification** — showing the Konode name + logo on the
+Google consent screen.
 
-- **Chrome Web Store listing:** any publicly reachable URL is accepted — a
-  GitHub link works here.
-- **Google OAuth consent screen / brand verification:** the privacy policy must
-  live on the **same domain as the app's homepage**, and that domain must be an
-  **authorized domain** whose ownership is verified in Google Search Console.
-  `github.com` can't be verified as yours, and Google has rejected shared-host
-  subdomains (`*.github.io`) as not first-party in verification reviews — even
-  when technically verifiable in Search Console. Use a domain you own (the
-  Firefox gecko id already assumes `konode.org`) and host the homepage +
-  privacy policy there.
+| | **Free path (launch now)** | **Owned domain (e.g. konode.org)** |
+|---|---|---|
+| Cost | $0 | ~$10–12/year |
+| Google sign-in works | ✅ fully, no user cap, no warning screen | ✅ |
+| CWS listing privacy URL | ✅ GitHub link / GitHub Pages accepted | ✅ own site |
+| Consent screen branding | ⚠️ no logo, less polished app identity | ✅ Konode name + logo (brand verification) |
+| Consent screen fields | App name + support email only; **no logo** (uploading one triggers the brand-verification requirement); leave homepage/privacy URL **empty** (filling them requires an authorized domain) | All fields + logo; domain verified in Search Console; privacy policy hosted on the same domain as the homepage |
+| Product website | GitHub repo / README | `konode-site` repo deployed on the domain |
 
-Note: `drive.file` is a **non-sensitive** scope, so the heavyweight
-sensitive-scope review doesn't apply — but brand verification (showing the
-Konode name + logo on the consent screen instead of a bare domain) still
-requires the authorized-domain setup above.
+Rules that make the free path safe and the shortcuts fail:
+
+- **CWS listing** accepts any publicly reachable privacy-policy URL — GitHub is
+  fine there.
+- **Brand verification** requires the privacy policy on the **same domain as
+  the homepage**, registered as an **authorized domain** and ownership-verified
+  in Google Search Console. `github.com` can't be verified as yours, and Google
+  has rejected `*.github.io` as not first-party in reviews — there is **no
+  free hosting that reliably passes brand verification**. Skip the step
+  instead; it can be submitted later on the same OAuth client once a domain
+  exists.
+- **Scope discipline:** adding any sensitive scope later (e.g. full-Drive)
+  would make verification mandatory, domain included. `drive.file` is all the
+  sync needs — keep it that way.
 
 ### `drive.file` scope justification
 
