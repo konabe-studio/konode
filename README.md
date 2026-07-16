@@ -15,6 +15,10 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MPL--2.0-brightgreen" alt="License: MPL-2.0"></a>
 </p>
 
+<p align="center">
+  <img src="docs/popup.png" alt="The Konode popup: synced status, active data streams, and sessions from other devices" width="100%">
+</p>
+
 ---
 
 Konode keeps your bookmarks, open tabs, history, and installed-extension list in sync
