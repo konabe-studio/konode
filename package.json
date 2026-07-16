@@ -1,13 +1,14 @@
 {
   "name": "konode",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npm run build:ui && npm run build:sw",
+    "sync-version": "node scripts/sync-version.mjs",
+    "build": "npm run sync-version && npm run build:ui && npm run build:sw",
     "build:ui": "vite build",
     "build:sw": "vite build --config vite.sw.config.ts",
-    "build:firefox": "npm run build:firefox:ui && npm run build:firefox:sw && node scripts/make-firefox-manifest.mjs dist-firefox/manifest.json",
+    "build:firefox": "npm run sync-version && npm run build:firefox:ui && npm run build:firefox:sw && node scripts/make-firefox-manifest.mjs dist-firefox/manifest.json",
     "build:firefox:ui": "vite build --outDir dist-firefox",
     "build:firefox:sw": "vite build --config vite.sw.config.ts --outDir dist-firefox",
     "lint:firefox": "web-ext lint --source-dir dist-firefox",

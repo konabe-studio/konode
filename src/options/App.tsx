@@ -8,6 +8,10 @@ import {
   Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
   Sliders, Shield, Save, Pencil, Key, Copy, Check,
 } from "lucide-react";
+// Shown in the About section. The manifest is the single source of truth for the
+// version — bump `package.json` and the build stamps it into the manifest.
+const APP_VERSION = browser.runtime.getManifest().version;
+
 // Konode brand mark — the glyph only; the container supplies the green tile.
 function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color?: string }) {
   return (
@@ -1143,7 +1147,7 @@ export default function OptionsApp() {
                 <div className="settings-card-head">About</div>
                 <div className="settings-row">
                   <div className="settings-row-left"><div><div className="row-label">Version</div></div></div>
-                  <span className="mono-value">0.1.0</span>
+                  <span className="mono-value">{APP_VERSION}</span>
                 </div>
                 <div className="settings-row">
                   <div className="settings-row-left">
