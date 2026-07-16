@@ -1,10 +1,7 @@
 <svg width="176" height="56" viewBox="0 0 176 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <g transform="translate(8,8) scale(0.3125)">
-    <rect width="128" height="128" rx="28" fill="#12b76a"/>
-    <path d="M64 34 L40 80 M64 34 L88 80 M40 80 L88 80" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
-    <circle cx="64" cy="34" r="11" fill="#ffffff"/>
-    <circle cx="40" cy="80" r="11" fill="#ffffff"/>
-    <circle cx="88" cy="80" r="11" fill="#ffffff"/>
+  <g transform="translate(8,8) scale(0.15625)">
+    <rect width="256" height="256" rx="48" fill="#12b76a"/>
+    <path d="M152 192C152 196.418 155.582 200 160 200H192C196.418 200 200 196.418 200 192V157.601C200 154.322 197.342 151.664 194.063 151.664H178.723C176.899 151.664 175.231 150.635 174.413 149.005C170.523 141.251 172.071 131.874 178.249 125.783L198.313 105.999C199.392 104.935 200 103.482 200 101.966V64C200 59.5817 196.418 56 192 56H157.119C153.998 56 151.163 57.8143 149.855 60.6475L107.816 151.732C106.917 153.679 104 153.039 104 150.894V111.329C104 106.91 100.418 103.329 96 103.329H64C59.5817 103.329 56 106.91 56 111.329V192C56 196.418 59.5817 200 64 200H100.67C102.801 200 104.845 199.149 106.346 197.637L141.743 161.993C145.516 158.193 152 160.866 152 166.221V192Z" fill="#ffffff"/>
   </g>
   <text x="60" y="37" font-family="Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="28" font-weight="600" letter-spacing="-0.6" fill="#11151a">Konode</text>
 </svg>

@@ -8,15 +8,11 @@ import {
   Clock, Puzzle, Globe, CheckCircle2, ArrowRight,
   Loader2, XCircle, Eye, EyeOff, Lock, Key,
 } from "lucide-react";
-// Konode brand mark — the peer-mesh triangle (3 linked nodes, no center = no server).
-// Just the glyph; the container supplies the green tile.
-function MeshMark({ size = 14, color = "currentColor" }: { size?: number; color?: string }) {
+// Konode brand mark — the glyph only; the container supplies the green tile.
+function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color?: string }) {
   return (
-    <svg width={size} height={size} viewBox="24 17 80 80" fill="none" aria-hidden="true">
-      <path d="M64 34 L40 80 M64 34 L88 80 M40 80 L88 80" stroke={color} strokeWidth="7" strokeLinecap="round" />
-      <circle cx="64" cy="34" r="11" fill={color} />
-      <circle cx="40" cy="80" r="11" fill={color} />
-      <circle cx="88" cy="80" r="11" fill={color} />
+    <svg width={size} height={size} viewBox="48 48 160 160" fill="none" aria-hidden="true">
+      <path d="M152 192C152 196.418 155.582 200 160 200H192C196.418 200 200 196.418 200 192V157.601C200 154.322 197.342 151.664 194.063 151.664H178.723C176.899 151.664 175.231 150.635 174.413 149.005C170.523 141.251 172.071 131.874 178.249 125.783L198.313 105.999C199.392 104.935 200 103.482 200 101.966V64C200 59.5817 196.418 56 192 56H157.119C153.998 56 151.163 57.8143 149.855 60.6475L107.816 151.732C106.917 153.679 104 153.039 104 150.894V111.329C104 106.91 100.418 103.329 96 103.329H64C59.5817 103.329 56 106.91 56 111.329V192C56 196.418 59.5817 200 64 200H100.67C102.801 200 104.845 199.149 106.346 197.637L141.743 161.993C145.516 158.193 152 160.866 152 166.221V192Z" fill={color} />
     </svg>
   );
 }
@@ -301,7 +297,7 @@ export default function OnboardingApp() {
       {step === "welcome" && (
         <div style={S.card}>
           <div style={S.logoWrap}>
-            <MeshMark size={32} color="white" />
+            <BrandMark size={32} color="white" />
           </div>
           <h1 style={S.h1}>Welcome to Konode</h1>
           <p style={S.subtitle}>
