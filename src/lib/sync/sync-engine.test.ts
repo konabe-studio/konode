@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { SyncEngine } from "@/lib/sync/sync-engine";
+import { createKeyVerifier } from "@/lib/crypto/encryption";
 import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState } from "@/lib/utils/storage";
 import type {
   IBackend,
@@ -260,7 +261,10 @@ describe("SyncEngine.syncType — E2EE", () => {
     expect(await localUrls()).toEqual(["https://a.com", "https://b.com"]);
     const last = backend.uploads[backend.uploads.length - 1];
     expect(last.encrypted).toBe(true);
-    expect(last.verifier).toBeTruthy();
+    // No verifier on uploads: encrypt(known-constant) on third-party storage is an
+    // offline brute-force oracle on the passphrase. Mismatch detection relies on
+    // the payload's GCM decrypt failure instead (tests below).
+    expect(last.verifier).toBeUndefined();
   });
 
   it("skips (does not merge) a peer with a DIFFERENT passphrase and records a warning — no silent fork", async () => {
@@ -277,6 +281,22 @@ describe("SyncEngine.syncType — E2EE", () => {
     // ...and we still re-upload our own (encrypted) file, so the group can self-heal.
     const last = backend.uploads[backend.uploads.length - 1];
     expect(last.encrypted).toBe(true);
+  });
+
+  it("still checks a LEGACY peer's verifier (older builds upload one) on mismatch", async () => {
+    const engine = encEngine("me", "my-passphrase");
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    // A peer on an older build: its packet carries the legacy verifier field.
+    const legacy = await encPeer("their-different-one", "peer1", payload([link("B", "https://b.com")]));
+    legacy.verifier = await createKeyVerifier("their-different-one");
+    backend.files.set("bookmarks_peer1", legacy);
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+    // Same non-fatal outcome as the decrypt-failure path: skipped, warned, self-heals.
+    expect(await localUrls()).toEqual(["https://a.com"]);
+    expect(priv(engine).encryptionWarnings.has("peer1")).toBe(true);
+    expect(backend.uploads[backend.uploads.length - 1].encrypted).toBe(true);
   });
 
   it("SILENTLY skips a plaintext peer while E2EE is on here (stale/orphan file must not warn forever)", async () => {

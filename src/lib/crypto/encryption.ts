@@ -125,9 +125,12 @@ export async function decrypt(
 // ─── Key verification ─────────────────────────────────────────────────────
 
 /**
- * Creates a verifier string to check if a passphrase is correct
- * without storing the passphrase itself. Store this alongside encrypted data.
- * Format: base64(salt + encrypt("konode-verify", passphrase))
+ * LEGACY — no longer called by the sync engine's upload path. A verifier is
+ * encrypt(known-constant), and publishing that to third-party storage hands an
+ * attacker a purpose-built offline brute-force oracle on the passphrase; a
+ * mismatch is detected just as loudly by the payload's GCM decrypt failing.
+ * Kept so verifyPassphrase can validate packets from older builds (and for tests
+ * that simulate such peers). Format: base64(salt + iv + ciphertext).
  */
 export async function createKeyVerifier(passphrase: string): Promise<string> {
   return encrypt("konode-verify-v1", passphrase);
@@ -144,6 +147,18 @@ export async function verifyPassphrase(
     return false;
   }
 }
+
+// ─── Passphrase strength ──────────────────────────────────────────────────
+
+/**
+ * Minimum length for a NEW, manually-typed E2EE passphrase. Encrypted blobs live
+ * on storage the provider (or anyone who breaches it) can read, so the passphrase
+ * can be guessed OFFLINE — PBKDF2's 600k iterations only slow each guess down; the
+ * entropy has to come from the passphrase itself. 12 characters is a floor, not a
+ * target — the generated recovery key remains the recommendation. Enforced only on
+ * new entries so an existing shorter passphrase keeps decrypting old data.
+ */
+export const MIN_PASSPHRASE_LENGTH = 12;
 
 // ─── Recovery key ─────────────────────────────────────────────────────────
 

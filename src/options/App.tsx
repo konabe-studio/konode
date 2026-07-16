@@ -21,7 +21,7 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
   );
 }
 
-import { generateRecoveryKey } from "@/lib/crypto/encryption";
+import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
 import { KEYS, normalizeRemoteExtensions } from "@/lib/utils/storage";
 import { CWS_DETAIL_BASE } from "@/lib/constants";
 import { isSafeContentUrl } from "@/lib/utils/url";
@@ -256,6 +256,9 @@ export default function OptionsApp() {
   const needsPassConfirm =
     !!settings?.encryption_enabled && currentPass.length > 0 && currentPass !== initialPass && currentPass !== genKey;
   const passMismatch = needsPassConfirm && passConfirm !== currentPass;
+  // Strength floor for a NEW manually-typed passphrase only (a generated key is
+  // long by construction; an already-saved shorter one must keep working).
+  const passTooShort = needsPassConfirm && currentPass.length < MIN_PASSPHRASE_LENGTH;
 
   // WebDAV hits an arbitrary user host that isn't in host_permissions, so we
   // request it at runtime (optional_host_permissions). Must run inside a user
@@ -273,6 +276,10 @@ export default function OptionsApp() {
 
   const save = async () => {
     if (!settings) return;
+    if (passTooShort) {
+      setTestStatus({ ok: false, message: `Use at least ${MIN_PASSPHRASE_LENGTH} characters — synced data can be attacked offline, so a short passphrase is guessable. Longer is better, or generate a key.` });
+      return;
+    }
     if (passMismatch) {
       setTestStatus({ ok: false, message: "The two passphrases don't match — re-enter to confirm before saving." });
       return;
@@ -1065,6 +1072,11 @@ export default function OptionsApp() {
                         sensitive
                         onChange={(v) => update({ encryption_passphrase: v })}
                       />
+                      {passTooShort && (
+                        <div className="row-desc" style={{ marginTop: 4, color: "var(--danger)" }}>
+                          At least {MIN_PASSPHRASE_LENGTH} characters — synced data can be attacked offline, so short passphrases are guessable.
+                        </div>
+                      )}
                       {needsPassConfirm && (
                         <div style={{ marginTop: 8 }}>
                           <input

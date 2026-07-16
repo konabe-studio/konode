@@ -65,11 +65,15 @@ src/
   (SHA-256 of plaintext), encrypted, payload, verifier? }`. When E2EE is on, `payload`
   is the base64 `salt+iv+ciphertext`; checksum stays over plaintext so identical content
   matches across devices. Checksum (64-char SHA-256) is **required and verified on
-  download** before import — a missing/short checksum is rejected. `verifier`
-  (present only when encrypted) is a passphrase verifier: on download the engine
-  checks the peer's verifier against the local passphrase and throws a
-  `PassphraseError` on mismatch — so a mistyped passphrase fails loudly instead of
-  silently forking devices into unreadable data.
+  download** before import — a missing/short checksum is rejected. A passphrase
+  mismatch fails loudly (`PassphraseError`) via the payload's GCM decrypt failure —
+  so a mistyped passphrase can't silently fork devices into unreadable data.
+  `verifier` is **legacy, read-only**: older builds uploaded
+  `encrypt("konode-verify-v1")` per packet, but a known-plaintext blob on
+  third-party storage is an offline brute-force oracle on the passphrase, so it's
+  no longer written; when a legacy peer's packet carries one it's still checked for
+  the clearer error message. New manual passphrases have a 12-char minimum
+  (`MIN_PASSPHRASE_LENGTH`), enforced in options + onboarding.
   **Encryption disagreements are non-fatal and self-healing** (no marker file — the
   group's intent is read from peers' `encrypted` flags): mismatches are recorded as
   per-device warnings in the `syncType` fold and surfaced by `sync()` *after* the

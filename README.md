@@ -70,7 +70,10 @@ prefer this device, always prefer the other, or resolve it yourself from the pop
   none of it is ever sent to us or to any third party.
 - **Optional E2EE** (AES-256-GCM, PBKDF2-SHA256, 600k iterations): encrypt every
   payload before it leaves your browser. It's an explicit choice you make during
-  onboarding — default off, never silently enabled or disabled.
+  onboarding — default off, never silently enabled or disabled. Honest threat model:
+  encrypted files sit on storage others can read, so a passphrase is guessable
+  *offline* — the 600k-round derivation makes each guess slow, a new passphrase must
+  be 12+ characters, and the generated key (recommended) is effectively unguessable.
 - **Credentials stay local.** Access tokens, GitHub tokens, WebDAV passwords, and your
   encryption passphrase live only in `chrome.storage.local` on your device and are
   never uploaded. (That store isn't encrypted at rest, so a fine-grained GitHub token

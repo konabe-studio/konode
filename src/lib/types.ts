@@ -15,9 +15,11 @@ export interface SyncPacket {
   checksum: string; // SHA-256 hex of the plaintext payload
   encrypted: boolean;
   payload: string; // JSON string, optionally encrypted
-  // When `encrypted`, a passphrase verifier (createKeyVerifier) so a peer can
-  // detect a passphrase MISMATCH up front — instead of a decrypt failing silently
-  // and the devices diverging. Absent on plaintext packets and legacy files.
+  // LEGACY (read-only): packets from older builds carry a passphrase verifier
+  // (createKeyVerifier) that peers check for a clearer mismatch error. It is no
+  // longer WRITTEN — a known-plaintext verifier on third-party storage is an
+  // offline brute-force oracle on the passphrase; a mismatch now surfaces via the
+  // payload's GCM decrypt failure instead. Absent on plaintext + current packets.
   verifier?: string;
 }
 

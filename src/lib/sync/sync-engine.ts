@@ -19,7 +19,7 @@ import {
   releaseSyncLock,
 } from "@/lib/utils/storage";
 import { logger } from "@/lib/utils/logger";
-import { encrypt, decrypt, sha256, createKeyVerifier, verifyPassphrase } from "@/lib/crypto/encryption";
+import { encrypt, decrypt, sha256, verifyPassphrase } from "@/lib/crypto/encryption";
 import { ConflictResolver, notifyConflict, orderPeersByTime } from "./conflict-resolver";
 
 // How long the persisted sync lock stays valid before it's treated as stale, so a
@@ -417,10 +417,13 @@ export class SyncEngine {
       payload: useE2ee
         ? await encrypt(payloadStr, this.settings.encryption_passphrase!)
         : payloadStr,
-      // Attach a passphrase verifier so peers can detect a mismatch up front.
-      ...(useE2ee
-        ? { verifier: await createKeyVerifier(this.settings.encryption_passphrase!) }
-        : {}),
+      // Deliberately NO passphrase `verifier`. Earlier builds attached
+      // encrypt("konode-verify-v1") to every encrypted packet, but a known-plaintext
+      // blob sitting on third-party storage is a purpose-built offline brute-force
+      // oracle on the passphrase. A mismatched peer fails just as loudly via the
+      // payload's GCM auth failure (applyRemote throws PassphraseError), so the
+      // verifier added attack surface without adding signal. Verifiers on packets
+      // from older builds are still CHECKED on download for the clearer error.
     };
   }
 

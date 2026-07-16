@@ -17,7 +17,7 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
   );
 }
 
-import { generateRecoveryKey } from "@/lib/crypto/encryption";
+import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
 
 // ─── Steps ────────────────────────────────────────────────────────────────
 
@@ -99,6 +99,10 @@ export default function OnboardingApp() {
   const confirmNeeded = encEnabled && encPass.length > 0 && encPass !== encGenerated;
   const passMissing = encEnabled && !encPass;
   const confirmMismatch = confirmNeeded && encConfirm !== encPass;
+  // Strength floor for a manually-typed passphrase (a generated key is long by
+  // construction): synced blobs sit on third-party storage and can be brute-forced
+  // offline, so a short passphrase would hollow out the E2EE promise.
+  const passTooShort = confirmNeeded && encPass.length < MIN_PASSPHRASE_LENGTH;
 
   useEffect(() => {
     if (step !== "syncing") return;
@@ -150,7 +154,7 @@ export default function OnboardingApp() {
 
     // E2EE chosen but the passphrase is empty / not confirmed — surface it (red
     // border + inline error) instead of silently doing nothing on click.
-    if (passMissing || confirmMismatch) {
+    if (passMissing || passTooShort || confirmMismatch) {
       setEncTouched(true);
       return;
     }
@@ -582,6 +586,11 @@ export default function OnboardingApp() {
               {encTouched && passMissing && (
                 <div style={{ fontSize: 12, color: "var(--danger)", marginTop: 4 }}>
                   Enter a passphrase, or generate a key.
+                </div>
+              )}
+              {passTooShort && (
+                <div style={{ fontSize: 12, color: "var(--danger)", marginTop: 4 }}>
+                  At least {MIN_PASSPHRASE_LENGTH} characters — synced data can be attacked offline, so short passphrases are guessable.
                 </div>
               )}
               {confirmNeeded && (

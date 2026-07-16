@@ -104,7 +104,19 @@ readable form. Choose encryption if your storage might be seen by anyone but you
 Even with encryption on, a small amount of **metadata** in each sync file is not
 encrypted: the storage provider can see that Konode sync files exist, roughly how
 many devices you sync (each has a random identifier), which data type each file
-holds, and when it was last written — but **not its contents**.
+holds, and when it was last written — but **not its contents**. Each file also
+carries a checksum of the (unencrypted) content so your devices can tell identical
+data apart from changed data; it cannot be reversed into your data, but someone who
+already had an exact copy of your entire data set could use it to confirm the match.
+
+**Your passphrase is the protection.** Encrypted files sit on storage that the
+provider (or anyone who obtains them) can read, which means a passphrase can be
+guessed *offline*, without Konode being able to slow the attempts down. Konode uses
+a deliberately slow key derivation (PBKDF2, 600,000 rounds) to make each guess
+expensive, requires at least 12 characters for a new passphrase, and offers a
+**generated key** — the option we recommend, as it is effectively impossible to
+guess. A short or common passphrase weakens the encryption no matter how strong the
+algorithm is.
 
 ## Google API services (Limited Use)
 
