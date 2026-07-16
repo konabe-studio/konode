@@ -14,13 +14,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      # `npm install` (not `npm ci`) until the lockfile is regenerated with the
-      # new devDeps and committed; switch to `npm ci` afterwards.
-      - run: npm install --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
       - name: Type-check
         run: npm run type-check
       - name: Test
         run: npm run test
       - name: Lint
         run: npm run lint
-        continue-on-error: true # informational until the rule set is tuned
