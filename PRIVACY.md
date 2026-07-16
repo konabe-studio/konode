@@ -1,10 +1,10 @@
 # Konode — Privacy Policy
 
-_Last updated: [EFFECTIVE DATE — e.g. June 23, 2026]_
+_Last updated: July 16, 2026_
 
-> **Draft.** Replace the `[BRACKETED]` placeholders (publisher name, contact email,
-> effective date, hosted URL) with your final details, and have someone review it
-> before you submit it to Google OAuth verification and the Chrome Web Store.
+> **Near-final.** One placeholder remains — the **contact email** — and the
+> "Last updated" date should be set to the actual publication day. Have someone review
+> it before submitting to Google OAuth verification and the Chrome Web Store.
 
 ## The short version
 
@@ -19,7 +19,7 @@ In plain terms: **your data stays yours.** Konode is the pipe, not the destinati
 ## Who this policy covers
 
 This policy applies to the **Konode** browser extension ("Konode", "we", "us"),
-published by **[PUBLISHER NAME — e.g. Kōnabe Studio]**. It explains what data the
+published by **Kōnabe Studio**. It explains what data the
 extension touches, where that data goes, and what we do — and don't do — with it.
 
 ## What data Konode accesses
@@ -158,8 +158,12 @@ extension's listing.
 
 ## Contact
 
-Questions about this policy or Konode's data handling:
-**[CONTACT EMAIL — e.g. hello@konabe.studio]**
+The best way to reach us — including if something isn't working — is to **open an
+issue** on the Konode repository:
+**https://github.com/konabe-studio/konode/issues**
 
-_This policy is published at **[PUBLISHED URL]** and linked from the Konode Chrome
-Web Store listing and the Google OAuth consent screen._
+For privacy-specific questions you can also email **konabe@proton.me**.
+
+_This policy is published at
+**https://github.com/konabe-studio/konode/blob/main/PRIVACY.md** and linked from the
+Konode Chrome Web Store listing and the Google OAuth consent screen._

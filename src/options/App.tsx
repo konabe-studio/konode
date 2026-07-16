@@ -1153,7 +1153,7 @@ export default function OptionsApp() {
                   <div className="settings-row-left">
                     <div><div className="row-label">Source code</div><div className="row-desc">No telemetry. No external servers.</div></div>
                   </div>
-                  <a href="https://github.com/benstone326/Konode" target="_blank" rel="noreferrer" className="link-external">
+                  <a href="https://github.com/konabe-studio/konode" target="_blank" rel="noreferrer" className="link-external">
                     <Github size={12} /> GitHub <ExternalLink size={10} />
                   </a>
                 </div>
