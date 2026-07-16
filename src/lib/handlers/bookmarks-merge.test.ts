@@ -453,6 +453,43 @@ describe("importBookmarks — folder repositions", () => {
     expect(order).toEqual(["News", "Docs", "Media"]); // before Media
   });
 
+  it("converges a move to the LAST position under Chromium's pre-removal convention", async () => {
+    // The setup fake uses Firefox's final-index convention, so the nudge path never
+    // runs against it. Wrap `move` to emulate Chromium: a same-parent `index` is
+    // measured against the pre-removal array, so a downward move lands one short.
+    // Regression: the nudge clamped to kids.length-1, re-requesting the index that
+    // already fell short — a move to the last slot ping-ponged one-off forever.
+    const realMove = chrome.bookmarks.move.bind(chrome.bookmarks);
+    chrome.bookmarks.move = (async (id: string, dest: { parentId?: string; index?: number }) => {
+      const node = (await chrome.bookmarks.get(id))[0];
+      if (typeof dest.index === "number" && (dest.parentId ?? node.parentId) === node.parentId) {
+        const sibs = await chrome.bookmarks.getChildren(node.parentId!);
+        const orig = sibs.findIndex((c) => c.id === id);
+        const capped = Math.min(dest.index, sibs.length); // Chromium accepts index = count
+        return realMove(id, { ...dest, index: orig < capped ? capped - 1 : capped });
+      }
+      return realMove(id, dest);
+    }) as typeof chrome.bookmarks.move;
+    try {
+      await chrome.bookmarks.create({ parentId: "1", title: "Docs" });
+      await chrome.bookmarks.create({ parentId: "1", title: "News" });
+      await chrome.bookmarks.create({ parentId: "1", title: "Media" });
+
+      // Peer moved Docs to the END of the bar (prev anchor = f:Media, the last sibling).
+      const future = Date.now() + 60_000;
+      const p: BookmarkPayload = {
+        ...payload([]),
+        folderMoves: [{ path: ["bar", "Docs"], index: 2, at: future, prev: "f:Media" }],
+      };
+      await importBookmarks(p, "merge", "lww");
+
+      const order = (await chrome.bookmarks.getChildren("1")).map((c) => c.title);
+      expect(order).toEqual(["News", "Media", "Docs"]); // Docs actually reaches the last slot
+    } finally {
+      chrome.bookmarks.move = realMove;
+    }
+  });
+
   it("prunes the empty shell left when a cross-parent bookmark move empties a folder", async () => {
     // Local: X lives in "Old". The peer moved X into "New" (different parent).
     const old = await chrome.bookmarks.create({ parentId: "1", title: "Old" });
