@@ -1,0 +1,3 @@
+# Shows a "Sponsor" button on the repo. Plain links only — no third-party JS is
+# loaded into the extension (that would break the no-external-request stance).
+buy_me_a_coffee: konabe.studio

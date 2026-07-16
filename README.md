@@ -10,6 +10,11 @@
   Bookmarks · Open tabs · History · Extension list &nbsp;•&nbsp; Google Drive · GitHub · WebDAV &nbsp;•&nbsp; Optional end-to-end encryption
 </p>
 
+<p align="center">
+  <a href="https://github.com/konabe-studio/konode/actions/workflows/ci.yml"><img src="https://github.com/konabe-studio/konode/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MPL--2.0-brightgreen" alt="License: MPL-2.0"></a>
+</p>
+
 ---
 
 Konode keeps your bookmarks, open tabs, history, and installed-extension list in sync
@@ -141,6 +146,10 @@ use a dedicated manager like [Bitwarden](https://bitwarden.com),
 
 Something not working, or an idea to share? **Open an issue** —
 it's the best way to reach us: [github.com/konabe-studio/konode/issues](https://github.com/konabe-studio/konode/issues).
+
+If Konode is useful to you and you'd like to support its development, you can
+[buy me a coffee](https://buymeacoffee.com/konabe.studio). Entirely optional — Konode
+is free and open source.
 
 ## License
 
