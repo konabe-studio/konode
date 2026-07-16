@@ -91,7 +91,9 @@ prefer this device, always prefer the other, or resolve it yourself from the pop
 ## Install
 
 Store listings (Chrome Web Store and Firefox Add-ons) are on the way. Until then, you
-can build and load it yourself — see below.
+can build and load it yourself — see below. New to Konode? The
+**[Getting Started guide](GETTING_STARTED.md)** walks through setup and connecting each
+backend.
 
 ## Build from source
 
@@ -111,6 +113,19 @@ pick `dist-firefox/manifest.json`.
 
 > Building the Google Drive backend yourself requires your own Google OAuth client
 > (scope `drive.file`). GitHub and WebDAV need no setup beyond your own credentials.
+
+## Verifying a build
+
+Each release publishes a **build fingerprint** — a deterministic SHA-256 over the
+built `dist/`. To confirm a published build matches this source, check out the release
+tag and run:
+
+```bash
+npm ci && npm run build && npm run checksum
+```
+
+Compare the printed `COMBINED` hash with the one in the release notes. (Best-effort: it
+assumes a comparable toolchain; the pinned lockfile keeps dependencies identical.)
 
 ## How it works
 
@@ -144,8 +159,9 @@ use a dedicated manager like [Bitwarden](https://bitwarden.com),
 
 ## Support & feedback
 
-Something not working, or an idea to share? **Open an issue** —
-it's the best way to reach us: [github.com/konabe-studio/konode/issues](https://github.com/konabe-studio/konode/issues).
+Something not working? Check **[Troubleshooting](TROUBLESHOOTING.md)** first. Still
+stuck, or have an idea? **Open an issue** — it's the best way to reach us:
+[github.com/konabe-studio/konode/issues](https://github.com/konabe-studio/konode/issues).
 
 If Konode is useful to you and you'd like to support its development, you can
 [buy me a coffee](https://buymeacoffee.com/konabe.studio). Entirely optional — Konode

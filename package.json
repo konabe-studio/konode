@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "sync-version": "node scripts/sync-version.mjs",
+    "checksum": "node scripts/checksum.mjs",
     "build": "npm run sync-version && npm run build:ui && npm run build:sw",
     "build:ui": "vite build",
     "build:sw": "vite build --config vite.sw.config.ts",
