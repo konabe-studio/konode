@@ -51,7 +51,7 @@ export interface MoveRecord {
 // A folder-reposition marker. Folders carry no URL, so the URL-keyed MoveRecord
 // can't describe a folder that was reordered among its siblings. `path` is the
 // browser-agnostic identity — `[rootKind, ...ancestorTitles, folderTitle]` (e.g.
-// ["bar","Work","GDD"]). Propagated with LWW like MoveRecord. Only pure reorders
+// ["bar","Work","Docs"]). Propagated with LWW like MoveRecord. Only pure reorders
 // (same parent) are recorded; a cross-parent folder move relocates its bookmarks
 // via the URL move-log and the emptied shell is cleaned up on the receiver.
 //

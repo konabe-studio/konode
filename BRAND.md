@@ -66,11 +66,11 @@ or auto-generated. Rules:
 - **C — S monogram:** a bold rounded "S". The most ownable and wordmark-friendly;
   scales cleanest to a 16px favicon.
 
-**Chosen mark: D — Peer triangle (mesh).** Three linked nodes, no center — a literal
-"no server, just your linked devices" mark, and the cleanest of the concepts at 16px.
-Assets shipped: master `public/icons/icon.svg`, app icons `icon{16,32,48,128}.png`,
-horizontal lockup `public/icons/wordmark.svg`. In-app it renders as the `MeshMark`
-glyph (white, on the green tile) in the options top bar and the onboarding header.
+**Chosen mark: the Konode glyph** — a bold white mark on the brand-green rounded-square
+tile. Assets: master `public/icons/icon.svg`, app icons `icon{16,32,48,128}.png` (run
+`npm run icons` to regenerate them from the master SVG), horizontal lockup
+`public/icons/wordmark.svg`. In-app it renders as the `BrandMark` glyph (white, on the
+green tile) in the options top bar and the onboarding header.
 
 **Construction rules (whichever mark wins):**
 - Mark sits on the brand-green rounded-square app tile (radius ≈ 22% of the tile),
@@ -127,7 +127,7 @@ the pitch.
 
 ## 8. Assets checklist (pre-launch)
 
-- [ ] Pick the mark (A / B / C) and lock the master SVG.
+- [x] Pick the mark and lock the master SVG.
 - [ ] App icons: 16 / 32 / 48 / 128 PNG from the master SVG → `public/icons/`.
 - [ ] Wordmark lockup SVG (horizontal + stacked) for the site / store header.
 - [ ] OAuth consent-screen logo (120×120, on-brand tile).

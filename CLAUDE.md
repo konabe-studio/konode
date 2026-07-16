@@ -1,7 +1,7 @@
 # CLAUDE.md — Konode project guide
 
 Context for any AI/dev session picking up this repo. Read this first, then
-`SESSION_HANDOFF.md` for the live cursor (what's in flight right now).
+`ROADMAP.md` for direction and `TODO.md` for the granular checklist.
 
 ## What Konode is
 
@@ -142,8 +142,9 @@ src/
   `launchWebAuthFlow` (`lib/backends/gdrive-oauth.ts`): one interactive consent →
   **refresh token**, then access tokens refresh via a plain POST (no UI, no
   browser session). Implicit grant + silent `prompt=none` was tried first and
-  fails on Brave (can't reach the Google session). The Web-app `client_secret`
-  ships embedded (non-confidential for an installed app; rotatable in the console).
+  fails on Brave (can't reach the Google session). The Web-app `client_secret` is
+  injected at build time from `VITE_GOOGLE_CLIENT_SECRET` (a gitignored `.env`) — never
+  committed; a source build without it sends no secret (bring your own OAuth client).
 
 ## Storage keys (`chrome.storage.local`)
 

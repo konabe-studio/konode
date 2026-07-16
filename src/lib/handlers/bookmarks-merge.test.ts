@@ -343,88 +343,88 @@ describe("importBookmarks — folder repositions", () => {
 
   it("repositions a folder to the peer's index when the peer's folder-move is newer (lww)", async () => {
     await seedFolderWithLink("A", "https://a.com");   // idx 0
-    await seedFolderWithLink("GDD", "https://g.com");  // idx 1
+    await seedFolderWithLink("Docs", "https://g.com");  // idx 1
     await seedFolderWithLink("B", "https://b.com");   // idx 2
 
-    // Peer reordered GDD to the front (index 0) with a newer folder-move; its tree
+    // Peer reordered Docs to the front (index 0) with a newer folder-move; its tree
     // carries no bookmark changes, so only the reposition should apply.
     const future = Date.now() + 60_000;
     const p: BookmarkPayload = {
       ...payload([]),
-      folderMoves: [{ path: ["bar", "GDD"], index: 0, at: future }],
+      folderMoves: [{ path: ["bar", "Docs"], index: 0, at: future }],
     };
     await importBookmarks(p, "merge", "lww");
 
     const order = (await chrome.bookmarks.getChildren("1")).filter((c) => !c.url).map((c) => c.title);
-    expect(order).toEqual(["GDD", "A", "B"]);
+    expect(order).toEqual(["Docs", "A", "B"]);
     expect(await localUrls()).toEqual(["https://a.com", "https://b.com", "https://g.com"]); // no churn
   });
 
   it("does NOT reposition a folder without a newer folder-move (stale record)", async () => {
     await seedFolderWithLink("A", "https://a.com");
-    await seedFolderWithLink("GDD", "https://g.com");
+    await seedFolderWithLink("Docs", "https://g.com");
 
     const past = Date.now() - 60_000; // older than any local move → loses lww
-    const p: BookmarkPayload = { ...payload([]), folderMoves: [{ path: ["bar", "GDD"], index: 0, at: past }] };
+    const p: BookmarkPayload = { ...payload([]), folderMoves: [{ path: ["bar", "Docs"], index: 0, at: past }] };
     // Seed a NEWER local folder-move for the same path so the peer's record loses.
     const { setFolderMoves } = await import("@/lib/utils/storage");
-    await setFolderMoves([{ path: ["bar", "GDD"], index: 1, at: Date.now() }]);
+    await setFolderMoves([{ path: ["bar", "Docs"], index: 1, at: Date.now() }]);
     await importBookmarks(p, "merge", "lww");
 
     const order = (await chrome.bookmarks.getChildren("1")).filter((c) => !c.url).map((c) => c.title);
-    expect(order).toEqual(["A", "GDD"]); // unchanged
+    expect(order).toEqual(["A", "Docs"]); // unchanged
   });
 
   it("prefer-local ignores the peer's folder reposition", async () => {
     await seedFolderWithLink("A", "https://a.com");
-    await seedFolderWithLink("GDD", "https://g.com");
+    await seedFolderWithLink("Docs", "https://g.com");
 
     const future = Date.now() + 60_000;
-    const p: BookmarkPayload = { ...payload([]), folderMoves: [{ path: ["bar", "GDD"], index: 0, at: future }] };
+    const p: BookmarkPayload = { ...payload([]), folderMoves: [{ path: ["bar", "Docs"], index: 0, at: future }] };
     await importBookmarks(p, "merge", "prefer-local");
 
     const order = (await chrome.bookmarks.getChildren("1")).filter((c) => !c.url).map((c) => c.title);
-    expect(order).toEqual(["A", "GDD"]); // local placement wins
+    expect(order).toEqual(["A", "Docs"]); // local placement wins
   });
 
   it("positions a repositioned folder after the peer's shared anchor, not by absolute index", async () => {
     // Local bar leads with a device-local folder ("Dev") the peer lacks, so absolute
-    // indices differ across devices (the real bug: GDD at index 7 on one, 6 on the
-    // other). Local order: Dev, Meghallgatunk, GDD, Summit.
+    // indices differ across devices (the real bug: Docs at index 7 on one, 6 on the
+    // other). Local order: Dev, News, Docs, Media.
     await chrome.bookmarks.create({ parentId: "1", title: "Dev" });
-    await chrome.bookmarks.create({ parentId: "1", title: "Meghallgatunk" });
-    await chrome.bookmarks.create({ parentId: "1", title: "GDD" });
-    await chrome.bookmarks.create({ parentId: "1", title: "Summit" });
+    await chrome.bookmarks.create({ parentId: "1", title: "News" });
+    await chrome.bookmarks.create({ parentId: "1", title: "Docs" });
+    await chrome.bookmarks.create({ parentId: "1", title: "Media" });
 
-    // Peer moved GDD to sit immediately AFTER Summit (anchor prev = f:Summit). The
+    // Peer moved Docs to sit immediately AFTER Media (anchor prev = f:Media). The
     // absolute index is deliberately wrong (0) to prove the anchor drives placement.
     const future = Date.now() + 60_000;
     const p: BookmarkPayload = {
       ...payload([]),
-      folderMoves: [{ path: ["bar", "GDD"], index: 0, at: future, prev: "f:Summit" }],
+      folderMoves: [{ path: ["bar", "Docs"], index: 0, at: future, prev: "f:Media" }],
     };
     await importBookmarks(p, "merge", "lww");
 
     const order = (await chrome.bookmarks.getChildren("1")).map((c) => c.title);
-    expect(order).toEqual(["Dev", "Meghallgatunk", "Summit", "GDD"]); // GDD after Summit, last
+    expect(order).toEqual(["Dev", "News", "Media", "Docs"]); // Docs after Media, last
   });
 
   it("falls back to the `next` anchor when `prev` is absent locally", async () => {
-    await chrome.bookmarks.create({ parentId: "1", title: "Meghallgatunk" });
-    await chrome.bookmarks.create({ parentId: "1", title: "GDD" });
-    await chrome.bookmarks.create({ parentId: "1", title: "Summit" });
+    await chrome.bookmarks.create({ parentId: "1", title: "News" });
+    await chrome.bookmarks.create({ parentId: "1", title: "Docs" });
+    await chrome.bookmarks.create({ parentId: "1", title: "Media" });
 
-    // Peer's prev anchor ("f:DeviceOnly") doesn't exist here, but next ("f:Summit") does
-    // → GDD lands immediately before Summit.
+    // Peer's prev anchor ("f:DeviceOnly") doesn't exist here, but next ("f:Media") does
+    // → Docs lands immediately before Media.
     const future = Date.now() + 60_000;
     const p: BookmarkPayload = {
       ...payload([]),
-      folderMoves: [{ path: ["bar", "GDD"], index: 9, at: future, prev: "f:DeviceOnly", next: "f:Summit" }],
+      folderMoves: [{ path: ["bar", "Docs"], index: 9, at: future, prev: "f:DeviceOnly", next: "f:Media" }],
     };
     await importBookmarks(p, "merge", "lww");
 
     const order = (await chrome.bookmarks.getChildren("1")).map((c) => c.title);
-    expect(order).toEqual(["Meghallgatunk", "GDD", "Summit"]); // before Summit
+    expect(order).toEqual(["News", "Docs", "Media"]); // before Media
   });
 
   it("prunes the empty shell left when a cross-parent bookmark move empties a folder", async () => {
