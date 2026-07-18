@@ -159,37 +159,43 @@ export default function OnboardingApp() {
       return;
     }
 
-    // WebDAV reaches an arbitrary host not in host_permissions — request it now,
-    // while we still have the click's user gesture (before any await).
-    if (backend === "webdav") {
-      let granted = false;
-      try {
-        const origin = new URL(webdavUrl).origin + "/*";
-        granted = await browser.permissions.request({ origins: [origin] });
-      } catch {
-        granted = false;
-      }
-      if (!granted) {
-        setSetupError("Konode needs permission to reach your WebDAV server. Please allow it to continue.");
-        return;
-      }
-    }
-
-    // Request optional permissions for the chosen data types (history/tabs/
-    // management are no longer requested up front).
+    // Request every optional permission this setup needs in ONE call, while we
+    // still have the click's user gesture. A SECOND permissions.request() after an
+    // await can be rejected for lacking a user gesture, which stranded WebDAV users
+    // who also enabled an optional data type (origin request, then perms request).
+    // The chosen data types (history/tabs/management) and — for WebDAV — the server
+    // origin (an arbitrary host not in host_permissions) go in the same request.
     const optPerms: string[] = [];
     if (dataTypes.history) optPerms.push("history");
     if (dataTypes.sessions) optPerms.push("tabs");
     if (dataTypes.extensions) optPerms.push("management");
-    if (optPerms.length) {
+
+    const origins: string[] = [];
+    if (backend === "webdav") {
       try {
-        const ok = await browser.permissions.request({ permissions: optPerms });
-        if (!ok) {
-          setSetupError("Some permissions were declined. Grant them, or turn off those data types, to continue.");
-          return;
-        }
+        origins.push(new URL(webdavUrl).origin + "/*");
       } catch {
-        setSetupError("Could not request the required permissions.");
+        setSetupError("That WebDAV address doesn't look like a valid URL.");
+        return;
+      }
+    }
+
+    if (optPerms.length || origins.length) {
+      let granted = false;
+      try {
+        granted = await browser.permissions.request({
+          ...(optPerms.length ? { permissions: optPerms } : {}),
+          ...(origins.length ? { origins } : {}),
+        });
+      } catch {
+        granted = false;
+      }
+      if (!granted) {
+        setSetupError(
+          origins.length
+            ? "Konode needs permission to reach your WebDAV server and the data types you chose. Please allow them to continue."
+            : "Some permissions were declined. Grant them, or turn off those data types, to continue."
+        );
         return;
       }
     }
