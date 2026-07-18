@@ -10,6 +10,7 @@ import type {
   Tombstone,
 } from "@/lib/types";
 import { browser } from "@/lib/utils/ext";
+import { CWS_DETAIL_BASE } from "@/lib/constants";
 
 // ─── Device name detection ─────────────────────────────────────────────────
 
@@ -279,7 +280,15 @@ export function normalizeRemoteExtensions(raw: unknown): SyncExtension[] {
   const byId = new Map<string, SyncExtension>();
   for (const entry of entries) {
     for (const ext of entry?.extensions ?? []) {
-      if (ext?.id && !byId.has(ext.id)) byId.set(ext.id, ext);
+      // Rebuild storeUrl locally from the id rather than trusting the peer's value.
+      // The whole entry is persisted verbatim from a peer's packet — which, with
+      // E2EE off, anyone with backend write access can forge — and the popup opens
+      // storeUrl in a tab / the options page links to it. A forged storeUrl is a
+      // phishing vector; reconstructing from CWS_DETAIL_BASE pins the host to the
+      // Web Store, so at worst a bogus id yields a dead Web Store link.
+      if (ext?.id && !byId.has(ext.id)) {
+        byId.set(ext.id, { ...ext, storeUrl: `${CWS_DETAIL_BASE}${ext.id}` });
+      }
     }
   }
   return [...byId.values()];
