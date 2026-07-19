@@ -229,7 +229,6 @@ export type ExtensionMessage =
   | { type: "RESOLVE_CONFLICT"; payload: { id: string; resolution: "local" | "remote" } }
   | { type: "CLEAR_HISTORY" }
   | { type: "RESTORE_SESSION"; payload?: { id?: string } }
-  | { type: "SET_EXTENSION_ENABLED"; payload: { id: string; enabled: boolean } }
   | { type: "TEST_BACKEND"; payload: { backend: BackendType } };
 
 export type ExtensionResponse =

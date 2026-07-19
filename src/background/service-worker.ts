@@ -200,11 +200,6 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
       return { type: "OK" };
     }
 
-    case "SET_EXTENSION_ENABLED": {
-      await browser.management.setEnabled(message.payload.id, message.payload.enabled);
-      return { type: "OK" };
-    }
-
     case "CLEAR_HISTORY": {
       // Clears the local audit log shown in the popup.
       await browser.storage.local.set({ [KEYS.AUDIT_LOG]: [] });
