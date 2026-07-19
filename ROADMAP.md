@@ -35,10 +35,20 @@ on any Chromium browser.
 - **All three backends device-verified** — two-way sync confirmed end-to-end on
   Google Drive, GitHub, and WebDAV (pCloud). Stale-read 409s fixed (`cache:no-store`);
   idle syncs no longer re-commit (`uploadIfChanged`).
+- **Store packaging + releases** — `npm run package:chrome` builds a Web Store zip
+  with the manifest `key` stripped (the CWS rejects `key` on a first upload) while
+  `dist/` keeps it for unpacked dev; pushing a `v*` tag runs a GitHub Actions release
+  that attaches the packaged zip (source build, no client secret). v1.0.0 released.
+- **Pre-submission hardening** — a peer's extension `storeUrl` is rebuilt locally
+  from the id (a forged URL was a phishing vector); onboarding requests all optional
+  permissions in one call (a second request lost the user gesture); the dead
+  `SET_EXTENSION_ENABLED` handler is gone, so `management` is strictly read-only.
 
 ## Next
-All feature / polish / QA items are done — the remaining work is the **publishing
-phase** (see *Before publishing* below).
+Konode **1.0.0 is submitted to the Chrome Web Store** (2026-07-19, item ID
+`mmlfiiimnpnjcjhhbldenpcmnibedkfa`) and awaiting review — the Chromium-first launch.
+Fast-follow is the Firefox/AMO submission (below): the build is runtime-verified on
+Waterfox 140, but the AMO upload is still a maintainer action.
 
 ## Platform priority (2026-07-10)
 Sequenced by where our value prop is strongest, not by raw browser size:
@@ -155,7 +165,11 @@ pitch.
   dedup scan is the current bottleneck on the ~5s sync tail).
 - Optional OAuth proxy (serverless) to avoid shipping the Google client secret.
 
-## Before publishing
-- OAuth consent screen: app name, logo, **privacy policy URL** (write the policy).
-- `drive.file` scope justification + demo video for Google verification.
-- Chrome Web Store listing ($5 one-time); review the permission warnings.
+## Publishing (Chrome Web Store)
+Submitted for review on **2026-07-19**. Done: keyless store package
+(`npm run package:chrome`), $5 developer registration, listing copy + screenshots,
+per-permission justifications, data-usage disclosures, and the live privacy policy
+(<https://github.com/konabe-studio/konode/blob/main/PRIVACY.md>). OAuth uses the
+non-sensitive `drive.file` scope, so Google app verification is not required and the
+free launch path (no brand verification) is in effect. Remaining: await the review
+result, then flip the item to published.

@@ -7,6 +7,12 @@ need, in one place. Items marked `[FILL]` are maintainer actions.
 > committed. Every claim below is checked against `public/manifest.json` and the
 > code as of this commit.
 
+> **Status — 2026-07-19: submitted to the Chrome Web Store for review.**
+> Store item ID `mmlfiiimnpnjcjhhbldenpcmnibedkfa` (publisher: Kōnabe Studio). The
+> OAuth redirect `https://mmlfiiimnpnjcjhhbldenpcmnibedkfa.chromiumapp.org/gdrive`
+> is registered in the Google OAuth client, and the privacy policy is live at
+> <https://github.com/konabe-studio/konode/blob/main/PRIVACY.md>.
+
 ---
 
 ## Chrome Web Store — listing
@@ -65,7 +71,7 @@ need, in one place. Items marked `[FILL]` are maintainer actions.
 > Konode's single purpose is synchronizing the user's browser data (bookmarks,
 > open tabs, history, extension list) to a storage backend the user owns.
 
-**Privacy policy URL:** `[FILL — see PRIVACY.md hosting note below]`
+**Privacy policy URL:** https://github.com/konabe-studio/konode/blob/main/PRIVACY.md
 
 **Support/homepage URL:** https://github.com/konabe-studio/konode
 
@@ -118,26 +124,31 @@ asked for it.
 
 ### Submission checklist
 
-- [ ] Screenshots, 1280×800: popup (status + streams), options (backend +
-      E2EE), onboarding (backend choice), popup (session restore). `docs/popup.png`
-      exists; retake at store resolution.
-- [ ] Small promo tile 440×280 (reuse the mesh mark on `--bg`, per `BRAND.md`).
-- [ ] $5 developer registration.
-- [ ] Privacy policy hosted at a public URL and linked in the listing AND the
-      consent screen.
-- [ ] Demo video (optional for listing, helpful for OAuth verification).
+- [x] Screenshots, 1280×800 (uploaded with the submission).
+- [ ] Small promo tile 440×280 (reuse the mesh mark on `--bg`, per `BRAND.md`) — optional.
+- [x] $5 developer registration.
+- [x] Privacy policy hosted at a public URL and linked in the listing
+      (<https://github.com/konabe-studio/konode/blob/main/PRIVACY.md>).
+- [ ] Demo video (optional for the listing; not required for the non-sensitive
+      `drive.file` scope).
 
 ---
 
 ## Google OAuth consent screen (Cloud Console)
 
+Filled per the **free launch path** (no brand verification): app name + support
+email only; logo, homepage, and the consent-screen privacy URL are left empty
+(uploading a logo or setting those triggers brand verification, which needs an
+authorized domain). `drive.file` is non-sensitive, so app verification is not
+required.
+
 - **App name:** Konode
-- **User support email:** `[FILL]`
-- **App logo:** `public/icons/icon128.png`
-- **App domain / homepage:** `[FILL — see hosting note]`
-- **Privacy policy URL:** `[FILL — must be on an authorized domain]`
-- **Authorized domain:** `[FILL]`
-- **Developer contact:** `[FILL]`
+- **User support email:** konabe@proton.me
+- **App logo:** — (empty on the free path; `public/icons/icon128.png` is ready for the owned-domain path)
+- **App domain / homepage:** — (empty; requires an authorized domain)
+- **Privacy policy URL:** — (empty on the consent screen; the CWS listing links the GitHub URL above)
+- **Authorized domain:** — (none; brand verification deferred)
+- **Developer contact:** konabe@proton.me
 - **Scopes:** `https://www.googleapis.com/auth/drive.file` only (non-sensitive).
 
 ### Privacy-policy hosting & verification — two valid paths

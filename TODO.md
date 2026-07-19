@@ -1,6 +1,6 @@
 # Konode — TODO & Roadmap
 
-> Last updated: 2026-06-19
+> Last updated: 2026-07-19
 
 ---
 
@@ -240,23 +240,29 @@ shrinking; native Firefox Sync is self-hostable so our edge is weaker). Tasks:
 
 ## 📦 Before publishing (Google OAuth verification + Chrome Web Store)
 
+**Submitted to the Chrome Web Store for review on 2026-07-19** — item ID
+`mmlfiiimnpnjcjhhbldenpcmnibedkfa` (publisher: Kōnabe Studio).
+
 - [x] **Test GitHub sync end-to-end** (fine-grained PAT) — two-way sync verified
       (fixed a repo-URL parse + a stale-SHA 409 along the way)
 - [x] **Test WebDAV sync end-to-end** (basic auth) — verified on pCloud (free tier):
       `konode/` folder + files appear, two-way sync works
-- [~] **Privacy policy** — first draft written (`PRIVACY.md`); fill the
-      `[BRACKETED]` placeholders (publisher, contact email, date), have it reviewed,
-      then host it at a public URL (e.g. GitHub Pages or the studio site)
-- [~] Consent screen: app name, logo, **privacy policy URL** — copy drafted in
-      `STORE_LISTING.md`; needs the hosted policy URL + contact email, then fill in
-      the Cloud Console
+- [x] **Privacy policy** — `PRIVACY.md` finalized (read-only extension wording,
+      internal note removed, dated) and live at
+      <https://github.com/konabe-studio/konode/blob/main/PRIVACY.md>
+- [x] Consent screen — app name + support email set (free launch path; logo /
+      homepage / privacy URL left empty to skip brand verification, per
+      `STORE_LISTING.md`)
 - [x] `drive.file` scope justification — drafted in `STORE_LISTING.md`
-- [~] **Chrome Web Store listing copy** — name, summary, description, category,
-      single-purpose, and per-permission justifications drafted in `STORE_LISTING.md`
-      (remaining: screenshots, $5 registration, submit)
-- [ ] Demo video (1–3 min screencast)
-- [ ] Verification request (1–4 weeks, free)
-- [ ] Chrome Web Store listing ($5 one-time)
+- [x] **Chrome Web Store listing** — copy, category, single-purpose, per-permission
+      justifications, data-usage disclosures, screenshots, $5 registration, submitted
+- [x] **Keyless store package** — `npm run package:chrome` strips the manifest `key`
+      (the CWS rejects it on a first upload); the OAuth redirect for the published ID
+      is registered in the Google OAuth client
+- [ ] Demo video (1–3 min screencast) — optional; not required for `drive.file`
+- [~] Verification request — **not required** (non-sensitive `drive.file` scope);
+      brand verification deferred (needs an authorized domain)
+- [ ] Await the review result, then flip the item to **published**
 
 ---
 

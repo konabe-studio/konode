@@ -3,10 +3,11 @@
 All notable changes to Konode. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
-## [1.0.0] — 2026-07-16
+## [1.0.0] — 2026-07-19
 
-First release-ready build: E2EE hardened end-to-end, Firefox supported, the
-brand applied everywhere, and the store-submission docs in place.
+The build submitted to the Chrome Web Store for review (2026-07-19): E2EE hardened
+end-to-end, Firefox supported, the brand applied everywhere, store packaging +
+releases wired up, and a round of pre-submission security hardening.
 
 ### Security / E2EE hardening
 - **Stopped uploading the passphrase verifier** — `encrypt("konode-verify-v1")`
@@ -34,6 +35,13 @@ brand applied everywhere, and the store-submission docs in place.
   committed to source now lives in a gitignored `.env` and is injected at build
   time (`VITE_GOOGLE_CLIENT_SECRET`); the exposed client was deleted in the
   Google Cloud Console and replaced with a fresh one.
+- **Peer extension `storeUrl` rebuilt locally** — the popup/options opened a peer's
+  synced `storeUrl` verbatim; with E2EE off, anyone with backend write access could
+  forge it and point "Install" at a phishing page. It is now reconstructed from the
+  extension id, pinning the host to the Web Store.
+- **`management` is strictly read-only** — dropped the dead `SET_EXTENSION_ENABLED`
+  handler (no UI ever sent it), so the code matches the read-only permission
+  justification and PRIVACY.md.
 
 ### Added
 - **Firefox support** — runtime APIs routed through `webextension-polyfill`,
@@ -77,6 +85,10 @@ brand applied everywhere, and the store-submission docs in place.
   conflict resolutions (no more re-notify loop), the sync-lock race, backend
   list errors no longer masquerade as "no peers", export works without the
   history permission, SecretField renders the generated key.
+- **Onboarding permission request** — the WebDAV server origin and the optional
+  data-type permissions are now requested in a single `permissions.request` call; a
+  second call after an `await` could be rejected for lacking a user gesture,
+  stranding WebDAV users who also enabled a data type.
 
 ### Tooling
 - CI now **enforces** lint (`continue-on-error` removed), runs `npm ci` from
@@ -84,6 +96,11 @@ brand applied everywhere, and the store-submission docs in place.
   (rules-of-hooks as an error, exhaustive-deps advisory).
 - Single-source version (`scripts/sync-version.mjs` stamps the manifests from
   `package.json`).
+- **Chrome Web Store packaging** — `npm run package:chrome` builds, then zips a
+  staging copy of `dist/` with the manifest `key` removed (the CWS rejects `key` on
+  a first upload) while `dist/` keeps it for unpacked-dev ID stability.
+- **Release workflow** — pushing a `v*` tag builds and publishes a GitHub release
+  with the packaged Chrome zip (source build, no client secret); v1.0.0 released.
 
 ## [0.1.0]
 
