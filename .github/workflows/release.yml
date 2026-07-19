@@ -1,0 +1,46 @@
+name: Release
+
+# Cut a GitHub release on a version tag:  git tag v1.0.0 && git push origin v1.0.0
+# Builds the extension and attaches the packaged zip to the release.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # required to create the release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+
+      # Tag pushes don't trigger ci.yml, so gate the release on the same checks.
+      - name: Check
+        run: npm run check
+
+      # Source build: no VITE_GOOGLE_CLIENT_SECRET in CI, so the released zip is the
+      # "bring your own OAuth client" variant — Drive sign-in needs the user's own
+      # OAuth client. The official Web Store zip is built locally with the secret
+      # and uploaded by hand.
+      - name: Package (Chrome)
+        run: npm run package:chrome
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "$GITHUB_REF_NAME"
+          web-ext-artifacts/konode-chrome-*.zip
+          --title "$GITHUB_REF_NAME"
+          --generate-notes
+
+# Firefox: once the build is runtime-verified, add `npm run package:firefox` above
+# and include web-ext-artifacts/konode-<version>.zip in the assets list.
