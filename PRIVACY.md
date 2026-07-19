@@ -1,10 +1,6 @@
 # Konode — Privacy Policy
 
-_Last updated: July 16, 2026_
-
-> **Near-final.** One placeholder remains — the **contact email** — and the
-> "Last updated" date should be set to the actual publication day. Have someone review
-> it before submitting to Google OAuth verification and the Chrome Web Store.
+_Last updated: July 19, 2026_
 
 ## The short version
 
@@ -34,9 +30,8 @@ choices, Konode may read:
   session sync.
 - **Installed-extension list** — the names, IDs, versions, and store links of your
   installed extensions, if you enable extension-list sync (this surfaces which
-  extensions are "missing on this device"). Konode **cannot install or remove**
-  extensions; it can enable or disable an already-installed extension only when you
-  click to do so from its popup.
+  extensions are "missing on this device"). Konode reads this list only; it
+  **cannot install, remove, enable, or disable** any extension.
 
 Konode reads this data **only to sync it to the storage backend you selected.** It
 is not used for any other purpose.
