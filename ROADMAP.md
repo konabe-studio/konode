@@ -45,10 +45,18 @@ on any Chromium browser.
   `SET_EXTENSION_ENABLED` handler is gone, so `management` is strictly read-only.
 
 ## Next
-Konode **1.0.0 is submitted to the Chrome Web Store** (2026-07-19, item ID
-`mmlfiiimnpnjcjhhbldenpcmnibedkfa`) and awaiting review — the Chromium-first launch.
-Fast-follow is the Firefox/AMO submission (below): the build is runtime-verified on
-Waterfox 140, but the AMO upload is still a maintainer action.
+Konode **1.0.0 is live on the Chrome Web Store** (published 2026-07-20, item ID
+`mmlfiiimnpnjcjhhbldenpcmnibedkfa`) — the Chromium-first launch is out. Fast-follow is
+the Firefox/AMO submission (below): the build is runtime-verified on Waterfox 140, but
+the AMO upload is still a maintainer action.
+
+**Not supported: iOS / WebKit (e.g. Orion on iOS).** First install there shows no
+onboarding (the `onInstalled` → `tabs.create(onboarding.html)` open is a no-op on
+WebKit) and Google Drive sign-in fails inside the browser's own API bridge
+(`identity.launchWebAuthFlow` is not reliably implemented on iOS WebKit web
+extensions). The Drive option is now feature-gated + fails with a friendly message
+there; GitHub/WebDAV *might* work but are untested. A real iOS/WebKit target is its own
+scoped effort, not a quick fix.
 
 ## Platform priority (2026-07-10)
 Sequenced by where our value prop is strongest, not by raw browser size:
@@ -166,10 +174,11 @@ pitch.
 - Optional OAuth proxy (serverless) to avoid shipping the Google client secret.
 
 ## Publishing (Chrome Web Store)
-Submitted for review on **2026-07-19**. Done: keyless store package
-(`npm run package:chrome`), $5 developer registration, listing copy + screenshots,
-per-permission justifications, data-usage disclosures, and the live privacy policy
+Submitted for review on **2026-07-19**, **published 2026-07-20**
+(<https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa>).
+Done: keyless store package (`npm run package:chrome`), $5 developer registration,
+listing copy + screenshots, per-permission justifications, data-usage disclosures, and
+the live privacy policy
 (<https://github.com/konabe-studio/konode/blob/main/PRIVACY.md>). OAuth uses the
-non-sensitive `drive.file` scope, so Google app verification is not required and the
-free launch path (no brand verification) is in effect. Remaining: await the review
-result, then flip the item to published.
+non-sensitive `drive.file` scope, so Google app verification was not required and the
+free launch path (no brand verification) is in effect.

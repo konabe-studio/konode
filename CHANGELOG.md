@@ -3,11 +3,26 @@
 All notable changes to Konode. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.1] — 2026-07-20
+
+First post-launch patch, from testing the published build on more browsers.
+
+### Fixed
+- **Google Drive sign-in on engines without `launchWebAuthFlow`** — on iOS WebKit
+  browsers (e.g. Orion) the interactive sign-in either isn't implemented or throws an
+  opaque native error (`undefined is not an object (evaluating 'parameters.length')`).
+  The Drive option is now feature-gated (hidden behind a "not available in this
+  browser — use GitHub or WebDAV" note when the API is absent), and any non-cancel
+  sign-in failure surfaces that friendly message instead of the raw engine error.
+  iOS / WebKit remains unsupported overall (onboarding also doesn't open there); this
+  just keeps the Drive path from dead-ending. GitHub and WebDAV are unaffected.
+
 ## [1.0.0] — 2026-07-19
 
-The build submitted to the Chrome Web Store for review (2026-07-19): E2EE hardened
-end-to-end, Firefox supported, the brand applied everywhere, store packaging +
-releases wired up, and a round of pre-submission security hardening.
+The build submitted to the Chrome Web Store for review (2026-07-19) and **published
+2026-07-20** (item `mmlfiiimnpnjcjhhbldenpcmnibedkfa`): E2EE hardened end-to-end,
+Firefox supported, the brand applied everywhere, store packaging + releases wired up,
+and a round of pre-submission security hardening.
 
 ### Security / E2EE hardening
 - **Stopped uploading the passphrase verifier** — `encrypt("konode-verify-v1")`

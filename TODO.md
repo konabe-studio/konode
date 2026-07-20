@@ -1,6 +1,6 @@
 # Konode — TODO & Roadmap
 
-> Last updated: 2026-07-19
+> Last updated: 2026-07-20
 
 ---
 
@@ -229,6 +229,14 @@ shrinking; native Firefox Sync is self-hostable so our edge is weaker). Tasks:
 
 ## 🧭 Later / Nice-to-have
 
+- [ ] **iOS / WebKit support (e.g. Orion on iOS)** — currently unsupported. On first
+      install the onboarding wizard never opens (`onInstalled` → `tabs.create` is a
+      no-op on WebKit), and Google Drive sign-in fails inside the browser's own API
+      bridge (`identity.launchWebAuthFlow` unreliable on iOS WebKit web extensions;
+      observed error: `undefined is not an object (evaluating 'parameters.length')`).
+      Mitigated: Drive is feature-gated + shows a friendly "not available here" message
+      instead of the raw engine error. A real target would need onboarding that also
+      works from Options and verified GitHub/WebDAV flows — its own scoped effort.
 - [ ] Incremental bookmark diff for >10k bookmarks
 - [ ] Audit log export, keyboard shortcuts
 - [ ] Populate `bytes_transferred` (currently unused)
@@ -240,8 +248,10 @@ shrinking; native Firefox Sync is self-hostable so our edge is weaker). Tasks:
 
 ## 📦 Before publishing (Google OAuth verification + Chrome Web Store)
 
-**Submitted to the Chrome Web Store for review on 2026-07-19** — item ID
-`mmlfiiimnpnjcjhhbldenpcmnibedkfa` (publisher: Kōnabe Studio).
+**Published on the Chrome Web Store 2026-07-20** — item ID
+`mmlfiiimnpnjcjhhbldenpcmnibedkfa` (publisher: Kōnabe Studio). Submitted for review
+2026-07-19; live at
+<https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa>.
 
 - [x] **Test GitHub sync end-to-end** (fine-grained PAT) — two-way sync verified
       (fixed a repo-URL parse + a stale-SHA 409 along the way)
@@ -262,7 +272,7 @@ shrinking; native Firefox Sync is self-hostable so our edge is weaker). Tasks:
 - [ ] Demo video (1–3 min screencast) — optional; not required for `drive.file`
 - [~] Verification request — **not required** (non-sensitive `drive.file` scope);
       brand verification deferred (needs an authorized domain)
-- [ ] Await the review result, then flip the item to **published**
+- [x] Await the review result, then flip the item to **published** — **live 2026-07-20**
 
 ---
 
