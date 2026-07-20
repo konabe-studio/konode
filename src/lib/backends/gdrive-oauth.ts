@@ -50,6 +50,27 @@ function redirectUri(): string {
   return browser.identity.getRedirectURL("gdrive");
 }
 
+const DRIVE_UNSUPPORTED_MSG =
+  "Google Drive sign-in isn't available in this browser. Use GitHub or WebDAV instead.";
+
+/**
+ * Whether interactive Google sign-in can even be attempted here.
+ *
+ * `chrome.identity.launchWebAuthFlow` is absent on some engines, so the UI uses
+ * this to disable the Drive option up front rather than failing mid-flow. Note it
+ * can't catch every case: on iOS WebKit (e.g. Orion) the method is *present* but
+ * throws an opaque native error when actually invoked ("undefined is not an object
+ * (evaluating 'parameters.length')") — that case is handled by the try/catch in
+ * interactiveSignIn, which maps any non-cancel failure to DRIVE_UNSUPPORTED_MSG.
+ */
+export function isDriveAuthAvailable(): boolean {
+  try {
+    return typeof browser.identity?.launchWebAuthFlow === "function";
+  } catch {
+    return false;
+  }
+}
+
 // ─── Session storage ────────────────────────────────────────────────────────
 
 export async function loadGDriveSession(): Promise<GDriveSession | null> {
@@ -126,6 +147,7 @@ async function fetchUserInfo(accessToken: string): Promise<{ email: string; disp
 // ─── Interactive sign-in (one-time consent → refresh token) ───────────────────
 
 export async function interactiveSignIn(): Promise<GDriveSession> {
+  if (!isDriveAuthAvailable()) throw new Error(DRIVE_UNSUPPORTED_MSG);
   await clearGDriveSession();
   const verifier = randomVerifier();
   const challenge = await codeChallenge(verifier);
@@ -144,7 +166,13 @@ export async function interactiveSignIn(): Promise<GDriveSession> {
   try {
     responseUrl = await browser.identity.launchWebAuthFlow({ url: authUrl, interactive: true });
   } catch (err) {
-    throw new Error(err instanceof Error ? err.message : "Sign-in cancelled");
+    const msg = err instanceof Error ? err.message : String(err);
+    // A user cancel is normal; anything else here is the browser's auth bridge
+    // refusing the call (observed on iOS WebKit/Orion, where launchWebAuthFlow
+    // exists but throws a native "parameters.length" error). Don't leak the raw
+    // engine message — treat a non-cancel failure as an unsupported platform.
+    if (/cancel/i.test(msg)) throw new Error("Sign-in cancelled");
+    throw new Error(DRIVE_UNSUPPORTED_MSG);
   }
   if (!responseUrl) throw new Error("Sign-in cancelled");
 

@@ -1,7 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import type { SyncSettings, BackendType, DataType, BackendConfig, SyncExtension } from "@/lib/types";
 import { sendMessage } from "@/lib/utils/messaging";
-import { interactiveSignIn } from "@/lib/backends/gdrive-oauth";
+import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
+
+// Interactive Google sign-in isn't supported on every engine (e.g. iOS WebKit /
+// Orion); gate the Drive sign-in so users get a note instead of a dead end.
+const DRIVE_AVAILABLE = isDriveAuthAvailable();
 import {
   Cloud, Github, Server, Bookmark, Clock,
   Globe, Puzzle, AlertTriangle, CheckCircle2, XCircle,
@@ -590,6 +594,11 @@ export default function OptionsApp() {
                               <button className="btn-disconnect" onClick={disconnectGDrive}>
                                 <LogOut size={12} /> Disconnect
                               </button>
+                            </div>
+                          ) : !DRIVE_AVAILABLE ? (
+                            <div className="error-row">
+                              <XCircle size={12} /> Google sign-in isn't available in
+                              this browser. Use GitHub or WebDAV instead.
                             </div>
                           ) : (
                             <div>

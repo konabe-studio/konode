@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { sendMessage } from "@/lib/utils/messaging";
 import { browser } from "@/lib/utils/ext";
-import { interactiveSignIn } from "@/lib/backends/gdrive-oauth";
+import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
+
+// Some engines (notably iOS WebKit, e.g. Orion) don't support interactive Google
+// sign-in; gate the Drive option so users aren't sent into a dead end.
+const DRIVE_AVAILABLE = isDriveAuthAvailable();
 import type { BackendType, SyncSettings } from "@/lib/types";
 import {
   Cloud, Server, Github, Bookmark,
@@ -362,6 +366,11 @@ export default function OnboardingApp() {
                       <span style={{ color: "var(--success)", fontSize: 14 }}>
                         {gdriveUser.displayName} ({gdriveUser.email})
                       </span>
+                    </div>
+                  ) : !DRIVE_AVAILABLE ? (
+                    <div style={S.errorRow}>
+                      <XCircle size={12} /> Google sign-in isn't available in this
+                      browser. Pick GitHub or WebDAV instead.
                     </div>
                   ) : (
                     <>
