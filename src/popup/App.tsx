@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { SyncState, SyncSettings, DataType, SyncExtension, RemoteSessionEntry } from "@/lib/types";
 import { sendMessage } from "@/lib/utils/messaging";
-import { browser } from "@/lib/utils/ext";
+import { browser, currentStore } from "@/lib/utils/ext";
+import { isInstalledLocally, installOrSearchUrl } from "@/lib/utils/extensions-match";
 import { KEYS, getSettings, getState, normalizeRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/storage";
 import { STATE_UPDATE } from "@/lib/constants";
 import { AuditLog } from "./components/AuditLog";
@@ -110,9 +111,12 @@ export default function PopupApp() {
       const hasMgmt = await browser.permissions.contains({ permissions: ["management"] });
       if (!hasMgmt) return;
       const local = await browser.management.getAll();
-      const localIds = new Set(local.map((e) => e.id));
+      const here = currentStore();
+      // Cross-store the same extension has different ids, so match on id (same
+      // store) OR normalized name / homepage host — otherwise every extension on a
+      // different-browser peer would show as "missing" here.
       setMissingExtensions(
-        remote.filter((e) => !localIds.has(e.id) && e.type === "extension")
+        remote.filter((e) => e.type === "extension" && !isInstalledLocally(e, local, here))
       );
     })();
 
@@ -174,8 +178,11 @@ export default function PopupApp() {
   const openOptions = () => browser.runtime.openOptionsPage();
 
   const openAllMissing = () => {
+    const here = currentStore();
     missingExtensions.forEach((ext) => {
-      browser.tabs.create({ url: ext.storeUrl, active: false });
+      // Same-store → the direct listing; cross-store → a name search in THIS
+      // browser's store (a peer's CWS id can't resolve on Firefox and vice-versa).
+      browser.tabs.create({ url: installOrSearchUrl(ext, here), active: false });
     });
   };
 

@@ -27,10 +27,10 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
 import { KEYS, normalizeRemoteExtensions } from "@/lib/utils/storage";
-import { CWS_DETAIL_BASE } from "@/lib/constants";
 import { isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
-import { browser } from "@/lib/utils/ext";
+import { browser, currentStore } from "@/lib/utils/ext";
+import { isInstalledLocally, installOrSearchUrl, storeUrlFor, inferStore, type LocalExtLike } from "@/lib/utils/extensions-match";
 
 // ─── Secret field ───────────────────────────────────────────────────────────
 // Masks a *saved* secret (token / password / passphrase): once a value exists, the
@@ -212,7 +212,7 @@ export default function OptionsApp() {
 
   // Extensions diff
   const [remoteExtensions, setRemoteExtensions] = useState<SyncExtension[] | null>(null);
-  const [localExtIds, setLocalExtIds] = useState<Set<string>>(new Set());
+  const [localExts, setLocalExts] = useState<LocalExtLike[]>([]);
 
   const load = useCallback(async () => {
     const res = await sendMessage({ type: "GET_SETTINGS" });
@@ -237,7 +237,9 @@ export default function OptionsApp() {
       setRemoteExtensions(normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]));
     });
     // "management" is optional — this may reject if not granted; ignore then.
-    void browser.management.getAll().then((exts) => setLocalExtIds(new Set(exts.map((e) => e.id)))).catch(() => {});
+    void browser.management.getAll()
+      .then((exts) => setLocalExts(exts.map((e) => ({ id: e.id, name: e.name, homepageUrl: e.homepageUrl }))))
+      .catch(() => {});
   }, [load]);
 
   const update = (partial: Partial<SyncSettings>) =>
@@ -393,7 +395,7 @@ export default function OptionsApp() {
           bookmarks: bookmarkTree,
           extensions: extensions
             .filter(e => e.id !== browser.runtime.id && e.installType !== "other" && e.installType !== "admin")
-            .map(e => ({ id: e.id, name: e.name, version: e.version, enabled: e.enabled, storeUrl: `${CWS_DETAIL_BASE}${e.id}` })),
+            .map(e => ({ id: e.id, name: e.name, version: e.version, enabled: e.enabled, store: currentStore(), storeUrl: storeUrlFor({ id: e.id, name: e.name, store: currentStore() }) })),
           history: historyItems.map(h => ({ url: h.url, title: h.title, lastVisitTime: h.lastVisitTime, visitCount: h.visitCount })),
         },
       };
@@ -508,7 +510,7 @@ export default function OptionsApp() {
   }
 
   const missingExtensions = remoteExtensions?.filter(
-    (e) => !localExtIds.has(e.id) && e.type === "extension"
+    (e) => e.type === "extension" && !isInstalledLocally(e, localExts, currentStore())
   ) ?? [];
 
   return (
@@ -808,11 +810,16 @@ export default function OptionsApp() {
                         <div className="settings-row-left">
                           <Puzzle size={16} className="row-icon" />
                           <div>
-                            <div className="row-label">{ext.name}</div>
+                            <div className="row-label">
+                              {ext.name}{" "}
+                              <span className="row-desc">· from {inferStore(ext) === "firefox" ? "Firefox" : "Chrome"}</span>
+                            </div>
                             {ext.description && <div className="row-desc">{ext.description.slice(0, 80)}</div>}
                           </div>
                         </div>
-                        <a href={ext.storeUrl} target="_blank" rel="noreferrer" className="btn-install">Install</a>
+                        <a href={installOrSearchUrl(ext, currentStore())} target="_blank" rel="noreferrer" className="btn-install">
+                          {inferStore(ext) === currentStore() ? "Install" : "Find"}
+                        </a>
                       </div>
                     ))}
                   </div>

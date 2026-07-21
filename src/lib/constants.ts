@@ -13,6 +13,13 @@ export const STATE_UPDATE = "STATE_UPDATE" as const;
  *  extension-list feature. */
 export const CWS_DETAIL_BASE = "https://chrome.google.com/webstore/detail/";
 
+/** Store SEARCH bases (query appended, URI-encoded). Used cross-store, where an
+ *  id/slug can't be mapped between the Chrome Web Store and Firefox Add-ons — we
+ *  link to a name search in the CURRENT browser's store instead of a dead direct
+ *  link, and never query the store ourselves (privacy: no external requests). */
+export const CWS_SEARCH_BASE = "https://chromewebstore.google.com/search/";
+export const AMO_SEARCH_BASE = "https://addons.mozilla.org/firefox/search/?q=";
+
 /** Toolbar badge color per sync status. The service worker can't read the UI's
  *  CSS custom properties, so the palette is mirrored here as plain values.
  *  `success` is the Konode signal green (kept in sync with the UI accent). */

@@ -120,9 +120,12 @@ export interface SyncExtension {
   version: string;
   enabled: boolean;
   homepageUrl?: string;
-  storeUrl: string; // Chrome Web Store URL
+  storeUrl: string; // a host-pinned store link: CWS listing (chrome) or AMO search (firefox)
   description?: string;
   type: "extension" | "theme" | "app";
+  // Source browser/store. Extension ids don't cross stores, so this + the name/
+  // homepage drive cross-browser matching. Optional for legacy packets (inferred).
+  store?: "chrome" | "firefox";
 }
 
 /** A peer device's stored extension list, keyed by device_id in `konode_remote_extensions`. */

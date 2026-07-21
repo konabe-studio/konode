@@ -19,3 +19,17 @@ import browserPolyfill from "webextension-polyfill";
 
 export const browser = browserPolyfill as unknown as typeof chrome;
 export default browser;
+
+/**
+ * Which extension store this build is running in. Firefox serves extension pages
+ * from `moz-extension://`, Chromium from `chrome-extension://`, so the runtime URL
+ * scheme is a reliable signal (the UA can be spoofed; this can't). Used to tag
+ * synced extensions with their source store and to pick the right store link.
+ */
+export function currentStore(): "chrome" | "firefox" {
+  try {
+    return browser.runtime.getURL("").startsWith("moz-extension://") ? "firefox" : "chrome";
+  } catch {
+    return "chrome";
+  }
+}
