@@ -7,9 +7,11 @@ need, in one place. Items marked `[FILL]` are maintainer actions.
 > committed. Every claim below is checked against `public/manifest.json` and the
 > code as of this commit.
 
-> **Status — 2026-07-19: submitted to the Chrome Web Store for review.**
-> Store item ID `mmlfiiimnpnjcjhhbldenpcmnibedkfa` (publisher: Kōnabe Studio). The
-> OAuth redirect `https://mmlfiiimnpnjcjhhbldenpcmnibedkfa.chromiumapp.org/gdrive`
+> **Status — published on the Chrome Web Store 2026-07-20** (submitted for review
+> 2026-07-19). Store item ID `mmlfiiimnpnjcjhhbldenpcmnibedkfa` (publisher: Kōnabe
+> Studio), live at
+> <https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa>.
+> The OAuth redirect `https://mmlfiiimnpnjcjhhbldenpcmnibedkfa.chromiumapp.org/gdrive`
 > is registered in the Google OAuth client, and the privacy policy is live at
 > <https://github.com/konabe-studio/konode/blob/main/PRIVACY.md>.
 
@@ -37,6 +39,11 @@ need, in one place. Items marked `[FILL]` are maintainer actions.
 > to your Google Drive, a GitHub repository, or any WebDAV server (Nextcloud,
 > Synology, pCloud, and more).
 >
+> **Open source & verifiable**
+> Konode is fully open source under the MPL-2.0 license — read every line, audit
+> exactly what it does with your data, or build it yourself:
+> https://github.com/konabe-studio/konode
+>
 > **What it syncs**
 > - Bookmarks — full folder structure, adds, deletes, moves, and reorders
 > - Open tabs — save your session and restore another device's tabs
@@ -54,17 +61,21 @@ need, in one place. Items marked `[FILL]` are maintainer actions.
 >   nothing is uploaded until you've decided. With encryption on, your storage
 >   provider can't read your data.
 > - Credentials stay on your device, in the browser's extension storage.
-> - Open source (MPL-2.0): https://github.com/konabe-studio/konode
 >
 > **Works on your browser**
 > Chrome, Brave, Helium, ungoogled-chromium — Google Drive sign-in works on all
-> of them, not just Chrome. A Firefox version is available too.
+> of them, not just Chrome. Konode also runs on Firefox and Firefox-based
+> browsers.
 >
 > **How it works**
 > Each device writes its own sync file to a `Konode` folder on your backend and
 > merges every other device's file — additively and deletion-aware, so 3+
 > devices converge without a central server. Conflicts can be resolved
 > newest-wins, prefer-local, prefer-remote, or manually from the popup.
+>
+> **Release history**
+> Full changelog in the repository:
+> https://github.com/konabe-studio/konode/blob/main/CHANGELOG.md
 
 **Single-purpose statement** (CWS requires one purpose):
 

@@ -11,6 +11,7 @@
 </p>
 
 <p align="center">
+  <a href="https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa"><img src="https://img.shields.io/chrome-web-store/v/mmlfiiimnpnjcjhhbldenpcmnibedkfa?label=Chrome%20Web%20Store" alt="Chrome Web Store"></a>
   <a href="https://github.com/konabe-studio/konode/actions/workflows/ci.yml"><img src="https://github.com/konabe-studio/konode/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MPL--2.0-brightgreen" alt="License: MPL-2.0"></a>
 </p>
@@ -39,7 +40,7 @@ provider can't read it.
   to log, sell, or breach — because we never see your data.
 - **Optional end-to-end encryption.** AES-256-GCM, chosen explicitly during setup. On
   or off, it's your call — nothing is silently uploaded behind a hidden default.
-- **Works across browsers.** Any Chromium browser today; Firefox support is on the way.
+- **Works across browsers.** Any Chromium browser, plus Firefox and Firefox-based browsers.
 - **Light by design.** No background bloat, no third-party scripts, no external
   requests beyond your own storage backend.
 
@@ -49,7 +50,7 @@ provider can't read it.
 |------|--------------|
 | **Bookmarks** | Two-way sync that preserves your folder structure. Deletions propagate too — no old bookmarks quietly coming back. |
 | **Open tabs / sessions** | Save the current tab set and restore another device's session whenever you want. |
-| **History** | Keep a synced, de-duplicated history list. *(Restore is best-effort — browsers can't set original visit times, so imported entries show the sync moment.)* |
+| **History** | Keep a synced, de-duplicated history list. *(On Firefox the original visit time is preserved; on Chrome the API can't set visit times, so restored entries show the sync moment.)* |
 | **Installed extensions** | Sync the list and see at a glance which extensions are missing on the device you're on. |
 
 When two devices disagree, you choose how it's resolved — newest change wins, always
@@ -87,9 +88,9 @@ prefer this device, always prefer the other, or resolve it yourself from the pop
 ## Browser support
 
 - **Chromium** — Chrome, Brave, Helium, ungoogled-chromium, and other Chromium
-  browsers. Fully supported.
-- **Firefox** — supported through a dedicated build (currently in beta; a Firefox
-  Add-ons listing is on the way).
+  browsers. Fully supported, and on the Chrome Web Store.
+- **Firefox** — works on Firefox and Firefox-based browsers (e.g. Waterfox) through a
+  dedicated build; a Firefox Add-ons listing is on the way.
 
 > On non-Chrome Chromium browsers, Google Drive sign-in uses the OAuth PKCE flow
 > (`launchWebAuthFlow`), so Drive sync works even where `chrome.identity.getAuthToken`
@@ -97,10 +98,13 @@ prefer this device, always prefer the other, or resolve it yourself from the pop
 
 ## Install
 
-Store listings (Chrome Web Store and Firefox Add-ons) are on the way. Until then, you
-can build and load it yourself — see below. New to Konode? The
-**[Getting Started guide](GETTING_STARTED.md)** walks through setup and connecting each
-backend.
+- **Chrome / Brave / other Chromium browsers** — install from the
+  **[Chrome Web Store](https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa)**.
+- **Firefox** — a Firefox Add-ons listing is on the way; until then, build and load it
+  yourself (see below).
+
+New to Konode? The **[Getting Started guide](GETTING_STARTED.md)** walks through setup
+and connecting each backend.
 
 ## Build from source
 
@@ -158,9 +162,9 @@ use a dedicated manager like [Bitwarden](https://bitwarden.com),
 
 - **Shipped** — bookmarks / sessions / history / extension-list sync · Google Drive +
   GitHub + WebDAV · multi-device merge · per-item conflict resolution · opt-in E2EE ·
-  Drive OAuth refresh (PKCE) · Firefox build.
-- **Next** — Chrome Web Store & Firefox Add-ons listings · folder/position sync ·
-  WebDAV provider presets.
+  Drive OAuth refresh (PKCE) · Firefox build · cross-browser extension matching ·
+  **Chrome Web Store listing**.
+- **Next** — Firefox Add-ons listing · WebDAV provider presets.
 - **Later** — more backends (Dropbox, OneDrive, Mega) · incremental diff for very
   large bookmark trees.
 
