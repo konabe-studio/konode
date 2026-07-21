@@ -35,6 +35,23 @@ export function rootKind(id: string): RootKind | undefined {
   return CHROME_ROOT_KINDS[id] ?? FIREFOX_ROOT_KINDS[id];
 }
 
+// WebKit browsers (Safari / Orion) REUSE Chrome's numeric root ids but with
+// different meaning: id "3" is "Favorites" (their bookmarks-bar equivalent), NOT
+// "mobile", and id "2" is a general "Bookmarks" collection. The numeric id alone
+// is therefore ambiguous across engines. WebKit's root TITLES are fixed English
+// strings and a user can't rename a root, so an exact title match is a reliable
+// extra signal — we use it to override the (wrong) id-based kind. Chrome/Firefox
+// never title a root "Favorites" (theirs are "Bookmarks bar" etc., localized), so
+// this can't misfire on them.
+const WEBKIT_TITLE_KINDS: Record<string, RootKind> = {
+  favorites: "bar",
+};
+
+/** A root kind inferred from a well-known engine-specific root TITLE, if any. */
+export function rootKindFromTitle(title: string | undefined): RootKind | undefined {
+  return title ? WEBKIT_TITLE_KINDS[title.trim().toLowerCase()] : undefined;
+}
+
 type RootLike = { id: string; title?: string };
 
 /**
@@ -69,9 +86,11 @@ export function matchLocalRootEx(
   localRoots: RootLike[],
   index: number,
 ): { id: string | undefined; confident: boolean } {
-  const kind = rootKind(remoteRoot.id);
+  // Title-derived kind wins over the id — it's how we disambiguate WebKit's
+  // reused numeric ids (id "3" titled "Favorites" is a bar, not Chrome's mobile).
+  const kind = rootKindFromTitle(remoteRoot.title) ?? rootKind(remoteRoot.id);
   if (kind) {
-    const byKind = localRoots.find((r) => rootKind(r.id) === kind);
+    const byKind = localRoots.find((r) => (rootKindFromTitle(r.title) ?? rootKind(r.id)) === kind);
     if (byKind) return { id: byKind.id, confident: true };
   }
   if (localRoots.some((r) => r.id === remoteRoot.id)) return { id: remoteRoot.id, confident: true };

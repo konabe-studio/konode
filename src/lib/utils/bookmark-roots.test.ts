@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rootKind, defaultOtherRootId, matchLocalRoot, matchLocalRootEx } from "./bookmark-roots";
+import { rootKind, rootKindFromTitle, defaultOtherRootId, matchLocalRoot, matchLocalRootEx } from "./bookmark-roots";
 
 // Chrome numbers its roots; Firefox uses stable guids.
 const CHROME_ROOTS = [
@@ -29,6 +29,36 @@ describe("rootKind", () => {
   it("returns undefined for a non-root id", () => {
     expect(rootKind("42")).toBeUndefined();
     expect(rootKind("some-node-guid")).toBeUndefined();
+  });
+});
+
+describe("rootKindFromTitle (WebKit/Orion reused numeric ids)", () => {
+  it("treats a 'Favorites' root as the bar (WebKit's bookmarks-bar equivalent)", () => {
+    expect(rootKindFromTitle("Favorites")).toBe("bar");
+    expect(rootKindFromTitle("favorites")).toBe("bar"); // case-insensitive
+  });
+  it("is undefined for ordinary titles", () => {
+    expect(rootKindFromTitle("Mobile bookmarks")).toBeUndefined();
+    expect(rootKindFromTitle(undefined)).toBeUndefined();
+  });
+});
+
+// Orion (WebKit) reuses Chrome numeric ids with different meaning: id 3 = "Favorites"
+// (a bar), id 2 = "Bookmarks", id 1 = "Bookmarks Bar". Confirmed from a live backend dump.
+const ORION_ROOTS = [
+  { id: "1", title: "Bookmarks Bar" },
+  { id: "2", title: "Bookmarks" },
+  { id: "3", title: "Favorites" },
+];
+
+describe("matchLocalRoot — Orion 'Favorites' root", () => {
+  it("maps Orion's Favorites (id 3) to the Chrome bar, NOT mobile bookmarks", () => {
+    // Without the title override, id 3 → kind mobile → Chrome's Mobile bookmarks.
+    expect(matchLocalRoot(ORION_ROOTS[2], CHROME_ROOTS, 2)).toBe("1"); // → bar
+    expect(matchLocalRootEx(ORION_ROOTS[2], CHROME_ROOTS, 2).confident).toBe(true);
+  });
+  it("still maps Chrome's real Mobile bookmarks (id 3) to mobile", () => {
+    expect(matchLocalRoot(CHROME_ROOTS[2], CHROME_ROOTS, 2)).toBe("3"); // unaffected
   });
 });
 
