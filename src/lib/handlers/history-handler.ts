@@ -39,11 +39,12 @@ export async function exportHistory(daysLimit = 30): Promise<SyncHistoryItem[]> 
 // ─── Import (merge remote history) ───────────────────────────────────────
 
 export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
-  // NOTE: chrome.history.addUrl can only record a visit at the *current* time —
-  // the API cannot restore the original visitCount or lastVisitTime. History
-  // restore is therefore inherently lossy (export/backup is the faithful path).
-  // We at least de-dup against existing local URLs so repeated syncs don't keep
-  // re-adding the same pages and inflating their visit counts.
+  // NOTE: on Chrome, history.addUrl records a visit only at the *current* time
+  // (its API takes no visitTime), so the original lastVisitTime is lost and
+  // visitCount can't be restored at all — history restore is lossy there
+  // (export/backup is the faithful path). Firefox's addUrl does accept visitTime,
+  // so the original date IS preserved below on Firefox. Either way we de-dup
+  // against existing local URLs so repeated syncs don't re-add pages.
   const existing = await browser.history.search({ text: "", startTime: 0, maxResults: 100000 });
   const known = new Set(existing.map((h) => h.url));
 
@@ -57,7 +58,14 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
       continue;
     }
     try {
-      await browser.history.addUrl({ url: item.url });
+      // Firefox's history.addUrl honors visitTime, so the restored entry keeps
+      // its real date; Chrome's ignores everything but url and always stamps the
+      // current time (its UrlDetails type has no visitTime — hence the cast).
+      // Passing it is a harmless no-op on Chrome and preserves the timeline on
+      // Firefox. The original time can't otherwise be set from an extension.
+      const details: chrome.history.Url & { visitTime?: number } = { url: item.url };
+      if (item.lastVisitTime) details.visitTime = item.lastVisitTime;
+      await browser.history.addUrl(details);
       known.add(item.url);
       importedUrls.push(item.url);
       added++;

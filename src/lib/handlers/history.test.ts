@@ -27,6 +27,16 @@ describe("history import/export", () => {
     expect(exported).toEqual(["https://a.com"]);
   });
 
+  it("forwards the original visit time as visitTime on import (Firefox honors it; Chrome ignores it)", async () => {
+    const originalTime = 1_600_000_000_000; // a real past timestamp, not the sync moment
+    await importHistory([{ url: "https://timed.com", lastVisitTime: originalTime, visitCount: 1 }]);
+    const [entry] = (await chrome.history.search({ text: "", startTime: 0, maxResults: 100 }))
+      .filter((h) => h.url === "https://timed.com");
+    // The fake models Firefox (honors visitTime); asserts the handler passed it through
+    // rather than dropping it, so the restored entry keeps its real date.
+    expect(entry?.lastVisitTime).toBe(originalTime);
+  });
+
   it("skips unsafe URL schemes on import", async () => {
     await importHistory([
       { url: "javascript:alert(1)", lastVisitTime: 1, visitCount: 1 },

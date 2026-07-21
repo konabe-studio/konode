@@ -27,6 +27,11 @@ let histEntries = new Map();
 function resetHistory() { histEntries = new Map(); }
 resetHistory();
 
+// ─── chrome.tabs / chrome.windows in-memory fake ───────────────────────────
+let openTabs = [];
+function resetTabs() { openTabs = []; }
+resetTabs();
+
 function bmChildren(parentId) {
   return [...bmNodes.values()]
     .filter((n) => n.parentId === parentId)
@@ -132,11 +137,25 @@ function makeChrome() {
       },
     },
     bookmarks: makeBookmarks(),
-    tabs: { query: () => Promise.resolve([]), create: () => Promise.resolve({}) },
+    tabs: {
+      query: () => Promise.resolve(openTabs.slice()),
+      create: (props = {}) => {
+        const t = { id: openTabs.length + 1, url: props.url, pinned: !!props.pinned, active: props.active ?? true };
+        openTabs.push(t);
+        return Promise.resolve(t);
+      },
+    },
+    windows: {
+      create: (props = {}) => {
+        const urls = Array.isArray(props.url) ? props.url : props.url != null ? [props.url] : [];
+        const tabs = urls.map((u) => { const t = { id: openTabs.length + 1, url: u }; openTabs.push(t); return t; });
+        return Promise.resolve({ id: 1, focused: !!props.focused, tabs });
+      },
+    },
     history: {
       search: ({ maxResults } = {}) =>
         Promise.resolve([...histEntries.values()].slice(0, maxResults ?? Infinity)),
-      addUrl: ({ url }) => { histEntries.set(url, { id: url, url, title: "", lastVisitTime: 1, visitCount: 1 }); return Promise.resolve(); },
+      addUrl: ({ url, visitTime }) => { histEntries.set(url, { id: url, url, title: "", lastVisitTime: visitTime ?? 1, visitCount: 1 }); return Promise.resolve(); },
     },
     notifications: { create: vi.fn() },
     alarms: { create: vi.fn(), clear: () => Promise.resolve(true) },
@@ -157,4 +176,5 @@ beforeEach(() => {
   store.clear();
   resetBookmarks();
   resetHistory();
+  resetTabs();
 });
