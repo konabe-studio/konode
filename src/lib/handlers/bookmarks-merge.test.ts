@@ -521,3 +521,29 @@ describe("importBookmarks — replace", () => {
     expect(await localUrls()).toEqual(["https://a.com"]);
   });
 });
+
+describe("importBookmarks — canonical URL dedup (bare-origin trailing slash across engines)", () => {
+  it("does NOT re-add a bare-origin bookmark when the peer's form omits the trailing slash", async () => {
+    // Local holds the Chromium/Firefox form; the peer (WebKit/Orion) stored it
+    // without the trailing slash. Keying on the raw string duplicated it every
+    // sync (seen live: telex.hu accumulating). Canonical keying must dedup them.
+    await seed("Telex", "https://telex.hu/");
+    await importBookmarks(payload([link("Telex", "https://telex.hu")]), "merge", "lww");
+    const urls = await localUrls();
+    expect(urls.filter((u) => u.includes("telex.hu"))).toEqual(["https://telex.hu/"]);
+  });
+
+  it("also dedups the reverse (local has no slash, peer has one)", async () => {
+    await seed("Telex", "https://telex.hu");
+    await importBookmarks(payload([link("Telex", "https://telex.hu/")]), "merge", "lww");
+    expect((await localUrls()).filter((u) => u.includes("telex.hu")).length).toBe(1);
+  });
+
+  it("does NOT over-merge distinct PATHS (only the empty root path is canonicalized)", async () => {
+    await seed("A", "https://site.com/a");
+    await importBookmarks(payload([link("B", "https://site.com/b")]), "merge", "lww");
+    const urls = await localUrls();
+    expect(urls).toContain("https://site.com/a");
+    expect(urls).toContain("https://site.com/b");
+  });
+});
