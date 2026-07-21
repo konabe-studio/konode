@@ -37,6 +37,16 @@ describe("history import/export", () => {
     expect(entry?.lastVisitTime).toBe(originalTime);
   });
 
+  it("rounds a fractional visitTime to an integer (Firefox rejects fractional ms)", async () => {
+    // Chrome's history.search returns sub-ms floats; Firefox's addUrl throws
+    // "visitTime must be an integer" on them. The handler must round.
+    await importHistory([{ url: "https://frac.com", lastVisitTime: 1783492571151.999, visitCount: 1 }]);
+    const [entry] = (await chrome.history.search({ text: "", startTime: 0, maxResults: 100 }))
+      .filter((h) => h.url === "https://frac.com");
+    expect(Number.isInteger(entry.lastVisitTime)).toBe(true);
+    expect(entry.lastVisitTime).toBe(1783492571152);
+  });
+
   it("skips unsafe URL schemes on import", async () => {
     await importHistory([
       { url: "javascript:alert(1)", lastVisitTime: 1, visitCount: 1 },

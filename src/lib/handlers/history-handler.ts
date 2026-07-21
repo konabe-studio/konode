@@ -64,7 +64,10 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
       // Passing it is a harmless no-op on Chrome and preserves the timeline on
       // Firefox. The original time can't otherwise be set from an extension.
       const details: chrome.history.Url & { visitTime?: number } = { url: item.url };
-      if (item.lastVisitTime) details.visitTime = item.lastVisitTime;
+      // Firefox's addUrl requires an INTEGER visitTime and rejects a fractional
+      // value (Chrome's history search returns sub-millisecond floats like
+      // 1783492571151.999), so round before passing. Chrome ignores it either way.
+      if (item.lastVisitTime) details.visitTime = Math.round(item.lastVisitTime);
       await browser.history.addUrl(details);
       known.add(item.url);
       importedUrls.push(item.url);
