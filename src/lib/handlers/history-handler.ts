@@ -1,6 +1,6 @@
 import type { SyncHistoryItem } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
-import { isSafeContentUrl } from "@/lib/utils/url";
+import { isSafeContentUrl, isSensitiveUrl } from "@/lib/utils/url";
 import { getImportedHistoryUrls, addImportedHistoryUrls } from "@/lib/utils/storage";
 import { browser } from "@/lib/utils/ext";
 
@@ -27,7 +27,10 @@ export async function exportHistory(daysLimit = 30): Promise<SyncHistoryItem[]> 
   const imported = new Set(await getImportedHistoryUrls());
 
   return items
-    .filter((item) => item.url && !imported.has(item.url))
+    // Never sync a URL that embeds an auth secret (OAuth callback token, reset
+    // link, …) — even E2EE'd, that's uploading a live credential to third-party
+    // storage. It stays in the local browser history; it just isn't published.
+    .filter((item) => item.url && !imported.has(item.url) && !isSensitiveUrl(item.url))
     .map((item) => ({
       url: item.url!,
       title: item.title,
@@ -57,6 +60,9 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
       logger.warn("importHistory", "Skipping an unsafe URL");
       continue;
     }
+    // Defense in depth: a legacy packet (written before export filtered these) may
+    // still carry an auth-secret URL — don't re-add it locally either.
+    if (isSensitiveUrl(item.url)) continue;
     try {
       // Firefox's history.addUrl honors visitTime, so the restored entry keeps
       // its real date; Chrome's ignores everything but url and always stamps the
@@ -72,8 +78,14 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
       known.add(item.url);
       importedUrls.push(item.url);
       added++;
-    } catch (err) {
-      logger.error(`History import: ${item.url}`, err);
+    } catch {
+      // A per-URL rejection is non-fatal and expected for some entries the local
+      // browser refuses to add (Firefox rejects over-long / malformed URLs, etc.).
+      // Warn (not error) and log only the host — never the full URL, which could
+      // carry sensitive query/fragment data — so one bad entry can't flood or leak.
+      let host = "?";
+      try { host = new URL(item.url).host; } catch { /* keep "?" */ }
+      logger.warn("importHistory", `Skipped a history URL the browser rejected (${host})`);
     }
   }
   // Remember what we imported so exportHistory won't re-publish it as a native

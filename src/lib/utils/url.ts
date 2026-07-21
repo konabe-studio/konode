@@ -18,6 +18,35 @@ export function isSafeContentUrl(url: string | undefined | null): boolean {
   }
 }
 
+// Query/fragment param names that carry an authentication secret. A URL exposing
+// any of these must be kept out of synced history — even E2EE'd, uploading a live
+// OAuth token (or a reset/one-time token) to third-party storage is more data than
+// necessary. `token` also covers `access_token` / `refresh_token` / `csrf_token`
+// as a substring, but the explicit names document intent.
+const SENSITIVE_URL_PARAMS = [
+  "access_token", "id_token", "refresh_token", "client_secret",
+  "token", "password", "otp", "api_key", "apikey",
+];
+
+/**
+ * True if a URL carries an auth secret in its query OR fragment (many OAuth
+ * providers return the token in the `#fragment`, e.g.
+ * `.../callback#access_token=…`). Used to exclude such URLs from history sync.
+ * Matches a sensitive name as a param KEY (`name=`), so a value that merely
+ * contains the word doesn't trip it. Unparseable URLs are treated as not sensitive
+ * (they're rejected elsewhere by isSafeContentUrl).
+ */
+export function isSensitiveUrl(url: string | undefined | null): boolean {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    const haystacks = [u.search.toLowerCase(), u.hash.toLowerCase()];
+    return SENSITIVE_URL_PARAMS.some((p) => haystacks.some((h) => h.includes(`${p}=`)));
+  } catch {
+    return false;
+  }
+}
+
 /**
  * A stable identity key for a bookmark URL, used ONLY for cross-device dedup /
  * merge matching — never for what we store or open (we keep the original string).

@@ -47,6 +47,24 @@ describe("history import/export", () => {
     expect(entry.lastVisitTime).toBe(1783492571152);
   });
 
+  it("does NOT export a URL carrying an auth token (privacy — no tokens on the backend)", async () => {
+    await chrome.history.addUrl({ url: "https://ok.com/article" });
+    await chrome.history.addUrl({ url: "https://site.com/callback#access_token=eyJhbGciOiJ" });
+    const exported = (await exportHistory()).map((i) => i.url);
+    expect(exported).toContain("https://ok.com/article");
+    expect(exported.some((u) => u.includes("access_token"))).toBe(false);
+  });
+
+  it("skips an auth-token URL on import (defense in depth for legacy packets)", async () => {
+    await importHistory([
+      { url: "https://site.com/cb?id_token=abc", lastVisitTime: 1, visitCount: 1 },
+      { url: "https://good.com", lastVisitTime: 1, visitCount: 1 },
+    ]);
+    const all = (await chrome.history.search({ text: "", startTime: 0, maxResults: 100 })).map((h) => h.url);
+    expect(all).toContain("https://good.com");
+    expect(all.some((u) => (u ?? "").includes("id_token"))).toBe(false);
+  });
+
   it("skips unsafe URL schemes on import", async () => {
     await importHistory([
       { url: "javascript:alert(1)", lastVisitTime: 1, visitCount: 1 },
