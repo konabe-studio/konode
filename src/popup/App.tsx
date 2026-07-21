@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import type { SyncState, SyncSettings, DataType, SyncExtension, RemoteSessionEntry } from "@/lib/types";
 import { sendMessage } from "@/lib/utils/messaging";
 import { browser } from "@/lib/utils/ext";
-import { KEYS, normalizeRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/storage";
+import { KEYS, getSettings, getState, normalizeRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/storage";
 import { STATE_UPDATE } from "@/lib/constants";
 import { AuditLog } from "./components/AuditLog";
 import {
@@ -47,17 +47,24 @@ export default function PopupApp() {
 
   const load = useCallback(async () => {
     try {
-      const [stateRes, settingsRes] = await Promise.all([
-        sendMessage({ type: "GET_STATE" }),
-        sendMessage({ type: "GET_SETTINGS" }),
-      ]);
-      if (stateRes.type === "STATE") setState(stateRes.payload);
-      if (settingsRes.type === "SETTINGS") setSettings(settingsRes.payload);
+      // Read state + settings DIRECTLY from storage (authoritative + fast). The
+      // GET_STATE/GET_SETTINGS messages only round-trip to read the same storage,
+      // and on Firefox's non-persistent event page that round-trip can lag while
+      // the worker cold-starts — long enough that the popup painted its initial
+      // `settings === null` state as "No backend configured", then corrected when
+      // the message resolved (the transient flash). Reading storage removes that
+      // dependency; the flash is also gated below on `settingsLoaded`.
+      const [st, se] = await Promise.all([getState(), getSettings()]);
+      setState(st);
+      setSettings(se);
       setLoadError(false);
     } catch (err) {
       console.error("Popup load error:", err);
       setLoadError(true);
     }
+    // Still wake the background so it (re)inits alarms / clears a stuck "syncing",
+    // but don't block the UI on it (fire-and-forget — cold event page is fine).
+    void sendMessage({ type: "GET_STATE" }).catch(() => {});
   }, []);
 
   // Start the per-type animation
@@ -184,7 +191,11 @@ export default function PopupApp() {
   const status = state?.status ?? "idle";
   const statusCfg = STATUS_CONFIG[status];
   const isSyncing = status === "syncing";
+  const settingsLoaded = settings !== null;
   const hasBackend = !!settings?.active_backend;
+  // Only treat "no backend" as real once settings have actually loaded — otherwise
+  // the first paint (settings still null) flashes a false "No backend configured".
+  const showNoBackend = settingsLoaded && !hasBackend;
   const lastSync = state?.last_sync
     ? new Date(state.last_sync).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : null;
@@ -222,7 +233,7 @@ export default function PopupApp() {
       </div>
 
       {/* ── Banners ── */}
-      {(loadError || state?.last_error || (state?.pending_conflicts?.length ?? 0) > 0 || !hasBackend) && (
+      {(loadError || state?.last_error || (state?.pending_conflicts?.length ?? 0) > 0 || showNoBackend) && (
         <div className="mt-3 space-y-2">
           {loadError && (
             <button
@@ -264,7 +275,7 @@ export default function PopupApp() {
               </div>
             ))}
 
-          {!hasBackend && (
+          {showNoBackend && (
             <button
               onClick={openOptions}
               className="flex w-full items-center justify-between rounded-box border border-sk-hairline bg-sk-raised px-3 py-2 transition-colors hover:bg-sk-tint"
