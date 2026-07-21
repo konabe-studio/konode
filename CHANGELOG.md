@@ -3,6 +3,39 @@
 All notable changes to Konode. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.2] — 2026-07-21
+
+Cross-engine hardening from testing sync across Brave, Firefox, and Orion (WebKit).
+
+### Fixed
+- **Bare-origin bookmark duplication across engines** — Chromium/Firefox store a
+  bare origin as `https://site/` (trailing slash) while WebKit stores `https://site`;
+  the merge keyed on the raw string and re-added the peer's form every sync
+  (unbounded — seen live as one bookmark multiplying). URL identity is now matched on
+  a canonical key; distinct paths still stay distinct.
+- **Session restore only opened the first tab on WebKit/Orion** — the per-tab
+  `tabs.create` loop was cut short by the popup blocker. Restores now open all tabs
+  in a single `windows.create`.
+- **Orion "Favorites" bookmarks landed in the wrong root** — WebKit reuses Chrome's
+  numeric root ids with different meaning (id 3 = Favorites, not mobile). A root
+  titled "Favorites" now maps to the bookmarks bar.
+- **History visit times & Firefox import** — the original visit time is preserved on
+  Firefox (via `visitTime`, rounded to an integer since Chrome emits fractional ms);
+  Chrome is unchanged (its API can't set visit times).
+- **Auth tokens no longer synced in history** — history URLs carrying an OAuth/reset
+  token (`…#access_token=…`, `?id_token=…`, etc.) are excluded from sync (they stay
+  in the local browser history); a per-URL import failure is now a quiet host-only
+  warning instead of an error logging the full URL.
+- **Popup "No backend configured" flash** — the popup read settings via a message to
+  a possibly-cold worker and painted its empty initial state first; it now reads
+  storage directly and gates the banner on settings having loaded.
+
+### Added
+- **Cross-browser extension matching** — synced extensions are tagged with their
+  source store; "installed here?" matches same-store by id and cross-store by name /
+  homepage, and install links are host-pinned to the current browser's store (a Chrome
+  Web Store id can't resolve on Firefox, so cross-store links go to a name search).
+
 ## [1.0.1] — 2026-07-20
 
 First post-launch patch, from testing the published build on more browsers.
