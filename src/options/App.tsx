@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import type { SyncSettings, BackendType, DataType, BackendConfig, SyncExtension } from "@/lib/types";
+import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, SyncExtension } from "@/lib/types";
 import { sendMessage } from "@/lib/utils/messaging";
 import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
 
@@ -10,7 +10,7 @@ import {
   Cloud, Github, Server, Bookmark, Clock,
   Globe, Puzzle, AlertTriangle, CheckCircle2, XCircle,
   Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
-  Sliders, Shield, Save, Pencil, Key, Copy, Check,
+  Sliders, Shield, Save, Pencil, Key, Copy, Check, ArrowRight, BarChart3,
 } from "lucide-react";
 // Shown in the About section. The manifest is the single source of truth for the
 // version — bump `package.json` and the build stamps it into the manifest.
@@ -26,7 +26,7 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 }
 
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
-import { KEYS, normalizeRemoteExtensions } from "@/lib/utils/storage";
+import { KEYS, normalizeRemoteExtensions, getRemoteSessions } from "@/lib/utils/storage";
 import { isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
 import { browser, currentStore } from "@/lib/utils/ext";
@@ -143,14 +143,23 @@ function SecretField({
 
 // ─── Nav ──────────────────────────────────────────────────────────────────
 
-type NavSection = "backend" | "data" | "device" | "advanced";
+type NavSection = "backend" | "data" | "device" | "stats" | "advanced";
 
 const NAV: { id: NavSection; label: string; icon: typeof Server }[] = [
   { id: "backend",  label: "Storage Backend", icon: Server },
   { id: "data",     label: "Data Types",      icon: Bookmark },
   { id: "device",   label: "Device",          icon: Sliders },
+  { id: "stats",    label: "Statistics",      icon: BarChart3 },
   { id: "advanced", label: "Advanced",        icon: Shield },
 ];
+
+// Human-readable byte size for the transfer stat (cumulative up + down).
+const formatBytes = (n: number): string => {
+  if (!n || n < 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.min(Math.floor(Math.log(n) / Math.log(1024)), units.length - 1);
+  return `${(n / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+};
 
 const BACKEND_META: Record<BackendType, { label: string; Icon: typeof Cloud; desc: string }> = {
   gdrive: {
@@ -176,6 +185,24 @@ const DATA_TYPE_META: { type: DataType; Icon: typeof Bookmark; label: string; de
   { type: "history",    Icon: Clock,    label: "History",    desc: "Browsing history, limited by days setting." },
   { type: "extensions", Icon: Puzzle,   label: "Extensions", desc: "Extension list — shows missing ones with install links." },
 ];
+
+// ─── WebDAV provider presets ────────────────────────────────────────────────
+// Fixed DAV endpoints so the user only fills in username + password — the URL is
+// set (and hidden) for them. Providers whose endpoint embeds a per-user host
+// (Nextcloud, ownCloud, Synology, kDrive) can't be a fixed URL, so they stay on
+// "Custom". Endpoints verified against each provider's own docs (2026-07); Box was
+// dropped because it discontinued WebDAV in 2023.
+const WEBDAV_PRESETS: { id: string; label: string; url: string; note?: string }[] = [
+  { id: "koofr",     label: "Koofr",       url: "https://app.koofr.net/dav/Koofr", note: "Username is your Koofr email; use a Koofr app password." },
+  { id: "pcloud-eu", label: "pCloud (EU)", url: "https://ewebdav.pcloud.com",      note: "EU data region. WebDAV needs a paid pCloud plan." },
+  { id: "pcloud-us", label: "pCloud (US)", url: "https://webdav.pcloud.com",       note: "US data region. WebDAV needs a paid pCloud plan." },
+  { id: "fastmail",  label: "Fastmail",    url: "https://webdav.fastmail.com",     note: "Use an app password with the Files (WebDAV) permission." },
+];
+
+// Trailing-slash- and case-insensitive URL compare, so a saved endpoint maps back
+// to its preset regardless of how it was stored.
+const sameWebdavUrl = (a: string, b: string) =>
+  a.replace(/\/+$/, "").toLowerCase() === b.replace(/\/+$/, "").toLowerCase();
 
 // ─── App ──────────────────────────────────────────────────────────────────
 
@@ -214,6 +241,17 @@ export default function OptionsApp() {
   const [remoteExtensions, setRemoteExtensions] = useState<SyncExtension[] | null>(null);
   const [localExts, setLocalExts] = useState<LocalExtLike[]>([]);
 
+  // WebDAV provider preset selection — seeded from the saved URL (below), then
+  // user-driven. "" = nothing chosen yet, "custom" = enter a URL, else a preset id.
+  const [webdavProvider, setWebdavProvider] = useState<string | null>(null);
+
+  // Statistics tab data (fetched once on mount; see the effect below).
+  const [syncState, setSyncState] = useState<SyncState | null>(null);
+  const [bookmarkCount, setBookmarkCount] = useState<number | null>(null);
+  const [openTabCount, setOpenTabCount] = useState<number | null>(null);
+  const [peerSessionCount, setPeerSessionCount] = useState(0);
+  const [peerDeviceCount, setPeerDeviceCount] = useState(0);
+
   const load = useCallback(async () => {
     const res = await sendMessage({ type: "GET_SETTINGS" });
     if (res.type === "SETTINGS") {
@@ -242,6 +280,60 @@ export default function OptionsApp() {
       .catch(() => {});
   }, [load]);
 
+  // Load Statistics data once on mount: sync state (last sync, counts, bytes), a live
+  // local bookmark count, open-tab count (only if the tabs permission is granted), and
+  // peer reach (distinct peer devices + how many peer sessions are available).
+  useEffect(() => {
+    void (async () => {
+      const res = await sendMessage({ type: "GET_STATE" });
+      if (res.type === "STATE") setSyncState(res.payload);
+
+      try {
+        const tree = await browser.bookmarks.getTree();
+        let n = 0;
+        const walk = (nodes: chrome.bookmarks.BookmarkTreeNode[]) => {
+          for (const node of nodes) { if (node.url) n++; if (node.children) walk(node.children); }
+        };
+        walk(tree);
+        setBookmarkCount(n);
+      } catch { /* bookmarks unavailable — leave null */ }
+
+      try { setPeerSessionCount((await getRemoteSessions()).length); } catch { /* ignore */ }
+
+      // Distinct peer devices across the two device-keyed maps (a device may sync
+      // sessions, extensions, or both). Legacy single-object shape carries device_id.
+      try {
+        const maps = await browser.storage.local.get([KEYS.REMOTE_SESSIONS, KEYS.REMOTE_EXTENSIONS]);
+        const ids = new Set<string>();
+        for (const raw of [maps[KEYS.REMOTE_SESSIONS], maps[KEYS.REMOTE_EXTENSIONS]]) {
+          if (raw && typeof raw === "object") {
+            if ("device_id" in raw) ids.add((raw as { device_id: string }).device_id);
+            else for (const k of Object.keys(raw)) ids.add(k);
+          }
+        }
+        setPeerDeviceCount(ids.size);
+      } catch { /* ignore */ }
+
+      // Open tabs is a "sessions" stat, gated behind the optional tabs permission.
+      try {
+        if (await browser.permissions.contains({ permissions: ["tabs"] })) {
+          setOpenTabCount((await browser.tabs.query({})).length);
+        }
+      } catch { /* ignore */ }
+    })();
+  }, []);
+
+  // Seed the WebDAV provider dropdown once settings arrive: map the saved URL to a
+  // preset, else "custom" if a URL exists, else leave unchosen. Runs once (guarded
+  // on the null sentinel) so it never fights the user's own selection.
+  useEffect(() => {
+    if (webdavProvider !== null || !settings) return;
+    const u = settings.backends.find((b) => b.type === "webdav")?.webdav?.url ?? "";
+    if (!u) { setWebdavProvider(""); return; }
+    const m = WEBDAV_PRESETS.find((p) => sameWebdavUrl(p.url, u));
+    setWebdavProvider(m ? m.id : "custom");
+  }, [settings, webdavProvider]);
+
   const update = (partial: Partial<SyncSettings>) =>
     setSettings((p) => p ? { ...p, ...partial } : p);
 
@@ -255,6 +347,22 @@ export default function OptionsApp() {
   };
 
   const getBackend = (type: BackendType) => settings?.backends.find((b) => b.type === type);
+
+  // Provider dropdown → fill/clear the WebDAV URL. A preset writes its fixed
+  // endpoint; "Custom" clears a preset URL (so the user types their own) but keeps a
+  // URL they'd already entered by hand.
+  const selectWebdavProvider = (id: string) => {
+    setWebdavProvider(id);
+    const w = getBackend("webdav")?.webdav;
+    if (id === "custom") {
+      if (WEBDAV_PRESETS.some((p) => sameWebdavUrl(p.url, w?.url ?? ""))) {
+        updateBackend("webdav", { webdav: { ...w, url: "" } as any });
+      }
+      return;
+    }
+    const preset = WEBDAV_PRESETS.find((p) => p.id === id);
+    if (preset) updateBackend("webdav", { webdav: { ...w, url: preset.url } as any });
+  };
 
   // #2 double-entry: require a confirm only for a *new*, manually-typed passphrase —
   // not an untouched saved one, and not a generated key (exact by construction).
@@ -513,6 +621,26 @@ export default function OptionsApp() {
     (e) => e.type === "extension" && !isInstalledLocally(e, localExts, currentStore())
   ) ?? [];
 
+  // First-run guidance. The onboarding wizard opens via a programmatic tabs.create
+  // on install, which silently no-ops on WebKit/Orion — so the user only ever reaches
+  // Options. This card makes Options self-sufficient: it shows until a backend is
+  // actually configured and at least one data type is on, with buttons that jump to
+  // the right tab (reliable everywhere, unlike opening a new tab).
+  const activeBackendConfigured = (() => {
+    const ab = settings.active_backend;
+    if (ab === "gdrive") return !!gdriveUser;
+    if (ab === "webdav") { const w = getBackend("webdav")?.webdav; return !!(w?.url && w?.username && w?.password); }
+    if (ab === "github") { const g = getBackend("github")?.github; return !!(g?.token && g?.repo); }
+    return false;
+  })();
+  const setupComplete = activeBackendConfigured && settings.enabled_types.length > 0;
+
+  // Statistics-tab derived values.
+  const totalSyncRuns = syncState ? Object.values(syncState.sync_counts).reduce((a, b) => a + b, 0) : 0;
+  const lastSyncLabel = syncState?.last_sync
+    ? new Date(syncState.last_sync).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+    : "Never";
+
   return (
     <div className="settings-root">
       <style>{STYLES}</style>
@@ -543,6 +671,43 @@ export default function OptionsApp() {
       {/* ── Content ── */}
       <main className="content">
         <div className="content-inner">
+
+          {/* ── First-run setup (esp. Orion/WebKit, where the wizard tab never opens) ── */}
+          {!setupComplete && (
+            <div className="setup-card">
+              <div className="setup-card-head">
+                <div className="setup-card-mark"><BrandMark size={16} /></div>
+                <div>
+                  <div className="setup-card-title">Finish setting up Konode</div>
+                  <div className="setup-card-sub">
+                    Konode syncs your browser to storage you own — there's no Konode server. Two quick
+                    steps and you're done. (If the setup wizard never opened on your browser, you can do
+                    everything right here.)
+                  </div>
+                </div>
+              </div>
+              <ol className="setup-steps">
+                <li className={activeBackendConfigured ? "done" : ""}>
+                  <span className="step-badge">{activeBackendConfigured ? <CheckCircle2 size={14} /> : "1"}</span>
+                  <span className="step-text">Choose where your data is stored</span>
+                  {!activeBackendConfigured && (
+                    <button className="step-action" onClick={() => setActiveNav("backend")}>
+                      Storage <ArrowRight size={12} />
+                    </button>
+                  )}
+                </li>
+                <li className={settings.enabled_types.length > 0 ? "done" : ""}>
+                  <span className="step-badge">{settings.enabled_types.length > 0 ? <CheckCircle2 size={14} /> : "2"}</span>
+                  <span className="step-text">Pick what to sync</span>
+                  {settings.enabled_types.length === 0 && (
+                    <button className="step-action" onClick={() => setActiveNav("data")}>
+                      Data types <ArrowRight size={12} />
+                    </button>
+                  )}
+                </li>
+              </ol>
+            </div>
+          )}
 
           {/* ── BACKEND ── */}
           {activeNav === "backend" && (
@@ -637,14 +802,38 @@ export default function OptionsApp() {
                       {isActive && type === "webdav" && (
                         <div className="backend-config" onClick={(e) => e.stopPropagation()}>
                           <div className="field-group">
-                            <label className="field-label">Server URL</label>
-                            <input
-                              className="field-input mono"
-                              value={getBackend("webdav")?.webdav?.url ?? ""}
-                              onChange={(e) => updateBackend("webdav", { webdav: { ...getBackend("webdav")?.webdav, url: e.target.value } as any })}
-                              placeholder="https://cloud.example.com/remote.php/dav/files/username/"
-                            />
+                            <label className="field-label">Provider</label>
+                            <select
+                              className="field-input"
+                              value={webdavProvider ?? ""}
+                              onChange={(e) => selectWebdavProvider(e.target.value)}
+                            >
+                              <option value="" disabled>Choose a provider…</option>
+                              {WEBDAV_PRESETS.map((p) => (
+                                <option key={p.id} value={p.id}>{p.label}</option>
+                              ))}
+                              <option value="custom">Custom (Nextcloud, Synology, own server…)</option>
+                            </select>
                           </div>
+                          {webdavProvider === "custom" ? (
+                            <div className="field-group">
+                              <label className="field-label">Server URL</label>
+                              <input
+                                className="field-input mono"
+                                value={getBackend("webdav")?.webdav?.url ?? ""}
+                                onChange={(e) => updateBackend("webdav", { webdav: { ...getBackend("webdav")?.webdav, url: e.target.value } as any })}
+                                placeholder="https://cloud.example.com/remote.php/dav/files/username/"
+                              />
+                            </div>
+                          ) : webdavProvider ? (
+                            <p className="config-hint">
+                              Syncing to <code>{WEBDAV_PRESETS.find((p) => p.id === webdavProvider)?.url}</code>.
+                              {(() => {
+                                const note = WEBDAV_PRESETS.find((p) => p.id === webdavProvider)?.note;
+                                return note ? ` ${note}` : null;
+                              })()}
+                            </p>
+                          ) : null}
                           <div className="field-row-2">
                             <div className="field-group" style={{ flex: 1 }}>
                               <label className="field-label">Username</label>
@@ -661,13 +850,16 @@ export default function OptionsApp() {
                               <SecretField
                                 value={getBackend("webdav")?.webdav?.password ?? ""}
                                 placeholder="••••••••"
+                                sensitive
                                 onChange={(v) => updateBackend("webdav", { webdav: { ...getBackend("webdav")?.webdav, password: v } as any })}
                               />
                             </div>
                           </div>
-                          <p className="config-hint">
-                            For Nextcloud, use an App Password from Settings → Security.
-                          </p>
+                          {webdavProvider === "custom" && (
+                            <p className="config-hint">
+                              For Nextcloud, use an App Password from Settings → Security.
+                            </p>
+                          )}
                           {(() => {
                             const u = getBackend("webdav")?.webdav?.url ?? "";
                             return /^http:\/\//i.test(u) && !/^http:\/\/(localhost|127\.)/i.test(u);
@@ -687,6 +879,7 @@ export default function OptionsApp() {
                             <SecretField
                               value={getBackend("github")?.github?.token ?? ""}
                               placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                              sensitive
                               onChange={async (v) => {
                                 updateBackend("github", { github: { ...getBackend("github")?.github, token: v } });
                                 if (v.length > 10) await verifyGithubToken(v);
@@ -969,6 +1162,42 @@ export default function OptionsApp() {
                   {saving ? <Loader2 size={14} className="spin" /> : saveOk ? <CheckCircle2 size={14} /> : <Save size={14} />}
                   {saving ? "Saving…" : saveOk ? "Saved" : "Save changes"}
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── STATISTICS ── */}
+          {activeNav === "stats" && (
+            <div className="section-wrap">
+              <h1 className="page-title">Statistics</h1>
+              <p className="page-subtitle">A local snapshot, computed on this device — nothing here is sent anywhere.</p>
+
+              <div className="settings-section">
+                <div className="settings-card-head">This device</div>
+                <div className="stat-grid">
+                  <div className="stat-tile"><div className="stat-value">{bookmarkCount ?? "—"}</div><div className="stat-label">Bookmarks</div></div>
+                  <div className="stat-tile"><div className="stat-value">{openTabCount ?? "—"}</div><div className="stat-label">Open tabs</div></div>
+                  <div className="stat-tile"><div className="stat-value">{localExts.length || "—"}</div><div className="stat-label">Extensions</div></div>
+                  <div className="stat-tile"><div className="stat-value">{settings.enabled_types.length}</div><div className="stat-label">Data types on</div></div>
+                </div>
+              </div>
+
+              <div className="settings-section">
+                <div className="settings-card-head">Sync activity</div>
+                <div className="stat-grid">
+                  <div className="stat-tile"><div className="stat-value">{formatBytes(syncState?.bytes_transferred ?? 0)}</div><div className="stat-label">Data transferred</div></div>
+                  <div className="stat-tile"><div className="stat-value">{totalSyncRuns}</div><div className="stat-label">Sync runs</div></div>
+                  <div className="stat-tile"><div className="stat-value stat-value-sm">{lastSyncLabel}</div><div className="stat-label">Last sync</div></div>
+                </div>
+              </div>
+
+              <div className="settings-section">
+                <div className="settings-card-head">Across your devices</div>
+                <div className="stat-grid">
+                  <div className="stat-tile"><div className="stat-value">{peerDeviceCount + 1}</div><div className="stat-label">Devices (incl. this one)</div></div>
+                  <div className="stat-tile"><div className="stat-value">{peerSessionCount}</div><div className="stat-label">Peer sessions</div></div>
+                  <div className="stat-tile"><div className="stat-value">{missingExtensions.length}</div><div className="stat-label">Missing extensions here</div></div>
+                </div>
               </div>
             </div>
           )}
@@ -1268,7 +1497,10 @@ const STYLES = `
   .radio-circle.checked { border-color: var(--accent); background: radial-gradient(circle at center, var(--accent) 38%, transparent 42%); }
 
   .backend-config { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
-  .field-row-2 { display: flex; gap: 10px; }
+  /* Stack fields vertically everywhere — side-by-side inputs overflowed the popup
+     and narrow (mobile/Orion) widths. The per-field flex:1/flex:2 inline styles are
+     inert on block children; field-group's own margin-top keeps the 10px rhythm. */
+  .field-row-2 { display: block; }
   .field-group { margin-top: 10px; }
   .field-label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
   .field-label .optional { opacity: .7; }
@@ -1340,6 +1572,39 @@ const STYLES = `
   .notice-warn svg { margin-top: 1px; flex-shrink: 0; color: var(--warn-border); }
   .notice-warn a { color: var(--text-link); }
 
+  select.field-input { cursor: pointer; }
+
+  .setup-card { margin-bottom: 20px; padding: 16px; background: var(--accent-light); border: 1px solid var(--accent); border-radius: 14px; }
+  .setup-card-head { display: flex; align-items: flex-start; gap: 12px; }
+  .setup-card-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--accent-solid); color: var(--on-accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .setup-card-title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+  .setup-card-sub { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+  .setup-steps { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .setup-steps li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; font-size: 13px; color: var(--text-primary); }
+  .setup-steps li.done .step-text { color: var(--text-secondary); }
+  .step-badge { width: 20px; height: 20px; border-radius: 50%; background: var(--bg-hover); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+  .setup-steps li.done .step-badge { background: transparent; color: var(--success); }
+  .step-text { flex: 1; }
+  .step-action { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--accent); background: var(--bg-card); color: var(--text-link); font-family: var(--font); font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .step-action:hover { background: var(--accent-light); }
+
+  /* Stat tiles: a hairline grid inside a titled card (the card clips the 1px gaps). */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 1px; background: var(--border); }
+  .stat-tile { background: var(--bg-card); padding: 16px; display: flex; flex-direction: column; gap: 4px; }
+  .stat-value { font-size: 22px; font-weight: 600; color: var(--text-primary); line-height: 1.15; word-break: break-word; }
+  .stat-value-sm { font-size: 15px; }
+  .stat-label { font-size: 12px; color: var(--text-secondary); }
+
   .spin { animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Narrow widths (small windows, mobile/Orion, or the page opened in a popup-sized
+     tab): let the save/test row wrap instead of pushing content off-screen, and tuck
+     the horizontal padding in. The connection-status text no longer forces overflow. */
+  @media (max-width: 560px) {
+    .content { padding: 20px 16px 48px; }
+    .action-row { flex-wrap: wrap; }
+    .test-group { flex-wrap: wrap; }
+    .test-result { white-space: normal; }
+  }
 `;
