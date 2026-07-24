@@ -67,6 +67,10 @@ export class SyncEngine {
   // type. Non-fatal: we skip merging that peer but still upload our own file, so the
   // group self-heals once every device uses the same E2EE setting + passphrase.
   private encryptionWarnings = new Map<string, string>();
+  // Bytes moved over the wire this sync (peer payloads pulled + our packets pushed),
+  // accumulated across data types and folded into the cumulative `bytes_transferred`
+  // stat at the end. Reset per sync so it's a per-run tally, not a running double-count.
+  private bytesThisSync = 0;
 
   constructor(
     private settings: SyncSettings,
@@ -128,6 +132,7 @@ export class SyncEngine {
     }
 
     this.encryptionWarnings.clear();
+    this.bytesThisSync = 0;
     const state = await setState({ status: "syncing", last_error: null });
     this.onStateChange(state);
 
@@ -148,10 +153,12 @@ export class SyncEngine {
       // the misconfig, but only after the upload has happened (never before — that's
       // what used to deadlock the group into mutually-stale plaintext files).
       const warnings = [...this.encryptionWarnings.values()];
+      const prevState = await getState();
       const newState = await setState({
         status: warnings.length ? "error" : "success",
         last_sync: new Date().toISOString(),
         last_error: warnings.length ? warnings.join(" ") : null,
+        bytes_transferred: prevState.bytes_transferred + this.bytesThisSync,
       });
       this.onStateChange(newState);
       logger.info("SyncEngine", warnings.length ? `Sync complete with ${warnings.length} encryption warning(s)` : "Sync complete");
@@ -187,6 +194,8 @@ export class SyncEngine {
       const peers = orderPeersByTime(
         await backend.downloadAll(dataType, this.settings.device_id)
       );
+      // Count pulled bytes (the serialized peer payloads) toward the transfer stat.
+      for (const p of peers) this.bytesThisSync += p.payload?.length ?? 0;
 
       // 2. Build local payload
       const localPayload = await this.buildPayload(dataType);
@@ -393,6 +402,7 @@ export class SyncEngine {
     }
     const packet = await this.buildPacket(dataType, payload);
     await backend.upload(packet);
+    this.bytesThisSync += packet.payload?.length ?? 0; // pushed bytes → transfer stat
     await setLastUploadChecksum(dataType, tag);
   }
 
