@@ -1,7 +1,7 @@
 # ROADMAP.md — direction
 
-High-level direction. Granular tasks live in `TODO.md`; what's in flight is in
-`SESSION_HANDOFF.md`; shipped history is in `CHANGELOG.md`.
+High-level direction. Granular tasks live in `TODO.md`; shipped history is in
+`CHANGELOG.md`.
 
 ## Vision
 A privacy-first browser sync that puts the user's data on storage **they own**

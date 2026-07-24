@@ -285,7 +285,7 @@ The first working build, hardened over a review + fix pass. Highlights:
   background sync survives indefinitely on every Chromium browser. backend +
   options + onboarding share the one implementation.
 - _Needs runtime verification (re-sign-in required to mint the first refresh
-  token). See `SESSION_HANDOFF.md`._
+  token)._
 
 ### UI / brand re-skin
 - **Popup re-skinned** to a system-following light/dark theme (new `sk-*` design
