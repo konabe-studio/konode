@@ -215,15 +215,70 @@ shrinking; native Firefox Sync is self-hostable so our edge is weaker). Tasks:
 - [ ] **Extension cross-store UX** *(optional)* — tag SyncExtension with source browser;
       install links only for same-browser peers (CWS ids don't resolve on Firefox).
 - [ ] **AMO submission** — `npm run package:firefox` → zip; submit + upload source.
+      Step-by-step guide written: `PUBLISHING-FIREFOX.md` (2026-07-24). Maintainer action.
 
 **3. Backend expansion — tiered by auth cost (cheapest first):**
-- [ ] **WebDAV presets** (Nextcloud / Synology / pCloud / kDrive / ownCloud) — already
-      work via the WebDAV backend; add presets + docs (~0 code).
-- [ ] **Token/basic backends** (Dropbox token, S3-compatible, Backblaze B2) —
+- [x] **WebDAV presets (fixed-URL providers)** — Provider dropdown on the WebDAV card
+      auto-fills + hides the endpoint (Koofr, pCloud EU/US, Fastmail; Box dropped —
+      discontinued WebDAV in 2023). "Custom" keeps the manual-URL path. Done 2026-07-24
+      (`options/App.tsx`, `WEBDAV_PRESETS`). UI-only — stored config + packet/folder
+      format unchanged, so **no breaking change / no re-sync** for existing WebDAV users.
+- [ ] **Nextcloud provider template** *(follow-up, confirmed 2026-07-24)* — Nextcloud /
+      ownCloud / Synology need a per-user host, so no fixed URL. Add a "host + username"
+      template that builds `https://<host>/remote.php/dav/files/<user>/`.
+- [ ] **Token/basic backends** (S3-compatible, Backblaze B2) —
       WebDAV/GitHub-class, ~0.5–1.5 d each; port to Firefox trivially.
-- [ ] **OAuth backends** (Dropbox OAuth, OneDrive/Graph) — ~2–4 d each (provider app
-      registration + redirect + refresh + QA, per browser).
+- [ ] **Dropbox OAuth backend** — CONFIRMED 2026-07-24. ~2–4 d (app registration +
+      PKCE redirect + refresh + QA, per browser). First new OAuth backend.
+- [ ] **OneDrive / Graph** — DEFERRED 2026-07-24: build only on real user demand.
 - [ ] **Mega backend** — heavier (~3–5 d; own crypto SDK to bundle).
+
+---
+
+## 🗓️ Product decisions (2026-07-24 planning)
+
+Confirmed with Ben; ordered roughly by build sequence.
+
+**Done this session:**
+- [x] **WebDAV provider presets** (above) + **Orion first-run setup card** — the
+      onboarding tab never opens on WebKit/Orion, so Options is now self-sufficient: a
+      "Finish setting up Konode" card shows until a backend is configured **and** a data
+      type is on, with buttons that jump to the right tab (no tab-open needed).
+      `options/App.tsx`.
+- [x] **Mask stored-secret tails** — WebDAV password + GitHub token now use the
+      content-free `sensitive` mask (no last-4 leak in screenshots), like the E2EE
+      passphrase. Reverses the earlier "leave token/password as-is" note under Security
+      #1 — decided 2026-07-24 at Ben's request.
+- [x] **Responsive Options** — form fields stacked everywhere (no side-by-side inputs)
+      + a `max-width:560px` media query so nothing overflows on mobile/Orion widths.
+
+**Confirmed, not yet built (suggested order):**
+- [x] **Statistics** — new Options **Statistics** tab (2026-07-24): This device
+      (bookmarks / open tabs / extensions / data types on), Sync activity (data
+      transferred / sync runs / last sync), Across your devices (device count / peer
+      sessions / missing extensions). `bytes_transferred` is now populated by the engine
+      (pulled peer payloads + pushed packets, per sync). `options/App.tsx` + `sync-engine.ts`.
+- [ ] **Activity log → its own Settings tab** — move the audit log out of the cramped
+      popup into a full Settings tab where the whole history is scrollable.
+- [ ] **Snapshot + Recovery mode** — flagship. Manual + automatic restore points built
+      on `IBackend.listVersions` (GitHub versions free via git; Drive/WebDAV keep N
+      timestamped copies). Recovery hooks the existing `bulk_delete_percent` guard: when
+      an unusual mass deletion trips it, offer to restore the last snapshot.
+- [ ] **Diff view (manual sync)** — preview adds / deletes / session + extension changes
+      before a *manual* sync (auto pull is alarm-driven, can't block on input). Pairs
+      with snapshots (diff vs last snapshot).
+- [ ] **Surface conflict strategy better** — per-item lww / prefer-local / prefer-remote
+      / manual is already implemented; just make it clearer in the UI. Polish.
+- [ ] **Uninstall survey** (replaces the "review prompt" idea) — `runtime.setUninstallURL`
+      to a short survey: what was missing / what didn't work. Feeds development. Keep it
+      short, optional, no PII.
+
+**Deferred / dropped:**
+- **Sync profiles (Home/Work)** — revisit as a design task, likely long-term. The real
+  need may be *selective sync* (don't mix work/personal), not named profiles.
+- **Desktop client** — dropped (out of scope; export/import already covers manual backup).
+- **Runtime plugin API** — dropped (MV3 + store policy forbid remote code; the
+  open-source `IBackend` contract is the realistic third-party-backend path).
 
 ---
 
@@ -239,7 +294,8 @@ shrinking; native Firefox Sync is self-hostable so our edge is weaker). Tasks:
       works from Options and verified GitHub/WebDAV flows — its own scoped effort.
 - [ ] Incremental bookmark diff for >10k bookmarks
 - [ ] Audit log export, keyboard shortcuts
-- [ ] Populate `bytes_transferred` (currently unused)
+- [x] Populate `bytes_transferred` — done 2026-07-24 (accumulated in `sync-engine.ts`
+      per sync: pulled peer payloads + pushed packet sizes; shown in the Statistics tab).
 - [ ] **BuyMeACoffee donate button** in Settings — plain external link only (no
       BMC embed script/iframe; that would load third-party JS and break the
       privacy-first, no-external-request stance). Keep it subtle.
