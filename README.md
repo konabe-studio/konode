@@ -182,6 +182,10 @@ is free and open source.
 
 See [LICENSE](LICENSE).
 
+## Built with
+
+Built with AI assistance (Claude Code), human-reviewed and maintained by Kōnabe Studio.
+
 ---
 
 <p align="center"><sub>Konode is not affiliated with Google, GitHub, Mozilla, or any storage provider.</sub></p>
