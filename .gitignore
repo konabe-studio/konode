@@ -5,3 +5,10 @@ dist-firefox/
 .env
 .DS_Store
 *.zip
+
+# Internal working docs — kept locally, not published to the public repo.
+BRAND.md
+CLAUDE.md
+QA_CHECKLIST.md
+STORE_LISTING.md
+TODO.md
