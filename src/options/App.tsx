@@ -11,6 +11,7 @@ import {
   Globe, Puzzle, AlertTriangle, CheckCircle2, XCircle,
   Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
   Sliders, Shield, Save, Pencil, Key, Copy, Check, ArrowRight, BarChart3,
+  ScrollText, Trash2,
 } from "lucide-react";
 // Shown in the About section. The manifest is the single source of truth for the
 // version — bump `package.json` and the build stamps it into the manifest.
@@ -26,7 +27,7 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 }
 
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
-import { KEYS, normalizeRemoteExtensions, getRemoteSessions } from "@/lib/utils/storage";
+import { KEYS, normalizeRemoteExtensions, getRemoteSessions, type AuditEntry } from "@/lib/utils/storage";
 import { isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
 import { browser, currentStore } from "@/lib/utils/ext";
@@ -148,13 +149,14 @@ function SecretField({
 
 // ─── Nav ──────────────────────────────────────────────────────────────────
 
-type NavSection = "backend" | "data" | "device" | "stats" | "advanced";
+type NavSection = "backend" | "data" | "device" | "stats" | "activity" | "advanced";
 
 const NAV: { id: NavSection; label: string; icon: typeof Server }[] = [
   { id: "backend",  label: "Storage", icon: Server },
   { id: "data",     label: "Data Types",      icon: Bookmark },
   { id: "device",   label: "Device",          icon: Sliders },
   { id: "stats",    label: "Statistics",      icon: BarChart3 },
+  { id: "activity", label: "Activity",        icon: ScrollText },
   { id: "advanced", label: "Advanced",        icon: Shield },
 ];
 
@@ -195,7 +197,11 @@ const DATA_TYPE_META: { type: DataType; Icon: typeof Bookmark; label: string; de
 
 export default function OptionsApp() {
   const [settings, setSettings]   = useState<SyncSettings | null>(null);
-  const [activeNav, setActiveNav] = useState<NavSection>("backend");
+  // The popup deep-links here with #activity; otherwise start on Storage.
+  const [activeNav, setActiveNav] = useState<NavSection>(() => {
+    const hash = window.location.hash.replace("#", "");
+    return NAV.some((n) => n.id === hash) ? (hash as NavSection) : "backend";
+  });
   const [saving, setSaving]       = useState(false);
   const [saveOk, setSaveOk]       = useState(false);
   const [testStatus, setTestStatus] = useState<{ ok: boolean; message: string } | null>(null);
@@ -231,6 +237,10 @@ export default function OptionsApp() {
   // Selected storage-provider card — seeded from the saved config (below), then
   // user-driven. null = nothing chosen yet.
   const [selectedProvider, setSelectedProvider] = useState<ProviderId | null>(null);
+
+  // Activity tab: the audit log (newest first, capped at 200 by the logger).
+  const [audit, setAudit] = useState<AuditEntry[]>([]);
+  const [auditOnlyErrors, setAuditOnlyErrors] = useState(false);
 
   // Statistics tab data (fetched once on mount; see the effect below).
   const [syncState, setSyncState] = useState<SyncState | null>(null);
@@ -286,6 +296,11 @@ export default function OptionsApp() {
       } catch { /* bookmarks unavailable — leave null */ }
 
       try { setPeerSessionCount((await getRemoteSessions()).length); } catch { /* ignore */ }
+
+      try {
+        const r = await browser.storage.local.get(KEYS.AUDIT_LOG);
+        setAudit((r[KEYS.AUDIT_LOG] as AuditEntry[]) ?? []);
+      } catch { /* ignore */ }
 
       // Distinct peer devices across the two device-keyed maps (a device may sync
       // sessions, extensions, or both). Legacy single-object shape carries device_id.
@@ -381,6 +396,11 @@ export default function OptionsApp() {
         </div>
       </div>
     );
+  };
+
+  const clearAudit = async () => {
+    await sendMessage({ type: "CLEAR_AUDIT_LOG" });
+    setAudit([]);
   };
 
   // http:// warning shown under any WebDAV card whose URL would send the password in the clear.
@@ -1261,6 +1281,86 @@ export default function OptionsApp() {
             </div>
           )}
 
+          {/* ── ACTIVITY ── */}
+          {activeNav === "activity" && (() => {
+            const shown = auditOnlyErrors ? audit.filter((e) => !e.ok) : audit;
+            const errorCount = audit.filter((e) => !e.ok).length;
+            return (
+              <div className="section-wrap">
+                <h1 className="page-title">Activity</h1>
+                <p className="page-subtitle">
+                  What Konode did on this device — uploads, downloads, conflicts and errors.
+                  Stored locally (last 200 entries), never uploaded.
+                </p>
+
+                <div className="settings-section">
+                  <div className="settings-card-head">
+                    Log
+                    <span className="head-sub">
+                      {audit.length === 0
+                        ? "No entries yet."
+                        : `${audit.length} entr${audit.length === 1 ? "y" : "ies"}${errorCount ? ` · ${errorCount} with errors` : ""}.`}
+                    </span>
+                  </div>
+
+                  {audit.length > 0 && (
+                    <div className="settings-row">
+                      <div className="settings-row-left">
+                        <div>
+                          <div className="row-label">Show errors only</div>
+                          <div className="row-desc">Hide successful entries.</div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+                        <label className="toggle-wrap">
+                          <input type="checkbox" className="toggle-input"
+                            checked={auditOnlyErrors}
+                            onChange={(e) => setAuditOnlyErrors(e.target.checked)} />
+                          <span className="toggle-track"><span className="toggle-thumb" /></span>
+                        </label>
+                        <button className="btn-secondary" onClick={clearAudit}>
+                          <Trash2 size={12} /> Clear log
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {shown.length === 0 ? (
+                    <div className="settings-row">
+                      <div className="settings-row-left">
+                        <div className="row-desc">
+                          {audit.length === 0
+                            ? "Nothing logged yet — run a sync and it'll show up here."
+                            : "No errors logged. Nice."}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="audit-list">
+                      {shown.map((e, i) => (
+                        <div key={`${e.timestamp}-${i}`} className="audit-row">
+                          {e.ok
+                            ? <CheckCircle2 size={13} className="audit-icon ok" />
+                            : <XCircle size={13} className="audit-icon fail" />}
+                          <div className="audit-main">
+                            <div className="audit-action">{e.action}</div>
+                            {e.detail && <div className="audit-detail">{e.detail}</div>}
+                          </div>
+                          <time className="audit-time" dateTime={e.timestamp}>
+                            {new Date(e.timestamp).toLocaleString([], {
+                              month: "short", day: "numeric",
+                              hour: "2-digit", minute: "2-digit", second: "2-digit",
+                            })}
+                          </time>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* ── ADVANCED ── */}
           {activeNav === "advanced" && (
             <div className="section-wrap">
@@ -1652,6 +1752,19 @@ const STYLES = `
   .step-text { flex: 1; }
   .step-action { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--accent); background: var(--bg-card); color: var(--text-link); font-family: var(--font); font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; }
   .step-action:hover { background: var(--accent-light); }
+
+  /* Audit log rows. Denser than a settings-row (a log is scanned, not read), with the
+     timestamp right-aligned and tabular so the column stays straight. */
+  .audit-list { max-height: 60vh; overflow-y: auto; }
+  .audit-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--border); }
+  .audit-row:last-child { border-bottom: none; }
+  .audit-icon { flex-shrink: 0; margin-top: 2px; }
+  .audit-icon.ok { color: var(--success); }
+  .audit-icon.fail { color: var(--danger); }
+  .audit-main { flex: 1; min-width: 0; }
+  .audit-action { font-size: 13px; color: var(--text-primary); }
+  .audit-detail { font-size: 12px; color: var(--text-secondary); margin-top: 1px; word-break: break-word; }
+  .audit-time { flex-shrink: 0; font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); font-variant-numeric: tabular-nums; padding-top: 1px; }
 
   /* Stat tiles: a hairline grid inside a titled card (the card clips the 1px gaps). */
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 1px; background: var(--border); }

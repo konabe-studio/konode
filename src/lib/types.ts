@@ -230,7 +230,7 @@ export type ExtensionMessage =
   | { type: "GET_SETTINGS" }
   | { type: "SAVE_SETTINGS"; payload: Partial<SyncSettings> }
   | { type: "RESOLVE_CONFLICT"; payload: { id: string; resolution: "local" | "remote" } }
-  | { type: "CLEAR_HISTORY" }
+  | { type: "CLEAR_AUDIT_LOG" }
   | { type: "RESTORE_SESSION"; payload?: { id?: string } }
   | { type: "TEST_BACKEND"; payload: { backend: BackendType } };
 

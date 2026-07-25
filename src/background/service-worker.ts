@@ -200,8 +200,9 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
       return { type: "OK" };
     }
 
-    case "CLEAR_HISTORY": {
-      // Clears the local audit log shown in the popup.
+    case "CLEAR_AUDIT_LOG": {
+      // Clears the local audit log (Settings → Activity). Named CLEAR_HISTORY until
+      // 1.0.3 — it never touched browsing history, only this log.
       await browser.storage.local.set({ [KEYS.AUDIT_LOG]: [] });
       return { type: "OK" };
     }

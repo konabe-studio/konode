@@ -5,7 +5,6 @@ import { browser, currentStore } from "@/lib/utils/ext";
 import { isInstalledLocally, installOrSearchUrl } from "@/lib/utils/extensions-match";
 import { KEYS, getSettings, getState, normalizeRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/storage";
 import { STATE_UPDATE } from "@/lib/constants";
-import { AuditLog } from "./components/AuditLog";
 import {
   RefreshCw, Settings, Bookmark, Clock, Globe,
   AlertCircle, Loader2, ChevronRight,
@@ -176,6 +175,11 @@ export default function PopupApp() {
   };
 
   const openOptions = () => browser.runtime.openOptionsPage();
+
+  // The audit log lives in Settings → Activity (a popup is too cramped to scan a
+  // long history). The hash selects that tab on load.
+  const openActivityLog = () =>
+    void browser.tabs.create({ url: browser.runtime.getURL("options.html#activity") });
 
   const openAllMissing = () => {
     const here = currentStore();
@@ -425,16 +429,21 @@ export default function PopupApp() {
             </div>
           )}
         </div>
-        <button
-          onClick={openOptions}
-          className="text-[14px] font-medium text-sk-text hover:underline hover:underline-offset-2"
-        >
-          Configure →
-        </button>
+        <div className="flex flex-col items-end gap-1.5">
+          <button
+            onClick={openOptions}
+            className="text-[14px] font-medium text-sk-text hover:underline hover:underline-offset-2"
+          >
+            Configure →
+          </button>
+          <button
+            onClick={openActivityLog}
+            className="text-[12px] text-sk-muted hover:text-sk-text hover:underline hover:underline-offset-2"
+          >
+            Activity log →
+          </button>
+        </div>
       </footer>
-
-      {/* ── Audit log ── */}
-      <AuditLog />
       </div>
     </div>
   );
