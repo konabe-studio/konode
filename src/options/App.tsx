@@ -31,6 +31,11 @@ import { isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { isInstalledLocally, installOrSearchUrl, storeUrlFor, inferStore, type LocalExtLike } from "@/lib/utils/extensions-match";
+import {
+  PROVIDERS, providerById, providerFromConfig, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf, sameUrl,
+  type ProviderId,
+} from "@/lib/storage-providers";
+import { ProviderLogo } from "@/lib/provider-logos";
 
 // ─── Secret field ───────────────────────────────────────────────────────────
 // Masks a *saved* secret (token / password / passphrase): once a value exists, the
@@ -146,7 +151,7 @@ function SecretField({
 type NavSection = "backend" | "data" | "device" | "stats" | "advanced";
 
 const NAV: { id: NavSection; label: string; icon: typeof Server }[] = [
-  { id: "backend",  label: "Storage Backend", icon: Server },
+  { id: "backend",  label: "Storage", icon: Server },
   { id: "data",     label: "Data Types",      icon: Bookmark },
   { id: "device",   label: "Device",          icon: Sliders },
   { id: "stats",    label: "Statistics",      icon: BarChart3 },
@@ -186,24 +191,6 @@ const DATA_TYPE_META: { type: DataType; Icon: typeof Bookmark; label: string; de
   { type: "extensions", Icon: Puzzle,   label: "Extensions", desc: "Extension list — shows missing ones with install links." },
 ];
 
-// ─── WebDAV provider presets ────────────────────────────────────────────────
-// Fixed DAV endpoints so the user only fills in username + password — the URL is
-// set (and hidden) for them. Providers whose endpoint embeds a per-user host
-// (Nextcloud, ownCloud, Synology, kDrive) can't be a fixed URL, so they stay on
-// "Custom". Endpoints verified against each provider's own docs (2026-07); Box was
-// dropped because it discontinued WebDAV in 2023.
-const WEBDAV_PRESETS: { id: string; label: string; url: string; note?: string }[] = [
-  { id: "koofr",     label: "Koofr",       url: "https://app.koofr.net/dav/Koofr", note: "Username is your Koofr email; use a Koofr app password." },
-  { id: "pcloud-eu", label: "pCloud (EU)", url: "https://ewebdav.pcloud.com",      note: "EU data region. WebDAV needs a paid pCloud plan." },
-  { id: "pcloud-us", label: "pCloud (US)", url: "https://webdav.pcloud.com",       note: "US data region. WebDAV needs a paid pCloud plan." },
-  { id: "fastmail",  label: "Fastmail",    url: "https://webdav.fastmail.com",     note: "Use an app password with the Files (WebDAV) permission." },
-];
-
-// Trailing-slash- and case-insensitive URL compare, so a saved endpoint maps back
-// to its preset regardless of how it was stored.
-const sameWebdavUrl = (a: string, b: string) =>
-  a.replace(/\/+$/, "").toLowerCase() === b.replace(/\/+$/, "").toLowerCase();
-
 // ─── App ──────────────────────────────────────────────────────────────────
 
 export default function OptionsApp() {
@@ -241,9 +228,9 @@ export default function OptionsApp() {
   const [remoteExtensions, setRemoteExtensions] = useState<SyncExtension[] | null>(null);
   const [localExts, setLocalExts] = useState<LocalExtLike[]>([]);
 
-  // WebDAV provider preset selection — seeded from the saved URL (below), then
-  // user-driven. "" = nothing chosen yet, "custom" = enter a URL, else a preset id.
-  const [webdavProvider, setWebdavProvider] = useState<string | null>(null);
+  // Selected storage-provider card — seeded from the saved config (below), then
+  // user-driven. null = nothing chosen yet.
+  const [selectedProvider, setSelectedProvider] = useState<ProviderId | null>(null);
 
   // Statistics tab data (fetched once on mount; see the effect below).
   const [syncState, setSyncState] = useState<SyncState | null>(null);
@@ -323,16 +310,14 @@ export default function OptionsApp() {
     })();
   }, []);
 
-  // Seed the WebDAV provider dropdown once settings arrive: map the saved URL to a
-  // preset, else "custom" if a URL exists, else leave unchosen. Runs once (guarded
-  // on the null sentinel) so it never fights the user's own selection.
+  // Seed the selected provider card once settings arrive: derive it from the saved
+  // backend + WebDAV URL. Runs once (guarded on the null sentinel) so it never fights
+  // the user's own selection.
   useEffect(() => {
-    if (webdavProvider !== null || !settings) return;
-    const u = settings.backends.find((b) => b.type === "webdav")?.webdav?.url ?? "";
-    if (!u) { setWebdavProvider(""); return; }
-    const m = WEBDAV_PRESETS.find((p) => sameWebdavUrl(p.url, u));
-    setWebdavProvider(m ? m.id : "custom");
-  }, [settings, webdavProvider]);
+    if (selectedProvider !== null || !settings) return;
+    const url = settings.backends.find((b) => b.type === "webdav")?.webdav?.url;
+    setSelectedProvider(providerFromConfig(settings.active_backend, url));
+  }, [settings, selectedProvider]);
 
   const update = (partial: Partial<SyncSettings>) =>
     setSettings((p) => p ? { ...p, ...partial } : p);
@@ -348,20 +333,65 @@ export default function OptionsApp() {
 
   const getBackend = (type: BackendType) => settings?.backends.find((b) => b.type === type);
 
-  // Provider dropdown → fill/clear the WebDAV URL. A preset writes its fixed
-  // endpoint; "Custom" clears a preset URL (so the user types their own) but keeps a
-  // URL they'd already entered by hand.
-  const selectWebdavProvider = (id: string) => {
-    setWebdavProvider(id);
+  // Pick a storage-provider card → set the active backend, and for WebDAV presets
+  // fill in the server URL (fixed endpoint, default region, or clear it so the user
+  // types a host/URL). Nothing about the sync format changes.
+  const pickProvider = (id: ProviderId) => {
+    const switching = selectedProvider !== id; // a different card → a different account
+    setSelectedProvider(id);
+    const p = providerById(id);
+    if (p.backend !== "webdav") { update({ active_backend: p.backend }); return; }
     const w = getBackend("webdav")?.webdav;
-    if (id === "custom") {
-      if (WEBDAV_PRESETS.some((p) => sameWebdavUrl(p.url, w?.url ?? ""))) {
-        updateBackend("webdav", { webdav: { ...w, url: "" } as any });
-      }
-      return;
-    }
-    const preset = WEBDAV_PRESETS.find((p) => p.id === id);
-    if (preset) updateBackend("webdav", { webdav: { ...w, url: preset.url } as any });
+    let url = w?.url ?? "";
+    const isPreset = PROVIDERS.some((x) =>
+      (x.fixedUrl && sameUrl(x.fixedUrl, url)) || x.regions?.some((r) => sameUrl(r.url, url)));
+    if (p.fixedUrl) url = p.fixedUrl;
+    else if (p.regions) { if (!p.regions.some((r) => sameUrl(r.url, url))) url = p.regions[0].url; }
+    else if (p.needsHost) { if (!/\/remote\.php\/dav\//i.test(url)) url = ""; }
+    else if (p.custom) { if (isPreset) url = ""; } // switching off a preset → type your own
+    // Don't carry the previous card's username/password to a different provider.
+    const creds = switching ? { username: "", password: "" } : {};
+    updateBackend("webdav", { webdav: { ...w, url, ...creds } as any });
+    update({ active_backend: "webdav" });
+  };
+
+  // Shared WebDAV username + password fields (used by every WebDAV preset card).
+  const webdavCreds = () => {
+    const w = getBackend("webdav")?.webdav;
+    return (
+      <div className="field-row-2">
+        <div className="field-group" style={{ flex: 1 }}>
+          <label className="field-label">Username</label>
+          <input
+            className="field-input mono"
+            value={w?.username ?? ""}
+            onChange={(e) => updateBackend("webdav", { webdav: { ...w, username: e.target.value } as any })}
+            placeholder="username"
+            autoComplete="off"
+          />
+        </div>
+        <div className="field-group" style={{ flex: 1 }}>
+          <label className="field-label">Password / App token</label>
+          <SecretField
+            value={w?.password ?? ""}
+            placeholder="••••••••"
+            sensitive
+            onChange={(v) => updateBackend("webdav", { webdav: { ...w, password: v } as any })}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  // http:// warning shown under any WebDAV card whose URL would send the password in the clear.
+  const webdavHttpWarn = () => {
+    const u = getBackend("webdav")?.webdav?.url ?? "";
+    if (!/^http:\/\//i.test(u) || /^http:\/\/(localhost|127\.)/i.test(u)) return null;
+    return (
+      <div className="error-row">
+        <AlertTriangle size={12} /> This is an <code>http://</code> URL — your password would be sent unencrypted. Use <code>https://</code>.
+      </div>
+    );
   };
 
   // #2 double-entry: require a confirm only for a *new*, manually-typed passphrase —
@@ -712,44 +742,43 @@ export default function OptionsApp() {
           {/* ── BACKEND ── */}
           {activeNav === "backend" && (
             <div className="section-wrap">
-              <h1 className="page-title">Storage Backend</h1>
+              <h1 className="page-title">Storage</h1>
               <p className="page-subtitle">Choose where your sync data is stored. Your data never touches our servers.</p>
 
               <div className="card-list">
-                {(["gdrive", "webdav", "github"] as BackendType[]).map((type) => {
-                  const { label, Icon, desc } = BACKEND_META[type];
-                  const isActive = settings.active_backend === type;
+                {PROVIDERS.map((p) => {
+                  const isActive = selectedProvider === p.id;
 
                   return (
                     <div
-                      key={type}
+                      key={p.id}
                       className={`backend-card ${isActive ? "selected" : ""}`}
                       role="button"
                       tabIndex={0}
                       aria-pressed={isActive}
-                      aria-label={`Use ${label}`}
-                      onClick={() => update({ active_backend: type })}
+                      aria-label={`Use ${p.label}`}
+                      onClick={() => pickProvider(p.id)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          update({ active_backend: type });
+                          pickProvider(p.id);
                         }
                       }}
                     >
                       <div className="backend-card-header">
-                        <div className="backend-icon-wrap"><Icon size={16} /></div>
+                        <div className="backend-icon-wrap"><ProviderLogo id={p.id} size={16} /></div>
                         <div className="backend-info">
                           <div className="backend-name">
-                            {label}
+                            {p.label}
                             {isActive && <span className="badge-active">active</span>}
                           </div>
-                          <div className="backend-desc">{desc}</div>
+                          <div className="backend-desc">{p.desc}</div>
                         </div>
                         <div className={`radio-circle ${isActive ? "checked" : ""}`} />
                       </div>
 
                       {/* ── Google Drive ── */}
-                      {isActive && type === "gdrive" && (
+                      {isActive && p.id === "gdrive" && (
                         <div className="backend-config" onClick={(e) => e.stopPropagation()}>
                           {gdriveUser ? (
                             <div className="account-row">
@@ -798,81 +827,111 @@ export default function OptionsApp() {
                         </div>
                       )}
 
-                      {/* ── WebDAV ── */}
-                      {isActive && type === "webdav" && (
+                      {/* ── Koofr / Fastmail (fixed endpoint) ── */}
+                      {isActive && (p.id === "koofr" || p.id === "fastmail") && (
+                        <div className="backend-config" onClick={(e) => e.stopPropagation()}>
+                          <p className="config-hint">
+                            Syncing to <code>{p.fixedUrl}</code>.{p.note ? ` ${p.note}` : null}
+                          </p>
+                          {webdavCreds()}
+                          {webdavHttpWarn()}
+                        </div>
+                      )}
+
+                      {/* ── pCloud (EU/US region) ── */}
+                      {isActive && p.id === "pcloud" && (
                         <div className="backend-config" onClick={(e) => e.stopPropagation()}>
                           <div className="field-group">
-                            <label className="field-label">Provider</label>
-                            <select
-                              className="field-input"
-                              value={webdavProvider ?? ""}
-                              onChange={(e) => selectWebdavProvider(e.target.value)}
-                            >
-                              <option value="" disabled>Choose a provider…</option>
-                              {WEBDAV_PRESETS.map((p) => (
-                                <option key={p.id} value={p.id}>{p.label}</option>
-                              ))}
-                              <option value="custom">Custom (Nextcloud, Synology, own server…)</option>
-                            </select>
-                          </div>
-                          {webdavProvider === "custom" ? (
-                            <div className="field-group">
-                              <label className="field-label">Server URL</label>
-                              <input
-                                className="field-input mono"
-                                value={getBackend("webdav")?.webdav?.url ?? ""}
-                                onChange={(e) => updateBackend("webdav", { webdav: { ...getBackend("webdav")?.webdav, url: e.target.value } as any })}
-                                placeholder="https://cloud.example.com/remote.php/dav/files/username/"
-                              />
-                            </div>
-                          ) : webdavProvider ? (
-                            <p className="config-hint">
-                              Syncing to <code>{WEBDAV_PRESETS.find((p) => p.id === webdavProvider)?.url}</code>.
-                              {(() => {
-                                const note = WEBDAV_PRESETS.find((p) => p.id === webdavProvider)?.note;
-                                return note ? ` ${note}` : null;
-                              })()}
-                            </p>
-                          ) : null}
-                          <div className="field-row-2">
-                            <div className="field-group" style={{ flex: 1 }}>
-                              <label className="field-label">Username</label>
-                              <input
-                                className="field-input mono"
-                                value={getBackend("webdav")?.webdav?.username ?? ""}
-                                onChange={(e) => updateBackend("webdav", { webdav: { ...getBackend("webdav")?.webdav, username: e.target.value } as any })}
-                                placeholder="username"
-                                autoComplete="off"
-                              />
-                            </div>
-                            <div className="field-group" style={{ flex: 1 }}>
-                              <label className="field-label">Password / App token</label>
-                              <SecretField
-                                value={getBackend("webdav")?.webdav?.password ?? ""}
-                                placeholder="••••••••"
-                                sensitive
-                                onChange={(v) => updateBackend("webdav", { webdav: { ...getBackend("webdav")?.webdav, password: v } as any })}
-                              />
+                            <label className="field-label">Region</label>
+                            <div className="seg-group">
+                              {p.regions!.map((r) => {
+                                const on = pcloudRegionOf(getBackend("webdav")?.webdav?.url) === r.id;
+                                return (
+                                  <button
+                                    key={r.id}
+                                    type="button"
+                                    className={`seg-btn ${on ? "on" : ""}`}
+                                    onClick={() => updateBackend("webdav", { webdav: { ...getBackend("webdav")?.webdav, url: r.url } as any })}
+                                  >
+                                    {r.label}
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
-                          {webdavProvider === "custom" && (
-                            <p className="config-hint">
-                              For Nextcloud, use an App Password from Settings → Security.
-                            </p>
-                          )}
-                          {(() => {
-                            const u = getBackend("webdav")?.webdav?.url ?? "";
-                            return /^http:\/\//i.test(u) && !/^http:\/\/(localhost|127\.)/i.test(u);
-                          })() && (
-                            <div className="error-row">
-                              <AlertTriangle size={12} /> This is an <code>http://</code> URL — your password would be sent unencrypted. Use <code>https://</code>.
-                            </div>
-                          )}
+                          <p className="config-hint">
+                            Syncing to <code>{getBackend("webdav")?.webdav?.url}</code>.{p.note ? ` ${p.note}` : null}
+                          </p>
+                          {webdavCreds()}
+                          {webdavHttpWarn()}
+                        </div>
+                      )}
+
+                      {/* ── Nextcloud / ownCloud (per-user host) ── */}
+                      {isActive && p.id === "nextcloud" && (
+                        <div className="backend-config" onClick={(e) => e.stopPropagation()}>
+                          <div className="field-group">
+                            <label className="field-label">Server host</label>
+                            <input
+                              className="field-input mono"
+                              value={nextcloudBaseFromUrl(getBackend("webdav")?.webdav?.url)}
+                              onChange={(e) => {
+                                const w = getBackend("webdav")?.webdav;
+                                updateBackend("webdav", { webdav: { ...w, url: nextcloudUrl(e.target.value, w?.username ?? "") } as any });
+                              }}
+                              placeholder="cloud.example.com (or cloud.example.com/nextcloud)"
+                            />
+                          </div>
+                          <div className="field-group">
+                            <label className="field-label">Username</label>
+                            <input
+                              className="field-input mono"
+                              value={getBackend("webdav")?.webdav?.username ?? ""}
+                              onChange={(e) => {
+                                const w = getBackend("webdav")?.webdav;
+                                updateBackend("webdav", { webdav: { ...w, username: e.target.value, url: nextcloudUrl(nextcloudBaseFromUrl(w?.url), e.target.value) } as any });
+                              }}
+                              placeholder="username"
+                              autoComplete="off"
+                            />
+                          </div>
+                          <div className="field-group">
+                            <label className="field-label">Password / App token</label>
+                            <SecretField
+                              value={getBackend("webdav")?.webdav?.password ?? ""}
+                              placeholder="••••••••"
+                              sensitive
+                              onChange={(v) => updateBackend("webdav", { webdav: { ...getBackend("webdav")?.webdav, password: v } as any })}
+                            />
+                          </div>
+                          <p className="config-hint">
+                            {getBackend("webdav")?.webdav?.url
+                              ? <>Syncing to <code>{getBackend("webdav")?.webdav?.url}</code>. {p.note}</>
+                              : p.note}
+                          </p>
+                          {webdavHttpWarn()}
+                        </div>
+                      )}
+
+                      {/* ── WebDAV (custom URL) ── */}
+                      {isActive && p.id === "webdav" && (
+                        <div className="backend-config" onClick={(e) => e.stopPropagation()}>
+                          <div className="field-group">
+                            <label className="field-label">Server URL</label>
+                            <input
+                              className="field-input mono"
+                              value={getBackend("webdav")?.webdav?.url ?? ""}
+                              onChange={(e) => updateBackend("webdav", { webdav: { ...getBackend("webdav")?.webdav, url: e.target.value } as any })}
+                              placeholder="https://host/remote.php/dav/files/username/"
+                            />
+                          </div>
+                          {webdavCreds()}
+                          {webdavHttpWarn()}
                         </div>
                       )}
 
                       {/* ── GitHub PAT ── */}
-                      {isActive && type === "github" && (
+                      {isActive && p.id === "github" && (
                         <div className="backend-config" onClick={(e) => e.stopPropagation()}>
                           <div className="field-group">
                             <label className="field-label">Personal Access Token</label>
@@ -1573,6 +1632,12 @@ const STYLES = `
   .notice-warn a { color: var(--text-link); }
 
   select.field-input { cursor: pointer; }
+
+  /* Segmented toggle (pCloud EU/US region). */
+  .seg-group { display: inline-flex; border: 1px solid var(--border-input); border-radius: 10px; overflow: hidden; }
+  .seg-btn { padding: 7px 16px; border: none; background: var(--bg-input); color: var(--text-secondary); font-family: var(--font); font-size: 13px; cursor: pointer; transition: background .1s, color .1s; }
+  .seg-btn + .seg-btn { border-left: 1px solid var(--border-input); }
+  .seg-btn.on { background: var(--accent-solid); color: var(--on-accent); font-weight: 600; }
 
   .setup-card { margin-bottom: 20px; padding: 16px; background: var(--accent-light); border: 1px solid var(--accent); border-radius: 14px; }
   .setup-card-head { display: flex; align-items: flex-start; gap: 12px; }

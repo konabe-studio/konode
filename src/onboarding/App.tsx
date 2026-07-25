@@ -8,7 +8,7 @@ import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-o
 const DRIVE_AVAILABLE = isDriveAuthAvailable();
 import type { BackendType, SyncSettings } from "@/lib/types";
 import {
-  Cloud, Server, Github, Bookmark,
+  Bookmark,
   Clock, Puzzle, Globe, CheckCircle2, ArrowRight,
   Loader2, XCircle, Eye, EyeOff, Lock, Key,
 } from "lucide-react";
@@ -22,6 +22,11 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 }
 
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
+import {
+  PROVIDERS, providerById, nextcloudUrl, pcloudRegionOf, sameUrl,
+  type ProviderId,
+} from "@/lib/storage-providers";
+import { ProviderLogo } from "@/lib/provider-logos";
 
 // ─── Steps ────────────────────────────────────────────────────────────────
 
@@ -41,7 +46,9 @@ const TYPE_META: Record<"bookmarks" | "extensions" | "history" | "sessions", { I
 
 export default function OnboardingApp() {
   const [step, setStep] = useState<Step>("welcome");
-  const [backend, setBackend] = useState<BackendType | null>(null);
+  // Selected storage-provider card. `backend` + the effective WebDAV URL are derived
+  // from it below (several cards map to the WebDAV backend).
+  const [provider, setProvider] = useState<ProviderId | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Google Drive
@@ -52,6 +59,7 @@ export default function OnboardingApp() {
   // GitHub
   const [githubToken, setGithubToken] = useState("");
   const [githubRepo, setGithubRepo] = useState("");
+  const [githubBranch, setGithubBranch] = useState("main");
   const [githubUser, setGithubUser] = useState<{ login: string } | null>(null);
   const [githubChecking, setGithubChecking] = useState(false);
   const [showToken, setShowToken] = useState(false);
@@ -60,6 +68,7 @@ export default function OnboardingApp() {
   const [webdavUrl, setWebdavUrl] = useState("");
   const [webdavUser, setWebdavUser] = useState("");
   const [webdavPass, setWebdavPass] = useState("");
+  const [ncHost, setNcHost] = useState(""); // Nextcloud/ownCloud server host
   const [showPass, setShowPass] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
 
@@ -73,6 +82,42 @@ export default function OnboardingApp() {
 
   const toggleData = (key: keyof typeof dataTypes) =>
     setDataTypes((p) => ({ ...p, [key]: !p[key] }));
+
+  // Derived from the selected provider card.
+  const backend: BackendType | null = provider ? providerById(provider).backend : null;
+  const effectiveWebdavUrl = provider === "nextcloud" ? nextcloudUrl(ncHost, webdavUser) : webdavUrl;
+
+  // Pick a provider card → for WebDAV presets, fill/clear the server URL.
+  const pickProvider = (id: ProviderId) => {
+    const switching = provider !== id;
+    setProvider(id);
+    const p = providerById(id);
+    // Different provider → different account; don't carry the previous card's creds.
+    if (p.backend === "webdav" && switching) { setWebdavUser(""); setWebdavPass(""); setNcHost(""); }
+    if (p.fixedUrl) setWebdavUrl(p.fixedUrl);
+    else if (p.regions) setWebdavUrl((cur) => (p.regions!.some((r) => sameUrl(r.url, cur)) ? cur : p.regions![0].url));
+    else if (p.needsHost) setWebdavUrl("");
+    else if (p.custom) setWebdavUrl((cur) =>
+      PROVIDERS.some((x) => (x.fixedUrl && sameUrl(x.fixedUrl, cur)) || x.regions?.some((r) => sameUrl(r.url, cur))) ? "" : cur);
+  };
+
+  const hintStyle = { fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.4 };
+
+  // Shared WebDAV username + password inputs (stacked). Used by every WebDAV card.
+  const webdavCreds = () => (
+    <>
+      <input style={S.input} placeholder="Username" autoComplete="off"
+        value={webdavUser} onChange={(e) => setWebdavUser(e.target.value)} />
+      <div style={{ position: "relative" }}>
+        <input style={{ ...S.input, width: "100%", paddingRight: 32 }}
+          type={showPass ? "text" : "password"} placeholder="Password / App token"
+          value={webdavPass} onChange={(e) => setWebdavPass(e.target.value)} />
+        <button style={S.eyeBtn} onClick={() => setShowPass((v) => !v)}>
+          {showPass ? <EyeOff size={12} /> : <Eye size={12} />}
+        </button>
+      </div>
+    </>
+  );
 
   // Encryption choice (made consciously on the "encrypt" step)
   const [encEnabled, setEncEnabled] = useState(false);
@@ -146,11 +191,11 @@ export default function OnboardingApp() {
   };
 
   const canProceedBackend = () => {
-    if (!backend) return false;
-    if (backend === "gdrive") return !!gdriveUser;
-    if (backend === "github") return !!githubUser && !!githubRepo;
-    if (backend === "webdav") return !!(webdavUrl && webdavUser && webdavPass);
-    return false;
+    if (!provider) return false;
+    if (provider === "gdrive") return !!gdriveUser;
+    if (provider === "github") return !!githubUser && !!githubRepo;
+    if (provider === "nextcloud") return !!(ncHost && webdavUser && webdavPass);
+    return !!(effectiveWebdavUrl && webdavUser && webdavPass);
   };
 
   const finish = async () => {
@@ -177,7 +222,7 @@ export default function OnboardingApp() {
     const origins: string[] = [];
     if (backend === "webdav") {
       try {
-        origins.push(new URL(webdavUrl).origin + "/*");
+        origins.push(new URL(effectiveWebdavUrl).origin + "/*");
       } catch {
         setSetupError("That WebDAV address doesn't look like a valid URL.");
         return;
@@ -217,12 +262,12 @@ export default function OnboardingApp() {
       } else if (backend === "github") {
         backends.push({
           type: "github" as const, label: "GitHub", enabled: true,
-          github: { token: githubToken, repo: githubRepo, branch: "main" },
+          github: { token: githubToken, repo: githubRepo, branch: githubBranch.trim() || "main" },
         });
       } else if (backend === "webdav") {
         backends.push({
           type: "webdav" as const, label: "WebDAV", enabled: true,
-          webdav: { url: webdavUrl, username: webdavUser, password: webdavPass },
+          webdav: { url: effectiveWebdavUrl, username: webdavUser, password: webdavPass },
         });
       }
 
@@ -343,145 +388,151 @@ export default function OnboardingApp() {
           <p style={S.subtitle}>Where should Konode store your data?</p>
 
           <div style={S.backendList}>
-            {/* Google Drive */}
-            <div
-              style={{ ...S.backendCard, ...(backend === "gdrive" ? S.backendSelected : {}) }}
-              role="button" tabIndex={0} aria-pressed={backend === "gdrive"} aria-label="Use Google Drive"
-              onClick={() => setBackend("gdrive")}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setBackend("gdrive"); } }}
-            >
-              <div style={S.backendHeader}>
-                <Cloud size={18} color={backend === "gdrive" ? "var(--text-primary)" : "var(--text-secondary)"} />
-                <div>
-                  <div style={S.backendName}>Google Drive</div>
-                  <div style={S.backendDesc}>OAuth — short-lived token cached on this device</div>
-                </div>
-                <div style={{ ...S.radio, ...(backend === "gdrive" ? S.radioChecked : {}) }} />
-              </div>
-              {backend === "gdrive" && (
-                <div style={S.authPanel}>
-                  {gdriveUser ? (
-                    <div style={S.verifiedRow}>
-                      <CheckCircle2 size={14} color="var(--success)" />
-                      <span style={{ color: "var(--success)", fontSize: 14 }}>
-                        {gdriveUser.displayName} ({gdriveUser.email})
-                      </span>
+            {PROVIDERS.map((p) => {
+              const on = provider === p.id;
+              return (
+                <div
+                  key={p.id}
+                  style={{ ...S.backendCard, ...(on ? S.backendSelected : {}) }}
+                  role="button" tabIndex={0} aria-pressed={on} aria-label={`Use ${p.label}`}
+                  onClick={() => pickProvider(p.id)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickProvider(p.id); } }}
+                >
+                  <div style={S.backendHeader}>
+                    <ProviderLogo id={p.id} size={18} color={on ? "var(--text-primary)" : "var(--text-secondary)"} />
+                    <div>
+                      <div style={S.backendName}>{p.label}</div>
+                      <div style={S.backendDesc}>{p.desc}</div>
                     </div>
-                  ) : !DRIVE_AVAILABLE ? (
-                    <div style={S.errorRow}>
-                      <XCircle size={12} /> Google sign-in isn't available in this
-                      browser. Pick GitHub or WebDAV instead.
-                    </div>
-                  ) : (
-                    <>
-                      <button style={S.btnGoogle} onClick={(e) => { e.stopPropagation(); connectGDrive(); }} disabled={gdriveConnecting}>
-                        {gdriveConnecting ? <Loader2 size={14} className="spin" /> : (
-                          <svg width="14" height="14" viewBox="0 0 24 24">
-                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                          </svg>
-                        )}
-                        {gdriveConnecting ? "Connecting…" : "Sign in with Google"}
-                      </button>
-                      {gdriveError && (
-                        <div style={S.errorRow}><XCircle size={12} /> {gdriveError}</div>
+                    <div style={{ ...S.radio, ...(on ? S.radioChecked : {}) }} />
+                  </div>
+
+                  {/* Google Drive */}
+                  {on && p.id === "gdrive" && (
+                    <div style={S.authPanel} onClick={(e) => e.stopPropagation()}>
+                      {gdriveUser ? (
+                        <div style={S.verifiedRow}>
+                          <CheckCircle2 size={14} color="var(--success)" />
+                          <span style={{ color: "var(--success)", fontSize: 14 }}>
+                            {gdriveUser.displayName} ({gdriveUser.email})
+                          </span>
+                        </div>
+                      ) : !DRIVE_AVAILABLE ? (
+                        <div style={S.errorRow}>
+                          <XCircle size={12} /> Google sign-in isn't available in this browser. Pick another option.
+                        </div>
+                      ) : (
+                        <>
+                          <button style={S.btnGoogle} onClick={(e) => { e.stopPropagation(); connectGDrive(); }} disabled={gdriveConnecting}>
+                            {gdriveConnecting ? <Loader2 size={14} className="spin" /> : (
+                              <svg width="14" height="14" viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                              </svg>
+                            )}
+                            {gdriveConnecting ? "Connecting…" : "Sign in with Google"}
+                          </button>
+                          {gdriveError && <div style={S.errorRow}><XCircle size={12} /> {gdriveError}</div>}
+                        </>
                       )}
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* WebDAV */}
-            <div
-              style={{ ...S.backendCard, ...(backend === "webdav" ? S.backendSelected : {}) }}
-              role="button" tabIndex={0} aria-pressed={backend === "webdav"} aria-label="Use WebDAV"
-              onClick={() => setBackend("webdav")}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setBackend("webdav"); } }}
-            >
-              <div style={S.backendHeader}>
-                <Server size={18} color={backend === "webdav" ? "var(--text-primary)" : "var(--text-secondary)"} />
-                <div>
-                  <div style={S.backendName}>WebDAV</div>
-                  <div style={S.backendDesc}>Nextcloud, pCloud, Synology, ownCloud…</div>
-                </div>
-                <div style={{ ...S.radio, ...(backend === "webdav" ? S.radioChecked : {}) }} />
-              </div>
-              {backend === "webdav" && (
-                <div style={S.authPanel} onClick={(e) => e.stopPropagation()}>
-                  <input style={S.input} placeholder="https://cloud.example.com/remote.php/dav/files/user/"
-                    value={webdavUrl} onChange={(e) => setWebdavUrl(e.target.value)} />
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <input style={{ ...S.input, flex: 1 }} placeholder="Username"
-                      value={webdavUser} onChange={(e) => setWebdavUser(e.target.value)} />
-                    <div style={{ position: "relative", flex: 1 }}>
-                      <input style={{ ...S.input, width: "100%", paddingRight: 32 }}
-                        type={showPass ? "text" : "password"} placeholder="Password / App token"
-                        value={webdavPass} onChange={(e) => setWebdavPass(e.target.value)} />
-                      <button style={S.eyeBtn} onClick={() => setShowPass(v => !v)}>
-                        {showPass ? <EyeOff size={12} /> : <Eye size={12} />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* GitHub */}
-            <div
-              style={{ ...S.backendCard, ...(backend === "github" ? S.backendSelected : {}) }}
-              role="button" tabIndex={0} aria-pressed={backend === "github"} aria-label="Use GitHub"
-              onClick={() => setBackend("github")}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setBackend("github"); } }}
-            >
-              <div style={S.backendHeader}>
-                <Github size={18} color={backend === "github" ? "var(--text-primary)" : "var(--text-secondary)"} />
-                <div>
-                  <div style={S.backendName}>GitHub / Gitea / GitLab</div>
-                  <div style={S.backendDesc}>Private repository via Personal Access Token</div>
-                </div>
-                <div style={{ ...S.radio, ...(backend === "github" ? S.radioChecked : {}) }} />
-              </div>
-              {backend === "github" && (
-                <div style={S.authPanel} onClick={(e) => e.stopPropagation()}>
-                  <div style={{ position: "relative" }}>
-                    <input
-                      style={{ ...S.input, fontFamily: "monospace", paddingRight: 32 }}
-                      type={showToken ? "text" : "password"}
-                      placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                      value={githubToken}
-                      onChange={async (e) => {
-                        setGithubToken(e.target.value);
-                        await verifyToken(e.target.value);
-                      }}
-                    />
-                    <button style={S.eyeBtn} onClick={() => setShowToken(v => !v)}>
-                      {showToken ? <EyeOff size={12} /> : <Eye size={12} />}
-                    </button>
-                  </div>
-                  {githubChecking && (
-                    <div style={S.verifyRow}><Loader2 size={12} className="spin" /> Verifying…</div>
-                  )}
-                  {githubUser && !githubChecking && (
-                    <div style={{ ...S.verifyRow, color: "var(--success)" }}>
-                      <CheckCircle2 size={12} /> @{githubUser.login}
                     </div>
                   )}
-                  <input style={{ ...S.input, fontFamily: "monospace" }}
-                    placeholder="username/konode-sync"
-                    value={githubRepo} onChange={(e) => setGithubRepo(e.target.value)} />
-                  <a
-                    href="https://github.com/settings/personal-access-tokens/new"
-                    target="_blank" rel="noreferrer"
-                    style={{ fontSize: 12, color: "var(--text-link)", textDecoration: "none", marginTop: 4, display: "inline-block" }}
-                  >
-                    Create a fine-grained token (only this repo) →
-                  </a>
+
+                  {/* Koofr / Fastmail (fixed endpoint) */}
+                  {on && (p.id === "koofr" || p.id === "fastmail") && (
+                    <div style={S.authPanel} onClick={(e) => e.stopPropagation()}>
+                      <div style={hintStyle}>Syncing to <code>{p.fixedUrl}</code>.{p.note ? ` ${p.note}` : null}</div>
+                      {webdavCreds()}
+                    </div>
+                  )}
+
+                  {/* pCloud (EU/US) */}
+                  {on && p.id === "pcloud" && (
+                    <div style={S.authPanel} onClick={(e) => e.stopPropagation()}>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {p.regions!.map((r) => {
+                          const sel = pcloudRegionOf(webdavUrl) === r.id;
+                          return (
+                            <button key={r.id} type="button" onClick={() => setWebdavUrl(r.url)}
+                              style={{ flex: 1, padding: "8px 0", borderRadius: 8, cursor: "pointer",
+                                border: sel ? "1px solid var(--accent)" : "1px solid var(--border-input)",
+                                background: sel ? "var(--accent-solid)" : "var(--bg-input)",
+                                color: sel ? "var(--on-accent)" : "var(--text-secondary)",
+                                fontFamily: "var(--font)", fontSize: 13, fontWeight: sel ? 600 : 400 }}>
+                              {r.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div style={hintStyle}>Syncing to <code>{webdavUrl}</code>.{p.note ? ` ${p.note}` : null}</div>
+                      {webdavCreds()}
+                    </div>
+                  )}
+
+                  {/* Nextcloud / ownCloud (per-user host) */}
+                  {on && p.id === "nextcloud" && (
+                    <div style={S.authPanel} onClick={(e) => e.stopPropagation()}>
+                      <input style={S.input} placeholder="cloud.example.com"
+                        value={ncHost} onChange={(e) => setNcHost(e.target.value)} />
+                      {webdavCreds()}
+                      <div style={hintStyle}>
+                        {effectiveWebdavUrl ? <>Syncing to <code>{effectiveWebdavUrl}</code>. {p.note}</> : p.note}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* WebDAV (custom URL) */}
+                  {on && p.id === "webdav" && (
+                    <div style={S.authPanel} onClick={(e) => e.stopPropagation()}>
+                      <input style={S.input} placeholder="https://host/remote.php/dav/files/user/"
+                        value={webdavUrl} onChange={(e) => setWebdavUrl(e.target.value)} />
+                      {webdavCreds()}
+                    </div>
+                  )}
+
+                  {/* GitHub / Gitea / GitLab */}
+                  {on && p.id === "github" && (
+                    <div style={S.authPanel} onClick={(e) => e.stopPropagation()}>
+                      <div style={{ position: "relative" }}>
+                        <input
+                          style={{ ...S.input, fontFamily: "monospace", paddingRight: 32 }}
+                          type={showToken ? "text" : "password"}
+                          placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                          value={githubToken}
+                          onChange={async (e) => { setGithubToken(e.target.value); await verifyToken(e.target.value); }}
+                        />
+                        <button style={S.eyeBtn} onClick={() => setShowToken(v => !v)}>
+                          {showToken ? <EyeOff size={12} /> : <Eye size={12} />}
+                        </button>
+                      </div>
+                      {githubChecking && (
+                        <div style={S.verifyRow}><Loader2 size={12} className="spin" /> Verifying…</div>
+                      )}
+                      {githubUser && !githubChecking && (
+                        <div style={{ ...S.verifyRow, color: "var(--success)" }}>
+                          <CheckCircle2 size={12} /> @{githubUser.login}
+                        </div>
+                      )}
+                      <input style={{ ...S.input, fontFamily: "monospace" }}
+                        placeholder="username/konode-sync"
+                        value={githubRepo} onChange={(e) => setGithubRepo(e.target.value)} />
+                      <input style={{ ...S.input, fontFamily: "monospace" }}
+                        placeholder="Branch (default: main)"
+                        value={githubBranch} onChange={(e) => setGithubBranch(e.target.value)} />
+                      <a
+                        href="https://github.com/settings/personal-access-tokens/new"
+                        target="_blank" rel="noreferrer"
+                        style={{ fontSize: 12, color: "var(--text-link)", textDecoration: "none", marginTop: 4, display: "inline-block" }}
+                      >
+                        Create a fine-grained token (only this repo) →
+                      </a>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              );
+            })}
           </div>
 
           <div style={S.navRow}>
