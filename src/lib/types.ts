@@ -220,6 +220,15 @@ export interface IBackend {
   downloadAll(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket[]>;
   listVersions(data_type: DataType): Promise<string[]>;
   testConnection(): Promise<{ ok: boolean; message: string }>;
+  // ── Generic named-file ops on the Konode folder ──────────────────────────
+  // Used by snapshots (restore points) — files that live alongside the per-device
+  // sync files but are invisible to downloadAll (they don't match its
+  // `konode_<type>_` prefix). `name` is the basename in the folder; getFile returns
+  // null when absent; listFiles returns basenames that start with `prefix`.
+  putFile(name: string, content: string): Promise<void>;
+  getFile(name: string): Promise<string | null>;
+  listFiles(prefix: string): Promise<string[]>;
+  deleteFile(name: string): Promise<void>;
 }
 
 // ─── Message Types (background ↔ popup) ───────────────────────────────────

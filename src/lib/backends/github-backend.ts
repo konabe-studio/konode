@@ -196,6 +196,65 @@ export class GitHubBackend implements IBackend {
     });
   }
 
+  async putFile(name: string, content: string): Promise<void> {
+    await this.ensureRepoInitialized();
+    const filename = `${this.path}/${name}`;
+    const encoded = btoa(unescape(encodeURIComponent(content)));
+    await withRetry(
+      async () => {
+        const sha = await this.getFileSHA(filename, this.branch);
+        const body: Record<string, unknown> = { message: `snapshot: ${name}`, content: encoded, branch: this.branch };
+        if (sha) body.sha = sha;
+        const res = await fetch(`${GITHUB_API}/repos/${this.repoSlug}/contents/${filename}`, {
+          method: "PUT", headers: this.headers(), body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new HttpError(res.status, `GitHub putFile failed: ${res.status} — ${err.message ?? ""}`);
+        }
+      },
+      { maxAttempts: 5, shouldRetry: (e) => defaultShouldRetry(e) || (e instanceof HttpError && e.status === 409) }
+    );
+  }
+
+  async getFile(name: string): Promise<string | null> {
+    return withRetry(async () => {
+      const res = await fetch(
+        `${GITHUB_API}/repos/${this.repoSlug}/contents/${this.path}/${name}?ref=${this.branch}`,
+        { headers: { ...this.headers(), Accept: "application/vnd.github.raw+json" }, cache: "no-store" }
+      );
+      if (res.status === 404) return null;
+      if (!res.ok) throw new HttpError(res.status, `GitHub getFile failed: ${res.status}`);
+      return res.text();
+    });
+  }
+
+  async listFiles(prefix: string): Promise<string[]> {
+    return withRetry(async () => {
+      const res = await fetch(
+        `${GITHUB_API}/repos/${this.repoSlug}/contents/${this.path}?ref=${this.branch}`,
+        { headers: this.headers(), cache: "no-store" }
+      );
+      if (res.status === 404) return [];
+      if (!res.ok) throw new HttpError(res.status, `GitHub list failed: ${res.status}`);
+      const files: Array<{ name: string }> = await res.json();
+      return files.map(f => f.name).filter(n => n.startsWith(prefix));
+    });
+  }
+
+  async deleteFile(name: string): Promise<void> {
+    const filename = `${this.path}/${name}`;
+    await withRetry(async () => {
+      const sha = await this.getFileSHA(filename, this.branch);
+      if (!sha) return; // already gone
+      const res = await fetch(`${GITHUB_API}/repos/${this.repoSlug}/contents/${filename}`, {
+        method: "DELETE", headers: this.headers(),
+        body: JSON.stringify({ message: `snapshot: delete ${name}`, sha, branch: this.branch }),
+      });
+      if (!res.ok && res.status !== 404) throw new HttpError(res.status, `GitHub DELETE failed: ${res.status}`);
+    });
+  }
+
   async listVersions(_: DataType): Promise<string[]> { return []; }
 
   async testConnection(): Promise<{ ok: boolean; message: string }> {

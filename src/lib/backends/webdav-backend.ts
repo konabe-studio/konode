@@ -124,6 +124,50 @@ export class WebDAVBackend implements IBackend {
     });
   }
 
+  async putFile(name: string, content: string): Promise<void> {
+    await withRetry(async () => {
+      const res = await fetch(`${this.baseUrl}/${name}`, { method: "PUT", headers: this.headers(), body: content });
+      if (!res.ok) throw new HttpError(res.status, `WebDAV PUT failed: ${res.status}`);
+    });
+  }
+
+  async getFile(name: string): Promise<string | null> {
+    return withRetry(async () => {
+      const res = await fetch(`${this.baseUrl}/${name}`, { headers: this.headers(), cache: "no-store" });
+      if (res.status === 404) return null;
+      if (!res.ok) throw new HttpError(res.status, `WebDAV GET failed: ${res.status}`);
+      return res.text();
+    });
+  }
+
+  async listFiles(prefix: string): Promise<string[]> {
+    return withRetry(async () => {
+      const res = await fetch(this.baseUrl + "/", {
+        method: "PROPFIND",
+        headers: { ...this.headers(), Depth: "1" },
+        body: `<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/></d:prop></d:propfind>`,
+        cache: "no-store",
+      });
+      if (res.status === 404) return [];
+      if (!res.ok) throw new HttpError(res.status, `WebDAV list failed: ${res.status}`);
+      const xml = await res.text();
+      const basename = (h: string): string => {
+        try { return decodeURIComponent(h).split("/").pop() ?? ""; }
+        catch { return h.split("/").pop() ?? ""; }
+      };
+      return [...xml.matchAll(/<(?:[a-z0-9]+:)?href>([^<]+)<\/(?:[a-z0-9]+:)?href>/gi)]
+        .map(m => basename(m[1]))
+        .filter(name => name.startsWith(prefix));
+    });
+  }
+
+  async deleteFile(name: string): Promise<void> {
+    await withRetry(async () => {
+      const res = await fetch(`${this.baseUrl}/${name}`, { method: "DELETE", headers: this.headers() });
+      if (!res.ok && res.status !== 404) throw new HttpError(res.status, `WebDAV DELETE failed: ${res.status}`);
+    });
+  }
+
   async listVersions(_: DataType): Promise<string[]> { return []; }
 
   async testConnection(): Promise<{ ok: boolean; message: string }> {

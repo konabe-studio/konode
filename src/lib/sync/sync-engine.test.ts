@@ -39,6 +39,13 @@ class FakeBackend implements IBackend {
   testConnection(): Promise<{ ok: boolean; message: string }> {
     return Promise.resolve({ ok: true, message: "" });
   }
+  blobs = new Map<string, string>();
+  putFile(name: string, content: string): Promise<void> { this.blobs.set(name, content); return Promise.resolve(); }
+  getFile(name: string): Promise<string | null> { return Promise.resolve(this.blobs.get(name) ?? null); }
+  listFiles(prefix: string): Promise<string[]> {
+    return Promise.resolve([...this.blobs.keys()].filter((n) => n.startsWith(prefix)));
+  }
+  deleteFile(name: string): Promise<void> { this.blobs.delete(name); return Promise.resolve(); }
 }
 
 // Typed view of the private members we drive directly in tests.

@@ -145,6 +145,83 @@ export class GDriveBackend implements IBackend {
     });
   }
 
+  private async findFileId(name: string, folderId: string, h: HeadersInit): Promise<string | null> {
+    const q = encodeURIComponent(`name='${name}' and '${folderId}' in parents and trashed=false`);
+    const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id)`, { headers: h });
+    if (!res.ok) throw new HttpError(res.status, `Drive lookup failed: ${res.status}`);
+    const data = await res.json();
+    return data.files?.[0]?.id ?? null;
+  }
+
+  async putFile(name: string, content: string): Promise<void> {
+    await withRetry(async () => {
+      const folderId = this.folderId ?? (await this.ensureFolder());
+      const h = await this.authHeaders();
+      const token = await this.getToken(false);
+      const existingId = await this.findFileId(name, folderId, h);
+      if (existingId) {
+        const res = await fetch(`${UPLOAD_API}/files/${existingId}?uploadType=media`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: content,
+        });
+        if (!res.ok) throw new HttpError(res.status, `Drive update failed: ${res.status}`);
+      } else {
+        const boundary = `konode_snap_${name.length}_${content.length}`;
+        const metadata = JSON.stringify({ name, parents: [folderId], mimeType: "application/json" });
+        const body =
+          `--${boundary}\r\n` +
+          `Content-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n` +
+          `--${boundary}\r\n` +
+          `Content-Type: application/json\r\n\r\n${content}\r\n` +
+          `--${boundary}--`;
+        const res = await fetch(`${UPLOAD_API}/files?uploadType=multipart`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": `multipart/related; boundary=${boundary}` },
+          body,
+        });
+        if (!res.ok) throw new HttpError(res.status, `Drive create failed: ${res.status}`);
+      }
+    });
+  }
+
+  async getFile(name: string): Promise<string | null> {
+    return withRetry(async () => {
+      const folderId = this.folderId ?? (await this.ensureFolder());
+      const h = await this.authHeaders();
+      const id = await this.findFileId(name, folderId, h);
+      if (!id) return null;
+      const r = await fetch(`${DRIVE_API}/files/${id}?alt=media`, { headers: h, cache: "no-store" });
+      if (r.status === 404) return null;
+      if (!r.ok) throw new HttpError(r.status, `Drive GET failed: ${r.status}`);
+      return r.text();
+    });
+  }
+
+  async listFiles(prefix: string): Promise<string[]> {
+    return withRetry(async () => {
+      const folderId = this.folderId ?? (await this.ensureFolder());
+      const h = await this.authHeaders();
+      // Drive's `contains` is a loose token match, so filter to a real startsWith below.
+      const q = encodeURIComponent(`name contains '${prefix}' and '${folderId}' in parents and trashed=false`);
+      const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(name)`, { headers: h, cache: "no-store" });
+      if (!res.ok) throw new HttpError(res.status, `Drive list failed: ${res.status}`);
+      const { files } = await res.json();
+      return ((files ?? []) as Array<{ name: string }>).map(f => f.name).filter(n => n.startsWith(prefix));
+    });
+  }
+
+  async deleteFile(name: string): Promise<void> {
+    await withRetry(async () => {
+      const folderId = this.folderId ?? (await this.ensureFolder());
+      const h = await this.authHeaders();
+      const id = await this.findFileId(name, folderId, h);
+      if (!id) return;
+      const res = await fetch(`${DRIVE_API}/files/${id}`, { method: "DELETE", headers: h });
+      if (!res.ok && res.status !== 404) throw new HttpError(res.status, `Drive DELETE failed: ${res.status}`);
+    });
+  }
+
   async listVersions(_data_type: DataType): Promise<string[]> { return []; }
 
   async testConnection(): Promise<{ ok: boolean; message: string }> {
