@@ -82,6 +82,7 @@ export const KEYS = {
   BOOKMARK_TOMBSTONES: "konode_bm_tombstones",
   BOOKMARK_MOVES: "konode_bm_moves",
   BOOKMARK_FOLDER_MOVES: "konode_bm_folder_moves",
+  SNAPSHOTS: "konode_bm_snapshots", // device-local index of bookmark restore points
   HIST_IMPORTED: "konode_hist_imported",
   REMOTE_SESSIONS: "konode_remote_sessions",
   REMOTE_EXTENSIONS: "konode_remote_extensions",

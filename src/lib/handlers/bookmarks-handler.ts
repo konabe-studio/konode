@@ -739,6 +739,72 @@ function pruneEmptyFolders(tree: SyncBookmark[]): SyncBookmark[] {
   }));
 }
 
+// ─── Snapshot restore ──────────────────────────────────────────────────────
+
+/** Restore bookmarks from a snapshot tree: re-create every URL that isn't currently
+ *  present locally, into its folder path, IGNORING tombstones — the whole point of a
+ *  restore point is to bring back deleted bookmarks. Fresh creates get a current
+ *  dateAdded, which beats an older peer deletion on the next sync (mergeBookmarks
+ *  Step A keeps a local add strictly newer than the tombstone). Local tombstones for
+ *  the restored URLs are dropped so this device doesn't immediately re-delete them.
+ *  Folders are materialized lazily (only when a restored bookmark lands under them),
+ *  so an empty folder from the snapshot isn't recreated. Returns the count added. */
+export async function restoreBookmarks(tree: SyncBookmark[]): Promise<number> {
+  importing = true;
+  try {
+    const snapUrls = new Set(
+      flattenNodes(tree).filter((n) => n.url).map((n) => canonicalUrlKey(n.url as string))
+    );
+    const tombs = await getTombstones();
+    await setTombstones(tombs.filter((t) => !snapUrls.has(canonicalUrlKey(t.url))));
+
+    const localRoots = (await browser.bookmarks.getTree())[0]?.children ?? [];
+    const otherId = defaultOtherRootId(localRoots);
+    if (!otherId) return 0;
+
+    const present = new Set(
+      flattenNodes(await exportBookmarks()).filter((n) => n.url).map((n) => canonicalUrlKey(n.url as string))
+    );
+    let added = 0;
+
+    const walk = async (node: SyncBookmark, ensureParent: () => Promise<string>): Promise<void> => {
+      if (node.url) {
+        const key = canonicalUrlKey(node.url);
+        if (present.has(key)) return;
+        try {
+          const parentId = await ensureParent();
+          await browser.bookmarks.create({ parentId, title: node.title, url: node.url });
+          present.add(key);
+          added++;
+        } catch { /* skip invalid url */ }
+        return;
+      }
+      let folderId: string | null = null;
+      const ensureThis = async (): Promise<string> => {
+        if (folderId) return folderId;
+        const parentId = await ensureParent();
+        const children = await browser.bookmarks.getChildren(parentId);
+        const existing = children.find((c) => !c.url && c.title === node.title);
+        folderId = existing ? existing.id : (await browser.bookmarks.create({ parentId, title: node.title })).id;
+        return folderId;
+      };
+      for (const kid of node.children ?? []) await walk(kid, ensureThis);
+    };
+
+    const roots = tree[0]?.children ?? tree;
+    for (let r = 0; r < roots.length; r++) {
+      const root = roots[r];
+      if (!root) continue;
+      const targetRootId = matchLocalRoot(root, localRoots, r) ?? otherId;
+      for (const kid of root.children ?? []) await walk(kid, () => Promise.resolve(targetRootId));
+    }
+    logger.info("Snapshots", `Restored ${added} bookmark(s)`);
+    return added;
+  } finally {
+    importing = false;
+  }
+}
+
 // ─── Listeners ───────────────────────────────────────────────────────────
 
 export type BookmarkChangeCallback = () => void;
