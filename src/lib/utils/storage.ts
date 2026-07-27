@@ -57,6 +57,7 @@ export const DEFAULT_SETTINGS: SyncSettings = {
   notifications_enabled: true,
   debug_mode: false,
   encryption_enabled: false,
+  onboarding_completed: false,
 };
 
 export const DEFAULT_STATE: SyncState = {

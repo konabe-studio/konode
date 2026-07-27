@@ -280,6 +280,7 @@ export default function OnboardingApp() {
           ...current, active_backend: backend, backends, enabled_types,
           encryption_enabled: encEnabled,
           encryption_passphrase: encEnabled ? encPass : undefined,
+          onboarding_completed: true,
         },
       });
 

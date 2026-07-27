@@ -181,6 +181,10 @@ export interface SyncSettings {
   // E2EE (opt-in) — wired into the sync engine; see src/lib/crypto/encryption.ts
   encryption_enabled: boolean;
   encryption_passphrase?: string; // device-local only: never uploaded, never leaves chrome.storage.local
+  // True once the user has finished first-run setup (onboarding wizard, or a first
+  // working config in Options). Gates the "Finish setting up Konode" card so it never
+  // reappears while the user browses provider cards after they're already set up.
+  onboarding_completed?: boolean;
 }
 
 // ─── Sync State ────────────────────────────────────────────────────────────

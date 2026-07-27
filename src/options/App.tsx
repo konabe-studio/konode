@@ -350,6 +350,25 @@ export default function OptionsApp() {
     })();
   }, [activeNav]);
 
+  // Latch onboarding_completed the first time a working config is seen (backend
+  // configured + a data type on), so the setup card doesn't reappear when the user
+  // later clicks around the provider cards. Persist it so it survives reloads.
+  useEffect(() => {
+    if (!settings || settings.onboarding_completed) return;
+    const ab = settings.active_backend;
+    const w = settings.backends.find((b) => b.type === "webdav")?.webdav;
+    const g = settings.backends.find((b) => b.type === "github")?.github;
+    const configured =
+      ab === "gdrive" ? !!gdriveUser
+      : ab === "webdav" ? !!(w?.url && w?.username && w?.password)
+      : ab === "github" ? !!(g?.token && g?.repo)
+      : false;
+    if (configured && settings.enabled_types.length > 0) {
+      update({ onboarding_completed: true });
+      void sendMessage({ type: "SAVE_SETTINGS", payload: { onboarding_completed: true } });
+    }
+  }, [settings, gdriveUser]);
+
   const update = (partial: Partial<SyncSettings>) =>
     setSettings((p) => p ? { ...p, ...partial } : p);
 
@@ -716,6 +735,11 @@ export default function OptionsApp() {
     return false;
   })();
   const setupComplete = activeBackendConfigured && settings.enabled_types.length > 0;
+  // Once first-run setup is complete, mark it persistently so the "Finish setting up"
+  // card never returns while the user browses provider cards. `active_backend` flips
+  // as they click around (deselecting their real backend), so the card can't rely on
+  // the live config — this latched flag is the source of truth.
+  const showSetupCard = !settings.onboarding_completed && !setupComplete;
 
   // Statistics-tab derived values.
   const totalSyncRuns = syncState ? Object.values(syncState.sync_counts).reduce((a, b) => a + b, 0) : 0;
@@ -755,7 +779,7 @@ export default function OptionsApp() {
         <div className="content-inner">
 
           {/* ── First-run setup (esp. Orion/WebKit, where the wizard tab never opens) ── */}
-          {!setupComplete && (
+          {showSetupCard && (
             <div className="setup-card">
               <div className="setup-card-head">
                 <div className="setup-card-mark"><BrandMark size={16} /></div>
@@ -1690,10 +1714,11 @@ const STYLES = `
   /* Top horizontal tab bar (Proton Pass settings pattern): brand at the left,
      horizontal tabs that scroll on narrow widths, active tab underlined in accent. */
   .topbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: center; align-items: center; height: 56px; padding: 0 24px; background: var(--bg-sidebar); border-bottom: 1px solid var(--border); }
-  /* Wider than the centered content (var(--content-max)=736) so the six tabs fit on
-     one line at desktop widths instead of being clipped by the content-width cap.
-     Narrow widths still scroll the tabbar (overflow-x:auto below). */
-  .topbar-inner { display: flex; align-items: center; gap: 20px; width: 100%; max-width: 1040px; height: 100%; }
+  /* Natural width (brand + all tabs), centered by the topbar's justify-content —
+     NOT width:100%, which would stretch it edge-to-edge and pin the brand hard left.
+     This keeps the menu centered like the content; a too-narrow window scrolls the
+     tabbar (overflow-x:auto below). */
+  .topbar-inner { display: flex; align-items: center; gap: 20px; max-width: 100%; height: 100%; }
   .topbar-brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
   .topbar-logo { width: 24px; height: 24px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
   .topbar-title { font-size: 16px; font-weight: 600; color: var(--text-primary); }
