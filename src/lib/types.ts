@@ -185,10 +185,6 @@ export interface SyncSettings {
   // working config in Options). Gates the "Finish setting up Konode" card so it never
   // reappears while the user browses provider cards after they're already set up.
   onboarding_completed?: boolean;
-  // Open a short, anonymous feedback form on uninstall (Chromium only —
-  // setUninstallURL is unsupported on Firefox). The extension sends nothing itself;
-  // it only registers the URL. User-controllable; default on.
-  uninstall_feedback?: boolean;
 }
 
 // ─── Sync State ────────────────────────────────────────────────────────────

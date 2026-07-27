@@ -11,7 +11,7 @@ import {
   Globe, Puzzle, AlertTriangle, CheckCircle2, XCircle,
   Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
   Sliders, Shield, Save, Pencil, Key, Copy, Check, ArrowRight, BarChart3,
-  ScrollText, Trash2, RotateCcw, Camera,
+  ScrollText, Trash2, RotateCcw, Camera, Mail,
 } from "lucide-react";
 // Shown in the About section. The manifest is the single source of truth for the
 // version — bump `package.json` and the build stamps it into the manifest.
@@ -1651,23 +1651,31 @@ export default function OptionsApp() {
               </div>
 
               <div className="settings-section">
-                <div className="settings-card-head">Feedback</div>
+                <div className="settings-card-head">
+                  Feedback
+                  <span className="head-sub">Nothing is sent automatically — these just open when you click them.</span>
+                </div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div>
-                      <div className="row-label">Feedback form on uninstall</div>
-                      <div className="row-desc">
-                        If you ever uninstall Konode, open a short, anonymous feedback form in your
-                        browser. Konode sends nothing itself — you choose whether to fill it in.
-                        (Chromium only.)
-                      </div>
+                      <div className="row-label">Report a bug or request a feature</div>
+                      <div className="row-desc">Opens the project's GitHub issues (public, tied to your GitHub account).</div>
                     </div>
                   </div>
-                  <label className="toggle-wrap">
-                    <input type="checkbox" className="toggle-input" checked={settings.uninstall_feedback ?? true}
-                      onChange={(e) => update({ uninstall_feedback: e.target.checked })} />
-                    <span className="toggle-track"><span className="toggle-thumb" /></span>
-                  </label>
+                  <a className="link-external" href="https://github.com/konabe-studio/konode/issues" target="_blank" rel="noreferrer">
+                    <Github size={12} /> Open issues <ExternalLink size={10} />
+                  </a>
+                </div>
+                <div className="settings-row">
+                  <div className="settings-row-left">
+                    <div>
+                      <div className="row-label">Email us</div>
+                      <div className="row-desc">For anything you'd rather not post publicly.</div>
+                    </div>
+                  </div>
+                  <a className="link-external" href="mailto:hello@konode.org">
+                    <Mail size={12} /> hello@konode.org
+                  </a>
                 </div>
               </div>
 

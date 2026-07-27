@@ -16,24 +16,11 @@ let syncEngine: SyncEngine | null = null;
 let bookmarkDebounce: ReturnType<typeof setTimeout> | null = null;
 const BOOKMARK_DEBOUNCE_MS = 1000; // coalesce bursts (a folder delete fires many events)
 
-// Optional, anonymous uninstall feedback form. The extension transmits NOTHING on
-// uninstall — it only names a URL the browser opens; the page is a voluntary form.
-// setUninstallURL is Chromium-only (absent on Firefox), so feature-detect. Respects
-// the user's uninstall_feedback setting (clear the URL when off).
-const UNINSTALL_FEEDBACK_URL = "https://konode.vercel.app/goodbye";
-function applyUninstallURL(settings: { uninstall_feedback?: boolean }): void {
-  const set = (browser.runtime as { setUninstallURL?: (u: string) => void }).setUninstallURL;
-  if (typeof set !== "function") return; // Firefox / unsupported → no-op
-  try { set(settings.uninstall_feedback === false ? "" : UNINSTALL_FEEDBACK_URL); }
-  catch { /* best effort */ }
-}
-
 // ─── Init ─────────────────────────────────────────────────────────────────
 
 async function init(): Promise<void> {
   const settings = await getSettings();
   setLoggerDebug(settings.debug_mode);
-  applyUninstallURL(settings);
 
   // ── Reset stuck "syncing" state from previous session ──
   const currentState = await getState();
@@ -174,7 +161,6 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
     case "SAVE_SETTINGS": {
       const updated = await saveSettings(message.payload);
       setLoggerDebug(updated.debug_mode);
-      applyUninstallURL(updated);
 
       // Reinit engine with new settings (awaited: an encryption/passphrase change
       // clears the upload checksums so the next sync re-uploads in the new form).
