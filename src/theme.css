@@ -10,6 +10,12 @@
    #f7f8fa page background here. Don't collapse the two without a visual pass. */
 :root {
   --sidebar-w: 200px; --content-max: 736px; --radius: 8px;
+  /* One height for every standalone button so adjacent controls line up. Buttons
+     set `height` and centre with flex rather than relying on vertical padding —
+     padding leaves the height at the mercy of the font's line box, which differed
+     per button (text vs icon-only) and per platform. Icon-only buttons use this for
+     width too, which is what keeps them square. */
+  --control-h: 34px;
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
   --bg: #f7f8fa; --bg-sidebar: #ffffff; --bg-card: #ffffff; --bg-card-sel: #e7f7ef;

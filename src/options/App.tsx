@@ -1814,7 +1814,7 @@ const STYLES = `
   .account-name { font-size: 14px; font-weight: 500; color: var(--text-primary); }
   .account-email { font-size: 12px; color: var(--text-secondary); }
 
-  .btn-connect-google { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 8px 16px; background: var(--bg-card); border: 1px solid var(--border-input); border-radius: 12px; cursor: pointer; font-family: var(--font); font-size: 14px; font-weight: 500; color: var(--text-primary); transition: background .1s, border-color .1s; }
+  .btn-connect-google { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: var(--control-h); padding: 0 16px; background: var(--bg-card); border: 1px solid var(--border-input); border-radius: 12px; cursor: pointer; font-family: var(--font); font-size: 14px; font-weight: 500; color: var(--text-primary); transition: background .1s, border-color .1s; }
   .btn-connect-google:hover { background: var(--bg-hover); border-color: var(--accent); }
   .btn-connect-google:disabled { opacity: .55; cursor: not-allowed; }
   .btn-disconnect { display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 12px; border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; font-family: var(--font); font-size: 12px; color: var(--text-secondary); transition: color .1s, border-color .1s, background .1s; white-space: nowrap; }
@@ -1845,10 +1845,12 @@ const STYLES = `
   .slider-val { font-size: 12px; font-family: var(--font-mono); color: var(--text-secondary); min-width: 30px; text-align: right; }
   .mono-value { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
 
-  .btn-secondary { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; font-family: var(--font); font-size: 14px; color: var(--text-secondary); transition: background .1s, border-color .1s, color .1s; white-space: nowrap; }
+  .btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--control-h); padding: 0 14px; border-radius: 12px; border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; font-family: var(--font); font-size: 14px; color: var(--text-secondary); transition: background .1s, border-color .1s, color .1s; white-space: nowrap; }
   .btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--accent); }
   .btn-secondary:disabled { opacity: .5; cursor: not-allowed; }
-  .btn-save { display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 12px; border: none; background: var(--accent-solid); color: var(--on-accent); font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
+  /* Borderless, so padding alone left it 2px shorter than the bordered Test
+     Connection button beside it. Height comes from the shared token instead. */
+  .btn-save { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--control-h); padding: 0 18px; border-radius: 12px; border: none; background: var(--accent-solid); color: var(--on-accent); font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
   .btn-save:hover { background: var(--accent-solid-hover); }
   .btn-save.saved { background: var(--accent-solid); }
   .btn-save:disabled { opacity: .6; cursor: not-allowed; }
