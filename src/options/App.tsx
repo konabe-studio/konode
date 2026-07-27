@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, SyncExtension } from "@/lib/types";
+import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, SyncExtension, SnapshotMeta } from "@/lib/types";
 import { sendMessage } from "@/lib/utils/messaging";
 import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
 
@@ -11,7 +11,7 @@ import {
   Globe, Puzzle, AlertTriangle, CheckCircle2, XCircle,
   Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
   Sliders, Shield, Save, Pencil, Key, Copy, Check, ArrowRight, BarChart3,
-  ScrollText, Trash2,
+  ScrollText, Trash2, RotateCcw, Camera,
 } from "lucide-react";
 // Shown in the About section. The manifest is the single source of truth for the
 // version — bump `package.json` and the build stamps it into the manifest.
@@ -242,6 +242,12 @@ export default function OptionsApp() {
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [auditOnlyErrors, setAuditOnlyErrors] = useState(false);
 
+  // Activity tab: bookmark restore points (loaded when the tab opens).
+  const [snapshots, setSnapshots] = useState<SnapshotMeta[]>([]);
+  const [snapBusy, setSnapBusy] = useState(false);
+  const [snapMsg, setSnapMsg] = useState<string | null>(null);
+  const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
+
   // Statistics tab data (fetched once on mount; see the effect below).
   const [syncState, setSyncState] = useState<SyncState | null>(null);
   const [bookmarkCount, setBookmarkCount] = useState<number | null>(null);
@@ -334,6 +340,16 @@ export default function OptionsApp() {
     setSelectedProvider(providerFromConfig(settings.active_backend, url));
   }, [settings, selectedProvider]);
 
+  // Load restore points when the Activity tab opens (LIST_SNAPSHOTS hits the backend,
+  // so don't fetch it until the user actually looks).
+  useEffect(() => {
+    if (activeNav !== "activity") return;
+    void (async () => {
+      const res = await sendMessage({ type: "LIST_SNAPSHOTS" });
+      if (res.type === "SNAPSHOTS") setSnapshots(res.payload);
+    })();
+  }, [activeNav]);
+
   const update = (partial: Partial<SyncSettings>) =>
     setSettings((p) => p ? { ...p, ...partial } : p);
 
@@ -401,6 +417,22 @@ export default function OptionsApp() {
   const clearAudit = async () => {
     await sendMessage({ type: "CLEAR_AUDIT_LOG" });
     setAudit([]);
+  };
+
+  const createSnapshot = async () => {
+    setSnapBusy(true); setSnapMsg(null);
+    const res = await sendMessage({ type: "CREATE_SNAPSHOT" });
+    if (res.type === "SNAPSHOTS") { setSnapshots(res.payload); setSnapMsg("Snapshot saved."); }
+    else if (res.type === "ERROR") setSnapMsg(res.payload);
+    setSnapBusy(false);
+  };
+
+  const restoreSnapshot = async (name: string) => {
+    setSnapBusy(true); setSnapMsg(null); setConfirmRestore(null);
+    const res = await sendMessage({ type: "RESTORE_SNAPSHOT", payload: { name } });
+    if (res.type === "SNAPSHOT_RESTORED") setSnapMsg(`Restored ${res.payload.restored} bookmark(s). Syncing to your other devices…`);
+    else if (res.type === "ERROR") setSnapMsg(res.payload);
+    setSnapBusy(false);
   };
 
   // http:// warning shown under any WebDAV card whose URL would send the password in the clear.
@@ -1293,6 +1325,55 @@ export default function OptionsApp() {
                   Stored locally (last 200 entries), never uploaded.
                 </p>
 
+                {/* ── Restore points ── */}
+                <div className="settings-section">
+                  <div className="settings-card-head">
+                    Restore points
+                    <span className="head-sub">Timestamped copies of your bookmarks on the backend. Restoring adds back any bookmarks missing on this device (it never deletes). Newest 10 kept.</span>
+                  </div>
+                  <div className="settings-row">
+                    <div className="settings-row-left">
+                      <Camera size={16} className="row-icon" />
+                      <div>
+                        <div className="row-label">Save a snapshot now</div>
+                        <div className="row-desc">A restore point of your current bookmark tree.</div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                      {snapMsg && <span className="row-desc">{snapMsg}</span>}
+                      <button className="btn-secondary" onClick={createSnapshot} disabled={snapBusy}>
+                        {snapBusy ? <Loader2 size={12} className="spin" /> : <Save size={12} />} Create snapshot
+                      </button>
+                    </div>
+                  </div>
+                  {snapshots.length === 0 ? (
+                    <div className="settings-row">
+                      <div className="settings-row-left"><div className="row-desc">No restore points yet — create one above, or one is saved automatically if an unusual deletion is ever blocked.</div></div>
+                    </div>
+                  ) : snapshots.map((s) => (
+                    <div key={s.name} className="settings-row">
+                      <div className="settings-row-left">
+                        <div>
+                          <div className="row-label">{new Date(s.timestamp).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</div>
+                          <div className="row-desc">{s.count != null ? `${s.count} bookmark${s.count === 1 ? "" : "s"}` : "bookmarks"}</div>
+                        </div>
+                      </div>
+                      {confirmRestore === s.name ? (
+                        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                          <button className="btn-secondary" onClick={() => setConfirmRestore(null)} disabled={snapBusy}>Cancel</button>
+                          <button className="btn-secondary" style={{ color: "var(--accent)", borderColor: "var(--accent)" }} onClick={() => restoreSnapshot(s.name)} disabled={snapBusy}>
+                            {snapBusy ? <Loader2 size={12} className="spin" /> : <RotateCcw size={12} />} Confirm restore
+                          </button>
+                        </div>
+                      ) : (
+                        <button className="btn-secondary" onClick={() => setConfirmRestore(s.name)} disabled={snapBusy}>
+                          <RotateCcw size={12} /> Restore
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
                 <div className="settings-section">
                   <div className="settings-card-head">
                     Log
@@ -1609,7 +1690,10 @@ const STYLES = `
   /* Top horizontal tab bar (Proton Pass settings pattern): brand at the left,
      horizontal tabs that scroll on narrow widths, active tab underlined in accent. */
   .topbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: center; align-items: center; height: 56px; padding: 0 24px; background: var(--bg-sidebar); border-bottom: 1px solid var(--border); }
-  .topbar-inner { display: flex; align-items: center; gap: 24px; width: 100%; max-width: var(--content-max); height: 100%; }
+  /* Wider than the centered content (var(--content-max)=736) so the six tabs fit on
+     one line at desktop widths instead of being clipped by the content-width cap.
+     Narrow widths still scroll the tabbar (overflow-x:auto below). */
+  .topbar-inner { display: flex; align-items: center; gap: 20px; width: 100%; max-width: 1040px; height: 100%; }
   .topbar-brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
   .topbar-logo { width: 24px; height: 24px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
   .topbar-title { font-size: 16px; font-weight: 600; color: var(--text-primary); }

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { SyncState, SyncSettings, DataType, SyncExtension, RemoteSessionEntry } from "@/lib/types";
+import { providerFromConfig, providerById } from "@/lib/storage-providers";
 import { sendMessage } from "@/lib/utils/messaging";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { isInstalledLocally, installOrSearchUrl } from "@/lib/utils/extensions-match";
@@ -210,6 +211,14 @@ export default function PopupApp() {
   const lastSync = state?.last_sync
     ? new Date(state.last_sync).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : null;
+  // Show the chosen provider's name (e.g. "Koofr"), not the raw backend type
+  // ("webdav") — several providers map to the WebDAV backend.
+  const backendLabel = (() => {
+    if (!settings?.active_backend) return "—";
+    const url = settings.backends.find((b) => b.type === "webdav")?.webdav?.url;
+    const pid = providerFromConfig(settings.active_backend, url);
+    return pid ? providerById(pid).label : settings.active_backend;
+  })();
   const pulsing = status === "syncing" || status === "success";
 
   return (
@@ -244,8 +253,20 @@ export default function PopupApp() {
       </div>
 
       {/* ── Banners ── */}
-      {(loadError || state?.last_error || (state?.pending_conflicts?.length ?? 0) > 0 || showNoBackend) && (
+      {(loadError || state?.last_error || state?.recovery_notice || (state?.pending_conflicts?.length ?? 0) > 0 || showNoBackend) && (
         <div className="mt-3 space-y-2">
+          {state?.recovery_notice && (
+            <button
+              onClick={openActivityLog}
+              className="flex w-full items-start gap-2 rounded-box border border-sk-warn bg-sk-raised px-3 py-2 text-left transition-colors hover:bg-sk-tint"
+            >
+              <AlertCircle size={12} className="mt-0.5 shrink-0 text-sk-warn" />
+              <span className="text-[12px] text-sk-warn">
+                An unusual deletion ({state.recovery_notice.blocked} bookmarks) was blocked and a restore point was saved. Review in Settings → Activity.
+              </span>
+            </button>
+          )}
+
           {loadError && (
             <button
               onClick={load}
@@ -420,7 +441,7 @@ export default function PopupApp() {
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
             <span className="text-xs text-sk-muted">Backend</span>
-            <span className="font-mono text-xs">{settings?.active_backend ?? "—"}</span>
+            <span className="text-xs">{backendLabel}</span>
           </div>
           {settings?.device_label && (
             <div className="flex items-center gap-2">
