@@ -3,6 +3,62 @@
 All notable changes to Konode. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.0] - 2026-07-27
+
+Bookmark restore points, a storage picker built around real providers, and two new
+Settings tabs. Nothing about the sync format changed, so existing setups keep syncing
+and map onto their new provider card without a re-sync.
+
+### Added
+- **Bookmark restore points**: timestamped copies of your bookmark tree, stored on
+  your own backend. Create one by hand in Settings, Activity, or let Konode save one
+  automatically when it refuses an unusual mass deletion from another device.
+  Restoring adds back bookmarks missing here and never deletes anything; the newest
+  10 are kept and you can delete any of them yourself. Encrypted like everything else
+  when end-to-end encryption is on. The bookmark count for each restore point is held
+  in a small index on your backend, encrypted with your passphrase, so every device
+  shows it while the storage provider cannot read it.
+- **A card per storage provider** in both Settings and first-run setup: Google Drive,
+  Nextcloud/ownCloud, pCloud (EU or US), Koofr, Fastmail, GitHub/Gitea/GitLab, and
+  WebDAV for anything else. Each has its real logo, inlined so nothing is fetched
+  from another server. Nextcloud takes just your server host and keeps a
+  subdirectory install intact; pCloud has a region switch. Picking a card no longer
+  means digging through a dropdown inside a WebDAV row.
+- **Activity tab**: the audit log moved out of the popup into a full-width tab,
+  newest first, with an errors-only filter and Clear log. The popup keeps a link to
+  it.
+- **Statistics tab**: counts for this device, sync activity including how much data
+  has moved, and how many other devices you are reaching. All computed locally.
+- **Setup card** in Settings until a backend and a data type are configured, with
+  buttons that jump to the right tab. Useful where the first-run tab never opens.
+- **Feedback links** in Settings, Advanced: a GitHub issues link and a mailto.
+  Both only do something when you click them. Konode still has no server, sends no
+  telemetry, and pings nothing when you uninstall it.
+- **Popup** shows your provider's actual name (for example "Koofr") instead of the
+  underlying backend type, plus a banner when a mass deletion was blocked.
+
+### Fixed
+- **Data transferred always read 0** in the new Statistics tab: the counter was
+  declared but never written. It now tallies every payload pulled and pushed.
+- **Restore points were never cleaned up across devices**: retention walked a
+  device-local list rather than the files actually on the backend, so two devices
+  each holding fewer than ten between them pruned nothing and the folder grew
+  without limit. "Newest 10 kept" is now true on every device.
+- **Two restore points taken in the same millisecond** collided on their filename
+  and the second silently replaced the first.
+- **Button heights** across Settings were set by text metrics, so neighboring
+  buttons rendered 2-3px apart (Save changes sat shorter than Test Connection).
+  They now share one height.
+- **Unknown Statistics values** showed a dash that read like a missing number; they
+  now say "n/a", which is what an ungranted permission actually means.
+
+### Changed
+- **American English throughout**, and em and en dashes removed from everything a
+  user or visitor reads, including the extension description shown in your browser's
+  extensions page.
+- The README now states plainly that Konode is built with AI assistance and
+  human-reviewed.
+
 ## [1.0.2] - 2026-07-21
 
 Cross-engine hardening from testing sync across Brave, Firefox, and Orion (WebKit).
