@@ -1,5 +1,6 @@
-import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncExtension, ConflictItem } from "@/lib/types";
+import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncExtension, ConflictItem, BackendConfig } from "@/lib/types";
 import { createBackend } from "@/lib/backends/abstract-backend";
+import { createSnapshot as writeSnapshot, listSnapshots as readSnapshots, restoreSnapshot as applySnapshot, type SnapshotMeta } from "@/lib/sync/snapshots";
 import { exportBookmarkPayload, importBookmarks } from "@/lib/handlers/bookmarks-handler";
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
 import { exportHistory, importHistory } from "@/lib/handlers/history-handler";
@@ -71,6 +72,10 @@ export class SyncEngine {
   // accumulated across data types and folded into the cumulative `bytes_transferred`
   // stat at the end. Reset per sync so it's a per-run tally, not a running double-count.
   private bytesThisSync = 0;
+  // Local bookmarks the mass-delete guard refused to remove this sync (recovery
+  // signal). >0 → an unusual deletion was blocked; sync() saves an auto-snapshot and
+  // flags state.recovery_notice so the popup can surface it.
+  private bulkBlockedThisSync = 0;
 
   constructor(
     private settings: SyncSettings,
@@ -133,7 +138,8 @@ export class SyncEngine {
 
     this.encryptionWarnings.clear();
     this.bytesThisSync = 0;
-    const state = await setState({ status: "syncing", last_error: null });
+    this.bulkBlockedThisSync = 0;
+    const state = await setState({ status: "syncing", last_error: null, recovery_notice: null });
     this.onStateChange(state);
 
     const backend = createBackend(backendConfig);
@@ -152,6 +158,16 @@ export class SyncEngine {
       // once it's aligned. Surface it as a visible error message so the user fixes
       // the misconfig, but only after the upload has happened (never before — that's
       // what used to deadlock the group into mutually-stale plaintext files).
+      // An unusual peer deletion was blocked by the mass-delete guard this sync — the
+      // tree is still intact, so save a restore point of it and flag the event so the
+      // popup can surface "unusual deletion blocked" with a pointer to Settings.
+      let recovery: SyncState["recovery_notice"] = null;
+      if (this.bulkBlockedThisSync > 0) {
+        try { await this.snapshotNow(); }
+        catch (e) { logger.warn("SyncEngine", `Recovery snapshot failed: ${e instanceof Error ? e.message : e}`); }
+        recovery = { at: new Date().toISOString(), blocked: this.bulkBlockedThisSync };
+      }
+
       const warnings = [...this.encryptionWarnings.values()];
       const prevState = await getState();
       const newState = await setState({
@@ -159,6 +175,7 @@ export class SyncEngine {
         last_sync: new Date().toISOString(),
         last_error: warnings.length ? warnings.join(" ") : null,
         bytes_transferred: prevState.bytes_transferred + this.bytesThisSync,
+        recovery_notice: recovery,
       });
       this.onStateChange(newState);
       logger.info("SyncEngine", warnings.length ? `Sync complete with ${warnings.length} encryption warning(s)` : "Sync complete");
@@ -173,6 +190,40 @@ export class SyncEngine {
       this.isSyncing = false;
       await releaseSyncLock();
     }
+  }
+
+  // ─── Snapshots (restore points) ───────────────────────────────────────
+
+  private activeBackendConfig(): BackendConfig | null {
+    return this.settings.backends.find((b) => b.type === this.settings.active_backend) ?? null;
+  }
+
+  private async withBackend<T>(fn: (b: ReturnType<typeof createBackend>) => Promise<T>): Promise<T> {
+    const cfg = this.activeBackendConfig();
+    if (!cfg) throw new Error("No active backend configured");
+    const backend = createBackend(cfg);
+    await backend.connect();
+    try { return await fn(backend); }
+    finally { await backend.disconnect(); }
+  }
+
+  /** Write a snapshot of the current bookmark tree to the backend. */
+  async snapshotNow(): Promise<SnapshotMeta> {
+    return this.withBackend((b) => writeSnapshot(b, this.settings));
+  }
+
+  /** List the backend's bookmark restore points, newest first. */
+  async getSnapshots(): Promise<SnapshotMeta[]> {
+    const cfg = this.activeBackendConfig();
+    if (!cfg) return [];
+    return this.withBackend((b) => readSnapshots(b));
+  }
+
+  /** Restore a snapshot (re-adds missing bookmarks), then sync so peers get them. */
+  async restoreFromSnapshot(name: string): Promise<number> {
+    const restored = await this.withBackend((b) => applySnapshot(b, name, this.settings));
+    if (restored > 0) void this.sync(["bookmarks"]);
+    return restored;
   }
 
   // ─── Per-type Sync ────────────────────────────────────────────────────
@@ -529,7 +580,8 @@ export class SyncEngine {
           payload,
           isLocalEmpty ? "replace" : "merge",
           this.settings.conflict_strategy,
-          this.settings.bulk_delete_percent
+          this.settings.bulk_delete_percent,
+          (blocked) => { this.bulkBlockedThisSync += blocked; },
         );
         break;
       case "history":

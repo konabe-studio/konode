@@ -8,7 +8,8 @@
 // leaking the count into the plaintext filename. The backend file list stays the
 // source of truth for which snapshots exist; the index only annotates them.
 
-import type { IBackend, SyncSettings, SyncBookmark } from "@/lib/types";
+import type { IBackend, SyncSettings, SyncBookmark, SnapshotMeta } from "@/lib/types";
+export type { SnapshotMeta };
 import { exportBookmarkPayload, restoreBookmarks, normalizePayload } from "@/lib/handlers/bookmarks-handler";
 import { encrypt, decrypt } from "@/lib/crypto/encryption";
 import { browser } from "@/lib/utils/ext";
@@ -17,12 +18,6 @@ import { logger } from "@/lib/utils/logger";
 
 const PREFIX = "konode_snap_bookmarks_";
 const MAX_SNAPSHOTS = 10;
-
-export interface SnapshotMeta {
-  name: string;
-  timestamp: number; // epoch ms (from the filename)
-  count?: number;    // bookmark count, if known from the local index
-}
 
 interface SnapshotFile {
   version: "1.0";

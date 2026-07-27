@@ -66,6 +66,7 @@ export const DEFAULT_STATE: SyncState = {
   pending_conflicts: [],
   sync_counts: { bookmarks: 0, history: 0, sessions: 0, extensions: 0 },
   bytes_transferred: 0,
+  recovery_notice: null,
 };
 
 // ─── Keys ──────────────────────────────────────────────────────────────────

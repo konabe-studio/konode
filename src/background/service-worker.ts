@@ -207,6 +207,23 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
       return { type: "OK" };
     }
 
+    case "CREATE_SNAPSHOT": {
+      if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
+      await syncEngine.snapshotNow();
+      return { type: "SNAPSHOTS", payload: await syncEngine.getSnapshots() };
+    }
+
+    case "LIST_SNAPSHOTS": {
+      if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
+      return { type: "SNAPSHOTS", payload: await syncEngine.getSnapshots() };
+    }
+
+    case "RESTORE_SNAPSHOT": {
+      if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
+      const restored = await syncEngine.restoreFromSnapshot(message.payload.name);
+      return { type: "SNAPSHOT_RESTORED", payload: { restored } };
+    }
+
     default:
       return { type: "ERROR", payload: "Unknown message type" };
   }

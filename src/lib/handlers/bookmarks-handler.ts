@@ -278,7 +278,10 @@ export async function importBookmarks(
   payload: unknown,
   strategy: "merge" | "replace" = "merge",
   conflictStrategy: ConflictStrategy = "lww",
-  deletePercent = 60
+  deletePercent = 60,
+  // Called when the mass-delete guard blocks a peer's deletions (recovery signal) —
+  // `blocked` is how many local bookmarks the guard refused to remove this merge.
+  onBulkBlocked?: (blocked: number) => void
 ): Promise<void> {
   const { tree, tombstones: remoteTombstones, moves: remoteMoves = [], folderMoves: remoteFolderMoves = [] } = normalizePayload(payload);
   importing = true;
@@ -296,7 +299,7 @@ export async function importBookmarks(
     if (strategy === "replace") {
       await clearAndImport(tree);
     } else {
-      await mergeBookmarks(tree, localTombstones, remoteTombstones, localMoves, remoteMoves, localFolderMoves, remoteFolderMoves, conflictStrategy, deletePercent);
+      await mergeBookmarks(tree, localTombstones, remoteTombstones, localMoves, remoteMoves, localFolderMoves, remoteFolderMoves, conflictStrategy, deletePercent, onBulkBlocked);
     }
   } finally {
     importing = false;
@@ -390,6 +393,7 @@ async function mergeBookmarks(
   remoteFolderMoves: FolderMoveRecord[],
   strategy: ConflictStrategy,
   deletePercent = 60,
+  onBulkBlocked?: (blocked: number) => void,
 ): Promise<void> {
   // All URL identity maps below are keyed by the CANONICAL url (canonicalUrlKey),
   // not the raw string, so a bare-origin bookmark that Chromium/Firefox store with
@@ -446,6 +450,7 @@ async function mergeBookmarks(
   const cap = Math.max(20, Math.floor((localFlat.length * pct) / 100));
   if (toRemove.length > cap) {
     logger.warn("mergeBookmarks", `Skipped deleting ${toRemove.length} bookmarks (cap ${cap}, ${pct}% of ${localFlat.length}) — exceeds the mass-delete guard`);
+    onBulkBlocked?.(toRemove.length);
   } else {
     for (const id of toRemove) {
       try { await browser.bookmarks.remove(id); } catch (err) { logger.error("Bookmark delete (tombstone)", err); }

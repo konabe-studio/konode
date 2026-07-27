@@ -192,6 +192,10 @@ export interface SyncState {
   pending_conflicts: ConflictItem[];
   sync_counts: Record<DataType, number>;
   bytes_transferred: number;
+  // Set when the mass-delete guard blocked an unusual peer deletion on the last sync
+  // (and an auto-snapshot was saved). Cleared at the start of each sync. `blocked` is
+  // how many local bookmarks the guard refused to remove.
+  recovery_notice?: { at: string; blocked: number } | null;
 }
 
 export interface ConflictItem {
@@ -231,6 +235,14 @@ export interface IBackend {
   deleteFile(name: string): Promise<void>;
 }
 
+// ─── Snapshots (bookmark restore points) ────────────────────────────────────
+
+export interface SnapshotMeta {
+  name: string;      // backend filename: konode_snap_bookmarks_<epochms>.json
+  timestamp: number; // epoch ms (parsed from the filename)
+  count?: number;    // bookmark count, when known from the device-local index
+}
+
 // ─── Message Types (background ↔ popup) ───────────────────────────────────
 
 export type ExtensionMessage =
@@ -241,11 +253,16 @@ export type ExtensionMessage =
   | { type: "RESOLVE_CONFLICT"; payload: { id: string; resolution: "local" | "remote" } }
   | { type: "CLEAR_AUDIT_LOG" }
   | { type: "RESTORE_SESSION"; payload?: { id?: string } }
-  | { type: "TEST_BACKEND"; payload: { backend: BackendType } };
+  | { type: "TEST_BACKEND"; payload: { backend: BackendType } }
+  | { type: "CREATE_SNAPSHOT" }
+  | { type: "LIST_SNAPSHOTS" }
+  | { type: "RESTORE_SNAPSHOT"; payload: { name: string } };
 
 export type ExtensionResponse =
   | { type: "STATE"; payload: SyncState }
   | { type: "SETTINGS"; payload: SyncSettings }
   | { type: "OK" }
   | { type: "ERROR"; payload: string }
-  | { type: "TEST_RESULT"; payload: { ok: boolean; message: string } };
+  | { type: "TEST_RESULT"; payload: { ok: boolean; message: string } }
+  | { type: "SNAPSHOTS"; payload: SnapshotMeta[] }
+  | { type: "SNAPSHOT_RESTORED"; payload: { restored: number } };
