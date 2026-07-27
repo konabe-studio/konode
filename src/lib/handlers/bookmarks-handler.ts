@@ -314,7 +314,7 @@ async function clearAndImport(tree: SyncBookmark[]): Promise<void> {
   // (a corrupt/tampered file or a transient empty read must not destroy data).
   const hasRemoteContent = remoteRoots.some((r) => (r?.children?.length ?? 0) > 0);
   if (!hasRemoteContent) {
-    logger.warn("clearAndImport", "Remote bookmark tree is empty/invalid — skipping destructive replace");
+    logger.warn("clearAndImport", "Remote bookmark tree is empty/invalid, skipping destructive replace");
     return;
   }
 
@@ -449,7 +449,7 @@ async function mergeBookmarks(
   const pct = deletePercent > 0 ? deletePercent : 60;
   const cap = Math.max(20, Math.floor((localFlat.length * pct) / 100));
   if (toRemove.length > cap) {
-    logger.warn("mergeBookmarks", `Skipped deleting ${toRemove.length} bookmarks (cap ${cap}, ${pct}% of ${localFlat.length}) — exceeds the mass-delete guard`);
+    logger.warn("mergeBookmarks", `Skipped deleting ${toRemove.length} bookmarks (cap ${cap}, ${pct}% of ${localFlat.length}): exceeds the mass-delete guard`);
     onBulkBlocked?.(toRemove.length);
   } else {
     for (const id of toRemove) {

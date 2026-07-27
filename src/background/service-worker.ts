@@ -254,7 +254,7 @@ browser.alarms.onAlarm.addListener(async (alarm) => {
 
 browser.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === "install") {
-    logger.info("Install", "First install — opening onboarding");
+    logger.info("Install", "First install, opening onboarding");
     browser.tabs.create({ url: browser.runtime.getURL("onboarding.html") });
   }
   await ensureInit();

@@ -118,7 +118,7 @@ export async function decrypt(
     );
     return new TextDecoder().decode(plainBuffer);
   } catch {
-    throw new Error("Decryption failed — wrong passphrase or corrupted data.");
+    throw new Error("Decryption failed: wrong passphrase or corrupted data.");
   }
 }
 

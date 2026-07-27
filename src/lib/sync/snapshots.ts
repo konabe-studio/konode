@@ -90,7 +90,7 @@ export async function restoreSnapshot(backend: IBackend, name: string, settings:
   const file = JSON.parse(raw) as SnapshotFile;
   let plain = file.payload;
   if (file.encrypted) {
-    if (!settings.encryption_passphrase) throw new Error("This snapshot is encrypted — set your passphrase first.");
+    if (!settings.encryption_passphrase) throw new Error("This snapshot is encrypted. Set your passphrase first.");
     plain = await decrypt(file.payload, settings.encryption_passphrase);
   }
   const payload = normalizePayload(JSON.parse(plain));

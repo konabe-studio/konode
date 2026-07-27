@@ -4,7 +4,7 @@ import { logger } from "@/lib/utils/logger";
 import { isSecureBackendUrl } from "@/lib/utils/url";
 
 const INSECURE_URL_MSG =
-  "WebDAV over plain http:// is not allowed — your username and password would be sent unencrypted on every request. Use an https:// URL (http is permitted only for localhost).";
+  "WebDAV over plain http:// is not allowed. Your username and password would be sent unencrypted on every request. Use an https:// URL (http is permitted only for localhost).";
 
 export class WebDAVBackend implements IBackend {
   readonly type = "webdav" as const;
@@ -181,7 +181,7 @@ export class WebDAVBackend implements IBackend {
       if (res.ok || res.status === 207) {
         return { ok: true, message: `Connected to ${new URL(this.w.url).hostname}` };
       }
-      if (res.status === 401) return { ok: false, message: "Authentication failed — check username/password" };
+      if (res.status === 401) return { ok: false, message: "Authentication failed. Check username/password" };
       return { ok: false, message: `Server returned HTTP ${res.status}` };
     } catch (err) {
       return { ok: false, message: err instanceof Error ? err.message : "Connection failed" };

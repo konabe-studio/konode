@@ -131,7 +131,7 @@ export class SyncEngine {
     // ignored, so a crashed sync self-heals. isSyncing (above) guards within one
     // worker instance; this guards across suspend/recreate.
     if (!(await acquireSyncLock(SYNC_LOCK_TTL_MS))) {
-      logger.warn("SyncEngine", "Another sync holds the lock — skipping");
+      logger.warn("SyncEngine", "Another sync holds the lock, skipping");
       this.isSyncing = false;
       return;
     }
@@ -328,7 +328,7 @@ export class SyncEngine {
             // the rest, and let sync() upload our own file + surface the warning.
             if (err instanceof PassphraseError || err instanceof EncryptionMismatchError) {
               this.encryptionWarnings.set(peer.device_id, err.message);
-              logger.warn("SyncEngine", `Encryption mismatch — skipping peer ${peer.device_id}: ${err.message}`);
+              logger.warn("SyncEngine", `Encryption mismatch, skipping peer ${peer.device_id}: ${err.message}`);
               continue;
             }
             // One bad peer file (corrupt JSON, checksum mismatch, import error) must
@@ -448,7 +448,7 @@ export class SyncEngine {
       this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
     const tag = `${useE2ee ? "enc" : "plain"}:${await sha256(JSON.stringify(payload))}`;
     if ((await getLastUploadChecksum(dataType)) === tag) {
-      logger.info("SyncEngine", `${dataType}: unchanged since last upload — skipping`);
+      logger.info("SyncEngine", `${dataType}: unchanged since last upload, skipping`);
       return;
     }
     const packet = await this.buildPacket(dataType, payload);
@@ -537,7 +537,7 @@ export class SyncEngine {
       } catch {
         // No verifier on the packet (legacy) but decrypt failed — still a mismatch.
         throw new PassphraseError(
-          "Could not decrypt a peer's synced data — check that your encryption passphrase matches your other devices."
+          "Could not decrypt a peer's synced data. Check that your encryption passphrase matches your other devices."
         );
       }
     }
@@ -547,7 +547,7 @@ export class SyncEngine {
     // the checksum.
     const actual = await sha256(raw);
     if (packet.checksum?.length !== 64 || actual !== packet.checksum) {
-      throw new Error("Sync packet checksum invalid or missing — refusing to import unverified data.");
+      throw new Error("Sync packet checksum invalid or missing. Refusing to import unverified data.");
     }
     const payload = JSON.parse(raw);
     await this.applyPayload(dataType, payload, {
@@ -566,11 +566,11 @@ export class SyncEngine {
     // Validate the parsed payload shape before handing untrusted remote data to
     // the Chrome APIs (a corrupt/tampered file must not crash or mis-import).
     if ((dataType === "history" || dataType === "extensions") && !Array.isArray(payload)) {
-      throw new Error(`Invalid ${dataType} payload — expected an array.`);
+      throw new Error(`Invalid ${dataType} payload: expected an array.`);
     }
     if (dataType === "bookmarks" && !Array.isArray(payload) &&
         !Array.isArray((payload as { tree?: unknown }).tree)) {
-      throw new Error("Invalid bookmarks payload — expected a tree or { tree, tombstones }.");
+      throw new Error("Invalid bookmarks payload: expected a tree or { tree, tombstones }.");
     }
 
     switch (dataType) {

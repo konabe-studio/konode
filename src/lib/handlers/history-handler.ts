@@ -18,7 +18,7 @@ export async function exportHistory(daysLimit = 30): Promise<SyncHistoryItem[]> 
   });
 
   if (items.length >= EXPORT_MAX_RESULTS) {
-    logger.warn("exportHistory", `Hit the ${EXPORT_MAX_RESULTS}-entry export cap — older history in the window is not synced this cycle`);
+    logger.warn("exportHistory", `Hit the ${EXPORT_MAX_RESULTS}-entry export cap: older history in the window is not synced this cycle`);
   }
 
   // Exclude URLs this device only RECEIVED via import (not genuinely visited

@@ -202,7 +202,7 @@ export async function interactiveSignIn(): Promise<GDriveSession> {
   // account is already shown in the UI; the log just needs the outcome.
   logger.info(
     "GDrive.oauth",
-    `Signed in — refresh token ${tok.refresh_token ? "stored" : "MISSING (re-consent needed)"}`
+    `Signed in. Refresh token ${tok.refresh_token ? "stored" : "MISSING (re-consent needed)"}`
   );
   return session;
 }
@@ -236,5 +236,5 @@ export async function getAccessToken(interactive = false): Promise<string> {
   }
 
   if (interactive) return (await interactiveSignIn()).access_token;
-  throw new Error("Google session expired — open Konode and sign in again.");
+  throw new Error("Google session expired. Open Konode and sign in again.");
 }

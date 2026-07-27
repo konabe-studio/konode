@@ -1,7 +1,7 @@
 # Getting started with Konode
 
-Konode syncs your browser data — bookmarks, open tabs, history, and your
-installed-extension list — to storage **you** own (Google Drive, GitHub, or WebDAV).
+Konode syncs your browser data (bookmarks, open tabs, history, and your
+installed-extension list) to storage **you** own (Google Drive, GitHub, or WebDAV).
 No Konode account, no Konode server. This guide walks you through your first setup and
 adding a second device.
 
@@ -19,7 +19,7 @@ adding a second device.
 ## Install
 
 Store listings (Chrome Web Store and Firefox Add-ons) are on the way. Until then you
-can build and load Konode yourself — see **Build from source** in the
+can build and load Konode yourself; see **Build from source** in the
 [README](README.md).
 
 After loading, click the Konode icon to open the popup, or open the options page to
@@ -29,13 +29,13 @@ configure everything.
 
 On first launch Konode opens a short setup wizard:
 
-1. **Choose a storage backend** — Google Drive, GitHub, or WebDAV (details below).
+1. **Choose a storage backend**: Google Drive, GitHub, or WebDAV (details below).
 2. **Sign in / enter your credentials** for that backend.
-3. **Choose what to sync** — bookmarks are on by default; history, open tabs, and the
+3. **Choose what to sync**: bookmarks are on by default; history, open tabs, and the
    extension list are opt-in.
-4. **Choose encryption** — decide, consciously, whether to turn on end-to-end
+4. **Choose encryption**: decide, consciously, whether to turn on end-to-end
    encryption. It's off by default; nothing is uploaded until you've made this choice.
-5. **Finish** — Konode does its first sync and you're done.
+5. **Finish**: Konode does its first sync and you're done.
 
 You can change any of this later in the options page.
 
@@ -49,11 +49,11 @@ if you enable encryption, the **same passphrase**) to sync together.
 1. Select **Google Drive** and click **Connect**.
 2. Sign in to your Google account and approve access.
 3. That's it. Konode uses the `drive.file` scope, so it can only see and touch the
-   files it creates — never the rest of your Drive. It writes a small set of JSON files
+   files it creates, never the rest of your Drive. It writes a small set of JSON files
    to a `Konode` folder.
 
 > Works on any Chromium browser (Chrome, Brave, Helium, ungoogled-chromium) and on
-> Firefox — the sign-in uses a browser-agnostic flow, not Chrome-only Google
+> Firefox. The sign-in uses a browser-agnostic flow, not Chrome-only Google
 > integration.
 
 ### GitHub
@@ -63,8 +63,8 @@ if you enable encryption, the **same passphrase**) to sync together.
 2. Scope it to **a single private repository** (create an empty private repo for this,
    e.g. `konode-sync`), and grant **Repository permissions → Contents: Read and write**.
 3. In Konode, select **GitHub / Gitea / GitLab**, paste the token and the repository
-   (`owner/repo`, or paste the full repo URL — Konode normalizes it).
-4. Konode refuses a **public** repository — your sync data should live in a private one.
+   (`owner/repo`, or paste the full repo URL; Konode normalizes it).
+4. Konode refuses a **public** repository: your sync data should live in a private one.
 
 ### WebDAV
 
@@ -76,15 +76,15 @@ if you enable encryption, the **same passphrase**) to sync together.
 
 ## Choosing what to sync
 
-- **Bookmarks** — on by default. Two-way sync with folders preserved; deletions
+- **Bookmarks**: on by default. Two-way sync with folders preserved; deletions
   propagate (no old bookmarks quietly coming back).
-- **Open tabs / sessions**, **History**, **Installed-extension list** — opt-in. When
+- **Open tabs / sessions**, **History**, **Installed-extension list**: opt-in. When
   you turn one on, the browser asks for the matching permission at that moment. If you
   never enable it, Konode never holds that permission.
 
 ## End-to-end encryption
 
-Optional, and a conscious choice — it's **off by default**.
+Optional, and a conscious choice. It's **off by default**.
 
 - Turn it on in onboarding or **Settings → Advanced**. Type a passphrase (you'll
   confirm it by re-typing) or **generate a strong key**.
@@ -92,7 +92,7 @@ Optional, and a conscious choice — it's **off by default**.
   upload, so your storage provider can't read it.
 - **Every device must use the same passphrase.** Konode warns you loudly on a mismatch
   rather than silently forking your data.
-- **If you lose the passphrase, the encrypted data can't be recovered** — save it
+- **If you lose the passphrase, the encrypted data can't be recovered**. Save it
   somewhere safe (a password manager).
 
 ## Adding a second device
@@ -100,7 +100,7 @@ Optional, and a conscious choice — it's **off by default**.
 1. Install Konode on the second browser/device.
 2. In onboarding, choose the **same backend** and sign in to the **same account**.
 3. If you use encryption, enter the **same passphrase**.
-4. The first sync **merges** the two devices non-destructively — your existing local
+4. The first sync **merges** the two devices non-destructively: your existing local
    bookmarks are kept and combined with what's on the backend.
 
 ## How syncing works
@@ -109,7 +109,7 @@ Optional, and a conscious choice — it's **off by default**.
   (`konode_<type>_<device_id>.json`). Every sync pulls in each other device's file,
   merges it, and pushes the result back.
 - **The editing device syncs in about a second.** Other devices pick up changes on
-  their next periodic pull (up to ~30 seconds — the browser's minimum alarm interval).
+  their next periodic pull (up to ~30 seconds, the browser's minimum alarm interval).
 - History restore is best-effort: browsers can't set original visit times, so imported
   history shows the sync moment. Treat history as a synced list/backup, not a faithful
   timeline.

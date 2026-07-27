@@ -7,7 +7,7 @@ import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-o
 // Orion); gate the Drive sign-in so users get a note instead of a dead end.
 const DRIVE_AVAILABLE = isDriveAuthAvailable();
 import {
-  Cloud, Github, Server, Bookmark, Clock,
+  Github, Server, Bookmark, Clock,
   Globe, Puzzle, AlertTriangle, CheckCircle2, XCircle,
   Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
   Sliders, Shield, Save, Pencil, Key, Copy, Check, ArrowRight, BarChart3,
@@ -168,29 +168,19 @@ const formatBytes = (n: number): string => {
   return `${(n / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 };
 
-const BACKEND_META: Record<BackendType, { label: string; Icon: typeof Cloud; desc: string }> = {
-  gdrive: {
-    label: "Google Drive",
-    Icon: Cloud,
-    desc: "Sync via your Google Drive. OAuth — a short-lived access token is cached on this device only.",
-  },
-  webdav: {
-    label: "WebDAV",
-    Icon: Server,
-    desc: "Nextcloud, pCloud, Synology, kDrive, ownCloud — any WebDAV server.",
-  },
-  github: {
-    label: "GitHub / Gitea / GitLab",
-    Icon: Github,
-    desc: "Store sync data in a private repository using a Personal Access Token.",
-  },
+// Backend label stamped on a newly created BackendConfig. The user-facing card
+// copy and icons live in the shared storage-providers module.
+const BACKEND_LABEL: Record<BackendType, string> = {
+  gdrive: "Google Drive",
+  webdav: "WebDAV",
+  github: "GitHub / Gitea / GitLab",
 };
 
 const DATA_TYPE_META: { type: DataType; Icon: typeof Bookmark; label: string; desc: string }[] = [
   { type: "bookmarks",  Icon: Bookmark, label: "Bookmarks",  desc: "Full bookmark tree with folders and ordering." },
   { type: "sessions",   Icon: Globe,    label: "Sessions",   desc: "Named tab sessions you can restore anywhere." },
   { type: "history",    Icon: Clock,    label: "History",    desc: "Browsing history, limited by days setting." },
-  { type: "extensions", Icon: Puzzle,   label: "Extensions", desc: "Extension list — shows missing ones with install links." },
+  { type: "extensions", Icon: Puzzle,   label: "Extensions", desc: "Extension list, showing missing ones with install links." },
 ];
 
 // ─── App ──────────────────────────────────────────────────────────────────
@@ -377,7 +367,7 @@ export default function OptionsApp() {
     const backends = [...settings.backends];
     const idx = backends.findIndex((b) => b.type === type);
     if (idx >= 0) backends[idx] = { ...backends[idx], ...partial };
-    else backends.push({ type, label: BACKEND_META[type].label, enabled: true, ...partial });
+    else backends.push({ type, label: BACKEND_LABEL[type], enabled: true, ...partial });
     update({ backends });
   };
 
@@ -460,7 +450,7 @@ export default function OptionsApp() {
     if (!/^http:\/\//i.test(u) || /^http:\/\/(localhost|127\.)/i.test(u)) return null;
     return (
       <div className="error-row">
-        <AlertTriangle size={12} /> This is an <code>http://</code> URL — your password would be sent unencrypted. Use <code>https://</code>.
+        <AlertTriangle size={12} /> This is an <code>http://</code> URL, so your password would be sent unencrypted. Use <code>https://</code>.
       </div>
     );
   };
@@ -492,11 +482,11 @@ export default function OptionsApp() {
   const save = async () => {
     if (!settings) return;
     if (passTooShort) {
-      setTestStatus({ ok: false, message: `Use at least ${MIN_PASSPHRASE_LENGTH} characters — synced data can be attacked offline, so a short passphrase is guessable. Longer is better, or generate a key.` });
+      setTestStatus({ ok: false, message: `Use at least ${MIN_PASSPHRASE_LENGTH} characters. Synced data can be attacked offline, so a short passphrase is guessable. Longer is better, or generate a key.` });
       return;
     }
     if (passMismatch) {
-      setTestStatus({ ok: false, message: "The two passphrases don't match — re-enter to confirm before saving." });
+      setTestStatus({ ok: false, message: "The two passphrases don't match. Re-enter to confirm before saving." });
       return;
     }
     if (settings.active_backend === "webdav") {
@@ -786,7 +776,7 @@ export default function OptionsApp() {
                 <div>
                   <div className="setup-card-title">Finish setting up Konode</div>
                   <div className="setup-card-sub">
-                    Konode syncs your browser to storage you own — there's no Konode server. Two quick
+                    Konode syncs your browser to storage you own. There's no Konode server. Two quick
                     steps and you're done. (If the setup wizard never opened on your browser, you can do
                     everything right here.)
                   </div>
@@ -886,7 +876,7 @@ export default function OptionsApp() {
                                 {gdriveConnecting ? "Connecting…" : "Sign in with Google"}
                               </button>
                               {gdriveError && <div className="error-row"><XCircle size={12} /> {gdriveError}</div>}
-                              <p className="config-hint">Only <code>drive.file</code> scope — Konode can only access files it creates.</p>
+                              <p className="config-hint">Only the <code>drive.file</code> scope, so Konode can only access files it creates.</p>
                             </div>
                           )}
                           {gdriveUser && (
@@ -896,7 +886,7 @@ export default function OptionsApp() {
                                 className="field-input"
                                 value={getBackend("gdrive")?.gdrive?.folderId ?? ""}
                                 onChange={(e) => updateBackend("gdrive", { gdrive: { folderId: e.target.value } })}
-                                placeholder="Leave blank — auto-creates a 'Konode' folder"
+                                placeholder="Leave blank to auto-create a 'Konode' folder"
                               />
                             </div>
                           )}
@@ -1022,7 +1012,7 @@ export default function OptionsApp() {
                             />
                             {githubChecking && <div className="verify-row"><Loader2 size={12} className="spin" /> Verifying…</div>}
                             {githubUser && !githubChecking && (
-                              <div className="verify-row ok"><CheckCircle2 size={12} /> @{githubUser.login} — {githubUser.name}</div>
+                              <div className="verify-row ok"><CheckCircle2 size={12} /> @{githubUser.login} · {githubUser.name}</div>
                             )}
                           </div>
                           <div className="field-row-2">
@@ -1205,7 +1195,7 @@ export default function OptionsApp() {
               </div>
 
               <div className="settings-section">
-                <div className="settings-card-head">Sync behaviour</div>
+                <div className="settings-card-head">Sync behavior</div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div><div className="row-label">Sync on change</div><div className="row-desc">Instantly sync bookmarks and tabs when they change. Recommended.</div></div>
@@ -1305,14 +1295,14 @@ export default function OptionsApp() {
           {activeNav === "stats" && (
             <div className="section-wrap">
               <h1 className="page-title">Statistics</h1>
-              <p className="page-subtitle">A local snapshot, computed on this device — nothing here is sent anywhere.</p>
+              <p className="page-subtitle">A local snapshot, computed on this device. Nothing here is sent anywhere.</p>
 
               <div className="settings-section">
                 <div className="settings-card-head">This device</div>
                 <div className="stat-grid">
-                  <div className="stat-tile"><div className="stat-value">{bookmarkCount ?? "—"}</div><div className="stat-label">Bookmarks</div></div>
-                  <div className="stat-tile"><div className="stat-value">{openTabCount ?? "—"}</div><div className="stat-label">Open tabs</div></div>
-                  <div className="stat-tile"><div className="stat-value">{localExts.length || "—"}</div><div className="stat-label">Extensions</div></div>
+                  <div className="stat-tile"><div className="stat-value">{bookmarkCount ?? "n/a"}</div><div className="stat-label">Bookmarks</div></div>
+                  <div className="stat-tile"><div className="stat-value">{openTabCount ?? "n/a"}</div><div className="stat-label">Open tabs</div></div>
+                  <div className="stat-tile"><div className="stat-value">{localExts.length || "n/a"}</div><div className="stat-label">Extensions</div></div>
                   <div className="stat-tile"><div className="stat-value">{settings.enabled_types.length}</div><div className="stat-label">Data types on</div></div>
                 </div>
               </div>
@@ -1345,7 +1335,7 @@ export default function OptionsApp() {
               <div className="section-wrap">
                 <h1 className="page-title">Activity</h1>
                 <p className="page-subtitle">
-                  What Konode did on this device — uploads, downloads, conflicts and errors.
+                  What Konode did on this device: uploads, downloads, conflicts and errors.
                   Stored locally (last 200 entries), never uploaded.
                 </p>
 
@@ -1372,7 +1362,7 @@ export default function OptionsApp() {
                   </div>
                   {snapshots.length === 0 ? (
                     <div className="settings-row">
-                      <div className="settings-row-left"><div className="row-desc">No restore points yet — create one above, or one is saved automatically if an unusual deletion is ever blocked.</div></div>
+                      <div className="settings-row-left"><div className="row-desc">No restore points yet. Create one above, or one is saved automatically if an unusual deletion is ever blocked.</div></div>
                     </div>
                   ) : snapshots.map((s) => (
                     <div key={s.name} className="settings-row">
@@ -1435,7 +1425,7 @@ export default function OptionsApp() {
                       <div className="settings-row-left">
                         <div className="row-desc">
                           {audit.length === 0
-                            ? "Nothing logged yet — run a sync and it'll show up here."
+                            ? "Nothing logged yet. Run a sync and it'll show up here."
                             : "No errors logged. Nice."}
                         </div>
                       </div>
@@ -1520,7 +1510,7 @@ export default function OptionsApp() {
                       <div className="row-label">End-to-End Encryption</div>
                       <div className="row-desc">
                         AES-256-GCM. Data is encrypted with your passphrase before it leaves this
-                        device, so the storage provider can never read it. Keep the passphrase safe —
+                        device, so the storage provider can never read it. Keep the passphrase safe:
                         without it, encrypted data can't be recovered, and every device must use the same one.
                       </div>
                     </div>
@@ -1583,7 +1573,7 @@ export default function OptionsApp() {
                       />
                       {passTooShort && (
                         <div className="row-desc" style={{ marginTop: 4, color: "var(--danger)" }}>
-                          At least {MIN_PASSPHRASE_LENGTH} characters — synced data can be attacked offline, so short passphrases are guessable.
+                          At least {MIN_PASSPHRASE_LENGTH} characters. Synced data can be attacked offline, so short passphrases are guessable.
                         </div>
                       )}
                       {needsPassConfirm && (
@@ -1615,7 +1605,7 @@ export default function OptionsApp() {
                       </button>
                       {genKey && (
                         <div className="row-desc" style={{ marginTop: 8, color: "var(--text-primary)" }}>
-                          Save this now — it's the only way to recover your data if you forget it. Enter the same key on your other devices.
+                          Save this now. It's the only way to recover your data if you forget it. Enter the same key on your other devices.
                           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
                             <code style={{ userSelect: "all", fontSize: 12, wordBreak: "break-all" }}>{genKey}</code>
                             <button type="button" title="Copy" onClick={() => navigator.clipboard?.writeText(genKey)}
@@ -1632,7 +1622,7 @@ export default function OptionsApp() {
                   <div className="settings-row" style={{ paddingTop: 0 }}>
                     <div className="settings-row-left">
                       <div className="row-desc" style={{ color: "var(--danger)" }}>
-                        Encryption is on but no passphrase is set — sync keeps uploading plaintext until you add one.
+                        Encryption is on but no passphrase is set, so sync keeps uploading plaintext until you add one.
                       </div>
                     </div>
                   </div>
@@ -1642,7 +1632,7 @@ export default function OptionsApp() {
                     <div className="settings-row-left">
                       <AlertTriangle size={14} className="row-icon" style={{ color: "var(--warn-border)" }} />
                       <div className="row-desc" style={{ color: "var(--warn-text)" }}>
-                        Encryption is off — your synced data (bookmarks, history, sessions, extensions) is stored
+                        Encryption is off, so your synced data (bookmarks, history, sessions, extensions) is stored
                         <b> unencrypted</b> on your backend. Turn it on to encrypt everything before it leaves this device.
                       </div>
                     </div>
@@ -1653,7 +1643,7 @@ export default function OptionsApp() {
               <div className="settings-section">
                 <div className="settings-card-head">
                   Feedback
-                  <span className="head-sub">Nothing is sent automatically — these just open when you click them.</span>
+                  <span className="head-sub">Nothing is sent automatically. These just open when you click them.</span>
                 </div>
                 <div className="settings-row">
                   <div className="settings-row-left">

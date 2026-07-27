@@ -5,14 +5,14 @@ Step-by-step for listing Konode on [addons.mozilla.org](https://addons.mozilla.o
 Firefox counterpart.
 
 ## What you're submitting
-- **gecko id:** `konode@konode.org` — **STABLE. Never change it after the first
+- **gecko id:** `konode@konode.org`. **STABLE. Never change it after the first
   upload** (a new id = a brand-new listing that loses your reviews/users).
 - **Minimum Firefox:** `128.0`.
-- **Data collection:** none — the manifest already declares
+- **Data collection:** none. The manifest already declares
   `browser_specific_settings.gecko.data_collection_permissions: { required: ["none"] }`,
   so AMO's data prompt is "No data collected."
 
-Both come from `scripts/make-firefox-manifest.mjs` — you don't set them by hand.
+Both come from `scripts/make-firefox-manifest.mjs`; you don't set them by hand.
 
 ## 0. One-time setup
 1. A **Firefox account**, signed in at the Developer Hub:
@@ -22,13 +22,13 @@ Both come from `scripts/make-firefox-manifest.mjs` — you don't set them by han
 
 ## 1. Build the package
 From the repo root, **with your `.env` present** (bakes in
-`VITE_GOOGLE_CLIENT_SECRET` so the Google Drive backend works for users — exactly
+`VITE_GOOGLE_CLIENT_SECRET` so the Google Drive backend works for users, exactly
 like the CWS build; a secret-less build just disables Drive, GitHub/WebDAV are
 unaffected):
 
 ```bash
 npm ci
-npm run lint:firefox      # web-ext lint — expect 0 errors / 0 notices; fix anything it flags
+npm run lint:firefox      # web-ext lint, expect 0 errors / 0 notices; fix anything it flags
 npm run package:firefox   # → web-ext-artifacts/konode-<version>.zip
 ```
 
@@ -42,7 +42,7 @@ Chrome manifest into the Firefox variant, then `web-ext build` zips it.
 3. Upload `web-ext-artifacts/konode-<version>.zip`. AMO auto-validates it.
 4. **Source code (required).** Konode is bundled/minified by Vite, so AMO reviewers
    need the sources + build steps:
-   - Upload a **source archive** — a `git archive` of the repo **without**
+   - Upload a **source archive**: a `git archive` of the repo **without**
      `node_modules/` and **without `.env`**.
    - Reviewer / build notes:
      ```
@@ -61,9 +61,9 @@ Chrome manifest into the Firefox variant, then `web-ext build` zips it.
    copy where it fits.
 6. **Data collection:** answer *No data collected* (the manifest already says so).
 7. **Firefox for Android:** in the listing, mark the add-on **compatible with
-   Firefox for Android**. This is the whole Android story — no separate app; a listed,
+   Firefox for Android**. This is the whole Android story: no separate app; a listed,
    Android-compatible add-on installs straight from AMO on Android Firefox.
-8. Submit for review. (Review latency varies — often days.)
+8. Submit for review. (Review latency varies, often days.)
 
 ## 3. After approval
 - Publicly listed on AMO; Mozilla serves auto-updates when you upload a new version.

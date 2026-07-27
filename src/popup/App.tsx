@@ -214,7 +214,7 @@ export default function PopupApp() {
   // Show the chosen provider's name (e.g. "Koofr"), not the raw backend type
   // ("webdav") — several providers map to the WebDAV backend.
   const backendLabel = (() => {
-    if (!settings?.active_backend) return "—";
+    if (!settings?.active_backend) return "None";
     const url = settings.backends.find((b) => b.type === "webdav")?.webdav?.url;
     const pid = providerFromConfig(settings.active_backend, url);
     return pid ? providerById(pid).label : settings.active_backend;
@@ -272,7 +272,7 @@ export default function PopupApp() {
               onClick={load}
               className="flex w-full items-center justify-center gap-2 rounded-box border border-sk-hairline bg-sk-raised px-3 py-2 text-[12px] text-sk-danger transition-colors hover:bg-sk-tint"
             >
-              <AlertCircle size={12} /> Couldn't reach Konode — tap to retry
+              <AlertCircle size={12} /> Couldn't reach Konode. Tap to retry.
             </button>
           )}
 
@@ -288,7 +288,7 @@ export default function PopupApp() {
               <div key={c.id} className="rounded-box border border-sk-hairline bg-sk-raised px-3 py-2">
                 <div className="mb-1.5 flex items-center gap-2">
                   <GitMerge size={12} className="shrink-0 text-sk-warn" />
-                  <span className="text-[12px] text-sk-warn">Conflict in {c.data_type} — choose a version</span>
+                  <span className="text-[12px] text-sk-warn">Conflict in {c.data_type}: choose a version</span>
                 </div>
                 <div className="flex gap-1.5">
                   <button
@@ -371,7 +371,7 @@ export default function PopupApp() {
             return (
               <div
                 key={type}
-                title={`${meta.label} — ${state}`}
+                title={`${meta.label}: ${state}`}
                 aria-label={`${meta.label}: ${state}`}
                 className={`flex aspect-square items-center justify-center rounded-full border border-sk-hairline bg-sk-tint ${!isEnabled ? "opacity-40" : ""}`}
               >

@@ -84,7 +84,7 @@ export class GitHubBackend implements IBackend {
         );
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          throw new HttpError(res.status, `GitHub upload failed: ${res.status} — ${err.message ?? ""}`);
+          throw new HttpError(res.status, `GitHub upload failed: ${res.status}. ${err.message ?? ""}`);
         }
 
         logger.info("GitHub.upload", `${packet.data_type} → ${filename}`);
@@ -123,7 +123,7 @@ export class GitHubBackend implements IBackend {
     // it would publish bookmarks/history to the open internet.
     if (repoData.private === false) {
       throw new Error(
-        `Repository '${this.repoSlug}' is public — refusing to sync your browser data to a public repo. Make it private and retry.`
+        `Repository '${this.repoSlug}' is public. Refusing to sync your browser data to a public repo. Make it private and retry.`
       );
     }
 
@@ -210,7 +210,7 @@ export class GitHubBackend implements IBackend {
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          throw new HttpError(res.status, `GitHub putFile failed: ${res.status} — ${err.message ?? ""}`);
+          throw new HttpError(res.status, `GitHub putFile failed: ${res.status}. ${err.message ?? ""}`);
         }
       },
       { maxAttempts: 5, shouldRetry: (e) => defaultShouldRetry(e) || (e instanceof HttpError && e.status === 409) }
@@ -259,7 +259,7 @@ export class GitHubBackend implements IBackend {
 
   async testConnection(): Promise<{ ok: boolean; message: string }> {
     try {
-      if (!this.gh.token) return { ok: false, message: "No token — paste a Personal Access Token or Fine-grained token" };
+      if (!this.gh.token) return { ok: false, message: "No token. Paste a Personal Access Token or Fine-grained token" };
 
       // Verify token works
       const userRes = await fetch(`${GITHUB_API}/user`, { headers: this.headers() });
@@ -267,13 +267,13 @@ export class GitHubBackend implements IBackend {
         return {
           ok: false,
           message: userRes.status === 401
-            ? "Invalid token — check it hasn't expired"
+            ? "Invalid token. Check it hasn't expired"
             : `Token check failed (HTTP ${userRes.status})`,
         };
       }
       const user = await userRes.json();
 
-      if (!this.gh.repo) return { ok: true, message: `Signed in as @${user.login} — set a repository below` };
+      if (!this.gh.repo) return { ok: true, message: `Signed in as @${user.login}. Set a repository below` };
 
       // Check repo access
       const repoRes = await fetch(`${GITHUB_API}/repos/${this.repoSlug}`, { headers: this.headers() });
@@ -298,13 +298,13 @@ export class GitHubBackend implements IBackend {
       if (repo.private === false) {
         return {
           ok: false,
-          message: `'${repo.full_name}' is a public repository — your synced data would be visible to everyone. Use a private repo.`,
+          message: `'${repo.full_name}' is a public repository. Your synced data would be visible to everyone. Use a private repo.`,
         };
       }
       const isEmpty = !repo.default_branch;
       return {
         ok: true,
-        message: `@${user.login} → ${repo.full_name}${isEmpty ? " (empty repo — will initialize on first sync)" : ""}`,
+        message: `@${user.login} → ${repo.full_name}${isEmpty ? " (empty repo, will initialize on first sync)" : ""}`,
       };
     } catch (err) {
       return { ok: false, message: err instanceof Error ? err.message : "Connection failed" };

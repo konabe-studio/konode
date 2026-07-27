@@ -15,7 +15,7 @@ up to ~30s of latency there. This is a platform limit, not a bug.
 Konode has a safety cap: a single sync won't apply peer deletions that would remove
 more than a threshold of your local bookmarks (default **60%**), to guard against a
 corrupt deletion log wiping your tree. If you intentionally deleted a large share,
-raise the threshold in **Settings → Advanced** (50–95%) and sync again.
+raise the threshold in **Settings → Advanced** (50-95%) and sync again.
 
 **Nothing syncs unless I keep a DevTools window open (dev builds).**
 After rebuilding an unpacked extension you must click **↻ reload** on it
@@ -32,7 +32,7 @@ faithful timeline.
 **"Your passphrase doesn't match your other devices."**
 Every device must use the exact same E2EE passphrase. Open **Settings → Advanced**,
 reveal or re-enter the passphrase so it matches your other device(s), and sync again.
-Konode fails loudly here on purpose — it won't silently fork your data into
+Konode fails loudly here on purpose. It won't silently fork your data into
 unreadable files.
 
 **I turned encryption off on one device.**
@@ -56,7 +56,7 @@ extension ID at `chrome://extensions`; the redirect is
 **Authorized redirect URIs**.
 
 **"Google hasn't verified this app."**
-Konode requests only the `drive.file` scope (non-sensitive — app-created files only),
+Konode requests only the `drive.file` scope (non-sensitive: app-created files only),
 so this warning normally doesn't appear. If it does, it's safe to proceed: you're
 authorizing access to your own Konode files, and no data goes to any Konode server
 (there isn't one).
@@ -79,7 +79,7 @@ Plain `http://` is rejected for security (credentials would travel in the clear)
 
 **Connected but I don't see my files.**
 Check that the account can create a `konode/` folder at that path. Some providers gate
-WebDAV behind a paid tier or a per-app password — check your provider's WebDAV docs.
+WebDAV behind a paid tier or a per-app password; check your provider's WebDAV docs.
 
 ## Firefox
 
@@ -92,5 +92,5 @@ between same-browser peers.
 
 To reset a device: disconnect the backend in **Settings**, or remove and reinstall the
 extension (this clears its local data and credentials). Your synced files on the
-backend are untouched — delete those directly through your storage provider if you want
+backend are untouched. Delete those directly through your storage provider if you want
 a full wipe.

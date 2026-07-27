@@ -31,7 +31,7 @@ export interface ProviderDef {
 export const PROVIDERS: ProviderDef[] = [
   {
     id: "gdrive", backend: "gdrive", label: "Google Drive",
-    desc: "Sync via your Google Drive. OAuth — a short-lived access token is cached on this device only.",
+    desc: "Sync via your Google Drive. OAuth, with a short-lived access token cached on this device only.",
   },
   {
     id: "nextcloud", backend: "webdav", label: "Nextcloud / ownCloud", needsHost: true,
@@ -40,7 +40,7 @@ export const PROVIDERS: ProviderDef[] = [
   },
   {
     id: "pcloud", backend: "webdav", label: "pCloud",
-    desc: "pCloud storage — needs a paid pCloud plan.",
+    desc: "pCloud storage. Needs a paid pCloud plan.",
     regions: [
       { id: "eu", label: "EU", url: "https://ewebdav.pcloud.com" },
       { id: "us", label: "US", url: "https://webdav.pcloud.com" },

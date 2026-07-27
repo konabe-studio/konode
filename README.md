@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>Sync your browser to storage you own — no middleman, no account, no tracking.</strong>
+  <strong>Sync your browser to storage you own: no middleman, no account, no tracking.</strong>
 </p>
 
 <p align="center">
@@ -23,7 +23,7 @@
 ---
 
 Konode keeps your bookmarks, open tabs, history, and installed-extension list in sync
-across your browsers — but instead of routing everything through a company's servers,
+across your browsers, but instead of routing everything through a company's servers,
 it writes to **storage you already own**: your Google Drive, a GitHub repository, or
 any WebDAV server.
 
@@ -37,9 +37,9 @@ provider can't read it.
 - **Your storage, your rules.** Pick Google Drive, GitHub, or WebDAV. Delete your data
   any time, straight from the provider.
 - **No server, no telemetry.** Konode operates nothing in the middle. There's nothing
-  to log, sell, or breach — because we never see your data.
+  to log, sell, or breach, because we never see your data.
 - **Optional end-to-end encryption.** AES-256-GCM, chosen explicitly during setup. On
-  or off, it's your call — nothing is silently uploaded behind a hidden default.
+  or off, it's your call. Nothing is silently uploaded behind a hidden default.
 - **Works across browsers.** Any Chromium browser, plus Firefox and Firefox-based browsers.
 - **Light by design.** No background bloat, no third-party scripts, no external
   requests beyond your own storage backend.
@@ -48,22 +48,22 @@ provider can't read it.
 
 | Data | What it does |
 |------|--------------|
-| **Bookmarks** | Two-way sync that preserves your folder structure. Deletions propagate too — no old bookmarks quietly coming back. |
+| **Bookmarks** | Two-way sync that preserves your folder structure. Deletions propagate too, so no old bookmarks quietly come back. |
 | **Open tabs / sessions** | Save the current tab set and restore another device's session whenever you want. |
 | **History** | Keep a synced, de-duplicated history list. *(On Firefox the original visit time is preserved; on Chrome the API can't set visit times, so restored entries show the sync moment.)* |
 | **Installed extensions** | Sync the list and see at a glance which extensions are missing on the device you're on. |
 
-When two devices disagree, you choose how it's resolved — newest change wins, always
+When two devices disagree, you choose how it's resolved: newest change wins, always
 prefer this device, always prefer the other, or resolve it yourself from the popup.
 
 ## Where your data goes
 
 | Backend | Auth | Notes |
 |---------|------|-------|
-| **Google Drive** | One-time sign-in | Scoped to `drive.file` — Konode only ever touches the files it creates. |
+| **Google Drive** | One-time sign-in | Scoped to `drive.file`, so Konode only ever touches the files it creates. |
 | **GitHub** | Fine-grained token | Point it at a single private repository. |
 | **WebDAV** | Username + password | Nextcloud, ownCloud, Synology, pCloud, kDrive, or any WebDAV server. |
-| **Mega** | — | Planned. |
+| **Mega** | n/a | Planned. |
 
 ## Privacy & security
 
@@ -71,9 +71,9 @@ prefer this device, always prefer the other, or resolve it yourself from the pop
   none of it is ever sent to us or to any third party.
 - **Optional E2EE** (AES-256-GCM, PBKDF2-SHA256, 600k iterations): encrypt every
   payload before it leaves your browser. It's an explicit choice you make during
-  onboarding — default off, never silently enabled or disabled. Honest threat model:
+  onboarding. Default off, never silently enabled or disabled. Honest threat model:
   encrypted files sit on storage others can read, so a passphrase is guessable
-  *offline* — the 600k-round derivation makes each guess slow, a new passphrase must
+  *offline*. The 600k-round derivation makes each guess slow, a new passphrase must
   be 12+ characters, and the generated key (recommended) is effectively unguessable.
 - **Credentials stay local.** Access tokens, GitHub tokens, WebDAV passwords, and your
   encryption passphrase live only in `chrome.storage.local` on your device and are
@@ -82,14 +82,14 @@ prefer this device, always prefer the other, or resolve it yourself from the pop
 - **Integrity checks.** Every payload carries a SHA-256 checksum that's verified on
   download before anything is imported.
 - **Least privilege.** `history`, `tabs`, and `management` are requested only when you
-  turn those data types on. The extension-list permission is read-only — Konode never
+  turn those data types on. The extension-list permission is read-only: Konode never
   installs or removes anything.
 
 ## Browser support
 
-- **Chromium** — Chrome, Brave, Helium, ungoogled-chromium, and other Chromium
+- **Chromium**: Chrome, Brave, Helium, ungoogled-chromium, and other Chromium
   browsers. Fully supported, and on the Chrome Web Store.
-- **Firefox** — works on Firefox and Firefox-based browsers (e.g. Waterfox) through a
+- **Firefox**: works on Firefox and Firefox-based browsers (e.g. Waterfox) through a
   dedicated build; a Firefox Add-ons listing is on the way.
 
 > On non-Chrome Chromium browsers, Google Drive sign-in uses the OAuth PKCE flow
@@ -98,9 +98,9 @@ prefer this device, always prefer the other, or resolve it yourself from the pop
 
 ## Install
 
-- **Chrome / Brave / other Chromium browsers** — install from the
+- **Chrome / Brave / other Chromium browsers**: install from the
   **[Chrome Web Store](https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa)**.
-- **Firefox** — a Firefox Add-ons listing is on the way; until then, build and load it
+- **Firefox**: a Firefox Add-ons listing is on the way; until then, build and load it
   yourself (see below).
 
 New to Konode? The **[Getting Started guide](GETTING_STARTED.md)** walks through setup
@@ -110,7 +110,7 @@ and connecting each backend.
 
 ```bash
 npm install          # install dependencies
-npm run type-check   # tsc --noEmit — should be clean
+npm run type-check   # tsc --noEmit, should be clean
 npm run build        # → dist/           (Chromium)
 npm run build:firefox # → dist-firefox/  (Firefox)
 ```
@@ -127,7 +127,7 @@ pick `dist-firefox/manifest.json`.
 
 ## Verifying a build
 
-Each release publishes a **build fingerprint** — a deterministic SHA-256 over the
+Each release publishes a **build fingerprint**, a deterministic SHA-256 over the
 built `dist/`. To confirm a published build matches this source, check out the release
 tag and run:
 
@@ -152,7 +152,7 @@ revealing anything to the backend.
 
 ## Why there's no password sync
 
-Browser extensions **cannot** read the browser's native password store — that's an
+Browser extensions **cannot** read the browser's native password store. That's an
 intentional security boundary in the browser, not a Konode limitation. For passwords,
 use a dedicated manager like [Bitwarden](https://bitwarden.com),
 [Proton Pass](https://proton.me/pass), or self-hosted
@@ -160,22 +160,22 @@ use a dedicated manager like [Bitwarden](https://bitwarden.com),
 
 ## Roadmap
 
-- **Shipped** — bookmarks / sessions / history / extension-list sync · Google Drive +
+- **Shipped**: bookmarks / sessions / history / extension-list sync · Google Drive +
   GitHub + WebDAV · multi-device merge · per-item conflict resolution · opt-in E2EE ·
   Drive OAuth refresh (PKCE) · Firefox build · cross-browser extension matching ·
   **Chrome Web Store listing**.
-- **Next** — Firefox Add-ons listing · WebDAV provider presets.
-- **Later** — more backends (Dropbox, OneDrive, Mega) · incremental diff for very
+- **Next**: Firefox Add-ons listing · WebDAV provider presets.
+- **Later**: more backends (Dropbox, OneDrive, Mega) · incremental diff for very
   large bookmark trees.
 
 ## Support & feedback
 
 Something not working? Check **[Troubleshooting](TROUBLESHOOTING.md)** first. Still
-stuck, or have an idea? **Open an issue** — it's the best way to reach us:
+stuck, or have an idea? **Open an issue**. It's the best way to reach us:
 [github.com/konabe-studio/konode/issues](https://github.com/konabe-studio/konode/issues).
 
 If Konode is useful to you and you'd like to support its development, you can
-[buy me a coffee](https://buymeacoffee.com/konabe.studio). Entirely optional — Konode
+[buy me a coffee](https://buymeacoffee.com/konabe.studio). Entirely optional. Konode
 is free and open source.
 
 ## License

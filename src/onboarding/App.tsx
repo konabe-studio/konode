@@ -361,14 +361,14 @@ export default function OnboardingApp() {
           </div>
           <h1 style={S.h1}>Welcome to Konode</h1>
           <p style={S.subtitle}>
-            Privacy-first browser sync. Your bookmarks, sessions, and extensions — synced to your own storage. No middlemen.
+            Privacy-first browser sync. Your bookmarks, sessions, and extensions, synced to your own storage. No middlemen.
           </p>
           <div style={S.featureList}>
             {[
               ["🔒", "Your data stays on your storage"],
               ["⚡", "Sync on every change, not just on schedule"],
               ["🌐", "Works across Chrome, Brave, and more"],
-              ["📦", "Google Drive, WebDAV, GitHub — you choose"],
+              ["📦", "Google Drive, WebDAV, GitHub. You choose"],
             ].map(([icon, text]) => (
               <div key={text} style={S.featureRow}>
                 <span>{icon}</span>
@@ -608,7 +608,7 @@ export default function OnboardingApp() {
         <div style={S.card}>
           <h1 style={S.h1}>Encrypt your data?</h1>
           <p style={S.subtitle}>
-            Your choice — Konode works either way. Encryption scrambles everything on this device
+            Your choice. Konode works either way. Encryption scrambles everything on this device
             before it's uploaded, so your storage provider can never read it.
           </p>
 
@@ -657,7 +657,7 @@ export default function OnboardingApp() {
               )}
               {passTooShort && (
                 <div style={{ fontSize: 12, color: "var(--danger)", marginTop: 4 }}>
-                  At least {MIN_PASSPHRASE_LENGTH} characters — synced data can be attacked offline, so short passphrases are guessable.
+                  At least {MIN_PASSPHRASE_LENGTH} characters. Synced data can be attacked offline, so short passphrases are guessable.
                 </div>
               )}
               {confirmNeeded && (
@@ -684,7 +684,7 @@ export default function OnboardingApp() {
                 <Key size={12} /> Generate a strong key
               </button>
               <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 10, lineHeight: 1.5 }}>
-                <b>Save this passphrase.</b> It never leaves your device and can't be recovered if lost —
+                <b>Save this passphrase.</b> It never leaves your device and can't be recovered if lost,
                 and every device must use the same one.
               </div>
             </div>
@@ -715,7 +715,7 @@ export default function OnboardingApp() {
           <p style={S.subtitle}>
             {syncError
               ? "Your settings are saved. Open Settings to fix this, or finish and let Konode retry in the background."
-              : "Konode is running its first sync. This also runs in the background — you don't have to wait here."}
+              : "Konode is running its first sync. This also runs in the background, so you don't have to wait here."}
           </p>
 
           <div style={S.dataList}>
@@ -745,7 +745,7 @@ export default function OnboardingApp() {
           )}
           {syncTimedOut && !syncError && (
             <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 12, lineHeight: 1.5 }}>
-              This is taking longer than usual — a large history can do that. The sync keeps running in the background, so you can finish now.
+              This is taking longer than usual. A large history can do that. The sync keeps running in the background, so you can finish now.
             </div>
           )}
 
