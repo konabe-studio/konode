@@ -1651,6 +1651,27 @@ export default function OptionsApp() {
               </div>
 
               <div className="settings-section">
+                <div className="settings-card-head">Feedback</div>
+                <div className="settings-row">
+                  <div className="settings-row-left">
+                    <div>
+                      <div className="row-label">Feedback form on uninstall</div>
+                      <div className="row-desc">
+                        If you ever uninstall Konode, open a short, anonymous feedback form in your
+                        browser. Konode sends nothing itself — you choose whether to fill it in.
+                        (Chromium only.)
+                      </div>
+                    </div>
+                  </div>
+                  <label className="toggle-wrap">
+                    <input type="checkbox" className="toggle-input" checked={settings.uninstall_feedback ?? true}
+                      onChange={(e) => update({ uninstall_feedback: e.target.checked })} />
+                    <span className="toggle-track"><span className="toggle-thumb" /></span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="settings-section">
                 <div className="settings-card-head">Developer</div>
                 <div className="settings-row">
                   <div className="settings-row-left">
