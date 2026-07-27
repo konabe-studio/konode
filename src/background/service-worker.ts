@@ -224,6 +224,12 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
       return { type: "SNAPSHOT_RESTORED", payload: { restored } };
     }
 
+    case "DELETE_SNAPSHOT": {
+      if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
+      await syncEngine.removeSnapshot(message.payload.name);
+      return { type: "SNAPSHOTS", payload: await syncEngine.getSnapshots() };
+    }
+
     default:
       return { type: "ERROR", payload: "Unknown message type" };
   }

@@ -1,6 +1,6 @@
 import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncExtension, ConflictItem, BackendConfig } from "@/lib/types";
 import { createBackend } from "@/lib/backends/abstract-backend";
-import { createSnapshot as writeSnapshot, listSnapshots as readSnapshots, restoreSnapshot as applySnapshot, type SnapshotMeta } from "@/lib/sync/snapshots";
+import { createSnapshot as writeSnapshot, listSnapshots as readSnapshots, restoreSnapshot as applySnapshot, deleteSnapshot as dropSnapshot, type SnapshotMeta } from "@/lib/sync/snapshots";
 import { exportBookmarkPayload, importBookmarks } from "@/lib/handlers/bookmarks-handler";
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
 import { exportHistory, importHistory } from "@/lib/handlers/history-handler";
@@ -216,7 +216,7 @@ export class SyncEngine {
   async getSnapshots(): Promise<SnapshotMeta[]> {
     const cfg = this.activeBackendConfig();
     if (!cfg) return [];
-    return this.withBackend((b) => readSnapshots(b));
+    return this.withBackend((b) => readSnapshots(b, this.settings));
   }
 
   /** Restore a snapshot (re-adds missing bookmarks), then sync so peers get them. */
@@ -224,6 +224,11 @@ export class SyncEngine {
     const restored = await this.withBackend((b) => applySnapshot(b, name, this.settings));
     if (restored > 0) void this.sync(["bookmarks"]);
     return restored;
+  }
+
+  /** Delete one restore point from the backend. */
+  async removeSnapshot(name: string): Promise<void> {
+    await this.withBackend((b) => dropSnapshot(b, this.settings, name));
   }
 
   // ─── Per-type Sync ────────────────────────────────────────────────────

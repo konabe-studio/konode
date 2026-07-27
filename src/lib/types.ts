@@ -244,7 +244,7 @@ export interface IBackend {
 export interface SnapshotMeta {
   name: string;      // backend filename: konode_snap_bookmarks_<epochms>.json
   timestamp: number; // epoch ms (parsed from the filename)
-  count?: number;    // bookmark count, when known from the device-local index
+  count?: number;    // bookmark count, from the shared index; absent if unreadable
 }
 
 // ─── Message Types (background ↔ popup) ───────────────────────────────────
@@ -260,7 +260,8 @@ export type ExtensionMessage =
   | { type: "TEST_BACKEND"; payload: { backend: BackendType } }
   | { type: "CREATE_SNAPSHOT" }
   | { type: "LIST_SNAPSHOTS" }
-  | { type: "RESTORE_SNAPSHOT"; payload: { name: string } };
+  | { type: "RESTORE_SNAPSHOT"; payload: { name: string } }
+  | { type: "DELETE_SNAPSHOT"; payload: { name: string } };
 
 export type ExtensionResponse =
   | { type: "STATE"; payload: SyncState }

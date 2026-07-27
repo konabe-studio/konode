@@ -84,7 +84,10 @@ export const KEYS = {
   BOOKMARK_TOMBSTONES: "konode_bm_tombstones",
   BOOKMARK_MOVES: "konode_bm_moves",
   BOOKMARK_FOLDER_MOVES: "konode_bm_folder_moves",
-  SNAPSHOTS: "konode_bm_snapshots", // device-local index of bookmark restore points
+  // Superseded by the backend-side `konode_snap_index.json`, which every device can
+  // read. Kept only so the one-time migration in sync/snapshots.ts can drain the
+  // counts this device recorded before dropping the key.
+  LEGACY_SNAPSHOTS: "konode_bm_snapshots",
   HIST_IMPORTED: "konode_hist_imported",
   REMOTE_SESSIONS: "konode_remote_sessions",
   REMOTE_EXTENSIONS: "konode_remote_extensions",

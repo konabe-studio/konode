@@ -237,6 +237,7 @@ export default function OptionsApp() {
   const [snapBusy, setSnapBusy] = useState(false);
   const [snapMsg, setSnapMsg] = useState<string | null>(null);
   const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   // Statistics tab data (fetched once on mount; see the effect below).
   const [syncState, setSyncState] = useState<SyncState | null>(null);
@@ -440,6 +441,14 @@ export default function OptionsApp() {
     setSnapBusy(true); setSnapMsg(null); setConfirmRestore(null);
     const res = await sendMessage({ type: "RESTORE_SNAPSHOT", payload: { name } });
     if (res.type === "SNAPSHOT_RESTORED") setSnapMsg(`Restored ${res.payload.restored} bookmark(s). Syncing to your other devices…`);
+    else if (res.type === "ERROR") setSnapMsg(res.payload);
+    setSnapBusy(false);
+  };
+
+  const deleteSnapshot = async (name: string) => {
+    setSnapBusy(true); setSnapMsg(null); setConfirmDelete(null);
+    const res = await sendMessage({ type: "DELETE_SNAPSHOT", payload: { name } });
+    if (res.type === "SNAPSHOTS") { setSnapshots(res.payload); setSnapMsg("Restore point deleted."); }
     else if (res.type === "ERROR") setSnapMsg(res.payload);
     setSnapBusy(false);
   };
@@ -1343,7 +1352,7 @@ export default function OptionsApp() {
                 <div className="settings-section">
                   <div className="settings-card-head">
                     Restore points
-                    <span className="head-sub">Timestamped copies of your bookmarks on the backend. Restoring adds back any bookmarks missing on this device (it never deletes). Newest 10 kept.</span>
+                    <span className="head-sub">Timestamped copies of your bookmarks on the backend, shared by all your devices. Restoring adds back any bookmarks missing on this device (it never deletes). The newest 10 are kept; older ones are removed automatically, and you can delete any of them here.</span>
                   </div>
                   <div className="settings-row">
                     <div className="settings-row-left">
@@ -1369,7 +1378,12 @@ export default function OptionsApp() {
                       <div className="settings-row-left">
                         <div>
                           <div className="row-label">{new Date(s.timestamp).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</div>
-                          <div className="row-desc">{s.count != null ? `${s.count} bookmark${s.count === 1 ? "" : "s"}` : "bookmarks"}</div>
+                          {/* The count comes from the shared index; an unreadable index
+                              (e.g. no passphrase set yet) leaves it unknown, and a bare
+                              "bookmarks" with no number reads as a rendering fault. */}
+                          <div className="row-desc">
+                            {s.count != null ? `${s.count} bookmark${s.count === 1 ? "" : "s"}` : "Bookmark restore point"}
+                          </div>
                         </div>
                       </div>
                       {confirmRestore === s.name ? (
@@ -1379,10 +1393,22 @@ export default function OptionsApp() {
                             {snapBusy ? <Loader2 size={12} className="spin" /> : <RotateCcw size={12} />} Confirm restore
                           </button>
                         </div>
+                      ) : confirmDelete === s.name ? (
+                        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                          <button className="btn-secondary" onClick={() => setConfirmDelete(null)} disabled={snapBusy}>Cancel</button>
+                          <button className="btn-secondary" style={{ color: "var(--danger)", borderColor: "var(--danger)" }} onClick={() => deleteSnapshot(s.name)} disabled={snapBusy}>
+                            {snapBusy ? <Loader2 size={12} className="spin" /> : <Trash2 size={12} />} Confirm delete
+                          </button>
+                        </div>
                       ) : (
-                        <button className="btn-secondary" onClick={() => setConfirmRestore(s.name)} disabled={snapBusy}>
-                          <RotateCcw size={12} /> Restore
-                        </button>
+                        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                          <button className="btn-secondary" onClick={() => setConfirmRestore(s.name)} disabled={snapBusy}>
+                            <RotateCcw size={12} /> Restore
+                          </button>
+                          <button className="btn-icon" aria-label="Delete this restore point" title="Delete this restore point" onClick={() => setConfirmDelete(s.name)} disabled={snapBusy}>
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       )}
                     </div>
                   ))}
@@ -1848,6 +1874,12 @@ const STYLES = `
   .btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--control-h); padding: 0 14px; border-radius: 12px; border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; font-family: var(--font); font-size: 14px; color: var(--text-secondary); transition: background .1s, border-color .1s, color .1s; white-space: nowrap; }
   .btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--accent); }
   .btn-secondary:disabled { opacity: .5; cursor: not-allowed; }
+  /* Icon-only: square by construction — one token drives both width and height, and
+     flex-basis is pinned so a tight row can't squash it into a rectangle. A
+     destructive action stays quiet until hover, so it's never the easiest hit. */
+  .btn-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: var(--control-h); height: var(--control-h); padding: 0; border-radius: 12px; border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; color: var(--text-secondary); transition: background .1s, border-color .1s, color .1s; }
+  .btn-icon:hover { background: var(--bg-hover); color: var(--danger); border-color: var(--danger); }
+  .btn-icon:disabled { opacity: .5; cursor: not-allowed; }
   /* Borderless, so padding alone left it 2px shorter than the bordered Test
      Connection button beside it. Height comes from the shared token instead. */
   .btn-save { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--control-h); padding: 0 18px; border-radius: 12px; border: none; background: var(--accent-solid); color: var(--on-accent); font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
