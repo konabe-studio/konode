@@ -101,6 +101,23 @@ export function pcloudRegionOf(url: string | undefined): string {
   return r?.id ?? "eu";
 }
 
+/** Server URL a WebDAV card should show when the user switches onto it.
+ *
+ *  `keptUrl` is whatever that same card held last time it was open (empty on a
+ *  first visit) — NOT the card being switched away from, whose URL belongs to a
+ *  different account. Presets pin their own endpoint; the custom card keeps what
+ *  the user typed; Nextcloud keeps a URL only if it still looks like a files-DAV
+ *  path, so a leftover preset endpoint can't masquerade as a server host.
+ *
+ *  Shared by the options page and the onboarding wizard so the two can't drift. */
+export function webdavUrlForCard(id: ProviderId, keptUrl: string): string {
+  const p = providerById(id);
+  if (p.fixedUrl) return p.fixedUrl;
+  if (p.regions) return p.regions.some((r) => sameUrl(r.url, keptUrl)) ? keptUrl : p.regions[0].url;
+  if (p.needsHost) return /\/remote\.php\/dav\//i.test(keptUrl) ? keptUrl : "";
+  return keptUrl; // custom WebDAV — the user's own URL, restored as typed
+}
+
 /** Which provider card matches a saved config (for seeding the selected card). */
 export function providerFromConfig(
   backend: BackendType | null | undefined,

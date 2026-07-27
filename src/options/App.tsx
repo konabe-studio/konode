@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, SyncExtension, SnapshotMeta } from "@/lib/types";
 import { sendMessage } from "@/lib/utils/messaging";
 import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
@@ -33,7 +33,8 @@ import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { isInstalledLocally, installOrSearchUrl, storeUrlFor, inferStore, type LocalExtLike } from "@/lib/utils/extensions-match";
 import {
-  PROVIDERS, providerById, providerFromConfig, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf, sameUrl,
+  PROVIDERS, providerById, providerFromConfig, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf,
+  webdavUrlForCard,
   type ProviderId,
 } from "@/lib/storage-providers";
 import { ProviderLogo } from "@/lib/provider-logos";
@@ -228,6 +229,18 @@ export default function OptionsApp() {
   // user-driven. null = nothing chosen yet.
   const [selectedProvider, setSelectedProvider] = useState<ProviderId | null>(null);
 
+  // The provider that is actually PERSISTED, i.e. the one the sync engine uses.
+  // Kept apart from `selectedProvider` because clicking a card only *stages* a
+  // switch — until Save the old provider is still the live one, so the "active"
+  // badge has to follow this, not the selection. Refreshed on load and on save.
+  const [savedProvider, setSavedProvider] = useState<ProviderId | null>(null);
+
+  // Per-card WebDAV credentials (and the custom URL), remembered for the session.
+  // Every preset card shares the single `webdav` backend slot, so switching cards
+  // must swap that slot's contents — parking the outgoing card's values here
+  // instead of destroying them, so clicking away and back doesn't empty the form.
+  const credStash = useRef<Partial<Record<ProviderId, { username: string; password: string; url: string }>>>({});
+
   // Activity tab: the audit log (newest first, capped at 200 by the logger).
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [auditOnlyErrors, setAuditOnlyErrors] = useState(false);
@@ -251,6 +264,8 @@ export default function OptionsApp() {
     if (res.type === "SETTINGS") {
       setSettings(res.payload);
       setInitialPass(res.payload.encryption_passphrase ?? "");
+      const url = res.payload.backends.find((b) => b.type === "webdav")?.webdav?.url;
+      setSavedProvider(providerFromConfig(res.payload.active_backend, url));
     }
   }, []);
 
@@ -378,21 +393,29 @@ export default function OptionsApp() {
   // fill in the server URL (fixed endpoint, default region, or clear it so the user
   // types a host/URL). Nothing about the sync format changes.
   const pickProvider = (id: ProviderId) => {
-    const switching = selectedProvider !== id; // a different card → a different account
+    if (selectedProvider === id) return; // already on this card — nothing to swap
+    const prev = selectedProvider;
     setSelectedProvider(id);
+
+    // Park the outgoing card's WebDAV values before anything below overwrites the
+    // shared slot, so switching back restores them instead of showing empty fields.
+    const w = getBackend("webdav")?.webdav;
+    if (prev && providerById(prev).backend === "webdav") {
+      credStash.current[prev] = {
+        username: w?.username ?? "",
+        password: w?.password ?? "",
+        url: w?.url ?? "",
+      };
+    }
+
     const p = providerById(id);
     if (p.backend !== "webdav") { update({ active_backend: p.backend }); return; }
-    const w = getBackend("webdav")?.webdav;
-    let url = w?.url ?? "";
-    const isPreset = PROVIDERS.some((x) =>
-      (x.fixedUrl && sameUrl(x.fixedUrl, url)) || x.regions?.some((r) => sameUrl(r.url, url)));
-    if (p.fixedUrl) url = p.fixedUrl;
-    else if (p.regions) { if (!p.regions.some((r) => sameUrl(r.url, url))) url = p.regions[0].url; }
-    else if (p.needsHost) { if (!/\/remote\.php\/dav\//i.test(url)) url = ""; }
-    else if (p.custom) { if (isPreset) url = ""; } // switching off a preset → type your own
-    // Don't carry the previous card's username/password to a different provider.
-    const creds = switching ? { username: "", password: "" } : {};
-    updateBackend("webdav", { webdav: { ...w, url, ...creds } as any });
+
+    // Restore this card's own values (empty on a first visit) — never the other
+    // card's account, which is a different login.
+    const kept = credStash.current[id] ?? { username: "", password: "", url: "" };
+    const url = webdavUrlForCard(id, kept.url);
+    updateBackend("webdav", { webdav: { ...w, url, username: kept.username, password: kept.password } as any });
     update({ active_backend: "webdav" });
   };
 
@@ -507,6 +530,11 @@ export default function OptionsApp() {
     }
     setSaving(true);
     await sendMessage({ type: "SAVE_SETTINGS", payload: settings });
+    // The staged provider is now the live one — move the "active" badge onto it.
+    setSavedProvider(providerFromConfig(
+      settings.active_backend,
+      settings.backends.find((b) => b.type === "webdav")?.webdav?.url,
+    ));
     setSaving(false); setSaveOk(true);
     setTimeout(() => setSaveOk(false), 2500);
   };
@@ -822,7 +850,10 @@ export default function OptionsApp() {
 
               <div className="card-list">
                 {PROVIDERS.map((p) => {
+                  // Selection drives the card UI (expanded config, radio); only the
+                  // persisted provider earns the "active" badge.
                   const isActive = selectedProvider === p.id;
+                  const isSaved = savedProvider === p.id;
 
                   return (
                     <div
@@ -845,7 +876,7 @@ export default function OptionsApp() {
                         <div className="backend-info">
                           <div className="backend-name">
                             {p.label}
-                            {isActive && <span className="badge-active">active</span>}
+                            {isSaved && <span className="badge-active">active</span>}
                           </div>
                           <div className="backend-desc">{p.desc}</div>
                         </div>

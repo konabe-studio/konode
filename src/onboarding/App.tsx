@@ -23,7 +23,7 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
 import {
-  PROVIDERS, providerById, nextcloudUrl, pcloudRegionOf, sameUrl,
+  PROVIDERS, providerById, nextcloudUrl, pcloudRegionOf, webdavUrlForCard,
   type ProviderId,
 } from "@/lib/storage-providers";
 import { ProviderLogo } from "@/lib/provider-logos";
@@ -87,18 +87,28 @@ export default function OnboardingApp() {
   const backend: BackendType | null = provider ? providerById(provider).backend : null;
   const effectiveWebdavUrl = provider === "nextcloud" ? nextcloudUrl(ncHost, webdavUser) : webdavUrl;
 
+  // Per-card WebDAV credentials, remembered while the wizard is open. The fields are
+  // shared by every WebDAV card, so switching swaps them rather than wiping them —
+  // clicking another card and back must not throw away what was already typed.
+  const credStash = useRef<Partial<Record<ProviderId, { user: string; pass: string; host: string; url: string }>>>({});
+
   // Pick a provider card → for WebDAV presets, fill/clear the server URL.
   const pickProvider = (id: ProviderId) => {
-    const switching = provider !== id;
+    if (provider === id) return;
+    const prev = provider;
     setProvider(id);
+
+    if (prev && providerById(prev).backend === "webdav") {
+      credStash.current[prev] = { user: webdavUser, pass: webdavPass, host: ncHost, url: webdavUrl };
+    }
+
     const p = providerById(id);
-    // Different provider → different account; don't carry the previous card's creds.
-    if (p.backend === "webdav" && switching) { setWebdavUser(""); setWebdavPass(""); setNcHost(""); }
-    if (p.fixedUrl) setWebdavUrl(p.fixedUrl);
-    else if (p.regions) setWebdavUrl((cur) => (p.regions!.some((r) => sameUrl(r.url, cur)) ? cur : p.regions![0].url));
-    else if (p.needsHost) setWebdavUrl("");
-    else if (p.custom) setWebdavUrl((cur) =>
-      PROVIDERS.some((x) => (x.fixedUrl && sameUrl(x.fixedUrl, cur)) || x.regions?.some((r) => sameUrl(r.url, cur))) ? "" : cur);
+    if (p.backend === "webdav") {
+      // This card's own values, not the previous card's — a different account.
+      const kept = credStash.current[id] ?? { user: "", pass: "", host: "", url: "" };
+      setWebdavUser(kept.user); setWebdavPass(kept.pass); setNcHost(kept.host);
+      setWebdavUrl(webdavUrlForCard(id, kept.url));
+    }
   };
 
   const hintStyle = { fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.4 };
