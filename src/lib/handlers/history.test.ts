@@ -158,3 +158,53 @@ describe("history de-dup is canonical, not string-equal", () => {
     expect(await localUrls()).toEqual(["https://fine.com/"]);
   });
 });
+
+describe("the imported set releases a page you've since visited yourself (CO-6, part 2)", () => {
+  // Nothing ever left konode_hist_imported. Once a page had arrived from ANY peer, this
+  // device stopped publishing it forever — even after the user genuinely browsed it here.
+  // With three devices each having received most of the mesh's URLs, a day spent on
+  // familiar sites exported as NOTHING. That is the field report: a day of activity on one
+  // machine, "Added 0 new history entries" on the other.
+  const exported = async (): Promise<string[]> => (await exportHistory()).map((i) => i.url).sort();
+
+  it("keeps withholding a page that only ever arrived from a peer", async () => {
+    await importHistory([{ url: "https://peer-only.com", lastVisitTime: 1, visitCount: 1 }]);
+    expect(await exported()).toEqual([]); // one visit — ours. Still not our browsing.
+  });
+
+  it("publishes it once you visit it here yourself", async () => {
+    await importHistory([{ url: "https://both.com", lastVisitTime: 1, visitCount: 1 }]);
+    expect(await exported()).toEqual([]);
+
+    await chrome.history.addUrl({ url: "https://both.com" }); // the user navigates here
+
+    expect(await exported()).toEqual(["https://both.com/"]);
+  });
+
+  it("keeps publishing it on later cycles — the release is persisted", async () => {
+    await importHistory([{ url: "https://both.com", lastVisitTime: 1, visitCount: 1 }]);
+    await chrome.history.addUrl({ url: "https://both.com" });
+
+    await exportHistory(); // the cycle that reclaims it
+    expect(await exported()).toEqual(["https://both.com/"]); // and every cycle after
+  });
+
+  it("releases only the pages you actually revisited", async () => {
+    await importHistory([
+      { url: "https://mine.com", lastVisitTime: 1, visitCount: 1 },
+      { url: "https://theirs.com", lastVisitTime: 1, visitCount: 1 },
+    ]);
+    await chrome.history.addUrl({ url: "https://mine.com" });
+
+    expect(await exported()).toEqual(["https://mine.com/"]);
+  });
+
+  it("a genuinely local page is never withheld in the first place", async () => {
+    await chrome.history.addUrl({ url: "https://local.com" });
+    // The same URL arriving from a peer is skipped on import (already known), so it is
+    // never added to the set and stays exportable.
+    await importHistory([{ url: "https://local.com", lastVisitTime: 1, visitCount: 1 }]);
+
+    expect(await exported()).toEqual(["https://local.com/"]);
+  });
+});

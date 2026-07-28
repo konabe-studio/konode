@@ -12,6 +12,7 @@ import type {
 } from "@/lib/types";
 import { browser } from "@/lib/utils/ext";
 import { inferStore, storeUrlFor } from "@/lib/utils/extensions-match";
+import { canonicalUrlKey } from "@/lib/utils/url";
 
 // ─── Device name detection ─────────────────────────────────────────────────
 
@@ -283,14 +284,37 @@ export async function getImportedHistoryUrls(): Promise<string[]> {
 
 export async function addImportedHistoryUrls(urls: string[]): Promise<void> {
   if (!urls.length) return;
-  const current = await get<string[]>(KEYS.HIST_IMPORTED, []);
-  const seen = new Set(current);
-  const merged = [...current];
-  for (const u of urls) if (!seen.has(u)) { seen.add(u); merged.push(u); }
-  // FIFO cap to bound storage. Dropping the oldest can at worst let one very old
-  // imported URL be re-exported once — it won't perpetually resurrect.
-  const capped = merged.length > HIST_IMPORTED_CAP ? merged.slice(-HIST_IMPORTED_CAP) : merged;
-  await set(KEYS.HIST_IMPORTED, capped);
+  // Serialized like the other logs (see updateKey) — this was a get/set pair.
+  await updateKey<string[]>(KEYS.HIST_IMPORTED, (current) => {
+    const seen = new Set(current);
+    const merged = [...current];
+    for (const u of urls) if (!seen.has(u)) { seen.add(u); merged.push(u); }
+    // FIFO cap to bound storage. Dropping the oldest can at worst let one very old
+    // imported URL be re-exported once — it won't perpetually resurrect.
+    return merged.length > HIST_IMPORTED_CAP ? merged.slice(-HIST_IMPORTED_CAP) : merged;
+  }, []);
+}
+
+/**
+ * Take URLs back OUT of the imported set, because this device has since genuinely visited
+ * them itself.
+ *
+ * The set only ever grew before, and nothing ever released an entry — so once a page had
+ * arrived from any peer, this device stopped publishing it FOREVER, even when the user
+ * later browsed it here. With three devices each having received most of the mesh's URLs,
+ * a day spent on familiar sites exported as nothing at all. Reported from the field as
+ * "a day of activity on my Mac, nothing appears on Windows".
+ *
+ * Compared on the canonical key so the legacy raw entries are removed too.
+ */
+export async function dropImportedHistoryUrls(urls: string[]): Promise<void> {
+  if (!urls.length) return;
+  const drop = new Set(urls.map(canonicalUrlKey));
+  await updateKey<string[]>(
+    KEYS.HIST_IMPORTED,
+    (current) => current.filter((u) => !drop.has(canonicalUrlKey(u))),
+    []
+  );
 }
 
 // ─── Last resolved Drive folder ──────────────────────────────────────────────

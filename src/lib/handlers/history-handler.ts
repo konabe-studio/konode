@@ -1,7 +1,9 @@
 import type { SyncHistoryItem } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import { canonicalUrlKey, isSafeContentUrl, isSensitiveUrl } from "@/lib/utils/url";
-import { getImportedHistoryUrls, addImportedHistoryUrls } from "@/lib/utils/storage";
+import {
+  getImportedHistoryUrls, addImportedHistoryUrls, dropImportedHistoryUrls,
+} from "@/lib/utils/storage";
 import { browser } from "@/lib/utils/ext";
 
 const EXPORT_MAX_RESULTS = 5000;
@@ -32,6 +34,25 @@ export async function exportHistory(daysLimit = 30): Promise<SyncHistoryItem[]> 
   // mesh-circulation this set exists to stop. Canonicalizing on read also keeps legacy
   // raw entries matching.
   const imported = new Set((await getImportedHistoryUrls()).map(canonicalUrlKey));
+
+  // Release anything this device has SINCE VISITED ITSELF. importHistory records exactly
+  // one visit per URL, so a local visitCount above 1 means the user has navigated here on
+  // their own — at which point this is genuinely this device's browsing, and withholding
+  // it from the group is wrong.
+  //
+  // Nothing used to leave this set. Once a page had arrived from any peer, this device
+  // stopped publishing it forever. With three devices, each had already received most of
+  // the mesh's URLs, so a day spent on familiar sites exported as NOTHING — which is
+  // exactly the field report: a day of activity on one machine, "Added 0 new history
+  // entries" on the other.
+  const reclaimed = items
+    .filter((i) => i.url && (i.visitCount ?? 1) > 1 && imported.has(canonicalUrlKey(i.url)))
+    .map((i) => canonicalUrlKey(i.url as string));
+  if (reclaimed.length) {
+    await dropImportedHistoryUrls(reclaimed);
+    for (const k of reclaimed) imported.delete(k);
+    logger.info("exportHistory", `Publishing ${reclaimed.length} page(s) visited here since they arrived`);
+  }
 
   return items
     // Never sync a URL that embeds an auth secret (OAuth callback token, reset
