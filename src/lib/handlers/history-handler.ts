@@ -1,6 +1,6 @@
 import type { SyncHistoryItem } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
-import { isSafeContentUrl, isSensitiveUrl } from "@/lib/utils/url";
+import { canonicalUrlKey, isSafeContentUrl, isSensitiveUrl } from "@/lib/utils/url";
 import { getImportedHistoryUrls, addImportedHistoryUrls } from "@/lib/utils/storage";
 import { browser } from "@/lib/utils/ext";
 
@@ -24,13 +24,20 @@ export async function exportHistory(daysLimit = 30): Promise<SyncHistoryItem[]> 
   // Exclude URLs this device only RECEIVED via import (not genuinely visited
   // here) so imported entries aren't re-published as native visits and resurrect
   // across the mesh even after the origin device forgets them.
-  const imported = new Set(await getImportedHistoryUrls());
+  //
+  // Keyed on the CANONICAL url, like the bookmark merge. The set holds what the PEER
+  // published, while `items` comes back from the local history API in the browser's own
+  // canonical form — so a raw-string compare missed (`https://x.com` vs `https://x.com/`)
+  // and the device re-published imported entries as its own visits, which is exactly the
+  // mesh-circulation this set exists to stop. Canonicalizing on read also keeps legacy
+  // raw entries matching.
+  const imported = new Set((await getImportedHistoryUrls()).map(canonicalUrlKey));
 
   return items
     // Never sync a URL that embeds an auth secret (OAuth callback token, reset
     // link, …) — even E2EE'd, that's uploading a live credential to third-party
     // storage. It stays in the local browser history; it just isn't published.
-    .filter((item) => item.url && !imported.has(item.url) && !isSensitiveUrl(item.url))
+    .filter((item) => item.url && !imported.has(canonicalUrlKey(item.url)) && !isSensitiveUrl(item.url))
     .map((item) => ({
       url: item.url!,
       title: item.title,
@@ -48,13 +55,21 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
   // (export/backup is the faithful path). Firefox's addUrl does accept visitTime,
   // so the original date IS preserved below on Firefox. Either way we de-dup
   // against existing local URLs so repeated syncs don't re-add pages.
+  // De-dup on the CANONICAL url, not the raw string. The browser canonicalizes on write
+  // (a bare origin gains its trailing slash, the host lowercases, a default port drops),
+  // so a peer that published `https://x.com` never matched the `https://x.com/` sitting
+  // in local history — and the entry was re-added as a FRESH VISIT on every sync cycle,
+  // forever, quietly inflating the visit count and the "most visited" ranking. Same
+  // canonical key the bookmark merge uses for the same reason.
   const existing = await browser.history.search({ text: "", startTime: 0, maxResults: 100000 });
-  const known = new Set(existing.map((h) => h.url));
+  const known = new Set(existing.filter((h) => h.url).map((h) => canonicalUrlKey(h.url as string)));
 
   let added = 0;
   const importedUrls: string[] = [];
   for (const item of items) {
-    if (!item.url || known.has(item.url)) continue;
+    if (!item.url) continue;
+    const key = canonicalUrlKey(item.url);
+    if (known.has(key)) continue;
     // Only add plain web URLs from a remote packet — never javascript:/data:/file:.
     if (!isSafeContentUrl(item.url)) {
       logger.warn("importHistory", "Skipping an unsafe URL");
@@ -75,8 +90,8 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
       // 1783492571151.999), so round before passing. Chrome ignores it either way.
       if (item.lastVisitTime) details.visitTime = Math.round(item.lastVisitTime);
       await browser.history.addUrl(details);
-      known.add(item.url);
-      importedUrls.push(item.url);
+      known.add(key);
+      importedUrls.push(key);
       added++;
     } catch {
       // A per-URL rejection is non-fatal and expected for some entries the local

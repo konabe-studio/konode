@@ -166,7 +166,25 @@ function makeChrome() {
     history: {
       search: ({ maxResults } = {}) =>
         Promise.resolve([...histEntries.values()].slice(0, maxResults ?? Infinity)),
-      addUrl: ({ url, visitTime }) => { histEntries.set(url, { id: url, url, title: "", lastVisitTime: visitTime ?? 1, visitCount: 1 }); return Promise.resolve(); },
+      addUrl: ({ url, visitTime }) => {
+        // Browsers CANONICALIZE on write: a bare origin gains its trailing slash, the
+        // host lowercases, a default port drops. The fake used to store the string
+        // verbatim, which hid a re-add loop — the import de-duped on the raw peer string
+        // while the browser had stored the normalized one, so the same URL was added as a
+        // fresh visit on every single sync.
+        let key = url;
+        try { key = new URL(url).href; } catch { /* unparseable — store as given */ }
+        const prev = histEntries.get(key);
+        histEntries.set(key, {
+          id: key, url: key, title: "",
+          lastVisitTime: visitTime ?? prev?.lastVisitTime ?? 1,
+          // addUrl records a VISIT. The URL row already exists, so a repeat add doesn't
+          // create a second row — it bumps the count. Modelling that is what makes a
+          // re-add loop observable at all; a plain Map.set() just overwrote it silently.
+          visitCount: (prev?.visitCount ?? 0) + 1,
+        });
+        return Promise.resolve();
+      },
     },
     notifications: { create: vi.fn() },
     // A real in-memory alarms registry, not a mock: the scheduling rule under test is
