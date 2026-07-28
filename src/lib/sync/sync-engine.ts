@@ -151,10 +151,7 @@ export class SyncEngine {
       await backend.connect();
 
       const typesToSync = types ?? this.settings.enabled_types;
-
-      for (const dataType of typesToSync) {
-        await this.syncType(dataType, backend, state);
-      }
+      const typeErrors = await this.syncAllTypes(typesToSync, backend, state);
 
       // A device that disagrees on encryption isn't a hard failure — we still synced
       // and re-uploaded our own (correctly-encrypted) data, so the group self-heals
@@ -166,17 +163,20 @@ export class SyncEngine {
         typesToSync.includes("bookmarks"),
       );
 
-      const warnings = [...this.encryptionWarnings.values()];
+      // Encryption disagreements and per-type failures share one surface: both mean
+      // "the sync ran and published what it could, but something needs the user's
+      // attention". Neither aborts the cycle.
+      const problems = [...this.encryptionWarnings.values(), ...typeErrors];
       const prevState = await getState();
       const newState = await setState({
-        status: warnings.length ? "error" : "success",
+        status: problems.length ? "error" : "success",
         last_sync: new Date().toISOString(),
-        last_error: warnings.length ? warnings.join(" ") : null,
+        last_error: problems.length ? problems.join(" ") : null,
         bytes_transferred: prevState.bytes_transferred + this.bytesThisSync,
         recovery_notice: recovery,
       });
       this.onStateChange(newState);
-      logger.info("SyncEngine", warnings.length ? `Sync complete with ${warnings.length} encryption warning(s)` : "Sync complete");
+      logger.info("SyncEngine", problems.length ? `Sync complete with ${problems.length} problem(s)` : "Sync complete");
 
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
@@ -188,6 +188,36 @@ export class SyncEngine {
       this.isSyncing = false;
       await releaseSyncLock();
     }
+  }
+
+  /**
+   * Sync every requested data type, isolating failures. One type must not take the
+   * others down with it — the same principle the peer fold and the encryption warnings
+   * already follow. Returns one message per failed type; `sync()` surfaces them.
+   *
+   * This was a bare loop whose throw propagated straight out of `sync()`, so a single
+   * failing type aborted every type AFTER it and skipped the post-loop work entirely.
+   * Concretely: revoking the optional `history` (or `management`) permission in
+   * chrome://extensions makes the export throw, which silently stopped BOOKMARKS from
+   * syncing and meant the mass-delete recovery snapshot never ran. Which types survived
+   * was arbitrary too — `enabled_types` is appended to as the user toggles, so it is not
+   * a fixed order.
+   */
+  private async syncAllTypes(
+    types: DataType[],
+    backend: ReturnType<typeof createBackend>,
+    state: SyncState
+  ): Promise<string[]> {
+    const errors: string[] = [];
+    for (const dataType of types) {
+      try {
+        await this.syncType(dataType, backend, state);
+      } catch (err) {
+        // syncType already logged it — just collect the message.
+        errors.push(`${dataType}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+    return errors;
   }
 
   /**
@@ -456,8 +486,17 @@ export class SyncEngine {
       }
       case "history":
         return !Array.isArray(payload) || payload.length === 0;
-      case "sessions":
-        return false;
+      case "sessions": {
+        // A tab-less session is nothing a peer can restore (normalizeRemoteSessions
+        // drops it anyway), and uploading one OVERWRITES this device's previously-good
+        // session file for every peer. That is reachable, not theoretical: revoke the
+        // optional `tabs` permission and tabs.query still resolves, but every tab comes
+        // back without a url, so the export filters them all out and the session goes
+        // empty. Skipping the upload leaves peers with the last session they can
+        // actually restore.
+        const tabs = (payload as { tabs?: unknown[] }).tabs;
+        return !tabs?.length;
+      }
       case "extensions":
         return !Array.isArray(payload) || payload.length === 0;
       default:

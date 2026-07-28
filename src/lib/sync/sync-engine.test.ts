@@ -51,6 +51,7 @@ class FakeBackend implements IBackend {
 // Typed view of the private members we drive directly in tests.
 type EnginePrivate = {
   syncType(dataType: DataType, backend: IBackend, state: SyncState): Promise<void>;
+  syncAllTypes(types: DataType[], backend: IBackend, state: SyncState): Promise<string[]>;
   buildPacket(dataType: DataType, payload: unknown): Promise<SyncPacket>;
   recordBlockedDeletion(
     blocked: number,
@@ -374,6 +375,84 @@ describe("SyncEngine.syncType — E2EE", () => {
     await priv(encEngine("me", "pw")).syncType("bookmarks", backend, DEFAULT_STATE);
     expect(backend.uploads.length).toBe(2);
     expect(backend.uploads[backend.uploads.length - 1].encrypted).toBe(true);
+  });
+});
+
+describe("SyncEngine — one data type's failure must not abort the others", () => {
+  // A revoked optional permission (history / management) makes that type's export
+  // throw. The bare per-type loop let the throw escape sync(), so every type AFTER the
+  // failing one was skipped — turning off history in chrome://extensions silently
+  // stopped BOOKMARKS from syncing — and the post-loop mass-delete recovery snapshot
+  // never ran either.
+  class FailingBackend extends FakeBackend {
+    constructor(private readonly failFor: DataType[]) { super(); }
+    downloadAll(dataType: DataType, exclude?: string): Promise<SyncPacket[]> {
+      if (this.failFor.includes(dataType)) {
+        return Promise.reject(new Error(`no ${dataType} permission`));
+      }
+      return super.downloadAll(dataType, exclude);
+    }
+  }
+
+  it("syncs the remaining types and reports the one that failed", async () => {
+    const engine = makeEngine();
+    const backend = new FailingBackend(["history"]);
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+
+    // history FIRST — a propagating throw would take bookmarks down with it, which is
+    // the exact shape of the bug.
+    const problems = await priv(engine).syncAllTypes(["history", "bookmarks"], backend, DEFAULT_STATE);
+
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("history");
+    expect(backend.uploads.map((u) => u.data_type)).toEqual(["bookmarks"]);
+  });
+
+  it("reports EVERY failing type, not just the first", async () => {
+    const engine = makeEngine();
+    const backend = new FailingBackend(["history", "extensions"]);
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+
+    const problems = await priv(engine).syncAllTypes(
+      ["history", "extensions", "bookmarks"], backend, DEFAULT_STATE
+    );
+
+    expect(problems).toHaveLength(2);
+    expect(backend.uploads.map((u) => u.data_type)).toEqual(["bookmarks"]);
+  });
+
+  it("reports nothing when every type succeeds", async () => {
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+
+    expect(await priv(engine).syncAllTypes(["bookmarks"], backend, DEFAULT_STATE)).toEqual([]);
+  });
+});
+
+describe("SyncEngine.syncType — a tab-less session is not published", () => {
+  // Revoking the optional `tabs` permission doesn't throw: tabs.query resolves, but
+  // every tab arrives without a url, so the export filters them all out. Uploading that
+  // empty session OVERWRITES this device's previously-good session file for every peer.
+
+  it("does not upload a session with no tabs", async () => {
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+
+    await priv(engine).syncType("sessions", backend, DEFAULT_STATE);
+
+    expect(backend.uploads).toHaveLength(0);
+  });
+
+  it("still uploads a session that has tabs", async () => {
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    await chrome.tabs.create({ url: "https://a.com" });
+
+    await priv(engine).syncType("sessions", backend, DEFAULT_STATE);
+
+    expect(backend.uploads).toHaveLength(1);
+    expect(backend.uploads[0].data_type).toBe("sessions");
   });
 });
 
