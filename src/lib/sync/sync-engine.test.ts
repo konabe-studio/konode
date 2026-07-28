@@ -370,6 +370,70 @@ describe("SyncEngine.syncType — E2EE", () => {
   });
 });
 
+describe("SyncEngine.syncType — upload dedup is per DESTINATION", () => {
+  // The dedup checksum is over the payload, so it can't see a destination change.
+  // Without the destination in the upload tag, pointing the device at a new provider /
+  // repo / server left the old checksum matching: nothing was ever uploaded there and
+  // the UI still reported a clean sync.
+  function ghEngine(repo: string, path?: string): SyncEngine {
+    return new SyncEngine(
+      {
+        ...DEFAULT_SETTINGS,
+        device_id: "me",
+        conflict_strategy: "lww",
+        active_backend: "github",
+        backends: [{ type: "github", label: "GitHub", enabled: true, github: { token: "t", repo, path } }],
+      },
+      () => {}
+    );
+  }
+
+  it("re-uploads to a NEW repo even though the payload is unchanged", async () => {
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+
+    const first = new FakeBackend();
+    await priv(ghEngine("owner/repo-one")).syncType("bookmarks", first, DEFAULT_STATE);
+    expect(first.uploads).toHaveLength(1);
+
+    // Same device, same untouched bookmarks, different destination → must upload.
+    const second = new FakeBackend();
+    await priv(ghEngine("owner/repo-two")).syncType("bookmarks", second, DEFAULT_STATE);
+    expect(second.uploads).toHaveLength(1);
+  });
+
+  it("re-uploads when only the subfolder path changes", async () => {
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+
+    const first = new FakeBackend();
+    await priv(ghEngine("owner/repo", "konode")).syncType("bookmarks", first, DEFAULT_STATE);
+    const second = new FakeBackend();
+    await priv(ghEngine("owner/repo", "backup/konode")).syncType("bookmarks", second, DEFAULT_STATE);
+
+    expect(second.uploads).toHaveLength(1);
+  });
+
+  it("still skips the re-upload when destination and payload are both unchanged", async () => {
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    const backend = new FakeBackend();
+
+    await priv(ghEngine("owner/repo-one")).syncType("bookmarks", backend, DEFAULT_STATE);
+    await priv(ghEngine("owner/repo-one")).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    expect(backend.uploads).toHaveLength(1);
+  });
+
+  it("treats an equivalent repo URL and slug as the SAME destination", async () => {
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    const backend = new FakeBackend();
+
+    // Re-typing the repo in URL form isn't a move — it must not force a re-upload.
+    await priv(ghEngine("owner/repo-one")).syncType("bookmarks", backend, DEFAULT_STATE);
+    await priv(ghEngine("https://github.com/owner/repo-one.git")).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    expect(backend.uploads).toHaveLength(1);
+  });
+});
+
 describe("SyncEngine.syncType — manual conflicts (CO-7 / CO-8)", () => {
   function manualEngine(): SyncEngine {
     return new SyncEngine({ ...DEFAULT_SETTINGS, device_id: "me", conflict_strategy: "manual" }, () => {});

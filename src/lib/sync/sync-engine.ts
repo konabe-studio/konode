@@ -1,5 +1,6 @@
 import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncExtension, ConflictItem, BackendConfig } from "@/lib/types";
 import { createBackend } from "@/lib/backends/abstract-backend";
+import { normalizeRepoSlug } from "@/lib/backends/github-backend";
 import { createSnapshot as writeSnapshot, listSnapshots as readSnapshots, restoreSnapshot as applySnapshot, deleteSnapshot as dropSnapshot, type SnapshotMeta } from "@/lib/sync/snapshots";
 import { exportBookmarkPayload, importBookmarks } from "@/lib/handlers/bookmarks-handler";
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
@@ -429,6 +430,53 @@ export class SyncEngine {
   }
 
   /**
+   * A stable identity for the current upload DESTINATION — the backend type plus the
+   * folder/repo/server it actually writes into.
+   *
+   * The dedup checksum below is over the PAYLOAD, so nothing about it changes when the
+   * destination does. Without this, switching provider (or GitHub repo/branch/path, or
+   * WebDAV server) left the previous checksum matching, `uploadIfChanged` skipped, and
+   * the NEW destination silently stayed empty while the UI reported a clean sync — only
+   * a later bookmark edit healed it, which on a stable tree can be days.
+   *
+   * The repo is normalized the same way the backend addresses it, so re-typing
+   * `owner/repo` as a full GitHub URL isn't mistaken for a move. Tokens/passwords are
+   * deliberately excluded: what matters is WHERE we write, and a secret has no business
+   * being copied into a second storage key.
+   */
+  private destinationTag(): string {
+    const cfg = this.activeBackendConfig();
+    if (!cfg) return "none";
+    switch (cfg.type) {
+      case "gdrive":
+        return `gdrive:${cfg.gdrive?.folderId ?? "default"}`;
+      case "github": {
+        const g = cfg.github;
+        return `github:${normalizeRepoSlug(g?.repo)}@${g?.branch ?? "main"}/${g?.path ?? "konode"}`;
+      }
+      case "webdav": {
+        const w = cfg.webdav;
+        return `webdav:${w?.username ?? ""}@${(w?.url ?? "").replace(/\/$/, "")}/${w?.path ?? "konode"}`;
+      }
+      default: {
+        const _e: never = cfg.type;
+        return String(_e);
+      }
+    }
+  }
+
+  /**
+   * The "what this device last uploaded" record for a data type. The plaintext
+   * checksum alone isn't enough: the encryption FORM and the DESTINATION both change
+   * what actually sits on the backend WITHOUT changing the payload, so both are folded
+   * in here. An old tag written by an earlier build matches neither, so an existing
+   * install re-uploads once and then stabilizes — no need to re-save settings.
+   */
+  private uploadTag(payloadChecksum: string, useE2ee: boolean): string {
+    return `${this.destinationTag()}|${useE2ee ? "enc" : "plain"}:${payloadChecksum}`;
+  }
+
+  /**
    * Upload only when the payload changed since our last successful upload. The
    * checksum is over the plaintext payload (stable for identical data, independent
    * of the packet's per-cycle timestamp), so a sync that finds nothing new doesn't
@@ -443,15 +491,10 @@ export class SyncEngine {
     // Compute the (cheap) plaintext checksum BEFORE building the full packet, so an
     // unchanged encrypted sync doesn't pay the expensive PBKDF2 for encrypt+verifier
     // on every idle interval — only when there's actually something to upload.
-    // Tag the record with the encryption FORM (enc/plain): the checksum is over the
-    // plaintext, so without the tag, toggling E2EE on wouldn't change the checksum and
-    // the device's own file would stay in its old form on the backend. An old bare
-    // checksum (no tag) won't match either form, so it forces one re-upload and then
-    // stabilizes — this is what lets an already-mixed group self-heal on the next sync
-    // without the user having to re-save settings.
+    // `uploadTag` folds in the encryption form + destination (see above).
     const useE2ee =
       this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
-    const tag = `${useE2ee ? "enc" : "plain"}:${await sha256(JSON.stringify(payload))}`;
+    const tag = this.uploadTag(await sha256(JSON.stringify(payload)), useE2ee);
     if ((await getLastUploadChecksum(dataType)) === tag) {
       logger.info("SyncEngine", `${dataType}: unchanged since last upload, skipping`);
       return;
@@ -664,10 +707,10 @@ export class SyncEngine {
           const payload = await this.buildPayload(conflict.data_type);
           const packet = await this.buildPacket(conflict.data_type, payload);
           await backend.upload(packet); // forced: conflict resolution overwrites remote
-          // Store the encryption-form-tagged record (see uploadIfChanged) so the next
-          // periodic sync doesn't see a format mismatch and re-upload needlessly.
+          // Store the same tag uploadIfChanged writes (encryption form + destination),
+          // so the next periodic sync doesn't see a mismatch and re-upload needlessly.
           const useE2ee = this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
-          await setLastUploadChecksum(conflict.data_type, `${useE2ee ? "enc" : "plain"}:${packet.checksum}`);
+          await setLastUploadChecksum(conflict.data_type, this.uploadTag(packet.checksum, useE2ee));
         } finally {
           await backend.disconnect();
         }
