@@ -17,6 +17,8 @@ import {
   clearUploadChecksums,
   getResolvedConflicts,
   setResolvedConflict,
+  getRecoverySnapshotTaken,
+  setRecoverySnapshotTaken,
   acquireSyncLock,
   releaseSyncLock,
 } from "@/lib/utils/storage";
@@ -159,15 +161,10 @@ export class SyncEngine {
       // once it's aligned. Surface it as a visible error message so the user fixes
       // the misconfig, but only after the upload has happened (never before — that's
       // what used to deadlock the group into mutually-stale plaintext files).
-      // An unusual peer deletion was blocked by the mass-delete guard this sync — the
-      // tree is still intact, so save a restore point of it and flag the event so the
-      // popup can surface "unusual deletion blocked" with a pointer to Settings.
-      let recovery: SyncState["recovery_notice"] = null;
-      if (this.bulkBlockedThisSync > 0) {
-        try { await this.snapshotNow(); }
-        catch (e) { logger.warn("SyncEngine", `Recovery snapshot failed: ${e instanceof Error ? e.message : e}`); }
-        recovery = { at: new Date().toISOString(), blocked: this.bulkBlockedThisSync };
-      }
+      const recovery = await this.recordBlockedDeletion(
+        this.bulkBlockedThisSync,
+        typesToSync.includes("bookmarks"),
+      );
 
       const warnings = [...this.encryptionWarnings.values()];
       const prevState = await getState();
@@ -191,6 +188,49 @@ export class SyncEngine {
       this.isSyncing = false;
       await releaseSyncLock();
     }
+  }
+
+  /**
+   * The mass-delete guard refused a peer's deletions this sync — the tree is still
+   * intact, so preserve it as a restore point and flag the event for the popup
+   * ("unusual deletion blocked", with a pointer to Settings → Activity).
+   *
+   * At most ONE restore point per incident. The guard re-evaluates the same peer
+   * deletions on every merge (their tombstones live for 90 days and the local
+   * bookmarks are still present, because we refused to remove them), so this used to
+   * write a snapshot on every cycle — and with a 10-slot ring on a 60s interval that
+   * evicted every pre-incident restore point within ~10 minutes, destroying exactly
+   * the history the user would recover from. Repeat syncs can't add value anyway: the
+   * deletions stay blocked, so the tree they'd capture is the same one.
+   *
+   * The latch clears on the first sync that merged bookmarks and blocked nothing — a
+   * later block is then a NEW incident and earns its own restore point. `syncedBookmarks`
+   * gates that: a sync that never touched bookmarks proves nothing about the guard.
+   *
+   * The notice itself is returned on every blocked sync (not just the first), so the
+   * banner keeps showing while the situation persists.
+   */
+  private async recordBlockedDeletion(
+    blocked: number,
+    syncedBookmarks: boolean
+  ): Promise<SyncState["recovery_notice"]> {
+    if (blocked <= 0) {
+      if (syncedBookmarks && (await getRecoverySnapshotTaken())) {
+        await setRecoverySnapshotTaken(false);
+      }
+      return null;
+    }
+    if (!(await getRecoverySnapshotTaken())) {
+      try {
+        await this.snapshotNow();
+        await setRecoverySnapshotTaken(true);
+      } catch (e) {
+        // Leave the latch clear so the next cycle retries the write — a failed
+        // snapshot must not count as "this incident is covered".
+        logger.warn("SyncEngine", `Recovery snapshot failed: ${e instanceof Error ? e.message : e}`);
+      }
+    }
+    return { at: new Date().toISOString(), blocked };
   }
 
   // ─── Snapshots (restore points) ───────────────────────────────────────

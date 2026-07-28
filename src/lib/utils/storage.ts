@@ -93,6 +93,7 @@ export const KEYS = {
   REMOTE_EXTENSIONS: "konode_remote_extensions",
   UPLOAD_CHECKSUMS: "konode_upload_checksums",
   RESOLVED_CONFLICTS: "konode_resolved_conflicts",
+  RECOVERY_SNAPSHOT: "konode_recovery_snap",
   SYNC_LOCK: "konode_sync_lock",
   GDRIVE_SESSION: "konode_gdrive_session",
 } as const;
@@ -213,6 +214,26 @@ export async function addImportedHistoryUrls(urls: string[]): Promise<void> {
   // imported URL be re-exported once — it won't perpetually resurrect.
   const capped = merged.length > HIST_IMPORTED_CAP ? merged.slice(-HIST_IMPORTED_CAP) : merged;
   await set(KEYS.HIST_IMPORTED, capped);
+}
+
+// ─── Recovery-snapshot latch ─────────────────────────────────────────────────
+// The mass-delete guard re-evaluates the SAME peer deletions on every merge (a
+// peer's tombstones live for 90 days and the local bookmarks are still there,
+// because we refused to remove them), so "blocked → save a restore point" fired
+// on every sync. With a 10-slot snapshot ring and a 60s interval that evicted
+// every pre-incident restore point in ~10 minutes — destroying exactly the
+// history the user would want to recover from.
+//
+// So: one restore point per INCIDENT. Latched after a successful recovery
+// snapshot, cleared by the first bookmark sync that blocks nothing. A failed
+// write leaves the latch clear so the next cycle retries.
+
+export async function getRecoverySnapshotTaken(): Promise<boolean> {
+  return get<boolean>(KEYS.RECOVERY_SNAPSHOT, false);
+}
+
+export async function setRecoverySnapshotTaken(taken: boolean): Promise<void> {
+  await set(KEYS.RECOVERY_SNAPSHOT, taken);
 }
 
 // ─── Sync lock (CO-4) ─────────────────────────────────────────────────────────

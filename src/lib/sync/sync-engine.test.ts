@@ -52,6 +52,10 @@ class FakeBackend implements IBackend {
 type EnginePrivate = {
   syncType(dataType: DataType, backend: IBackend, state: SyncState): Promise<void>;
   buildPacket(dataType: DataType, payload: unknown): Promise<SyncPacket>;
+  recordBlockedDeletion(
+    blocked: number,
+    syncedBookmarks: boolean
+  ): Promise<SyncState["recovery_notice"]>;
   encryptionWarnings: Map<string, string>;
 };
 function priv(engine: SyncEngine): EnginePrivate {
@@ -367,6 +371,77 @@ describe("SyncEngine.syncType — E2EE", () => {
     await priv(encEngine("me", "pw")).syncType("bookmarks", backend, DEFAULT_STATE);
     expect(backend.uploads.length).toBe(2);
     expect(backend.uploads[backend.uploads.length - 1].encrypted).toBe(true);
+  });
+});
+
+describe("SyncEngine — blocked mass-delete takes ONE restore point per incident", () => {
+  // The guard re-blocks the same peer deletions on every merge, so a snapshot per
+  // sync burned through the 10-slot ring in ~10 cycles and deleted the user's own
+  // pre-incident restore points — the exact history they'd recover from.
+
+  /** Counts recovery snapshots and optionally fails the first N attempts. */
+  function countingEngine(failFirst = 0): { engine: SyncEngine; taken: () => number } {
+    const engine = makeEngine();
+    let calls = 0;
+    (engine as unknown as { snapshotNow: () => Promise<unknown> }).snapshotNow = () => {
+      calls++;
+      if (calls <= failFirst) return Promise.reject(new Error("backend unreachable"));
+      return Promise.resolve({ name: "konode_snap_bookmarks_1.json", timestamp: 1, count: 1 });
+    };
+    // `calls` counts attempts; for the success-count assertions failFirst is 0.
+    return { engine, taken: () => calls };
+  }
+
+  it("writes ONE restore point even though the deletion is blocked every sync", async () => {
+    const { engine, taken } = countingEngine();
+
+    const first = await priv(engine).recordBlockedDeletion(50, true);
+    const second = await priv(engine).recordBlockedDeletion(50, true);
+    const third = await priv(engine).recordBlockedDeletion(50, true);
+
+    expect(taken()).toBe(1);
+    // ...but the banner keeps being surfaced while the situation persists.
+    for (const n of [first, second, third]) expect(n?.blocked).toBe(50);
+  });
+
+  it("earns a new restore point after a clean bookmark sync ends the incident", async () => {
+    const { engine, taken } = countingEngine();
+
+    await priv(engine).recordBlockedDeletion(50, true);
+    expect(taken()).toBe(1);
+
+    // A sync that merged bookmarks and blocked nothing → incident over.
+    expect(await priv(engine).recordBlockedDeletion(0, true)).toBeNull();
+
+    // A later block is a NEW incident and deserves its own restore point.
+    await priv(engine).recordBlockedDeletion(30, true);
+    expect(taken()).toBe(2);
+  });
+
+  it("a sync that never merged bookmarks does NOT end the incident", async () => {
+    const { engine, taken } = countingEngine();
+
+    await priv(engine).recordBlockedDeletion(50, true);
+    await priv(engine).recordBlockedDeletion(0, false); // e.g. sync(["history"])
+    await priv(engine).recordBlockedDeletion(50, true);
+
+    expect(taken()).toBe(1);
+  });
+
+  it("retries on the next sync when the restore-point write fails", async () => {
+    const { engine, taken } = countingEngine(1); // first snapshotNow() rejects
+
+    // A failed write must not throw out, and must not latch the incident closed.
+    await expect(priv(engine).recordBlockedDeletion(50, true)).resolves.toMatchObject({ blocked: 50 });
+    expect(taken()).toBe(1);
+
+    // Next cycle tries again — and this time succeeds.
+    await priv(engine).recordBlockedDeletion(50, true);
+    expect(taken()).toBe(2);
+
+    // Now it IS latched, so no third attempt.
+    await priv(engine).recordBlockedDeletion(50, true);
+    expect(taken()).toBe(2);
   });
 });
 
