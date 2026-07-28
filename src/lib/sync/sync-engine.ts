@@ -129,6 +129,48 @@ export class SyncEngine {
     if (encChanged) await clearUploadChecksums();
   }
 
+  /**
+   * Is end-to-end encryption ACTUALLY active here — enabled AND a passphrase set?
+   *
+   * Not the same as "a passphrase exists": turning E2EE off keeps the passphrase in
+   * settings. Conflating the two is what let the snapshot index be read as encrypted and
+   * then rewritten in PLAINTEXT on shared storage. This expression was inlined in five
+   * places; one accessor so the copies can't drift apart again.
+   */
+  private get e2eeActive(): boolean {
+    return !!this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
+  }
+
+  /**
+   * Why this peer's packet can't be consumed here, decided WITHOUT decrypting anything.
+   *
+   * Two of the three encryption disagreements are visible from the packet's `encrypted`
+   * flag alone, and both used to be detected only inside applyRemote — which the `manual`
+   * strategy never calls. So a device on `manual` was never told it had dropped out of the
+   * encrypted group, and it queued conflicts for peers whose data it could not read.
+   *
+   *   "silent"  we encrypt, the peer doesn't. Usually a stale/orphan file from a removed
+   *             device, and not this device's problem — it must not warn forever.
+   *   a message the peer encrypts and we don't: the group is encrypted and we're the odd
+   *             one out. Surfaced on the device that can actually fix it.
+   *   null      nothing detectable from here.
+   *
+   * The third case — encrypted peer, WRONG passphrase — needs an actual decrypt (a 600k
+   * PBKDF2), so it is deliberately not probed here. On the auto path applyRemote still
+   * catches it; on the manual path it surfaces when the user picks "Use remote", which the
+   * popup now reports instead of swallowing.
+   */
+  private encryptionBarrier(packet: SyncPacket): "silent" | string | null {
+    if (this.e2eeActive && !packet.encrypted) return "silent";
+    if (packet.encrypted && !this.e2eeActive) {
+      return (
+        "Some of your devices are end-to-end encrypted. Enable E2EE with the same " +
+        "passphrase here (Settings → Advanced) to sync with them."
+      );
+    }
+    return null;
+  }
+
   // ─── Main Entry Point ─────────────────────────────────────────────────
 
   async sync(types?: DataType[]): Promise<SyncOutcome> {
@@ -435,6 +477,15 @@ export class SyncEngine {
           const key = `${dataType}:${peer.device_id}`;
           if (already.has(key)) continue;
           if (resolved[key] === peer.checksum) continue;
+          // Don't queue a conflict for a peer we couldn't consume even if the user picked
+          // it. `manual` never reaches applyRemote, so this was the one path where an
+          // encryption disagreement went completely unreported.
+          const barrier = this.encryptionBarrier(peer);
+          if (barrier === "silent") continue;
+          if (barrier) {
+            this.encryptionWarnings.set(peer.device_id, barrier);
+            continue;
+          }
           const { conflict } = this.resolver.resolve(localPacket, peer);
           if (conflict) {
             fresh.push(conflict);
@@ -480,8 +531,6 @@ export class SyncEngine {
         // republished it to the whole mesh. Newest-first establishes the most recent
         // deletions and moves BEFORE older trees are folded in, which also saves the
         // redundant intermediate move an older peer's stale placement used to cause.
-        const localE2ee =
-          this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
         for (const peer of peers) {
           // We're encrypted, this peer's file is plaintext. It's either a stale/orphan
           // file (a device that was removed → its file lingers forever) or a device
@@ -491,7 +540,7 @@ export class SyncEngine {
           // it SILENTLY: this is what stops an abandoned plaintext file from warning
           // forever. (The reverse — we're plaintext, a peer is encrypted — is surfaced
           // below as a non-fatal "enable E2EE here" nudge, on the device that can fix it.)
-          if (localE2ee && !peer.encrypted) {
+          if (this.encryptionBarrier(peer) === "silent") {
             logger.debug("SyncEngine", `Skipping plaintext peer ${peer.device_id} (E2EE on here) — stale/unencrypted, not merged`);
             continue;
           }
@@ -687,9 +736,7 @@ export class SyncEngine {
     // unchanged encrypted sync doesn't pay the expensive PBKDF2 for encrypt+verifier
     // on every idle interval — only when there's actually something to upload.
     // `uploadTag` folds in the encryption form + destination (see above).
-    const useE2ee =
-      this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
-    const tag = this.uploadTag(await sha256(JSON.stringify(payload)), useE2ee);
+    const tag = this.uploadTag(await sha256(JSON.stringify(payload)), this.e2eeActive);
     if ((await getLastUploadChecksum(dataType)) === tag) {
       logger.info("SyncEngine", `${dataType}: unchanged since last upload, skipping`);
       return;
@@ -702,8 +749,7 @@ export class SyncEngine {
 
   private async buildPacket(dataType: DataType, payload: unknown): Promise<SyncPacket> {
     const payloadStr = JSON.stringify(payload);
-    const useE2ee =
-      this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
+    const useE2ee = this.e2eeActive;
     return {
       version: "1.0",
       device_id: this.settings.device_id,
@@ -738,8 +784,7 @@ export class SyncEngine {
     packet: SyncPacket,
     isLocalEmpty = false
   ): Promise<void> {
-    const localE2ee =
-      this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
+    const localE2ee = this.e2eeActive;
     // Refuse to import a plaintext peer while E2EE is active here. The auto-merge
     // path already skips plaintext peers before calling applyRemote (they're stale/
     // orphan files), so this is the guard for the MANUAL resolve-remote path —
@@ -914,7 +959,7 @@ export class SyncEngine {
           await backend.upload(packet); // forced: conflict resolution overwrites remote
           // Store the same tag uploadIfChanged writes (encryption form + destination),
           // so the next periodic sync doesn't see a mismatch and re-upload needlessly.
-          const useE2ee = this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
+          const useE2ee = this.e2eeActive;
           await setLastUploadChecksum(conflict.data_type, this.uploadTag(packet.checksum, useE2ee));
         } finally {
           await backend.disconnect();

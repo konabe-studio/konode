@@ -1080,3 +1080,63 @@ describe("SyncEngine.finishSync — tear-down must not strand its own guards", (
     expect(engine.isSyncing).toBe(false);
   });
 });
+
+describe("SyncEngine.syncType — manual strategy reports encryption disagreements too", () => {
+  // The manual branch never calls applyRemote, and BOTH detectable encryption
+  // disagreements were only checked in there. So a device on `manual` was never told it
+  // had dropped out of the encrypted group, and it queued conflicts for peers whose data
+  // it could not read — offering the user a choice it couldn't honour.
+  const manualPlain = (): SyncEngine =>
+    new SyncEngine({ ...DEFAULT_SETTINGS, device_id: "me", conflict_strategy: "manual" }, () => {});
+  const manualEnc = (pass: string): SyncEngine =>
+    new SyncEngine(
+      { ...DEFAULT_SETTINGS, device_id: "me", conflict_strategy: "manual",
+        encryption_enabled: true, encryption_passphrase: pass },
+      () => {}
+    );
+
+  it("nudges when a peer is encrypted and E2EE is off here — instead of saying nothing", async () => {
+    const engine = manualPlain();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    const encPeer = await priv(manualEnc("group-pass")).buildPacket("bookmarks", payload([link("B", "https://b.com")]));
+    encPeer.device_id = "peer1"; // buildPacket stamps OUR id; the fake would filter it as own
+    backend.files.set("bookmarks_peer1", encPeer);
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    expect(priv(engine).encryptionWarnings.has("peer1")).toBe(true);
+    // No conflict: the user could not have applied that version anyway.
+    expect((await getState()).pending_conflicts).toHaveLength(0);
+    // ...and this device still publishes its own file (the manual-export fix).
+    expect(backend.uploads).toHaveLength(1);
+  });
+
+  it("SILENTLY skips a plaintext peer while E2EE is on here (a stale file must not nag)", async () => {
+    const engine = manualEnc("my-pass");
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    backend.files.set("bookmarks_peer1", await peerPacket(makeEngine(), "peer1", payload([link("B", "https://b.com")])));
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    expect(priv(engine).encryptionWarnings.size).toBe(0); // no warning, ever
+    expect((await getState()).pending_conflicts).toHaveLength(0); // no useless conflict
+    expect(backend.uploads[backend.uploads.length - 1].encrypted).toBe(true);
+  });
+
+  it("still queues a normal conflict when the encryption forms agree", async () => {
+    // The narrowing must not swallow the case manual exists for.
+    const engine = manualEnc("shared");
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    const peer = await priv(manualEnc("shared")).buildPacket("bookmarks", payload([link("B", "https://b.com")]));
+    peer.device_id = "peer1";
+    backend.files.set("bookmarks_peer1", peer);
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    expect((await getState()).pending_conflicts.map((c) => c.device_id)).toEqual(["peer1"]);
+    expect(priv(engine).encryptionWarnings.size).toBe(0);
+  });
+});
