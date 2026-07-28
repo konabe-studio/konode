@@ -58,14 +58,18 @@ export class WebDAVBackend implements IBackend {
 
   async upload(packet: SyncPacket): Promise<void> {
     await withRetry(async () => {
-      const filename = `${this.baseUrl}/konode_${packet.data_type}_${packet.device_id}.json`;
-      const res = await fetch(filename, {
+      const name = `konode_${packet.data_type}_${packet.device_id}.json`;
+      const res = await fetch(`${this.baseUrl}/${name}`, {
         method: "PUT",
         headers: this.headers(),
         body: JSON.stringify(packet, null, 2),
       });
       if (!res.ok) throw new HttpError(res.status, `WebDAV PUT failed: ${res.status}`);
-      logger.info("WebDAV.upload", `${packet.data_type} → ${filename}`);
+      // Log the FILE NAME, never the URL. `baseUrl` carries the account username on
+      // Nextcloud/ownCloud (…/remote.php/dav/files/<user>/…) and the audit log is
+      // persisted to disk — connect() already logs the hostname only for exactly this
+      // reason (PR-L2). The name is what's actually useful when troubleshooting.
+      logger.info("WebDAV.upload", `${packet.data_type} → ${name}`);
     });
   }
 
@@ -117,7 +121,9 @@ export class WebDAVBackend implements IBackend {
         } catch {
           // A corrupt/partial file (e.g. trailing junk from a non-truncating write)
           // must not abort the whole sync — skip it; the owner rewrites it next sync.
-          logger.warn("WebDAV.downloadAll", `Skipping unreadable sync file: ${href}`);
+          // Name only: an href is a full DAV path, which on Nextcloud/ownCloud embeds
+          // the account username (see the note in upload()).
+          logger.warn("WebDAV.downloadAll", `Skipping unreadable sync file: ${basename(href)}`);
         }
       }
       return packets;
