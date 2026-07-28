@@ -300,6 +300,15 @@ export class SyncEngine {
           });
           if (this.settings.notifications_enabled) notifyConflict(dataType);
         }
+        // Publish our own file anyway. `manual` gates what we IMPORT — it was never
+        // meant to stop us EXPORTING: every device writes its own
+        // konode_<type>_<device_id>.json, so an upload here cannot overwrite a peer's
+        // data or pre-empt the user's choice. Without it, a device on `manual` with any
+        // peer present never uploaded at all (the only other upload paths are "no peers
+        // yet" and a keep-local resolution), so its changes reached no other device —
+        // silently, while the sync reported success. Same principle as the E2EE-mismatch
+        // path above: skip the merge, still publish, let the group converge.
+        await this.uploadIfChanged(backend, dataType, localPayload);
       } else {
         // Auto-resolve across ALL peers. applyRemote is non-destructive for every
         // data type (bookmarks/history merge additively + tombstones; sessions/

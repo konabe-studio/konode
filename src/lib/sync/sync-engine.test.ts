@@ -498,6 +498,44 @@ describe("SyncEngine.syncType — manual conflicts (CO-7 / CO-8)", () => {
     expect((await getState()).pending_conflicts).toHaveLength(1);
   });
 
+  it("still publishes its OWN file while a conflict is pending (manual gates import, not export)", async () => {
+    const engine = manualEngine();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    backend.files.set("bookmarks_peer1", await peerPacket(engine, "peer1", payload([link("B", "https://b.com")])));
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    // The peer is NOT merged — that's what `manual` is for...
+    expect(await localUrls()).toEqual(["https://a.com"]);
+    // ...and the conflict is queued for the user...
+    expect((await getState()).pending_conflicts).toHaveLength(1);
+    // ...but our own data still reaches the backend. Each device owns its own file, so
+    // this can't overwrite the peer — and without it our changes reach nobody, ever.
+    expect(backend.uploads).toHaveLength(1);
+    const sent = JSON.parse(backend.uploads[0].payload) as BookmarkPayload;
+    expect(flatUrls(sent.tree)).toEqual(["https://a.com"]);
+  });
+
+  it("keeps publishing later local changes once the conflict is resolved/deduped", async () => {
+    const engine = manualEngine();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    backend.files.set("bookmarks_peer1", await peerPacket(engine, "peer1", payload([link("B", "https://b.com")])));
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+    await engine.resolveConflict((await getState()).pending_conflicts[0].id, "local");
+
+    // No fresh conflict will be queued now (the peer is deduped by checksum), which is
+    // exactly the state in which the device used to go permanently silent.
+    await chrome.bookmarks.create({ parentId: "1", title: "C", url: "https://c.com" });
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    expect((await getState()).pending_conflicts).toHaveLength(0);
+    const last = JSON.parse(backend.uploads[backend.uploads.length - 1].payload) as BookmarkPayload;
+    expect(flatUrls(last.tree)).toEqual(["https://a.com", "https://c.com"]);
+  });
+
   it("refuses a manual resolve-remote of a PLAINTEXT peer while E2EE is on (no silent downgrade)", async () => {
     const engine = new SyncEngine(
       { ...DEFAULT_SETTINGS, device_id: "me", conflict_strategy: "manual",
