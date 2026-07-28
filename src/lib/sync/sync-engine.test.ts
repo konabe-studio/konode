@@ -72,7 +72,10 @@ function makeEngine(): SyncEngine {
   return new SyncEngine(settings, () => {});
 }
 
-function payload(barChildren: SyncBookmark[]): BookmarkPayload {
+function payload(
+  barChildren: SyncBookmark[],
+  tombstones: BookmarkPayload["tombstones"] = []
+): BookmarkPayload {
   return {
     tree: [
       {
@@ -87,7 +90,7 @@ function payload(barChildren: SyncBookmark[]): BookmarkPayload {
         ],
       },
     ],
-    tombstones: [],
+    tombstones,
   };
 }
 
@@ -371,6 +374,60 @@ describe("SyncEngine.syncType — E2EE", () => {
     await priv(encEngine("me", "pw")).syncType("bookmarks", backend, DEFAULT_STATE);
     expect(backend.uploads.length).toBe(2);
     expect(backend.uploads[backend.uploads.length - 1].encrypted).toBe(true);
+  });
+});
+
+describe("SyncEngine.syncType — a stale peer must not resurrect a deleted bookmark", () => {
+  /** Stamp an explicit packet timestamp — that's what orders the fold. The checksum is
+   *  over the payload only, so it stays valid. */
+  async function agedPeer(
+    engine: SyncEngine, deviceId: string, p: BookmarkPayload, ageMs: number
+  ): Promise<SyncPacket> {
+    const packet = await peerPacket(engine, deviceId, p);
+    packet.timestamp = new Date(Date.now() - ageMs).toISOString();
+    return packet;
+  }
+
+  it("does not re-add a bookmark a NEWER peer tombstoned, even from an OLDER peer's tree", async () => {
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    // This device never held X — that's what makes it vulnerable: there is no local
+    // copy for the tombstone to match against in Step A.
+    const deletedAt = Date.now() - 1_000;
+
+    // Stale peer (older file) still has X in its tree, and no tombstone.
+    backend.files.set("bookmarks_stale",
+      await agedPeer(engine, "stale", payload([link("X", "https://x.com")]), 60_000));
+    // Fresh peer (newer file) dropped X and carries the tombstone.
+    backend.files.set("bookmarks_fresh",
+      await agedPeer(engine, "fresh", payload([], [{ url: "https://x.com", deletedAt }]), 0));
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    // X must NOT come back. Folded oldest-first it was created (with a fresh
+    // dateAdded, which the API won't let us set to the peer's original), and that
+    // fresh stamp then beat the older tombstone — so it survived AND got republished.
+    expect(await localUrls()).toEqual([]);
+
+    // And we must not advertise X to the rest of the mesh either.
+    const sent = JSON.parse(backend.uploads[backend.uploads.length - 1].payload) as BookmarkPayload;
+    expect(flatUrls(sent.tree)).toEqual([]);
+    expect(sent.tombstones.map((t) => t.url)).toEqual(["https://x.com"]);
+  });
+
+  it("still adds a bookmark from an older peer when nobody deleted it", async () => {
+    // The ordering change must not make the fold skip legitimate additions.
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+
+    backend.files.set("bookmarks_stale",
+      await agedPeer(engine, "stale", payload([link("A", "https://a.com")]), 60_000));
+    backend.files.set("bookmarks_fresh",
+      await agedPeer(engine, "fresh", payload([link("B", "https://b.com")]), 0));
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    expect(await localUrls()).toEqual(["https://a.com", "https://b.com"]);
   });
 });
 

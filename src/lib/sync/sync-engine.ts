@@ -286,8 +286,8 @@ export class SyncEngine {
       // 1. PULL every peer's file (excluding our own), so we converge against
       //    ALL devices in one cycle — not just the most recent one. Order
       //    newest-first by packet timestamp: backends list files in arbitrary
-      //    order, but the manual-conflict path and the oldest→newest fold below
-      //    both assume peers[0] is the most recent.
+      //    order, but both the manual-conflict path and the newest→oldest fold
+      //    below rely on peers[0] being the most recent.
       const peers = orderPeersByTime(
         await backend.downloadAll(dataType, this.settings.device_id)
       );
@@ -353,13 +353,26 @@ export class SyncEngine {
         // Auto-resolve across ALL peers. applyRemote is non-destructive for every
         // data type (bookmarks/history merge additively + tombstones; sessions/
         // extensions are stored for display/restore), so fold each peer in — this
-        // is what makes 3+ devices converge in a single cycle. Apply oldest→newest
-        // so any snapshot-style store ends on the most recent peer. Per-strategy
-        // deletion handling (lww/prefer-local/prefer-remote) lives inside the
-        // bookmark merge.
+        // is what makes 3+ devices converge in a single cycle. Per-strategy deletion
+        // handling (lww/prefer-local/prefer-remote) lives inside the bookmark merge.
+        //
+        // NEWEST→OLDEST (peers is already sorted newest-first). This used to fold
+        // oldest→newest "so any snapshot-style store ends on the most recent peer",
+        // but that reason is gone: sessions/extensions are device-keyed upserts now
+        // (one entry per peer, order-irrelevant) and history is additive + deduped. So
+        // ordering only affects bookmarks — where oldest-first actively RESURRECTED
+        // deleted bookmarks: a stale peer still holding X was folded in before the
+        // newest peer's tombstone for X was known, and since importBookmarks persists
+        // each peer's tombstones before merging its tree, the fresher deletion arrived
+        // too late to suppress the add. Worse, the merge's own create() stamps a fresh
+        // `dateAdded` (the API can't set it), which then reads as "the user just
+        // re-added this" and beats the older tombstone — so X came back and this device
+        // republished it to the whole mesh. Newest-first establishes the most recent
+        // deletions and moves BEFORE older trees are folded in, which also saves the
+        // redundant intermediate move an older peer's stale placement used to cause.
         const localE2ee =
           this.settings.encryption_enabled && !!this.settings.encryption_passphrase;
-        for (const peer of [...peers].reverse()) {
+        for (const peer of peers) {
           // We're encrypted, this peer's file is plaintext. It's either a stale/orphan
           // file (a device that was removed → its file lingers forever) or a device
           // that simply hasn't enabled E2EE yet. Either way it's not something we merge
