@@ -13,6 +13,33 @@ const UPLOAD_API = "https://www.googleapis.com/upload/drive/v3";
 const FOLDER_MIME = "application/vnd.google-apps.folder";
 const KONODE_FOLDER = "Konode";
 
+/** The subset of a Drive file we need in order to choose between duplicates. */
+export interface DriveFileRef {
+  id: string;
+  createdTime?: string;
+}
+
+/**
+ * Pick ONE match deterministically when Drive returns several.
+ *
+ * Drive has no atomic create-if-absent, so two devices connecting for the first time at
+ * the same moment both see nothing and both create a "Konode" folder; a retried upload
+ * whose create response was lost can likewise leave two files with the same name (Drive
+ * permits duplicate names within a folder).
+ *
+ * Taking files[0] meant devices could settle on DIFFERENT duplicates and then sync into
+ * separate folders forever, each convinced it was the only device. Duplicates can't always
+ * be prevented, but agreeing on which one wins can — and that turns a permanent split into
+ * something the group converges out of. Oldest first, id as the tie-break: stable across
+ * devices and across calls. createdTime is RFC 3339, so a lexicographic compare is
+ * chronological; without it the id alone is still deterministic.
+ */
+export function pickCanonical<T extends DriveFileRef>(files: T[]): T | undefined {
+  return [...files].sort(
+    (a, b) => (a.createdTime ?? "").localeCompare(b.createdTime ?? "") || a.id.localeCompare(b.id)
+  )[0];
+}
+
 export interface GDriveUserInfo {
   email: string;
   displayName: string;
@@ -59,15 +86,29 @@ export class GDriveBackend implements IBackend {
 
   async disconnect(): Promise<void> { this.folderId = null; }
 
+  /** Every non-trashed "Konode" folder this app can see. */
+  private async findFolders(h: HeadersInit): Promise<DriveFileRef[]> {
+    const q = encodeURIComponent(`name='${KONODE_FOLDER}' and mimeType='${FOLDER_MIME}' and trashed=false`);
+    const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,createdTime)`, { headers: h });
+    if (!res.ok) throw new HttpError(res.status, `Drive folder lookup failed: ${res.status}`);
+    return ((await res.json()).files ?? []) as DriveFileRef[];
+  }
+
   private async ensureFolder(): Promise<string> {
     const h = await this.authHeaders();
-    const folderId = this.config.gdrive?.folderId;
-    if (folderId) return folderId;
-    const q = encodeURIComponent(`name='${KONODE_FOLDER}' and mimeType='${FOLDER_MIME}' and trashed=false`);
-    const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name)`, { headers: h });
-    if (!res.ok) throw new HttpError(res.status, `Drive folder lookup failed: ${res.status}`);
-    const data = await res.json();
-    if (data.files?.length > 0) return data.files[0].id as string;
+    const configured = this.config.gdrive?.folderId;
+    if (configured) return configured;
+
+    const found = await this.findFolders(h);
+    if (found.length > 1) {
+      logger.warn(
+        "GDrive.ensureFolder",
+        `${found.length} Konode folders exist in this Drive; using the oldest. You can delete the extras.`
+      );
+    }
+    const existing = pickCanonical(found);
+    if (existing) return existing.id;
+
     const create = await fetch(`${DRIVE_API}/files`, {
       method: "POST", headers: h,
       body: JSON.stringify({ name: KONODE_FOLDER, mimeType: FOLDER_MIME }),
@@ -75,6 +116,20 @@ export class GDriveBackend implements IBackend {
     if (!create.ok) throw new HttpError(create.status, `Drive folder create failed: ${create.status}`);
     const created = await create.json();
     if (!created.id) throw new Error("Drive folder create returned no id");
+
+    // Re-resolve. Another device setting up at the same moment saw an empty Drive too and
+    // created its own folder; if we each kept the one we made, the group would be split
+    // from the very first sync. Applying the same rule on both sides lands them together.
+    // The losing folder is deliberately left alone: it is the user's Drive, and quietly
+    // trashing something on a heuristic is not this code's call. The warning says so.
+    const winner = pickCanonical(await this.findFolders(h));
+    if (winner && winner.id !== created.id) {
+      logger.warn(
+        "GDrive.ensureFolder",
+        "Another device created the Konode folder at the same time; using the older one. The empty duplicate can be deleted in Drive."
+      );
+      return winner.id;
+    }
     return created.id as string;
   }
 
@@ -85,12 +140,11 @@ export class GDriveBackend implements IBackend {
       const token = await this.getToken(false);
       const filename = `konode_${packet.data_type}_${packet.device_id}.json`;
       const content = JSON.stringify(packet, null, 2);
-      const q = encodeURIComponent(`name='${filename}' and '${folderId}' in parents and trashed=false`);
-      const lookup = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id)`, { headers: h });
-      if (!lookup.ok) throw new HttpError(lookup.status, `Drive lookup failed: ${lookup.status}`);
-      const existing = await lookup.json();
-      if (existing.files?.length > 0) {
-        const res = await fetch(`${UPLOAD_API}/files/${existing.files[0].id}?uploadType=media`, {
+      // Was an inline copy of findFileId; routed through it so the duplicate handling
+      // lives in exactly one place.
+      const existingId = await this.findFileId(filename, folderId, h);
+      if (existingId) {
+        const res = await fetch(`${UPLOAD_API}/files/${existingId}?uploadType=media`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           body: content,
@@ -147,10 +201,16 @@ export class GDriveBackend implements IBackend {
 
   private async findFileId(name: string, folderId: string, h: HeadersInit): Promise<string | null> {
     const q = encodeURIComponent(`name='${name}' and '${folderId}' in parents and trashed=false`);
-    const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id)`, { headers: h });
+    const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,createdTime)`, { headers: h });
     if (!res.ok) throw new HttpError(res.status, `Drive lookup failed: ${res.status}`);
-    const data = await res.json();
-    return data.files?.[0]?.id ?? null;
+    const files = ((await res.json()).files ?? []) as DriveFileRef[];
+    if (files.length > 1) {
+      // A retried upload whose create response was lost can leave two files with the same
+      // name. Always updating the same one keeps a single file authoritative, instead of
+      // writing alternately into both and leaving peers to read whichever they pick.
+      logger.warn("GDrive", `${files.length} copies of ${name} in the Konode folder; updating the oldest.`);
+    }
+    return pickCanonical(files)?.id ?? null;
   }
 
   async putFile(name: string, content: string): Promise<void> {
