@@ -22,7 +22,7 @@ function timestamp(): string {
  *   warn   console + audit — always; this is what the user is sent to look for
  *   error  console + audit — always
  *   info   console only    — routine operational detail
- *   debug  console only, and gated behind Debug mode
+ *   debug  console + audit, but ONLY while Debug mode is on
  *
  * `info` used to be audited too, and that flooded the 200-entry log: an idle sync of
  * four data types writes ~11 lines a minute ("Syncing: X", "unchanged since last
@@ -58,6 +58,16 @@ export const logger = {
   },
   debug(action: string, data?: unknown) {
     if (!debugEnabled) return; // gated by settings.debug_mode
-    console.debug(`${PREFIX} [DEBUG] ${action}`, data ?? "");
+    const detail = data === undefined ? undefined : typeof data === "string" ? data : JSON.stringify(data);
+    console.debug(`${PREFIX} [DEBUG] ${action}`, detail ?? "");
+    // Persisted WHILE Debug mode is on, and only then.
+    //
+    // The standard troubleshooting request is "turn on Debug mode and send us Settings →
+    // Activity" — and that produced nothing, because debug only ever reached the service
+    // worker's console, which a user is not going to open. It hid exactly the lines someone
+    // chasing a missing device needs, such as "Skipping plaintext peer". Yes, this crowds
+    // the 200-entry log; that is the trade Debug mode is asking for, and it stops the
+    // moment the toggle goes off.
+    appendAudit({ timestamp: timestamp(), action, detail, ok: true });
   },
 };

@@ -1771,7 +1771,7 @@ export default function OptionsApp() {
                 <div className="settings-card-head">Developer</div>
                 <div className="settings-row">
                   <div className="settings-row-left">
-                    <div><div className="row-label">Debug mode</div><div className="row-desc">Verbose logging to the console.</div></div>
+                    <div><div className="row-label">Debug mode</div><div className="row-desc">Verbose logging, to the browser console and to Activity so you can share it. Turn it off when you're done.</div></div>
                   </div>
                   <label className="toggle-wrap">
                     <input type="checkbox" className="toggle-input" checked={settings.debug_mode}

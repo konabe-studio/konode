@@ -74,6 +74,42 @@ describe("logger — which levels reach the audit log", () => {
     expect(spy.mock.calls[0].join(" ")).toContain("Syncing: bookmarks");
   });
 
+  it("puts debug lines into the Activity log WHILE Debug mode is on", async () => {
+    // Support asks users to enable Debug mode and send Settings → Activity. That produced
+    // nothing: debug only reached the service-worker console, which nobody is going to
+    // open — hiding exactly the lines that explain a missing device.
+    vi.spyOn(console, "debug").mockImplementation(() => {});
+
+    logger.debug("SyncEngine", "Skipping plaintext peer abc123 (E2EE on here)");
+    expect(await auditLog()).toEqual([]); // off by default
+
+    setLoggerDebug(true);
+    logger.debug("SyncEngine", "Skipping plaintext peer abc123 (E2EE on here)");
+
+    const log = await auditLog();
+    expect(log).toHaveLength(1);
+    expect(JSON.stringify(log)).toContain("Skipping plaintext peer");
+  });
+
+  it("stops persisting the moment Debug mode goes off", async () => {
+    vi.spyOn(console, "debug").mockImplementation(() => {});
+    setLoggerDebug(true);
+    logger.debug("SyncEngine", "one");
+    setLoggerDebug(false);
+    logger.debug("SyncEngine", "two");
+
+    expect(await auditLog()).toHaveLength(1);
+  });
+
+  it("serialises non-string debug data instead of storing [object Object]", async () => {
+    vi.spyOn(console, "debug").mockImplementation(() => {});
+    setLoggerDebug(true);
+
+    logger.debug("SyncEngine", { peers: 2, type: "bookmarks" });
+
+    expect(JSON.stringify(await auditLog())).toContain("peers");
+  });
+
   it("keeps debug gated behind Debug mode", async () => {
     const spy = vi.spyOn(console, "debug").mockImplementation(() => {});
 
@@ -83,7 +119,5 @@ describe("logger — which levels reach the audit log", () => {
     setLoggerDebug(true);
     logger.debug("SyncEngine", "verbose");
     expect(spy).toHaveBeenCalled();
-
-    expect(await auditLog()).toEqual([]); // never persisted either way
   });
 });
