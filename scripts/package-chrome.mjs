@@ -18,7 +18,7 @@
 // Usage: node scripts/package-chrome.mjs
 //   (or `npm run package:chrome`, which builds first)
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, cpSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, cpSync, readdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve, join } from "node:path";
@@ -42,6 +42,14 @@ const outPath = resolve(artifactsDir, `konode-chrome-${version}.zip`);
 mkdirSync(artifactsDir, { recursive: true });
 rmSync(outPath, { force: true }); // zip appends otherwise
 
+// On Windows, resolve bsdtar by absolute path: a `tar` on PATH there is usually
+// GNU tar from Git for Windows, which can't write zip at all.
+function bsdtar() {
+  return process.platform === "win32"
+    ? join(process.env.SystemRoot || "C:\\Windows", "System32", "tar.exe")
+    : "tar";
+}
+
 // Stage a copy so we can strip `key` without mutating dist/ (the dev-load dir).
 const staging = mkdtempSync(join(tmpdir(), "konode-chrome-"));
 try {
@@ -57,11 +65,24 @@ try {
 
   // Zip the CONTENTS of the staging dir (cwd: staging) so manifest.json lands at
   // the archive root. -r recurse, -X strip extra file attributes, exclude junk.
-  execFileSync(
-    "zip",
-    ["-r", "-X", outPath, ".", "-x", "*.DS_Store", "-x", "__MACOSX/*"],
-    { cwd: staging, stdio: "inherit" }
-  );
+  try {
+    execFileSync(
+      "zip",
+      ["-r", "-X", outPath, ".", "-x", "*.DS_Store", "-x", "__MACOSX/*"],
+      { cwd: staging, stdio: "inherit" }
+    );
+  } catch (err) {
+    if (err.code !== "ENOENT") throw err;
+    // No Info-ZIP `zip` (the normal case on Windows). bsdtar/libarchive ships with
+    // Windows 10+ and writes zip via `-a`; pass the top-level entries rather than
+    // "." so nothing gets a "./" prefix in the archive.
+    console.log("`zip` not found, falling back to bsdtar.");
+    execFileSync(
+      bsdtar(),
+      ["-a", "-c", "-f", outPath, "--exclude", ".DS_Store", "--exclude", "__MACOSX", ...readdirSync(staging)],
+      { cwd: staging, stdio: "inherit" }
+    );
+  }
 } finally {
   rmSync(staging, { recursive: true, force: true });
 }
