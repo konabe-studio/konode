@@ -7,6 +7,7 @@ import {
   getStoredGDriveUser,
   clearGDriveSession,
 } from "./gdrive-oauth";
+import { clearUploadChecksums, getLastDriveFolder, setLastDriveFolder } from "@/lib/utils/storage";
 
 const DRIVE_API = "https://www.googleapis.com/drive/v3";
 const UPLOAD_API = "https://www.googleapis.com/upload/drive/v3";
@@ -95,6 +96,43 @@ export class GDriveBackend implements IBackend {
   }
 
   private async ensureFolder(): Promise<string> {
+    const id = await this.resolveFolder();
+    await this.noteResolvedFolder(id);
+    return id;
+  }
+
+  /**
+   * Remember which folder we resolved, and if it MOVED, forget what we think we uploaded.
+   *
+   * `destinationTag()` in the sync engine is built from the CONFIG, and Drive's folder
+   * isn't in the config — it's found by lookup. So the tag is blind to a change here, and
+   * a device that started writing into a different folder kept its upload checksums and
+   * left the new folder EMPTY while reporting a clean sync. That is precisely the failure
+   * the destination tag exists to prevent, in the one case it cannot see.
+   *
+   * Reachable, and the duplicate-folder warning actively invites it: told that "the empty
+   * duplicate can be deleted in Drive", a user who trashes the wrong one sends this device
+   * to a brand-new folder it would then never populate.
+   *
+   * Only flushes when there WAS a previous folder and it differs — a first run has no
+   * checksums to invalidate. The key is the engine's, which is a small reach from a
+   * backend; the alternative was an IBackend method threaded through the tag, for one
+   * backend that needs it.
+   */
+  private async noteResolvedFolder(id: string): Promise<void> {
+    const previous = await getLastDriveFolder();
+    if (previous === id) return;
+    await setLastDriveFolder(id);
+    if (previous) {
+      logger.warn(
+        "GDrive",
+        "The Konode folder changed — re-uploading this device's files into the new one."
+      );
+      await clearUploadChecksums();
+    }
+  }
+
+  private async resolveFolder(): Promise<string> {
     const h = await this.authHeaders();
     const configured = this.config.gdrive?.folderId;
     if (configured) return configured;

@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { GDriveBackend, pickCanonical } from "./gdrive-backend";
-import { KEYS } from "@/lib/utils/storage";
+import { KEYS, setLastUploadChecksum } from "@/lib/utils/storage";
 import type { BackendConfig } from "@/lib/types";
 
 // Drive has no atomic create-if-absent. Two devices setting up at the same moment both
@@ -130,5 +130,56 @@ describe("GDriveBackend.connect — duplicate Konode folders", () => {
 
     expect((be as unknown as { folderId: string | null }).folderId).toBe("pinned");
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("GDriveBackend — a folder move must invalidate the upload checksums", () => {
+  // destinationTag() is built from the CONFIG, and Drive's folder isn't in the config —
+  // it's resolved by lookup. So the tag can't see a change here, and a device that started
+  // writing into a different folder kept its checksums and left the new folder EMPTY while
+  // reporting a clean sync. Reachable: the duplicate-folder warning tells the user the
+  // extra folder can be deleted, and trashing the wrong one sends the device somewhere new.
+  const checksums = async (): Promise<Record<string, string> | undefined> =>
+    ((await chrome.storage.local.get(KEYS.UPLOAD_CHECKSUMS)) as Record<string, Record<string, string>>)[
+      KEYS.UPLOAD_CHECKSUMS
+    ];
+
+  const connectTo = async (folderId: string): Promise<void> => {
+    vi.stubGlobal("fetch", () =>
+      Promise.resolve(json({ files: [{ id: folderId, name: "Konode", createdTime: "2026-07-01T00:00:00.000Z" }] }))
+    );
+    await new GDriveBackend(config()).connect();
+  };
+
+  it("clears them when the resolved folder changes", async () => {
+    await signIn();
+    await setLastUploadChecksum("bookmarks", "gdrive:default|plain:abc");
+
+    await connectTo("folder-1");
+    expect(await checksums()).toBeDefined(); // first run: nothing to invalidate
+
+    await connectTo("folder-2"); // e.g. the old one was trashed
+    expect(await checksums()).toBeUndefined(); // → every type re-uploads into the new folder
+  });
+
+  it("leaves them alone when the folder is unchanged", async () => {
+    await signIn();
+    await connectTo("folder-1");
+    await setLastUploadChecksum("bookmarks", "gdrive:default|plain:abc");
+
+    await connectTo("folder-1");
+    await connectTo("folder-1");
+
+    expect(await checksums()).toEqual({ bookmarks: "gdrive:default|plain:abc" });
+  });
+
+  it("does not clear on the very first resolve — there is nothing to invalidate", async () => {
+    await signIn();
+    await setLastUploadChecksum("bookmarks", "carried-over-from-an-older-build");
+
+    await connectTo("folder-1");
+
+    // The upgrade path relies on the TAG FORMAT change to force that re-upload, not on this.
+    expect(await checksums()).toEqual({ bookmarks: "carried-over-from-an-older-build" });
   });
 });

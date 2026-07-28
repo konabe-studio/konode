@@ -102,6 +102,7 @@ export const KEYS = {
   RECOVERY_SNAPSHOT: "konode_recovery_snap",
   SYNC_LOCK: "konode_sync_lock",
   GDRIVE_SESSION: "konode_gdrive_session",
+  GDRIVE_FOLDER: "konode_gdrive_folder",
 } as const;
 
 // ─── Generic Helpers ───────────────────────────────────────────────────────
@@ -290,6 +291,20 @@ export async function addImportedHistoryUrls(urls: string[]): Promise<void> {
   // imported URL be re-exported once — it won't perpetually resurrect.
   const capped = merged.length > HIST_IMPORTED_CAP ? merged.slice(-HIST_IMPORTED_CAP) : merged;
   await set(KEYS.HIST_IMPORTED, capped);
+}
+
+// ─── Last resolved Drive folder ──────────────────────────────────────────────
+// Drive FINDS its folder by lookup instead of taking it from config, so the engine's
+// destination tag — which is built from the config — cannot see when that folder changes.
+// Remembering the last one lets the Drive backend flush the upload checksums exactly when
+// the destination really moved. See GDriveBackend.noteResolvedFolder.
+
+export async function getLastDriveFolder(): Promise<string | null> {
+  return get<string | null>(KEYS.GDRIVE_FOLDER, null);
+}
+
+export async function setLastDriveFolder(id: string): Promise<void> {
+  await set(KEYS.GDRIVE_FOLDER, id);
 }
 
 // ─── Recovery-snapshot latch ─────────────────────────────────────────────────
