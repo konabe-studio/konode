@@ -93,8 +93,28 @@ describe("matchLocalRoot", () => {
   });
 
   it("degrades a Firefox-only menu root onto Chrome's Other bookmarks", () => {
-    // No "menu" kind on Chrome, titles differ → position (index 1) then default.
+    // No "menu" kind on Chrome and the titles differ, so this is a KNOWN absence →
+    // straight to the default writable root, never a positional guess.
     expect(matchLocalRoot(FIREFOX_ROOTS[1], CHROME_ROOTS, 1)).toBe("2");
+  });
+
+  it("puts the menu root in Other bookmarks from ANY index (order must not matter)", () => {
+    // This used to depend entirely on where the engine happens to list the menu root:
+    // `localRoots[index]` fired before the default, so at index 0 the whole Bookmarks
+    // Menu landed in Chrome's bookmarks BAR. Firefox's own enumeration puts
+    // `menu________` first, and the old test only passed because this fixture lists the
+    // toolbar first. Pin every index so the outcome can't hinge on that again.
+    const menu = FIREFOX_ROOTS[1];
+    for (const index of [0, 1, 2, 3, 9]) {
+      expect(matchLocalRoot(menu, CHROME_ROOTS, index)).toBe("2");
+    }
+  });
+
+  it("still positions an UNRECOGNIZED root by index — that guess is all we have", () => {
+    // The narrowing must not swallow the genuine unknown-root case (a peer on an older
+    // build with a nonstandard root id and no title match).
+    const local = [{ id: "x" }, { id: "y" }, { id: "z" }];
+    expect(matchLocalRoot({ id: "nonstandard-root" }, local, 2)).toBe("z");
   });
 
   it("falls back to title when kind/id don't resolve", () => {

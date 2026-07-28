@@ -72,9 +72,17 @@ export function defaultOtherRootId(roots: RootLike[]): string | undefined {
  *   2. by exact id — same-browser fast path when kinds don't resolve;
  *   3. by (localized) title;
  *   → the above are `confident: true`.
- *   4. by position, then the default writable root — `confident: false` (a guess).
- * A Firefox-only "menu" root syncing to Chrome has no local kind match and lands
- * in "Other bookmarks" via the tail fallbacks — the sensible degrade.
+ *   4a. kind RECOGNIZED but absent locally → the default writable root ("Other
+ *       bookmarks"). A known absence, not an unknown root: Firefox's "menu" kind simply
+ *       has no Chromium counterpart, so there is nothing for a positional guess to find.
+ *       Guessing by position used to fire FIRST here and drop the whole Bookmarks Menu
+ *       into whichever local root happened to sit at that index — Chrome's bookmarks
+ *       BAR when Firefox lists `menu________` first — contradicting this very comment.
+ *       The outcome must not depend on the order an engine happens to enumerate roots.
+ *   4b. kind UNRECOGNIZED (a nonstandard or older-build root id with no title match) →
+ *       by position, then the default writable root. Here position really is the best
+ *       remaining guess.
+ *   → both are `confident: false`.
  *
  * `confident` matters when RELOCATING an existing bookmark (a move): a positional/
  * default guess must NOT yank a bookmark across roots (e.g. a peer on an older
@@ -99,6 +107,9 @@ export function matchLocalRootEx(
     const byTitle = localRoots.find((r) => r.title?.toLowerCase() === title);
     if (byTitle) return { id: byTitle.id, confident: true };
   }
+  // We know WHAT this root is, this browser just doesn't have one — skip the positional
+  // guess entirely (see 4a above), so the result can't hinge on root enumeration order.
+  if (kind) return { id: defaultOtherRootId(localRoots), confident: false };
   return { id: localRoots[index]?.id ?? defaultOtherRootId(localRoots), confident: false };
 }
 

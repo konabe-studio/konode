@@ -71,8 +71,9 @@ describe("importBookmarks — cross-browser move safety (confidence gate)", () =
 
   it("does NOT relocate an existing bookmark when the peer root is unmappable", async () => {
     await seed("X", "https://x.com", "2"); // local: in "Other bookmarks"
-    // Peer's foreign root resolves (via the position/default fallback) to the bar
-    // "1" and carries a newer move for X. The gate must keep X in "2", not yank it.
+    // The peer's "menu" root has no Chrome counterpart, so it degrades to the default
+    // writable root and carries a newer move for X. Not confident either way, so the
+    // gate must leave X where it is rather than acting on the peer's placement.
     await importBookmarks(
       foreignRootPayload([link("X", "https://x.com")], [{ url: "https://x.com", at: Date.now() }]),
       "merge",
