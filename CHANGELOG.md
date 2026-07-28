@@ -81,6 +81,10 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
 - **Setting up GitHub: a rejected token now says so.** Continue simply stayed greyed out
   with nothing on screen. The token is also checked once you stop typing, rather than on
   every keystroke.
+- **A device that couldn't be read just disappeared from the sync.** If one device's file
+  couldn't be downloaded — a permission problem on the server, a transient error — it was
+  skipped without a word, and the sync still reported success with fewer devices than were
+  really there. Konode now names the file, the error, and what it means for you.
 
 ### Fixed — other browsers
 
@@ -101,6 +105,13 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
   recorded as a new visit every cycle — inflating visit counts and your most-visited
   list. It also meant pages you only received from another device were published back out
   as your own visits.
+- **History could stop being published from a device entirely.** Konode remembers which
+  pages arrived from another device so it doesn't send them back out as your own visits —
+  but nothing ever left that list. Once a page had arrived from any device, this one
+  stopped publishing it forever, even after you genuinely browsed there yourself. With
+  three devices that had each already received most of the shared history, a full day of
+  browsing familiar sites could export nothing at all — it looked exactly like history
+  being filtered out. Pages you have since visited here are published again now.
 - **"Missing extensions" was effectively always empty.** Chrome uses the Web Store page as
   an extension's homepage when the extension doesn't provide one, so almost every
   extension looked like a match for almost every other. A store page is no longer treated
@@ -123,6 +134,12 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
   that isn't ours). Nothing is published on Firefox Add-ons yet, so this is free to change
   now — but a Firefox test install has to be removed and re-added, and its Drive redirect
   URL changes with it.
+
+- **Debug mode now fills the activity log, not just the console.** Verbose logging only
+  ever reached the browser's developer console, so "turn on Debug mode and send us your
+  activity log" couldn't produce anything. While the mode is on those lines are kept in
+  Settings → Activity, where you can read and share them; turning it off stops that
+  immediately.
 
 ### Upgrade notes
 
