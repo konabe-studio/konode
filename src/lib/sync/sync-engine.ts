@@ -416,16 +416,30 @@ export class SyncEngine {
 
   // ─── Empty detection ──────────────────────────────────────────────────
 
+  /**
+   * "Empty" means there is nothing a peer could act on, so skipping the upload costs
+   * the group nothing. It is NOT the same as "the tree has no bookmarks": for
+   * bookmarks the payload is a `{ tree, tombstones }` envelope and the DELETION LOG
+   * is content in its own right.
+   *
+   * Judging bookmarks on the tree alone meant that deleting every bookmark produced an
+   * "empty" payload that was never uploaded — so the tombstones never left this device,
+   * the deletion propagated to nobody, and our own stale remote file kept advertising
+   * the entire old tree to every peer. Once the local tombstones aged out (90 days),
+   * the whole tree came back.
+   */
   private isPayloadEmpty(dataType: DataType, payload: unknown): boolean {
     if (!payload) return true;
     switch (dataType) {
       case "bookmarks": {
         // Payload is a { tree, tombstones } envelope (or a legacy bare array).
-        const tree = Array.isArray(payload)
-          ? payload
-          : ((payload as { tree?: unknown[] }).tree ?? []);
+        const bare = Array.isArray(payload);
+        const tree = bare ? payload : ((payload as { tree?: unknown[] }).tree ?? []);
         const flat = this.flattenBookmarks(tree as Array<{ children?: unknown[]; url?: string }>);
-        return flat.filter((n) => n.url).length === 0;
+        if (flat.some((n) => n.url)) return false;
+        // No bookmarks left — but a deletion still has to reach the peers.
+        const tombstones = bare ? [] : ((payload as { tombstones?: unknown[] }).tombstones ?? []);
+        return tombstones.length === 0;
       }
       case "history":
         return !Array.isArray(payload) || payload.length === 0;

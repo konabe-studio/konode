@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { SyncEngine } from "@/lib/sync/sync-engine";
 import { createKeyVerifier } from "@/lib/crypto/encryption";
-import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState } from "@/lib/utils/storage";
+import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState, setTombstones } from "@/lib/utils/storage";
 import type {
   IBackend,
   DataType,
@@ -371,6 +371,44 @@ describe("SyncEngine.syncType — E2EE", () => {
     await priv(encEngine("me", "pw")).syncType("bookmarks", backend, DEFAULT_STATE);
     expect(backend.uploads.length).toBe(2);
     expect(backend.uploads[backend.uploads.length - 1].encrypted).toBe(true);
+  });
+});
+
+describe("SyncEngine.syncType — a deletion-only payload still gets uploaded", () => {
+  // The bookmark payload is a { tree, tombstones } envelope, and the deletion log is
+  // content. Judging "empty" on the tree alone meant deleting EVERY bookmark produced
+  // an "empty" payload that was never uploaded: the tombstones never left the device,
+  // no peer learned of the deletion, and this device's stale remote file kept
+  // advertising the whole old tree — which came back once the tombstones aged out.
+
+  it("uploads the tombstones when every local bookmark has been deleted", async () => {
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    // Local: no bookmarks left, but a deletion to announce.
+    const future = Date.now() + 60_000;
+    await setTombstones([{ url: "https://b.com", deletedAt: future }]);
+    // The peer still holds the bookmark we deleted.
+    backend.files.set("bookmarks_peer1", await peerPacket(engine, "peer1", payload([link("B", "https://b.com")])));
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    // The peer's copy is suppressed by our newer tombstone, so local stays empty...
+    expect(await localUrls()).toEqual([]);
+    // ...and the deletion must reach the backend, or it propagates to nobody.
+    expect(backend.uploads).toHaveLength(1);
+    const sent = JSON.parse(backend.uploads[0].payload) as BookmarkPayload;
+    expect(flatUrls(sent.tree)).toEqual([]);
+    expect(sent.tombstones.map((t) => t.url)).toEqual(["https://b.com"]);
+  });
+
+  it("still uploads nothing on a fresh device with no bookmarks and no deletions", async () => {
+    // The guard must stay: a device with genuinely nothing to say writes no file.
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    expect(backend.uploads).toHaveLength(0);
   });
 });
 
