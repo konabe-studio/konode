@@ -17,6 +17,9 @@ import {
   clearUploadChecksums,
   getResolvedConflicts,
   setResolvedConflict,
+  getConflictPacket,
+  putConflictPacket,
+  pruneConflictPackets,
   getRecoverySnapshotTaken,
   setRecoverySnapshotTaken,
   acquireSyncLock,
@@ -394,7 +397,12 @@ export class SyncEngine {
           if (already.has(key)) continue;
           if (resolved[key] === peer.checksum) continue;
           const { conflict } = this.resolver.resolve(localPacket, peer);
-          if (conflict) fresh.push(conflict);
+          if (conflict) {
+            fresh.push(conflict);
+            // Park the raw peer packet OUTSIDE konode_state — "use remote" needs it to
+            // decrypt and verify, but it must not ride along on every status broadcast.
+            await putConflictPacket(conflict.id, peer);
+          }
         }
         if (fresh.length) {
           await setState({
@@ -833,16 +841,26 @@ export class SyncEngine {
       return;
     }
 
+    // The peer's raw packet lives in its own storage key, out of konode_state; a
+    // conflict queued by an older build still carries it inline.
+    const remotePacket = (await getConflictPacket(id)) ?? conflict.remote_packet ?? null;
+
     if (resolution === "remote") {
-      // Prefer the raw packet (handles decryption); fall back to the parsed version.
-      if (conflict.remote_packet) {
-        await this.applyRemote(conflict.data_type, conflict.remote_packet, false);
-      } else {
+      // The packet is preferred: applyRemote decrypts and verifies the checksum.
+      if (remotePacket) {
+        await this.applyRemote(conflict.data_type, remotePacket, false);
+      } else if (conflict.remote_version !== undefined) {
+        // Oldest legacy shape: only the parsed payload was stored.
         await this.applyPayload(
           conflict.data_type,
           conflict.remote_version,
           { device_id: conflict.device_id, timestamp: conflict.timestamp },
           false
+        );
+      } else {
+        // Nothing left to apply — don't silently drop the conflict as if we had.
+        throw new Error(
+          "That peer's data is no longer available to apply. Keep local, or sync again to re-check the peer."
         );
       }
     } else {
@@ -868,14 +886,16 @@ export class SyncEngine {
     // Remember the peer content we just resolved against so the same conflict
     // doesn't re-queue every cycle (the resolution doesn't rewrite the peer's file,
     // so it keeps diverging from ours). Keyed by data_type:device_id → peer checksum.
-    if (conflict.remote_packet?.checksum) {
+    if (remotePacket?.checksum) {
       await setResolvedConflict(
         `${conflict.data_type}:${conflict.device_id}`,
-        conflict.remote_packet.checksum
+        remotePacket.checksum
       );
     }
 
     const remaining = state.pending_conflicts.filter((c) => c.id !== id);
+    // Drop the packet we just consumed (and any orphan from an earlier interruption).
+    await pruneConflictPackets(remaining.map((c) => c.id));
     const newState = await setState({
       pending_conflicts: remaining,
       status: remaining.length > 0 ? "conflict" : "idle",

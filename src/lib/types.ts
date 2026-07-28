@@ -202,13 +202,25 @@ export interface SyncState {
   recovery_notice?: { at: string; blocked: number } | null;
 }
 
+/**
+ * A queued manual conflict. Deliberately METADATA ONLY — it lives in `konode_state`,
+ * which every setState() rewrites in full and every STATE_UPDATE broadcasts to the
+ * popup. The peer's raw packet is parked in `konode_conflict_packets` instead (see
+ * getConflictPacket), keyed by `id`.
+ *
+ * The three payload fields below are LEGACY, read-only: older builds inlined the full
+ * local tree, the full remote tree AND the raw packet here — the same data up to three
+ * times, per conflict, in the object rewritten on every status change. `local_version`
+ * was never read by anything at all. They're still accepted so a conflict queued by an
+ * older build can still be resolved; nothing writes them.
+ */
 export interface ConflictItem {
   id: string;
   data_type: DataType;
   device_id: string; // the peer this conflict is against (dedupe key; correct map key on apply)
-  local_version: unknown;
-  remote_version: unknown;
-  remote_packet?: SyncPacket; // raw remote packet, so "use remote" can decrypt + apply
+  local_version?: unknown;
+  remote_version?: unknown;
+  remote_packet?: SyncPacket;
   timestamp: string;
   resolved: boolean;
 }

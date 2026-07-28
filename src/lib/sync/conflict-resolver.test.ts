@@ -41,24 +41,35 @@ describe("ConflictResolver", () => {
     expect(r.resolve(local, remote).winner).toBe(remote);
   });
 
-  it("manual queues a conflict carrying the raw remote packet", () => {
+  it("manual queues a METADATA-ONLY conflict — no payload rides into konode_state", () => {
     const r = new ConflictResolver("manual");
     const local = packet({ device_id: "A", checksum: "x", payload: '{"a":1}' });
     const remote = packet({ device_id: "B", checksum: "y", payload: '{"b":2}' });
     const { winner, conflict } = r.resolve(local, remote);
+
     expect(winner).toBeNull();
-    expect(conflict?.remote_packet).toBe(remote);
     expect(conflict?.data_type).toBe("bookmarks");
+    expect(conflict?.device_id).toBe("B"); // the peer it's against — the dedupe key
+    expect(conflict?.id).toBeTruthy();
+
+    // The bulk used to be inlined here — the whole local tree, the whole remote tree AND
+    // the raw packet — inside the object every setState() rewrites and every
+    // STATE_UPDATE broadcasts. The engine parks the packet in its own key instead.
+    expect(conflict?.local_version).toBeUndefined();
+    expect(conflict?.remote_version).toBeUndefined();
+    expect(conflict?.remote_packet).toBeUndefined();
+    expect(JSON.stringify(conflict)).not.toContain('"b":2');
   });
 
-  it("does not raise a conflict for encrypted payloads (safeParse tolerates non-JSON)", () => {
+  it("queues a conflict for encrypted payloads too — it never parses them", () => {
     const r = new ConflictResolver("manual");
     const local = packet({ device_id: "A", checksum: "x", payload: "not-json-ciphertext", encrypted: true });
     const remote = packet({ device_id: "B", checksum: "y", payload: "also-ciphertext", encrypted: true });
+
     const { conflict } = r.resolve(local, remote);
-    expect(conflict?.local_version).toBeNull();
-    expect(conflict?.remote_version).toBeNull();
-    expect(conflict?.remote_packet).toBe(remote);
+
+    expect(conflict?.device_id).toBe("B");
+    expect(JSON.stringify(conflict)).not.toContain("ciphertext");
   });
 });
 

@@ -1,5 +1,6 @@
 import type {
   DataType,
+  SyncPacket,
   FolderMoveRecord,
   MoveRecord,
   RemoteExtensionEntry,
@@ -93,6 +94,7 @@ export const KEYS = {
   REMOTE_EXTENSIONS: "konode_remote_extensions",
   UPLOAD_CHECKSUMS: "konode_upload_checksums",
   RESOLVED_CONFLICTS: "konode_resolved_conflicts",
+  CONFLICT_PACKETS: "konode_conflict_packets",
   RECOVERY_SNAPSHOT: "konode_recovery_snap",
   SYNC_LOCK: "konode_sync_lock",
   GDRIVE_SESSION: "konode_gdrive_session",
@@ -418,6 +420,39 @@ export async function setLastUploadChecksum(dataType: DataType, checksum: string
  */
 export async function clearUploadChecksums(): Promise<void> {
   await browser.storage.local.remove(KEYS.UPLOAD_CHECKSUMS);
+}
+
+// ─── Pending-conflict packets (parked OUTSIDE konode_state) ─────────────────
+// The raw peer packet is what "use remote" needs in order to decrypt, verify and apply
+// the version the user picked — so it has to be kept. It just must not live in
+// `konode_state`: every setState() rewrites that whole object (several times per sync)
+// and every STATE_UPDATE broadcasts it to the popup, so a few hundred KB of bookmark
+// tree per conflict turned routine status updates into megabytes of churn.
+//
+// Keyed by conflict id. The popup only ever renders a conflict's `id` and `data_type`,
+// so nothing else needs the bulk.
+
+export async function getConflictPacket(id: string): Promise<SyncPacket | null> {
+  const map = await get<Record<string, SyncPacket>>(KEYS.CONFLICT_PACKETS, {});
+  return map[id] ?? null;
+}
+
+export async function putConflictPacket(id: string, packet: SyncPacket): Promise<void> {
+  await updateKey<Record<string, SyncPacket>>(
+    KEYS.CONFLICT_PACKETS, (cur) => ({ ...cur, [id]: packet }), {}
+  );
+}
+
+/** Keep only the packets still backing a pending conflict. Called whenever the pending
+ *  list changes, so it covers both resolve-cleanup and any orphan left by an earlier
+ *  interruption — the packets are the largest thing this extension stores per conflict. */
+export async function pruneConflictPackets(keepIds: string[]): Promise<void> {
+  const keep = new Set(keepIds);
+  await updateKey<Record<string, SyncPacket>>(KEYS.CONFLICT_PACKETS, (cur) => {
+    const next: Record<string, SyncPacket> = {};
+    for (const [id, p] of Object.entries(cur)) if (keep.has(id)) next[id] = p;
+    return next;
+  }, {});
 }
 
 // ─── Resolved manual conflicts (make a resolution sticky) ───────────────────

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { SyncEngine } from "@/lib/sync/sync-engine";
 import { createKeyVerifier } from "@/lib/crypto/encryption";
-import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState, setTombstones, acquireSyncLock } from "@/lib/utils/storage";
+import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState, setTombstones, acquireSyncLock, KEYS } from "@/lib/utils/storage";
 import type {
   IBackend,
   DataType,
@@ -905,5 +905,94 @@ describe("SyncEngine.restoreFromSnapshot — the follow-up sync must not be deta
     engine.sync = async () => "already-running";
 
     expect(await engine.restoreFromSnapshot("konode_snap_bookmarks_1.json")).toBe(7);
+  });
+});
+
+describe("SyncEngine — the conflict packet is parked outside konode_state", () => {
+  // konode_state is rewritten in full by every setState() (several times per sync) and
+  // broadcast to the popup by every STATE_UPDATE. A pending conflict used to carry the
+  // whole local tree, the whole remote tree AND the raw packet inside it.
+  function manualEngine2(): SyncEngine {
+    return new SyncEngine({ ...DEFAULT_SETTINGS, device_id: "me", conflict_strategy: "manual" }, () => {});
+  }
+  const packetStore = async (): Promise<Record<string, SyncPacket>> =>
+    ((await chrome.storage.local.get(KEYS.CONFLICT_PACKETS)) as Record<string, Record<string, SyncPacket>>)[
+      KEYS.CONFLICT_PACKETS
+    ] ?? {};
+
+  it("keeps the tree out of the state but stores it under the conflict id", async () => {
+    const engine = manualEngine2();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    backend.files.set("bookmarks_peer1", await peerPacket(engine, "peer1", payload([link("B", "https://b.com")])));
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    const conflicts = (await getState()).pending_conflicts;
+    expect(conflicts).toHaveLength(1);
+    // Nothing bulky in the broadcast object.
+    expect(JSON.stringify(conflicts)).not.toContain("https://b.com");
+    // ...but the packet is retrievable for "use remote".
+    const parked = await packetStore();
+    expect(Object.keys(parked)).toEqual([conflicts[0].id]);
+    expect(parked[conflicts[0].id].payload).toContain("https://b.com");
+  });
+
+  it("resolves 'use remote' from the parked packet and then drops it", async () => {
+    const engine = manualEngine2();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    backend.files.set("bookmarks_peer1", await peerPacket(engine, "peer1", payload([link("B", "https://b.com")])));
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    const id = (await getState()).pending_conflicts[0].id;
+    await engine.resolveConflict(id, "remote");
+
+    expect(await localUrls()).toEqual(["https://a.com", "https://b.com"]); // peer applied
+    expect(await packetStore()).toEqual({}); // consumed → pruned
+  });
+
+  it("prunes the parked packet on 'keep local' too", async () => {
+    const engine = manualEngine2();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    backend.files.set("bookmarks_peer1", await peerPacket(engine, "peer1", payload([link("B", "https://b.com")])));
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    await engine.resolveConflict((await getState()).pending_conflicts[0].id, "local");
+
+    expect(await localUrls()).toEqual(["https://a.com"]); // peer NOT applied
+    expect(await packetStore()).toEqual({});
+  });
+
+  it("still resolves a conflict queued inline by an older build", async () => {
+    const engine = manualEngine2();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    const legacyPeer = await peerPacket(makeEngine(), "peer1", payload([link("B", "https://b.com")]));
+    await setState({
+      pending_conflicts: [{
+        id: "legacy-1", data_type: "bookmarks", device_id: "peer1",
+        remote_packet: legacyPeer, // inline, the old shape — nothing is parked for it
+        timestamp: new Date().toISOString(), resolved: false,
+      }],
+    });
+
+    await engine.resolveConflict("legacy-1", "remote");
+
+    expect(await localUrls()).toEqual(["https://a.com", "https://b.com"]);
+  });
+
+  it("refuses to silently drop a conflict whose data is gone", async () => {
+    const engine = manualEngine2();
+    await setState({
+      pending_conflicts: [{
+        id: "orphan-1", data_type: "bookmarks", device_id: "peer1",
+        timestamp: new Date().toISOString(), resolved: false,
+      }],
+    });
+
+    await expect(engine.resolveConflict("orphan-1", "remote")).rejects.toThrow(/no longer available/i);
+    // Still pending — it must not look resolved when nothing was applied.
+    expect((await getState()).pending_conflicts).toHaveLength(1);
   });
 });

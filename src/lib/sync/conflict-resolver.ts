@@ -55,18 +55,16 @@ export class ConflictResolver {
         return { winner: remote, conflict: null };
 
       case "manual": {
-        // Parsing may fail for encrypted payloads — keep the raw packet so the
-        // engine can decrypt + apply on resolution; versions are best-effort.
-        const safeParse = (s: string): unknown => {
-          try { return JSON.parse(s); } catch { return null; }
-        };
+        // METADATA ONLY. This object goes into `konode_state`, which every setState()
+        // rewrites in full and every STATE_UPDATE broadcasts to the popup — so it used
+        // to carry the whole local tree, the whole remote tree AND the raw packet, the
+        // same data up to three times per conflict. (`local_version` was never read by
+        // anything.) The engine parks the raw peer packet in its own storage key and
+        // reads it back on resolve; the popup only renders `id` and `data_type`.
         const conflict: ConflictItem = {
           id: crypto.randomUUID(),
           data_type: local.data_type,
           device_id: remote.device_id,
-          local_version: safeParse(local.payload),
-          remote_version: safeParse(remote.payload),
-          remote_packet: remote,
           timestamp: new Date().toISOString(),
           resolved: false,
         };
