@@ -1,6 +1,7 @@
 import type { IBackend, BackendConfig, DataType, SyncPacket } from "@/lib/types";
 import { withRetry, HttpError, defaultShouldRetry } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
+import { utf8ToBase64 } from "@/lib/utils/base64";
 
 const GITHUB_API = "https://api.github.com";
 
@@ -63,7 +64,10 @@ export class GitHubBackend implements IBackend {
 
     const branch = this.gh.branch ?? "main";
     const filename = `${this.path}/konode_${packet.data_type}_${packet.device_id}.json`;
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(packet, null, 2))));
+    // Same UTF-8-then-base64 as before, via the shared helper — the old
+    // btoa(unescape(encodeURIComponent(…))) idiom is byte-identical but leans on
+    // deprecated `unescape` and was duplicated per call site.
+    const content = utf8ToBase64(JSON.stringify(packet, null, 2));
 
     await withRetry(
       async () => {
@@ -199,7 +203,7 @@ export class GitHubBackend implements IBackend {
   async putFile(name: string, content: string): Promise<void> {
     await this.ensureRepoInitialized();
     const filename = `${this.path}/${name}`;
-    const encoded = btoa(unescape(encodeURIComponent(content)));
+    const encoded = utf8ToBase64(content);
     await withRetry(
       async () => {
         const sha = await this.getFileSHA(filename, this.branch);

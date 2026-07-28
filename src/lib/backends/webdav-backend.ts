@@ -2,6 +2,7 @@ import type { IBackend, BackendConfig, DataType, SyncPacket } from "@/lib/types"
 import { withRetry, HttpError } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 import { isSecureBackendUrl } from "@/lib/utils/url";
+import { utf8ToBase64 } from "@/lib/utils/base64";
 
 const INSECURE_URL_MSG =
   "WebDAV over plain http:// is not allowed. Your username and password would be sent unencrypted on every request. Use an https:// URL (http is permitted only for localhost).";
@@ -25,10 +26,26 @@ export class WebDAVBackend implements IBackend {
     return this.w.url.replace(/\/$/, "") + "/" + (this.w.path ?? "konode").replace(/^\//, "");
   }
 
+  /**
+   * The Basic-auth header value. Credentials are UTF-8 encoded before base64: raw
+   * `btoa` throws on any code point above U+00FF (`ő`, `ű`, `ł`, `€`, Cyrillic, emoji)
+   * — and that DOMException is neither an HttpError nor a network TypeError, so
+   * `defaultShouldRetry` won't retry it and every sync failed hard and permanently. For
+   * U+0080–U+00FF (`á`, `ö`, `ü`) it didn't throw but emitted ISO-8859-1 bytes, while
+   * Nextcloud/ownCloud/SabreDAV and Apache decode UTF-8 — so a CORRECT password was
+   * rejected forever with "Authentication failed. Check username/password".
+   * RFC 7617 recommends UTF-8 and every mainstream DAV server expects it.
+   *
+   * Single accessor on purpose: this used to be inlined twice (here and in
+   * downloadAll), which is how the two copies could drift.
+   */
+  private authHeader(): string {
+    return `Basic ${utf8ToBase64(`${this.w.username}:${this.w.password}`)}`;
+  }
+
   private headers(): HeadersInit {
-    const creds = btoa(`${this.w.username}:${this.w.password}`);
     return {
-      Authorization: `Basic ${creds}`,
+      Authorization: this.authHeader(),
       "Content-Type": "application/json",
     };
   }
@@ -112,7 +129,7 @@ export class WebDAVBackend implements IBackend {
       for (const href of hrefs) {
         const fullUrl = href.startsWith("http") ? href : new URL(href, this.w.url).href;
         const r = await fetch(fullUrl, {
-          headers: { Authorization: `Basic ${btoa(`${this.w.username}:${this.w.password}`)}` },
+          headers: { Authorization: this.authHeader() },
           cache: "no-store", // avoid a stale peer file from the browser HTTP cache
         });
         if (!r.ok) continue;
