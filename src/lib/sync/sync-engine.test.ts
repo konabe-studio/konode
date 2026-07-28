@@ -859,3 +859,51 @@ describe("SyncEngine.sync — reports whether it actually ran", () => {
     expect(b.isSyncing).toBe(false);
   });
 });
+
+describe("SyncEngine.restoreFromSnapshot — the follow-up sync must not be detached", () => {
+  // MV3 keeps the worker alive for a PENDING message response. `void this.sync(...)`
+  // let restoreFromSnapshot return first, so the worker could be suspended mid-upload:
+  // the user was told "restored N bookmarks" while the peers received nothing. The
+  // restore itself is covered by snapshots.test.ts; this pins the ordering.
+  type Seam = {
+    withBackend<T>(fn: (b: IBackend) => Promise<T>): Promise<T>;
+  };
+  const stubRestore = (engine: SyncEngine, restored: number): void => {
+    (engine as unknown as Seam).withBackend = <T>() => Promise.resolve(restored as unknown as T);
+  };
+
+  it("does not resolve until the sync has finished", async () => {
+    const engine = makeEngine();
+    stubRestore(engine, 3);
+    let syncFinished = false;
+    engine.sync = async () => {
+      await new Promise((r) => setTimeout(r, 5));
+      syncFinished = true;
+      return "ran";
+    };
+
+    const restored = await engine.restoreFromSnapshot("konode_snap_bookmarks_1.json");
+
+    expect(restored).toBe(3);
+    expect(syncFinished).toBe(true); // detached, this was still false
+  });
+
+  it("skips the sync entirely when nothing was restored", async () => {
+    const engine = makeEngine();
+    stubRestore(engine, 0);
+    let called = false;
+    engine.sync = async () => { called = true; return "ran"; };
+
+    expect(await engine.restoreFromSnapshot("konode_snap_bookmarks_1.json")).toBe(0);
+    expect(called).toBe(false);
+  });
+
+  it("still reports the restored count when the sync couldn't run", async () => {
+    // e.g. a periodic sync holds the lock. The restore stands either way.
+    const engine = makeEngine();
+    stubRestore(engine, 7);
+    engine.sync = async () => "already-running";
+
+    expect(await engine.restoreFromSnapshot("konode_snap_bookmarks_1.json")).toBe(7);
+  });
+});

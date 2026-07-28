@@ -304,10 +304,29 @@ export class SyncEngine {
     return this.withBackend((b) => readSnapshots(b, this.settings));
   }
 
-  /** Restore a snapshot (re-adds missing bookmarks), then sync so peers get them. */
+  /**
+   * Restore a snapshot (re-adds missing bookmarks), then sync so peers get them.
+   *
+   * The sync is AWAITED, not detached. In MV3 it's the pending RESTORE_SNAPSHOT message
+   * response that keeps the worker alive, so returning first — `void this.sync(...)` —
+   * let the worker be suspended mid-upload: the user was told "restored N bookmarks"
+   * while the peers got nothing, and the persisted lock was left for a later worker to
+   * clear. This is the same rule the SYNC_NOW handler already spells out. The cost is a
+   * slower response for a bookmarks-only sync, which is the right trade.
+   */
   async restoreFromSnapshot(name: string): Promise<number> {
     const restored = await this.withBackend((b) => applySnapshot(b, name, this.settings));
-    if (restored > 0) void this.sync(["bookmarks"]);
+    if (restored > 0) {
+      const outcome = await this.sync(["bookmarks"]);
+      if (outcome !== "ran") {
+        // e.g. a periodic sync already holds the lock. The restore itself stands; the
+        // next cycle publishes it. Worth a line so it isn't a silent gap.
+        logger.warn(
+          "SyncEngine",
+          `Restored ${restored} bookmark(s) but couldn't publish yet (${outcome}) — the next sync will.`
+        );
+      }
+    }
     return restored;
   }
 
