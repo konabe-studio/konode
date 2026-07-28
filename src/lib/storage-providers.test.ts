@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  PROVIDERS,
   webdavUrlForCard, providerFromConfig, providerById, nextcloudUrl, nextcloudBaseFromUrl,
   pcloudRegionOf, sameUrl,
 } from "./storage-providers";
@@ -115,5 +116,23 @@ describe("sameUrl / pcloudRegionOf", () => {
 describe("providerById", () => {
   it("throws on an unknown id instead of returning undefined", () => {
     expect(() => providerById("nope" as never)).toThrow(/Unknown provider id/);
+  });
+});
+
+describe("provider cards only name hosts the backend can actually reach", () => {
+  // The GitHub card used to read "GitHub / Gitea / GitLab" while the backend hardcodes
+  // api.github.com and BackendConfig.github has no base-URL field. A user who believed
+  // the label pasted a self-hosted instance's token, which was then sent to GitHub, and
+  // got back a misleading "Invalid token. Check it hasn't expired".
+  it("does not advertise Gitea or GitLab on the GitHub card", () => {
+    const github = providerById("github");
+    expect(github.label).toBe("GitHub");
+    expect(`${github.label} ${github.desc}`).not.toMatch(/gitea|gitlab/i);
+  });
+
+  it("names no Git host other than GitHub anywhere in the card copy", () => {
+    for (const p of PROVIDERS) {
+      expect(`${p.label} ${p.desc} ${p.note ?? ""}`).not.toMatch(/gitea|gitlab|bitbucket|codeberg|forgejo/i);
+    }
   });
 });

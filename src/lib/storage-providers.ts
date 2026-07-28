@@ -58,7 +58,14 @@ export const PROVIDERS: ProviderDef[] = [
     note: "Username is your full Fastmail address; use an app password with Files (WebDAV) access.",
   },
   {
-    id: "github", backend: "github", label: "GitHub / Gitea / GitLab",
+    // GitHub ONLY. The backend hardcodes api.github.com and BackendConfig.github has
+    // no base-URL field, so this card must not name a host it can't reach: a user who
+    // believed the old "GitHub / Gitea / GitLab" label pasted a self-hosted instance's
+    // token and sent it straight to GitHub, then got a misleading "invalid token".
+    // Gitea would need an API base URL (its contents API is GitHub-shaped); GitLab's
+    // API differs entirely and needs its own backend. Until either ships, don't
+    // advertise them.
+    id: "github", backend: "github", label: "GitHub",
     desc: "Store sync data in a private repository using a Personal Access Token.",
   },
   {

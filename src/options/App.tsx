@@ -174,7 +174,7 @@ const formatBytes = (n: number): string => {
 const BACKEND_LABEL: Record<BackendType, string> = {
   gdrive: "Google Drive",
   webdav: "WebDAV",
-  github: "GitHub / Gitea / GitLab",
+  github: "GitHub", // GitHub only — see the provider card note in storage-providers.ts
 };
 
 const DATA_TYPE_META: { type: DataType; Icon: typeof Bookmark; label: string; desc: string }[] = [

@@ -503,7 +503,7 @@ export default function OnboardingApp() {
                     </div>
                   )}
 
-                  {/* GitHub / Gitea / GitLab */}
+                  {/* GitHub (only — the backend is pinned to api.github.com) */}
                   {on && p.id === "github" && (
                     <div style={S.authPanel} onClick={(e) => e.stopPropagation()}>
                       <div style={{ position: "relative" }}>
