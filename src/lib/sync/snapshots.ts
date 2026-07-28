@@ -53,28 +53,72 @@ function countUrls(tree: SyncBookmark[]): number {
   return n;
 }
 
-/** Read the shared index. Never throws: a missing, corrupt, or undecryptable index
- *  only costs the counts, so degrade to "no annotations" rather than breaking the
- *  restore-point list (the file list alone still tells us what can be restored). */
-async function getIndex(backend: IBackend, settings: SyncSettings): Promise<SnapshotMeta[]> {
+/** Is end-to-end encryption ACTUALLY active here — enabled AND a passphrase set?
+ *  Not the same as "a passphrase exists": turning E2EE off keeps the passphrase in
+ *  settings, and treating that as "encrypted" is what let this module read the group's
+ *  encrypted index and write it back in plaintext. Mirrors the sync engine's C1 guard. */
+const e2eeActive = (s: SyncSettings): boolean =>
+  !!s.encryption_enabled && !!s.encryption_passphrase;
+
+/**
+ * Read the shared index. Never throws, and distinguishes three outcomes:
+ *
+ *  - `[]`   — there is genuinely no index yet, or the file is garbage for EVERY device
+ *             (unparseable JSON, payload that isn't a list). Safe to write a fresh one.
+ *  - a list — readable.
+ *  - `null` — the file exists and is perfectly valid for someone, we just can't read it
+ *             (encrypted while E2EE is off here, wrong passphrase, transient backend
+ *             error). The caller must NOT overwrite it.
+ *
+ * Collapsing all of these to `[]` caused two bugs. A device with a lingering passphrase
+ * but E2EE off decrypted the group's index and `putIndex` rewrote it in PLAINTEXT on
+ * shared storage — the exact downgrade `sync-engine`'s applyRemote refuses. And any
+ * transient read failure made `mergeIndex` rewrite the index from scratch, discarding
+ * every other device's bookmark counts.
+ */
+async function getIndex(backend: IBackend, settings: SyncSettings): Promise<SnapshotMeta[] | null> {
+  let raw: string | null;
   try {
-    const raw = await backend.getFile(INDEX_NAME);
-    if (!raw) return [];
-    const file = JSON.parse(raw) as IndexFile;
-    let plain = file.payload;
-    if (file.encrypted) {
-      if (!settings.encryption_passphrase) return [];
-      plain = await decrypt(file.payload, settings.encryption_passphrase);
+    raw = await backend.getFile(INDEX_NAME);
+  } catch (e) {
+    // A backend failure is not "there is no index".
+    logger.warn("Snapshots", `Could not read the shared index: ${e instanceof Error ? e.message : e}`);
+    return null;
+  }
+  if (!raw) return []; // no index yet
+
+  let file: IndexFile;
+  try {
+    file = JSON.parse(raw) as IndexFile;
+  } catch {
+    logger.warn("Snapshots", "Shared index is not valid JSON — replacing it");
+    return []; // garbage for everyone, so nothing is lost by replacing it
+  }
+
+  let plain = file.payload;
+  if (file.encrypted) {
+    if (!e2eeActive(settings)) {
+      logger.warn("Snapshots", "Shared index is encrypted but E2EE is off here — leaving it alone");
+      return null;
     }
+    try {
+      plain = await decrypt(file.payload, settings.encryption_passphrase as string);
+    } catch {
+      logger.warn("Snapshots", "Shared index won't decrypt with this passphrase — leaving it alone");
+      return null;
+    }
+  }
+
+  try {
     const list = JSON.parse(plain);
     return Array.isArray(list) ? (list as SnapshotMeta[]) : [];
   } catch {
-    return [];
+    return []; // readable but not a list → garbage, safe to replace
   }
 }
 
 async function putIndex(backend: IBackend, settings: SyncSettings, list: SnapshotMeta[]): Promise<void> {
-  const useE2ee = settings.encryption_enabled && !!settings.encryption_passphrase;
+  const useE2ee = e2eeActive(settings);
   const plain = JSON.stringify(list);
   const file: IndexFile = {
     version: "1.0",
@@ -84,13 +128,23 @@ async function putIndex(backend: IBackend, settings: SyncSettings, list: Snapsho
   await backend.putFile(INDEX_NAME, JSON.stringify(file));
 }
 
-/** Merge entries into the shared index, keeping only those that still have a file
- *  on the backend. Read-merge-write rather than overwrite: two devices both taking
- *  snapshots must not drop each other's counts. `live` is the current file list. */
+/** Merge entries into the shared index, keeping only those that still have a file on
+ *  the backend. Read-merge-write rather than overwrite: two devices both taking
+ *  snapshots must not drop each other's counts. `live` is the current file list.
+ *
+ *  Returns `null` — having written NOTHING — when the existing index can't be read
+ *  (see getIndex). The index is only an annotation; the backend file list is what says
+ *  which restore points exist. So losing a count is cosmetic, while overwriting data we
+ *  couldn't read would destroy the other devices' counts or downgrade the group's
+ *  encrypted index to plaintext. Bail instead. */
 async function mergeIndex(
   backend: IBackend, settings: SyncSettings, add: SnapshotMeta[], live: string[],
-): Promise<SnapshotMeta[]> {
+): Promise<SnapshotMeta[] | null> {
   const remote = await getIndex(backend, settings);
+  if (remote === null) {
+    logger.warn("Snapshots", "Leaving the shared index untouched — only the counts are affected, the restore points themselves are fine");
+    return null;
+  }
   const byName = new Map<string, SnapshotMeta>();
   for (const m of [...remote, ...add]) byName.set(m.name, m); // `add` wins on conflict
   const alive = new Set(live);
@@ -139,20 +193,31 @@ async function migrateLegacyIndex(
   const r = await browser.storage.local.get(KEYS.LEGACY_SNAPSHOTS);
   const legacy = r[KEYS.LEGACY_SNAPSHOTS] as SnapshotMeta[] | undefined;
   if (legacy === undefined) return null;
-  let merged: SnapshotMeta[] | null = null;
-  if (Array.isArray(legacy) && legacy.length) {
-    merged = await mergeIndex(backend, settings, legacy, live);
-    logger.info("Snapshots", `Published ${legacy.length} local snapshot count(s) to the shared index`);
+  if (!Array.isArray(legacy) || !legacy.length) {
+    await browser.storage.local.remove(KEYS.LEGACY_SNAPSHOTS); // nothing to carry over
+    return null;
+  }
+  const merged = await mergeIndex(backend, settings, legacy, live);
+  if (merged === null) {
+    // The shared index couldn't be read, so nothing was published. KEEP the legacy
+    // counts and retry later — dropping the key here deleted them for good, and these
+    // counts exist nowhere else.
+    logger.warn("Snapshots", "Keeping the legacy snapshot counts — the shared index could not be updated yet");
+    return null;
   }
   await browser.storage.local.remove(KEYS.LEGACY_SNAPSHOTS);
+  logger.info("Snapshots", `Published ${legacy.length} local snapshot count(s) to the shared index`);
   return merged;
 }
 
 /** List restore points on the backend, newest first, annotated with known counts. */
 export async function listSnapshots(backend: IBackend, settings: SyncSettings): Promise<SnapshotMeta[]> {
   const names = await backend.listFiles(PREFIX);
+  // An unreadable index costs the counts, nothing more — the file list below is what
+  // says which restore points exist, so the list still works.
   const idx = (await migrateLegacyIndex(backend, settings, names))
-    ?? (await getIndex(backend, settings));
+    ?? (await getIndex(backend, settings))
+    ?? [];
   const byName = new Map(idx.map((m) => [m.name, m]));
   const metas: SnapshotMeta[] = [];
   for (const name of names) {

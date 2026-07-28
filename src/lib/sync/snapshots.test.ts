@@ -270,3 +270,101 @@ describe("snapshots — legacy index migration", () => {
     expect(backend.blobs.has(INDEX_NAME)).toBe(false); // no pointless index write
   });
 });
+
+describe("snapshots — an unreadable shared index is never overwritten", () => {
+  // The index is only an ANNOTATION: the backend file list is what says which restore
+  // points exist. So a lost count is cosmetic, while overwriting an index we couldn't
+  // read destroys every other device's counts — or downgrades the group's encrypted
+  // index to plaintext, the very thing the sync engine's applyRemote refuses.
+
+  it("does not decrypt or rewrite an encrypted index when E2EE is OFF here", async () => {
+    const backend = new FileFake();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com/" });
+    // Device 1 has E2EE on and publishes an encrypted index.
+    await createSnapshot(asBackend(backend), e2ee());
+    const encrypted = backend.blobs.get(INDEX_NAME)!;
+    expect(JSON.parse(encrypted).encrypted).toBe(true);
+
+    // Device 2: E2EE turned OFF, but the passphrase still lingers in settings — which
+    // is exactly what the sync engine calls a C1 downgrade.
+    await otherDevice();
+    const lingering = settings({ encryption_enabled: false, encryption_passphrase: "correct horse battery" });
+    await createSnapshot(asBackend(backend), lingering);
+
+    // The index must be untouched — NOT rewritten in plaintext.
+    expect(backend.blobs.get(INDEX_NAME)).toBe(encrypted);
+  });
+
+  it("does not rewrite an index it cannot decrypt (wrong passphrase)", async () => {
+    const backend = new FileFake();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com/" });
+    await createSnapshot(asBackend(backend), e2ee("the real passphrase"));
+    const before = backend.blobs.get(INDEX_NAME)!;
+
+    await otherDevice();
+    await createSnapshot(asBackend(backend), e2ee("a different passphrase"));
+
+    expect(backend.blobs.get(INDEX_NAME)).toBe(before);
+  });
+
+  it("does not wipe other devices' counts when the index read fails transiently", async () => {
+    const backend = new FileFake();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com/" });
+    await createSnapshot(asBackend(backend), settings());
+    const before = backend.blobs.get(INDEX_NAME)!;
+    expect(JSON.parse(before).payload).toContain("count");
+
+    // A 500 from the backend is NOT "there is no index".
+    await otherDevice();
+    const flaky = new FileFake();
+    flaky.blobs = backend.blobs;
+    flaky.getFile = (n: string) =>
+      n === INDEX_NAME ? Promise.reject(new Error("HTTP 500")) : Promise.resolve(flaky.blobs.get(n) ?? null);
+
+    await createSnapshot(asBackend(flaky), settings());
+
+    expect(flaky.blobs.get(INDEX_NAME)).toBe(before);
+  });
+
+  it("keeps the legacy counts when they could not be published", async () => {
+    const backend = new FileFake();
+    const [name] = seedFiles(backend, 1);
+    // An encrypted index this device can't read (E2EE off, passphrase lingering).
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com/" });
+    await createSnapshot(asBackend(backend), e2ee());
+    await otherDevice();
+    await chrome.storage.local.set({ [KEYS.LEGACY_SNAPSHOTS]: [{ name, timestamp: 1, count: 42 }] });
+
+    await listSnapshots(asBackend(backend), settings({ encryption_passphrase: "correct horse battery" }));
+
+    // The legacy key must SURVIVE — these counts exist nowhere else, and dropping it
+    // after a failed publish deleted them for good.
+    expect((await chrome.storage.local.get(KEYS.LEGACY_SNAPSHOTS))[KEYS.LEGACY_SNAPSHOTS]).toBeDefined();
+  });
+
+  it("still replaces an index that is garbage for every device", async () => {
+    // Unparseable is not "unreadable by me" — nothing is lost by rewriting it, and
+    // otherwise a corrupt index could never self-heal.
+    const backend = new FileFake();
+    backend.blobs.set(INDEX_NAME, "}{ not json");
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com/" });
+
+    const meta = await createSnapshot(asBackend(backend), settings());
+
+    const idx = JSON.parse(backend.blobs.get(INDEX_NAME)!);
+    expect(idx.encrypted).toBe(false);
+    expect(JSON.parse(idx.payload).map((m: { name: string }) => m.name)).toEqual([meta.name]);
+  });
+
+  it("still lists the restore points when the index is unreadable (counts only are lost)", async () => {
+    const backend = new FileFake();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com/" });
+    const meta = await createSnapshot(asBackend(backend), e2ee());
+
+    await otherDevice();
+    const list = await listSnapshots(asBackend(backend), settings()); // no passphrase here
+
+    expect(list.map((m) => m.name)).toEqual([meta.name]);
+    expect(list[0].count).toBeUndefined();
+  });
+});
