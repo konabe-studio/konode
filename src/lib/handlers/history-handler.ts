@@ -91,5 +91,8 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
   // Remember what we imported so exportHistory won't re-publish it as a native
   // visit (CO-6: stops old history from circulating the mesh indefinitely).
   await addImportedHistoryUrls(importedUrls);
-  logger.info("importHistory", `Added ${added} new history entries (skipped existing)`);
+  const summary = `Added ${added} new history entries (skipped existing)`;
+  // Only worth remembering when it actually added something.
+  if (added) logger.event("importHistory", summary);
+  else logger.info("importHistory", summary);
 }

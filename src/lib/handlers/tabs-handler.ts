@@ -59,7 +59,7 @@ export async function importSession(session: SyncSession): Promise<void> {
     })
     .map((t) => t.url);
 
-  logger.info("importSession", `Opening ${urls.length} tabs from "${session.label}"`);
+  logger.event("importSession", `Opening ${urls.length} tabs from "${session.label}"`);
   if (urls.length === 0) return;
 
   try {

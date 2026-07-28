@@ -179,7 +179,7 @@ export async function createSnapshot(backend: IBackend, settings: SyncSettings):
   // Prune first so the index write reflects the post-prune file list in one pass.
   const live = await pruneSnapshots(backend);
   await mergeIndex(backend, settings, [meta], [...live, name]);
-  logger.info("Snapshots", `Created ${name} (${count} bookmarks)`);
+  logger.event("Snapshots", `Created ${name} (${count} bookmarks)`);
   return meta;
 }
 
@@ -206,7 +206,7 @@ async function migrateLegacyIndex(
     return null;
   }
   await browser.storage.local.remove(KEYS.LEGACY_SNAPSHOTS);
-  logger.info("Snapshots", `Published ${legacy.length} local snapshot count(s) to the shared index`);
+  logger.event("Snapshots", `Published ${legacy.length} local snapshot count(s) to the shared index`);
   return merged;
 }
 
@@ -268,5 +268,5 @@ export async function deleteSnapshot(backend: IBackend, settings: SyncSettings, 
   const live = await backend.listFiles(PREFIX);
   // mergeIndex drops entries with no file behind them, which now includes this one.
   await mergeIndex(backend, settings, [], live);
-  logger.info("Snapshots", `Deleted ${name}`);
+  logger.event("Snapshots", `Deleted ${name}`);
 }

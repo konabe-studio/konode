@@ -40,7 +40,7 @@ export class GDriveBackend implements IBackend {
   async signOut(): Promise<void> {
     this.folderId = null;
     await clearGDriveSession();
-    logger.info("GDrive.signOut", "Signed out");
+    logger.event("GDrive.signOut", "Signed out");
   }
 
   async getSignedInUser(): Promise<GDriveUserInfo | null> {

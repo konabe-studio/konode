@@ -148,7 +148,7 @@ async function recordRemovedTombstones(node: BookmarkNode): Promise<void> {
   await updateTombstones((current) =>
     mergeTombstoneLists(current, gone.map((url) => ({ url, deletedAt: now })))
   );
-  logger.info("Tombstones", `Recorded ${gone.length} deletion(s)`);
+  logger.event("Tombstones", `Recorded ${gone.length} deletion(s)`);
 }
 
 /** Editing a bookmark's URL fires onChanged (NOT onRemoved), so no tombstone is
@@ -170,7 +170,7 @@ async function recordUrlChange(id: string, newUrl: string | undefined): Promise<
   if ((await localUrlSet()).has(oldUrl)) return;
   const now = Date.now();
   await updateTombstones((current) => mergeTombstoneLists(current, [{ url: oldUrl, deletedAt: now }]));
-  logger.info("Tombstones", "Recorded a URL-change deletion");
+  logger.event("Tombstones", "Recorded a URL-change deletion");
 }
 
 /** Record a move (per URL) for a moved bookmark/folder subtree, so the new
@@ -361,7 +361,7 @@ async function clearAndImport(tree: SyncBookmark[]): Promise<void> {
     }
   }
 
-  logger.info("clearAndImport", "Bookmark structure restored from remote");
+  logger.event("clearAndImport", "Bookmark structure restored from remote");
 }
 
 async function restoreNode(
@@ -681,7 +681,12 @@ async function mergeBookmarks(
     } catch { /* concurrently removed — ignore */ }
   }
 
-  logger.info("mergeBookmarks", `Merged +${added} / -${toRemove.length} / moved ${moved} / folders ${folderMoved} / shells ${shells} (folders preserved)`);
+  // The most informative line about what a sync actually DID to the tree, so it belongs
+  // in the user's Activity log — but only when it changed something. Every idle cycle
+  // logging "+0 / -0 / moved 0" is exactly the noise that used to evict the warnings.
+  const summary = `Merged +${added} / -${toRemove.length} / moved ${moved} / folders ${folderMoved} / shells ${shells} (folders preserved)`;
+  if (added || toRemove.length || moved || folderMoved || shells) logger.event("mergeBookmarks", summary);
+  else logger.info("mergeBookmarks", summary);
 }
 
 /** Resolve a browser-agnostic folder path (`[rootKind, …titles]`) to a local
@@ -840,7 +845,7 @@ export async function restoreBookmarks(tree: SyncBookmark[]): Promise<number> {
       const targetRootId = matchLocalRoot(root, localRoots, r) ?? otherId;
       for (const kid of root.children ?? []) await walk(kid, () => Promise.resolve(targetRootId));
     }
-    logger.info("Snapshots", `Restored ${added} bookmark(s)`);
+    logger.event("Snapshots", `Restored ${added} bookmark(s)`);
     return added;
   } finally {
     importing = false;

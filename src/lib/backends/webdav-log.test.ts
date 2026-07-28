@@ -36,32 +36,50 @@ async function auditText(): Promise<string> {
   return JSON.stringify(r[KEYS.AUDIT_LOG] ?? []);
 }
 
+/** Everything the routine (console-only) log lines emitted, as one string. Those lines
+ *  no longer reach the audit log, but they must still not carry the account name. */
+function consoleSpy(): { text: () => string; restore: () => void } {
+  const seen: string[] = [];
+  const spy = vi.spyOn(console, "info").mockImplementation((...args: unknown[]) => {
+    seen.push(args.map(String).join(" "));
+  });
+  return { text: () => seen.join("\n"), restore: () => spy.mockRestore() };
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
-describe("WebDAV logging keeps the account out of the audit log", () => {
-  it("logs the file name on upload, not the DAV URL", async () => {
+describe("WebDAV logging keeps the account name out of every sink", () => {
+  it("names the file, never the DAV URL, on upload", async () => {
     vi.stubGlobal("fetch", () => Promise.resolve({ ok: true, status: 201 } as Response));
+    const con = consoleSpy();
 
     await new WebDAVBackend(config()).upload(packet());
+    const line = con.text();
+    con.restore();
 
-    const log = await auditText();
-    expect(log).toContain("konode_bookmarks_11111111-2222-3333-4444-555555555555.json");
-    expect(log).not.toContain(USERNAME);
-    expect(log).not.toContain("remote.php");
-    expect(log).not.toContain(DAV_URL);
+    expect(line).toContain("konode_bookmarks_11111111-2222-3333-4444-555555555555.json");
+    expect(line).not.toContain(USERNAME);
+    expect(line).not.toContain("remote.php");
+    expect(line).not.toContain(DAV_URL);
+    // Routine per-sync detail is console-only, so it can't evict the warnings the
+    // recovery banner points at — and nothing is persisted here at all.
+    expect(await auditText()).not.toContain("konode_bookmarks_");
   });
 
-  it("logs only the host on connect", async () => {
+  it("names only the host on connect", async () => {
     vi.stubGlobal("fetch", () => Promise.resolve({ ok: true, status: 201 } as Response));
+    const con = consoleSpy();
 
     await new WebDAVBackend(config()).connect();
+    const line = con.text();
+    con.restore();
 
-    const log = await auditText();
-    expect(log).toContain(HOST);
-    expect(log).not.toContain(USERNAME);
-    expect(log).not.toContain("remote.php");
+    expect(line).toContain(HOST);
+    expect(line).not.toContain(USERNAME);
+    expect(line).not.toContain("remote.php");
   });
 
   it("logs the file name, not the DAV path, when skipping a corrupt peer file", async () => {

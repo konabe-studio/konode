@@ -881,7 +881,7 @@ export class SyncEngine {
       status: remaining.length > 0 ? "conflict" : "idle",
     });
     this.onStateChange(newState);
-    logger.info("SyncEngine", `Resolved conflict ${id} → ${resolution}`);
+    logger.event("SyncEngine", `Resolved conflict ${id} → ${resolution}`);
   }
 
   // ─── Session restore ──────────────────────────────────────────────────

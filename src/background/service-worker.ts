@@ -27,7 +27,7 @@ async function init(): Promise<void> {
   const currentState = await getState();
   if (currentState.status === "syncing") {
     await setState({ status: "idle", last_error: null });
-    logger.info("ServiceWorker", "Reset stuck syncing state");
+    logger.event("ServiceWorker", "Reset stuck syncing state");
   }
 
   // ── Drop a sync lock left behind by a worker that died mid-sync ──
@@ -37,7 +37,7 @@ async function init(): Promise<void> {
   // still answering OK. Safe unconditionally: MV3 runs one worker at a time, so on a
   // fresh worker nothing can still be holding it.
   if (await clearStaleSyncLock()) {
-    logger.info("ServiceWorker", "Cleared a sync lock left by an interrupted sync");
+    logger.event("ServiceWorker", "Cleared a sync lock left by an interrupted sync");
   }
 
   // ── Migration: drop the legacy "tabs" data type (folded into "sessions") ──
@@ -46,7 +46,7 @@ async function init(): Promise<void> {
     const cleaned = settings.enabled_types.filter((t) => (t as string) !== "tabs");
     await saveSettings({ enabled_types: cleaned });
     settings.enabled_types = cleaned;
-    logger.info("ServiceWorker", "Migrated: removed legacy 'tabs' data type");
+    logger.event("ServiceWorker", "Migrated: removed legacy 'tabs' data type");
   }
 
   syncEngine = new SyncEngine(settings, (state) => {
@@ -272,7 +272,7 @@ browser.alarms.onAlarm.addListener(async (alarm) => {
 
 browser.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === "install") {
-    logger.info("Install", "First install, opening onboarding");
+    logger.event("Install", "First install, opening onboarding");
     browser.tabs.create({ url: browser.runtime.getURL("onboarding.html") });
   }
   await ensureInit();
