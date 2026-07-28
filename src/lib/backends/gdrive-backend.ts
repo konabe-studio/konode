@@ -226,9 +226,24 @@ export class GDriveBackend implements IBackend {
 
   async testConnection(): Promise<{ ok: boolean; message: string }> {
     try {
-      const user = await this.getSignedInUser();
-      if (!user) return { ok: false, message: "Not signed in" };
-      return { ok: true, message: `Connected as ${user.displayName} (${user.email})` };
+      const stored = await this.getSignedInUser();
+      if (!stored) return { ok: false, message: "Not signed in to Google Drive yet." };
+      // Actually CALL Drive. This used to report success from stored session data alone,
+      // so a revoked grant or a dead refresh token still answered "Connected as …" — a
+      // connection test that never touched the connection. getToken() renews via the
+      // refresh token first, and throws a clear message if that no longer works.
+      const token = await this.getToken(false);
+      const res = await fetch(`${DRIVE_API}/about?fields=user`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 401 || res.status === 403) {
+        return { ok: false, message: "Google rejected the saved access. Sign in again." };
+      }
+      if (!res.ok) return { ok: false, message: `Drive check failed (HTTP ${res.status})` };
+      const d = await res.json();
+      const name = d.user?.displayName ?? stored.displayName;
+      const email = d.user?.emailAddress ?? stored.email;
+      return { ok: true, message: `Connected as ${name}${email ? ` (${email})` : ""}` };
     } catch (err) {
       return { ok: false, message: err instanceof Error ? err.message : "Connection failed" };
     }

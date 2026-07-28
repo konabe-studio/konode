@@ -306,9 +306,29 @@ export class GitHubBackend implements IBackend {
         };
       }
       const isEmpty = !repo.default_branch;
+
+      // Verify the BRANCH as well. A typo here passed this test and then 404'd on every
+      // upload — and 404 isn't retried, so the sync failed permanently while the test
+      // still said everything was fine. Skipped for an empty repo: it has no branches
+      // yet, the first upload creates one.
+      if (!isEmpty) {
+        const branch = this.branch;
+        const brRes = await fetch(
+          `${GITHUB_API}/repos/${this.repoSlug}/branches/${encodeURIComponent(branch)}`,
+          { headers: this.headers() }
+        );
+        if (brRes.status === 404) {
+          return {
+            ok: false,
+            message: `Branch '${branch}' doesn't exist in ${repo.full_name}. Its default branch is '${repo.default_branch}'.`,
+          };
+        }
+        if (!brRes.ok) return { ok: false, message: `Branch check failed (HTTP ${brRes.status})` };
+      }
+
       return {
         ok: true,
-        message: `@${user.login} → ${repo.full_name}${isEmpty ? " (empty repo, will initialize on first sync)" : ""}`,
+        message: `@${user.login} → ${repo.full_name}${isEmpty ? " (empty repo, will initialize on first sync)" : ` (${this.branch})`}`,
       };
     } catch (err) {
       return { ok: false, message: err instanceof Error ? err.message : "Connection failed" };
