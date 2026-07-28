@@ -2,9 +2,9 @@ import type { SyncBookmark, Tombstone, MoveRecord, FolderMoveRecord, BookmarkPay
 import { logger } from "@/lib/utils/logger";
 import {
   setBookmarkCache, getBookmarkCache,
-  getTombstones, setTombstones,
-  getMoves, setMoves,
-  getFolderMoves, setFolderMoves,
+  getTombstones, setTombstones, updateTombstones,
+  getMoves, setMoves, updateMoves,
+  getFolderMoves, setFolderMoves, updateFolderMoves,
 } from "@/lib/utils/storage";
 import { defaultOtherRootId, matchLocalRoot, matchLocalRootEx, rootKind } from "@/lib/utils/bookmark-roots";
 import { canonicalUrlKey } from "@/lib/utils/url";
@@ -141,8 +141,13 @@ async function recordRemovedTombstones(node: BookmarkNode): Promise<void> {
   const gone = [...new Set(urls)].filter((url) => !remaining.has(url));
   if (!gone.length) return; // every removed URL still has another local copy
   const now = Date.now();
-  const current = await getTombstones();
-  await setTombstones(mergeTombstoneLists(current, gone.map((url) => ({ url, deletedAt: now }))));
+  // Serialized append: Chrome fires one onRemoved per removed node, so a multi-select
+  // delete runs several of these at once. A get/set pair let them read the same list
+  // and overwrite each other — only one deletion was recorded and the rest came back
+  // from a peer on the next merge.
+  await updateTombstones((current) =>
+    mergeTombstoneLists(current, gone.map((url) => ({ url, deletedAt: now })))
+  );
   logger.info("Tombstones", `Recorded ${gone.length} deletion(s)`);
 }
 
@@ -164,8 +169,7 @@ async function recordUrlChange(id: string, newUrl: string | undefined): Promise<
   // still holds it (editing one of several identical-URL copies).
   if ((await localUrlSet()).has(oldUrl)) return;
   const now = Date.now();
-  const current = await getTombstones();
-  await setTombstones(mergeTombstoneLists(current, [{ url: oldUrl, deletedAt: now }]));
+  await updateTombstones((current) => mergeTombstoneLists(current, [{ url: oldUrl, deletedAt: now }]));
   logger.info("Tombstones", "Recorded a URL-change deletion");
 }
 
@@ -186,8 +190,7 @@ async function recordMove(id: string): Promise<void> {
   }
   if (!urls.length) return;
   const now = Date.now();
-  const current = await getMoves();
-  await setMoves(mergeMoveLists(current, urls.map((url) => ({ url, at: now }))));
+  await updateMoves((current) => mergeMoveLists(current, urls.map((url) => ({ url, at: now }))));
   logger.info("Moves", `Recorded ${urls.length} move(s)`);
 }
 
@@ -241,22 +244,25 @@ async function recordFolderMove(id: string, moveInfo: chrome.bookmarks.BookmarkM
     if (gi >= 0 && gi < siblings.length - 1) next = siblingKey(siblings[gi + 1]);
   } catch { /* best effort — fall back to index on the receiver */ }
   const now = Date.now();
-  const current = await getFolderMoves();
-  await setFolderMoves(mergeFolderMoveLists(current, [{ path, index: moveInfo.index, at: now, prev, next }]));
+  await updateFolderMoves((current) =>
+    mergeFolderMoveLists(current, [{ path, index: moveInfo.index, at: now, prev, next }])
+  );
   logger.info("Moves", "Recorded a folder reposition");
 }
 
 /** Bookmark sync payload: live tree + this device's (pruned) deletion log. */
 export async function exportBookmarkPayload(): Promise<BookmarkPayload> {
-  const [tree, tombstones, moves, folderMoves] = await Promise.all([
-    exportBookmarks(), getTombstones(), getMoves(), getFolderMoves(),
+  // GC each log through the SAME serialized path the listeners append on. A bookmark
+  // event landing mid-export would otherwise read the pre-GC list and write it back —
+  // either undoing the prune or dropping the event's own record, depending on which
+  // write happened to land last. Nothing here is exempt from the burst just because it
+  // runs inside a sync: `importing` only suppresses the recorders during an IMPORT.
+  const [tree, gced, gcedMoves, gcedFolderMoves] = await Promise.all([
+    exportBookmarks(),
+    updateTombstones(gcTombstones),
+    updateMoves(gcMoves),
+    updateFolderMoves(gcFolderMoves),
   ]);
-  const gced = gcTombstones(tombstones);
-  const gcedMoves = gcMoves(moves);
-  const gcedFolderMoves = gcFolderMoves(folderMoves);
-  await setTombstones(gced); // keep the stored logs pruned
-  await setMoves(gcedMoves);
-  await setFolderMoves(gcedFolderMoves);
   // Snapshot the current (full) tree so a later URL edit can find the replaced
   // url by id and tombstone it (see recordUrlChange). This is the state peers hold.
   await setBookmarkCache(tree);

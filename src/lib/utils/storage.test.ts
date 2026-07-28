@@ -3,7 +3,9 @@ import {
   normalizeRemoteSessions, normalizeRemoteExtensions,
   acquireSyncLock, releaseSyncLock,
   getImportedHistoryUrls, addImportedHistoryUrls,
+  updateKey, appendAudit, KEYS,
 } from "@/lib/utils/storage";
+import { browser } from "@/lib/utils/ext";
 import type { RemoteSessionEntry, RemoteExtensionEntry, SyncExtension } from "@/lib/types";
 
 function entry(device: string, ts: string, tabCount = 1): RemoteSessionEntry {
@@ -95,6 +97,68 @@ describe("sync lock (CO-4)", () => {
   it("treats a lock older than the TTL as stale (self-heals)", async () => {
     await acquireSyncLock(60_000); // lockedAt = now
     expect(await acquireSyncLock(0)).toBe(true); // ttl 0 → any existing lock is stale
+  });
+});
+
+describe("updateKey — serialized read-modify-write", () => {
+  const read = async <T>(key: string, fallback: T): Promise<T> =>
+    ((await browser.storage.local.get(key)) as Record<string, T>)[key] ?? fallback;
+
+  it("(control) a naive get→set pair DOES lose concurrent writes here", async () => {
+    // Proves this environment actually reproduces the race, so the serialized test
+    // below is meaningful rather than vacuously green.
+    const naive = async (n: number): Promise<void> => {
+      const cur = await read<number[]>("race_naive", []);
+      await browser.storage.local.set({ race_naive: [...cur, n] });
+    };
+    await Promise.all([1, 2, 3, 4, 5].map(naive));
+    expect((await read<number[]>("race_naive", [])).length).toBeLessThan(5);
+  });
+
+  it("keeps every concurrent append on the same key", async () => {
+    await Promise.all(
+      [1, 2, 3, 4, 5].map((n) => updateKey<number[]>("race_safe", (cur) => [...cur, n], []))
+    );
+    expect((await read<number[]>("race_safe", [])).sort()).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it("returns the value it wrote, and keeps different keys independent", async () => {
+    const [a, b] = await Promise.all([
+      updateKey<number[]>("race_a", (cur) => [...cur, 1], []),
+      updateKey<number[]>("race_b", (cur) => [...cur, 9], []),
+    ]);
+    expect(a).toEqual([1]);
+    expect(b).toEqual([9]);
+  });
+
+  it("a failing update rejects but does not wedge the key", async () => {
+    await updateKey<number[]>("race_fail", (cur) => [...cur, 1], []);
+    await expect(
+      updateKey<number[]>("race_fail", () => { throw new Error("boom"); }, [])
+    ).rejects.toThrow("boom");
+    // The chain must continue past the failure, and the failed update must not have
+    // written anything.
+    await expect(updateKey<number[]>("race_fail", (cur) => [...cur, 2], [])).resolves.toEqual([1, 2]);
+  });
+
+  it("appendAudit keeps every entry from a burst and caps at 200", async () => {
+    // The logger fires appendAudit without awaiting, so a sync emits overlapping
+    // appends; a get/set pair dropped all but the last.
+    await Promise.all(
+      Array.from({ length: 12 }, (_, i) =>
+        appendAudit({ timestamp: `t${i}`, action: `a${i}`, ok: true })
+      )
+    );
+    const log = await read<Array<{ action: string }>>(KEYS.AUDIT_LOG, []);
+    expect(log).toHaveLength(12);
+    expect(new Set(log.map((e) => e.action)).size).toBe(12);
+
+    await Promise.all(
+      Array.from({ length: 250 }, (_, i) =>
+        appendAudit({ timestamp: `x${i}`, action: `x${i}`, ok: true })
+      )
+    );
+    expect(await read<unknown[]>(KEYS.AUDIT_LOG, [])).toHaveLength(200);
   });
 });
 

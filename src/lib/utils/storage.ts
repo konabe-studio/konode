@@ -109,6 +109,32 @@ async function set(key: string, value: unknown): Promise<void> {
   await browser.storage.local.set({ [key]: value });
 }
 
+// ─── Serialized read-modify-write ──────────────────────────────────────────
+// `chrome.storage.local` has no atomic update, so every get → mutate → set pair is
+// a lost-update race. Bookmark bursts make that concrete: Chrome fires one
+// `onRemoved` per removed node, so deleting five selected bookmarks starts five
+// overlapping recordRemovedTombstones() runs that all read the SAME list and then
+// clobber one another. Deletions were silently lost and the bookmarks came back
+// from a peer on the next merge — the deletion-propagation model's whole point.
+//
+// `updateKey` chains updates per key, so each one observes every write before it.
+// This guards a single JS context, which is where the bursts happen: the bookmark
+// listeners and the sync engine all live in the service worker.
+
+const updateChains = new Map<string, Promise<unknown>>();
+
+export function updateKey<T>(key: string, mutate: (current: T) => T, fallback: T): Promise<T> {
+  const run = async (): Promise<T> => {
+    const next = mutate(await get<T>(key, fallback));
+    await set(key, next);
+    return next;
+  };
+  // Continue on both settle paths, so one failed update can't wedge the key.
+  const chained = (updateChains.get(key) ?? Promise.resolve()).then(run, run);
+  updateChains.set(key, chained.catch(() => {}));
+  return chained;
+}
+
 // ─── Settings ──────────────────────────────────────────────────────────────
 
 export async function getSettings(): Promise<SyncSettings> {
@@ -148,10 +174,9 @@ export interface AuditEntry {
 }
 
 export async function appendAudit(entry: AuditEntry): Promise<void> {
-  const log = await get<AuditEntry[]>(KEYS.AUDIT_LOG, []);
-  log.unshift(entry);
-  // Keep last 200 entries
-  await set(KEYS.AUDIT_LOG, log.slice(0, 200));
+  // Serialized: the logger calls this without awaiting, so a sync emits several
+  // overlapping appends and a plain get→set pair dropped all but the last.
+  await updateKey<AuditEntry[]>(KEYS.AUDIT_LOG, (log) => [entry, ...log].slice(0, 200), []);
 }
 
 // ─── Caches ────────────────────────────────────────────────────────────────
@@ -191,6 +216,26 @@ export async function getFolderMoves(): Promise<FolderMoveRecord[]> {
 
 export async function setFolderMoves(list: FolderMoveRecord[]): Promise<void> {
   await set(KEYS.BOOKMARK_FOLDER_MOVES, list);
+}
+
+// Serialized read-modify-write for the three change logs (see `updateKey`). Every
+// caller that APPENDS to a log — the bookmark listeners, which run unawaited and in
+// bursts — must go through these, not a get/set pair, or concurrent events overwrite
+// each other and the deletion/move is silently lost. `setX` remains for callers that
+// replace the whole log wholesale (the merge, restore, tests).
+
+export function updateTombstones(mutate: (current: Tombstone[]) => Tombstone[]): Promise<Tombstone[]> {
+  return updateKey<Tombstone[]>(KEYS.BOOKMARK_TOMBSTONES, mutate, []);
+}
+
+export function updateMoves(mutate: (current: MoveRecord[]) => MoveRecord[]): Promise<MoveRecord[]> {
+  return updateKey<MoveRecord[]>(KEYS.BOOKMARK_MOVES, mutate, []);
+}
+
+export function updateFolderMoves(
+  mutate: (current: FolderMoveRecord[]) => FolderMoveRecord[]
+): Promise<FolderMoveRecord[]> {
+  return updateKey<FolderMoveRecord[]>(KEYS.BOOKMARK_FOLDER_MOVES, mutate, []);
 }
 
 // ─── Imported history (CO-6) ─────────────────────────────────────────────────
