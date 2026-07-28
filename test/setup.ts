@@ -10,6 +10,7 @@ const store = new Map();
 // Flat node map (id → node); the tree is materialized on demand. Models Chrome's
 // virtual root "0" with the three stable roots: "1" bar, "2" other, "3" mobile.
 let bmSeq = 100;
+let alarmStore = new Map();
 let bmNodes = new Map();
 
 function resetBookmarks() {
@@ -168,7 +169,18 @@ function makeChrome() {
       addUrl: ({ url, visitTime }) => { histEntries.set(url, { id: url, url, title: "", lastVisitTime: visitTime ?? 1, visitCount: 1 }); return Promise.resolve(); },
     },
     notifications: { create: vi.fn() },
-    alarms: { create: vi.fn(), clear: () => Promise.resolve(true) },
+    // A real in-memory alarms registry, not a mock: the scheduling rule under test is
+    // "don't recreate an alarm that already exists", which a create() stub can't show.
+    alarms: {
+      create: (name, info = {}) => {
+        alarmStore.set(name, { name, ...info });
+        return Promise.resolve();
+      },
+      get: (name) => Promise.resolve(alarmStore.get(name)),
+      getAll: () => Promise.resolve([...alarmStore.values()]),
+      clear: (name) => Promise.resolve(alarmStore.delete(name)),
+      clearAll: () => { alarmStore.clear(); return Promise.resolve(true); },
+    },
     action: { setBadgeText: vi.fn(), setBadgeBackgroundColor: vi.fn() },
   };
 }
@@ -187,4 +199,5 @@ beforeEach(() => {
   resetBookmarks();
   resetHistory();
   resetTabs();
+  alarmStore = new Map();
 });

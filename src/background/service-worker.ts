@@ -9,6 +9,7 @@ import { createBackend } from "@/lib/backends/abstract-backend";
 import { logger, setLoggerDebug } from "@/lib/utils/logger";
 import { BADGE_COLORS, STATE_UPDATE } from "@/lib/constants";
 import { browser } from "@/lib/utils/ext";
+import { ensureSyncAlarm, SYNC_ALARM, BOOKMARK_ALARM } from "@/lib/utils/alarms";
 
 // ─── State ────────────────────────────────────────────────────────────────
 
@@ -49,8 +50,10 @@ async function init(): Promise<void> {
   // Bookmark listeners are registered once at the top level (see bottom of file),
   // not here — init() re-runs on every SW wake and would stack duplicate listeners.
 
+  // NOT forced: init() runs on every worker wake, and re-creating the alarm each time
+  // reset its next fire and starved the periodic pull. See ensureSyncAlarm.
   if (settings.auto_sync) {
-    await setupSyncAlarm(settings.sync_interval_seconds);
+    await ensureSyncAlarm(settings.sync_interval_seconds);
   }
 
   logger.info("ServiceWorker", "Initialized");
@@ -83,24 +86,12 @@ function updateBadge(status: string): void {
   });
 }
 
-// ─── Alarm ───────────────────────────────────────────────────────────────
-
-async function setupSyncAlarm(intervalSeconds: number): Promise<void> {
-  await browser.alarms.clear("konode-sync");
-  // 0.5 min (30s) is Chrome's hard floor for background alarms — independent of
-  // the storage backend (Drive/GitHub/WebDAV are all poll-only, no push), so the
-  // receiving side can't pull faster than this regardless of what's configured.
-  browser.alarms.create("konode-sync", {
-    periodInMinutes: Math.max(0.5, intervalSeconds / 60),
-  });
-}
-
 // ─── Bookmark Listener ────────────────────────────────────────────────────
 
 function onBookmarkChange(): void {
   // Backstop: a one-shot alarm survives SW suspension (Chrome floors it at ~30s),
   // so a change is never lost even if the fast path below doesn't get to run.
-  browser.alarms.create("konode-bookmark-sync", { delayInMinutes: 0.5 });
+  browser.alarms.create(BOOKMARK_ALARM, { delayInMinutes: 0.5 });
 
   // Fast path: the worker is awake right now (the event just fired), so sync
   // almost immediately. A short debounce coalesces bursts (e.g. deleting a
@@ -118,7 +109,7 @@ function onBookmarkChange(): void {
       !syncEngine.isSyncing
     ) {
       // We're handling it now — drop the backstop so it doesn't double-sync.
-      await browser.alarms.clear("konode-bookmark-sync");
+      await browser.alarms.clear(BOOKMARK_ALARM);
       await syncEngine.sync(["bookmarks"]);
     }
     // If a sync is already running, leave the alarm to pick this change up next.
@@ -169,9 +160,10 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
       // Reconfigure alarm if interval changed
       if ("sync_interval_seconds" in message.payload || "auto_sync" in message.payload) {
         if (updated.auto_sync) {
-          await setupSyncAlarm(updated.sync_interval_seconds);
+          // FORCED: a real interval change is the one case that must restart the timer.
+          await ensureSyncAlarm(updated.sync_interval_seconds, true);
         } else {
-          await browser.alarms.clear("konode-sync");
+          await browser.alarms.clear(SYNC_ALARM);
         }
       }
 
@@ -240,10 +232,10 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
 browser.alarms.onAlarm.addListener(async (alarm) => {
   await ensureInit();
   if (!syncEngine) return;
-  if (alarm.name === "konode-sync") {
+  if (alarm.name === SYNC_ALARM) {
     logger.info("Alarm", "Periodic sync triggered");
     await syncEngine.sync();
-  } else if (alarm.name === "konode-bookmark-sync") {
+  } else if (alarm.name === BOOKMARK_ALARM) {
     const settings = await getSettings();
     if (
       settings.sync_on_change &&
