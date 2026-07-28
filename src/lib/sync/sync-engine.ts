@@ -60,6 +60,17 @@ export class EncryptionMismatchError extends Error {
   }
 }
 
+/**
+ * Whether `sync()` actually did anything. It used to return void, so a caller couldn't
+ * tell a completed sync from one that bailed at the door — and the SYNC_NOW handler
+ * answered a blanket `OK` either way, which is how a stranded lock turned the manual
+ * "Sync now" button into a silent no-op that looked like success.
+ *
+ * `ran` covers a sync that failed too: the failure is recorded in the state, which is a
+ * different thing from never having started.
+ */
+export type SyncOutcome = "ran" | "no-backend" | "already-running";
+
 // ─── Sync Engine ─────────────────────────────────────────────────────────
 
 export class SyncEngine {
@@ -103,10 +114,10 @@ export class SyncEngine {
 
   // ─── Main Entry Point ─────────────────────────────────────────────────
 
-  async sync(types?: DataType[]): Promise<void> {
+  async sync(types?: DataType[]): Promise<SyncOutcome> {
     if (this.isSyncing) {
       logger.warn("SyncEngine", "Already syncing, skipping");
-      return;
+      return "already-running";
     }
     // Claim the in-memory guard SYNCHRONOUSLY, before any await, so a tight
     // double-trigger can't both pass the check above and double-run one data type.
@@ -117,7 +128,7 @@ export class SyncEngine {
     if (!this.settings.active_backend) {
       logger.warn("SyncEngine", "No active backend configured");
       this.isSyncing = false;
-      return;
+      return "no-backend";
     }
 
     const backendConfig = this.settings.backends.find(
@@ -126,7 +137,7 @@ export class SyncEngine {
     if (!backendConfig) {
       logger.warn("SyncEngine", "Active backend config not found");
       this.isSyncing = false;
-      return;
+      return "no-backend";
     }
 
     // Cross-instance guard (CO-4): a persisted TTL lock so a sync interrupted by an
@@ -136,7 +147,7 @@ export class SyncEngine {
     if (!(await acquireSyncLock(SYNC_LOCK_TTL_MS))) {
       logger.warn("SyncEngine", "Another sync holds the lock, skipping");
       this.isSyncing = false;
-      return;
+      return "already-running";
     }
 
     this.encryptionWarnings.clear();
@@ -188,6 +199,9 @@ export class SyncEngine {
       this.isSyncing = false;
       await releaseSyncLock();
     }
+    // Reached whether the sync succeeded or was recorded as an error — either way it
+    // ran, which is what the caller needs to distinguish from bailing at the door.
+    return "ran";
   }
 
   /**

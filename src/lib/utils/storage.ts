@@ -299,6 +299,23 @@ export async function releaseSyncLock(): Promise<void> {
   await set(KEYS.SYNC_LOCK, 0);
 }
 
+/**
+ * Drop a lock left behind by a worker that died mid-sync, reporting whether one was
+ * actually held. Called from the service worker's startup recovery.
+ *
+ * On a fresh worker any lock is stale BY DEFINITION: MV3 runs one worker at a time and
+ * tears the entire JS context down, so nothing can still be holding it — which is also
+ * why this doesn't consult the TTL. Without it the lock sat there for its full 2 minutes
+ * while every sync returned early, including the manual "Sync now", and still reported
+ * success.
+ */
+export async function clearStaleSyncLock(): Promise<boolean> {
+  const lockedAt = await get<number>(KEYS.SYNC_LOCK, 0);
+  if (!lockedAt) return false;
+  await set(KEYS.SYNC_LOCK, 0);
+  return true;
+}
+
 // ─── Remote sessions (one per peer device) ──────────────────────────────────
 
 /**

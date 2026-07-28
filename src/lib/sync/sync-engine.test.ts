@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { SyncEngine } from "@/lib/sync/sync-engine";
 import { createKeyVerifier } from "@/lib/crypto/encryption";
-import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState, setTombstones } from "@/lib/utils/storage";
+import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState, setTombstones, acquireSyncLock } from "@/lib/utils/storage";
 import type {
   IBackend,
   DataType,
@@ -804,5 +804,58 @@ describe("SyncEngine.syncType — manual conflicts (CO-7 / CO-8)", () => {
 
     await expect(engine.resolveConflict("c1", "remote")).rejects.toThrow(/not end-to-end encrypted/);
     expect(await localUrls()).toEqual(["https://a.com"]); // nothing imported
+  });
+});
+
+describe("SyncEngine.sync — reports whether it actually ran", () => {
+  // sync() returned void, so SYNC_NOW answered a blanket OK even when the sync never
+  // started. Combined with a lock stranded by a worker that died mid-sync, the manual
+  // "Sync now" button was a no-op that reported success for up to the 2-minute TTL.
+  // These paths all return before createBackend(), so they need no real backend.
+
+  function configured(): SyncEngine {
+    return new SyncEngine(
+      {
+        ...DEFAULT_SETTINGS,
+        device_id: "me",
+        active_backend: "github",
+        backends: [{ type: "github", label: "GitHub", enabled: true, github: { token: "t", repo: "o/r" } }],
+      },
+      () => {}
+    );
+  }
+
+  it("reports no-backend when nothing is configured", async () => {
+    expect(await makeEngine().sync()).toBe("no-backend");
+  });
+
+  it("reports no-backend when active_backend has no matching config", async () => {
+    const engine = new SyncEngine(
+      { ...DEFAULT_SETTINGS, device_id: "me", active_backend: "github", backends: [] },
+      () => {}
+    );
+    expect(await engine.sync()).toBe("no-backend");
+  });
+
+  it("reports already-running when a lock is held", async () => {
+    expect(await acquireSyncLock(60_000)).toBe(true); // e.g. stranded by a dead worker
+    expect(await configured().sync()).toBe("already-running");
+  });
+
+  it("reports already-running while a sync is in flight in this worker", async () => {
+    const engine = configured();
+    engine.isSyncing = true;
+    expect(await engine.sync()).toBe("already-running");
+  });
+
+  it("leaves isSyncing false after every early return, so it can't wedge", async () => {
+    const a = makeEngine();
+    await a.sync();
+    expect(a.isSyncing).toBe(false);
+
+    await acquireSyncLock(60_000);
+    const b = configured();
+    await b.sync();
+    expect(b.isSyncing).toBe(false);
   });
 });

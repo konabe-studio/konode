@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   normalizeRemoteSessions, normalizeRemoteExtensions,
-  acquireSyncLock, releaseSyncLock,
+  acquireSyncLock, releaseSyncLock, clearStaleSyncLock,
   getImportedHistoryUrls, addImportedHistoryUrls,
   updateKey, appendAudit, KEYS,
 } from "@/lib/utils/storage";
@@ -174,5 +174,34 @@ describe("imported-history set (CO-6)", () => {
   it("no-ops on an empty list", async () => {
     await addImportedHistoryUrls([]);
     expect(await getImportedHistoryUrls()).toEqual([]);
+  });
+});
+
+describe("clearStaleSyncLock — recovery from a worker that died mid-sync", () => {
+  // sync()'s finally releases the lock, but a worker torn down mid-sync never runs it.
+  // The lock then sat for its full 2-minute TTL and every sync returned early — the
+  // manual "Sync now" included, which still answered OK. init() reset the stuck
+  // "syncing" status but not this, the other half of the same stranded state.
+
+  it("drops a held lock and says so", async () => {
+    expect(await acquireSyncLock(60_000)).toBe(true);
+    expect(await clearStaleSyncLock()).toBe(true);
+    // The next sync can start immediately instead of waiting out the TTL.
+    expect(await acquireSyncLock(60_000)).toBe(true);
+  });
+
+  it("reports false when no lock was held, so startup stays quiet", async () => {
+    expect(await clearStaleSyncLock()).toBe(false);
+    await acquireSyncLock(60_000);
+    await releaseSyncLock();
+    expect(await clearStaleSyncLock()).toBe(false); // released, not held
+  });
+
+  it("ignores the TTL — a fresh worker means the lock is stale by definition", async () => {
+    // MV3 runs one worker at a time and tears the whole JS context down, so nothing can
+    // still be holding it however recently it was taken.
+    await acquireSyncLock(60 * 60_000); // an hour-long TTL, taken just now
+    expect(await clearStaleSyncLock()).toBe(true);
+    expect(await acquireSyncLock(60 * 60_000)).toBe(true);
   });
 });

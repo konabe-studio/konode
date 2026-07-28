@@ -2,7 +2,7 @@
 // Handles: alarm-based polling, bookmark/tab listeners, message routing
 
 import type { ExtensionMessage, ExtensionResponse } from "@/lib/types";
-import { getSettings, getState, setState, saveSettings, KEYS } from "@/lib/utils/storage";
+import { getSettings, getState, setState, saveSettings, clearStaleSyncLock, KEYS } from "@/lib/utils/storage";
 import { SyncEngine } from "@/lib/sync/sync-engine";
 import { registerBookmarkListeners } from "@/lib/handlers/bookmarks-handler";
 import { createBackend } from "@/lib/backends/abstract-backend";
@@ -28,6 +28,16 @@ async function init(): Promise<void> {
   if (currentState.status === "syncing") {
     await setState({ status: "idle", last_error: null });
     logger.info("ServiceWorker", "Reset stuck syncing state");
+  }
+
+  // ── Drop a sync lock left behind by a worker that died mid-sync ──
+  // The other half of that same stranded state, and it was missing: a worker torn down
+  // mid-sync skips sync()'s finally, so konode_sync_lock kept a timestamp and every
+  // sync for the next 2 minutes — the manual "Sync now" included — returned early while
+  // still answering OK. Safe unconditionally: MV3 runs one worker at a time, so on a
+  // fresh worker nothing can still be holding it.
+  if (await clearStaleSyncLock()) {
+    logger.info("ServiceWorker", "Cleared a sync lock left by an interrupted sync");
   }
 
   // ── Migration: drop the legacy "tabs" data type (folded into "sessions") ──
@@ -135,7 +145,17 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
       // Await the sync so the pending message response keeps the MV3 worker alive
       // for its whole duration — otherwise a mid-sync suspension can skip the
       // lock's finally and strand the persisted lock until its TTL (C2).
-      await syncEngine.sync(message.payload?.data_type ? [message.payload.data_type] : undefined);
+      const outcome = await syncEngine.sync(
+        message.payload?.data_type ? [message.payload.data_type] : undefined
+      );
+      // Don't answer OK for a sync that never started. This used to be a blanket OK, so
+      // a stranded lock made "Sync now" a no-op that reported success.
+      if (outcome === "no-backend") {
+        return { type: "ERROR", payload: "No storage backend is set up yet." };
+      }
+      if (outcome === "already-running") {
+        return { type: "ERROR", payload: "A sync is already running — try again in a moment." };
+      }
       return { type: "OK" };
     }
 
