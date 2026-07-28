@@ -69,3 +69,64 @@ describe("normalizeExtName", () => {
     expect(normalizeExtName(undefined)).toBe("");
   });
 });
+
+describe("isInstalledLocally — a store-listing homepage is not a match", () => {
+  // Reported from the field (1.0.2): two Helium machines, each with a password manager
+  // the other lacked, and neither ever appeared under "missing on this device". Chrome
+  // fills homepageUrl with the Web Store detail URL for any extension whose manifest has
+  // no homepage_url — most of them — so that one host was shared by a large share of
+  // extensions on both sides and the host rule matched almost anything against anything.
+  const CWS = (id: string) => `https://chrome.google.com/webstore/detail/${id}`;
+
+  const icloud = ext({
+    id: "pejdijmoenmkgeppbflobdenhhabjlaj",
+    name: "iCloud Passwords",
+    homepageUrl: CWS("pejdijmoenmkgeppbflobdenhhabjlaj"), // Chrome's synthesized default
+    store: "chrome",
+  });
+  // What the OTHER machine has installed — different extensions, same synthesized host.
+  const localsWithStoreHomepages: Array<{ id: string; name?: string; homepageUrl?: string }> = [
+    { id: "oboonakemofpalcgghocfoadofidjkkk", name: "KeePassXC-Browser", homepageUrl: CWS("oboonakemofpalcgghocfoadofidjkkk") },
+    { id: "cjpalhdlnbpafiamejdnhcphjbkeiagm", name: "uBlock Origin", homepageUrl: CWS("cjpalhdlnbpafiamejdnhcphjbkeiagm") },
+  ];
+
+  it("reports a genuinely absent extension as missing", () => {
+    // This returned TRUE — chrome.google.com === chrome.google.com — so the list was empty.
+    expect(isInstalledLocally(icloud, localsWithStoreHomepages, "chrome")).toBe(false);
+  });
+
+  it("is not fooled by any store's listing host", () => {
+    for (const host of [
+      "https://chrome.google.com/webstore/detail/abc",
+      "https://chromewebstore.google.com/detail/x/abc",
+      "https://addons.mozilla.org/firefox/addon/abc/",
+      "https://microsoftedge.microsoft.com/addons/detail/abc",
+    ]) {
+      expect(
+        isInstalledLocally(
+          ext({ id: "a".repeat(32), name: "Something", homepageUrl: host, store: "chrome" }),
+          [{ id: "b".repeat(32), name: "Different", homepageUrl: host }],
+          "chrome"
+        )
+      ).toBe(false);
+    }
+  });
+
+  it("still matches on a real DEVELOPER homepage across stores", () => {
+    // The signal the host rule exists for — keepassxc.org is not a store listing.
+    const remote = ext({ id: "oboonakemofpalcgghocfoadofidjkkk", name: "KeePassXC-Browser", homepageUrl: "https://keepassxc.org/", store: "chrome" });
+    expect(isInstalledLocally(remote, [{ id: "keepassxc-browser@keepassxc.org", name: "KeePassXC", homepageUrl: "https://www.keepassxc.org/docs/" }], "firefox")).toBe(true);
+  });
+
+  it("still matches the same extension by id, store homepage or not", () => {
+    expect(isInstalledLocally(icloud, [...localsWithStoreHomepages, { id: icloud.id, name: "iCloud Passwords" }], "chrome")).toBe(true);
+  });
+
+  it("still matches a differently-ided local copy by name (dev-loaded / sideloaded)", () => {
+    expect(isInstalledLocally(icloud, [{ id: "temp-dev-id", name: "iCloud  Passwords" }], "chrome")).toBe(true);
+  });
+
+  it("treats a missing homepage as no signal, not as a match", () => {
+    expect(isInstalledLocally(ext({ id: "a".repeat(32), name: "A", store: "chrome" }), [{ id: "b".repeat(32), name: "B" }], "chrome")).toBe(false);
+  });
+});
