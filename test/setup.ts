@@ -51,9 +51,19 @@ function makeBookmarks() {
     getTree: () => Promise.resolve([bmBuild("0")]),
     getChildren: (parentId) => Promise.resolve(bmChildren(parentId).map((c) => bmBuild(c.id))),
     create: (props) => {
-      const id = String(bmSeq++);
       const siblings = bmChildren(props.parentId);
-      const idx = typeof props.index === "number" ? Math.min(props.index, siblings.length) : siblings.length;
+      // Chrome and Firefox REJECT an index past the child count ("Index out of
+      // bounds."). The fake used to clamp it silently, which hid a real bug: the
+      // merge passed a peer's absolute index into a smaller local parent, the create
+      // threw, the handler's catch swallowed it, and the bookmark was never added —
+      // on every sync. Reject like the browser so that can't hide again.
+      if (typeof props.index === "number" && (props.index < 0 || props.index > siblings.length)) {
+        return Promise.reject(
+          new Error(`Index out of bounds. (index ${props.index}, ${siblings.length} children)`)
+        );
+      }
+      const id = String(bmSeq++);
+      const idx = typeof props.index === "number" ? props.index : siblings.length;
       for (const s of siblings) if ((s.index ?? 0) >= idx) s.index = (s.index ?? 0) + 1; // shift to insert
       const node = { id, parentId: props.parentId, title: props.title ?? "", dateAdded: Date.now(), index: idx };
       if (typeof props.url === "string") node.url = props.url;

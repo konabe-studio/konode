@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { importBookmarks, exportBookmarkPayload, registerBookmarkListeners } from "@/lib/handlers/bookmarks-handler";
-import { getTombstones } from "@/lib/utils/storage";
+import { getTombstones, setTombstones } from "@/lib/utils/storage";
 import type { BookmarkPayload, SyncBookmark } from "@/lib/types";
 
 // These exercise the real merge/replace logic against the in-memory
@@ -179,6 +179,68 @@ describe("importBookmarks — merge", () => {
     const barChildren = await chrome.bookmarks.getChildren("1");
     const workFolders = barChildren.filter((c) => !c.url && c.title === "Work");
     expect(workFolders).toHaveLength(1);
+  });
+});
+
+describe("importBookmarks — the peer's index must not exceed the local parent", () => {
+  // The peer's absolute child index is meaningless on a device whose matching parent
+  // holds fewer children. Chrome/Firefox REJECT `create({ index })` past the child
+  // count, the merge's catch swallowed it, and the bookmark was never added — on every
+  // sync, silently, forever. (The test fake used to clamp, which hid all of this.)
+
+  it("adds a bookmark whose peer index is past the end of the local parent", async () => {
+    // Peer bar: [X, Y]. X is tombstoned here, so it is suppressed and never created —
+    // which leaves the local bar EMPTY when Y arrives carrying index 1.
+    await setTombstones([{ url: "https://x.com", deletedAt: Date.now() }]);
+
+    await importBookmarks(
+      payload([link("X", "https://x.com"), link("Y", "https://y.com")]),
+      "merge",
+      "lww"
+    );
+
+    expect(await localUrls()).toEqual(["https://y.com"]);
+  });
+
+  it("adds every bookmark when the peer's parent is much larger than the local one", async () => {
+    // Eight of the peer's ten already live here, but in a DIFFERENT folder, so
+    // `placement` matches them and they are never (re)created in the bar. The last
+    // two then carry indices 8 and 9 into a bar that has 0 children.
+    const kids = Array.from({ length: 10 }, (_, i) => link(`L${i}`, `https://l${i}.com`));
+    for (let i = 0; i < 8; i++) await seed(`L${i}`, `https://l${i}.com`, "2"); // in "Other"
+
+    await importBookmarks(payload(kids), "merge", "lww");
+
+    expect(await localUrls()).toEqual(kids.map((k) => k.url!).sort());
+  });
+
+  it("creates a folder whose peer index is past the end of the local parent", async () => {
+    await setTombstones([{ url: "https://x.com", deletedAt: Date.now() }]);
+
+    await importBookmarks(
+      payload([link("X", "https://x.com"), folder("Work", [link("W", "https://work.com")])]),
+      "merge",
+      "lww"
+    );
+
+    expect(await localUrls()).toEqual(["https://work.com"]);
+    const bar = await chrome.bookmarks.getChildren("1");
+    expect(bar.filter((c) => !c.url).map((c) => c.title)).toEqual(["Work"]);
+  });
+
+  it("still honours the peer's position when the local parent is large enough", async () => {
+    // The clamp must not flatten real placement: B belongs between A and C.
+    await seed("A", "https://a.com");
+    await seed("C", "https://c.com");
+
+    await importBookmarks(
+      payload([link("A", "https://a.com"), link("B", "https://b.com"), link("C", "https://c.com")]),
+      "merge",
+      "lww"
+    );
+
+    const order = (await chrome.bookmarks.getChildren("1")).map((c) => c.title);
+    expect(order).toEqual(["A", "B", "C"]);
   });
 });
 

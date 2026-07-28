@@ -561,7 +561,12 @@ async function mergeBookmarks(
       if (suppressedByDeletion(node.url)) return;
       try {
         const parentId = await ensureParent();
-        await browser.bookmarks.create({ parentId, index, title: node.title, url: node.url });
+        // Resolve the position against the LOCAL parent (same anchor-then-clamp rule
+        // as the move path). Passing the peer's raw index made the browser reject the
+        // create whenever the local parent was smaller — and the catch below turned
+        // that into a bookmark that silently never appeared, on every sync.
+        const at = placementIndex(await browser.bookmarks.getChildren(parentId), prevKey, index);
+        await browser.bookmarks.create({ parentId, index: at, title: node.title, url: node.url });
         addedUrls.add(urlKey);
         added++;
       } catch (err) {
@@ -576,9 +581,17 @@ async function mergeBookmarks(
         const parentId = await ensureParent();
         const children = await browser.bookmarks.getChildren(parentId);
         const existing = children.find((c) => !c.url && c.title === node.title);
+        // Same anchor-then-clamp as the bookmark add — `children` is already in hand,
+        // so this costs nothing. Unclamped, a folder at a peer index past the local
+        // parent's end failed to create, and the rejection surfaced (confusingly) as
+        // an error against its first child, which then went missing too.
         folderId = existing
           ? existing.id
-          : (await browser.bookmarks.create({ parentId, index, title: node.title })).id;
+          : (await browser.bookmarks.create({
+              parentId,
+              index: placementIndex(children, prevKey, index),
+              title: node.title,
+            })).id;
         return folderId;
       };
       const kids = node.children ?? [];
@@ -702,10 +715,28 @@ async function resolveFolderPath(path: string[], localRoots: BookmarkNode[]): Pr
  *  absent locally. */
 async function anchoredIndex(parentId: string, movingId: string, prevKey: string | undefined, fallbackIndex: number): Promise<number> {
   const rest = (await browser.bookmarks.getChildren(parentId)).filter((c) => c.id !== movingId);
+  return placementIndex(rest, prevKey, fallbackIndex);
+}
+
+/** Where to place a node among `siblings` — the pure core shared by the move path
+ *  (`anchoredIndex`) and the ADD path in the merge.
+ *
+ *  Anchored to the peer's previous sibling (`prevKey`) rather than its absolute index,
+ *  which doesn't translate when the two devices have different device-local siblings.
+ *  The absolute index is the fallback, CLAMPED to `siblings.length`: the browser
+ *  rejects `create`/`move` past the child count ("Index out of bounds."), and on the
+ *  add path that rejection was swallowed by the caller's catch — so a peer index
+ *  larger than the local parent silently dropped the bookmark on every sync. Every
+ *  return here is a valid insertion point. */
+function placementIndex(
+  siblings: Array<{ url?: string; title: string }>,
+  prevKey: string | undefined,
+  fallbackIndex: number
+): number {
   if (prevKey === undefined) return 0; // peer had it first
-  const p = rest.findIndex((c) => siblingKey(c) === prevKey);
+  const p = siblings.findIndex((s) => siblingKey(s) === prevKey);
   if (p >= 0) return p + 1; // immediately after the shared prev sibling
-  return Math.min(fallbackIndex, rest.length); // anchor absent locally → fallback
+  return Math.min(Math.max(0, fallbackIndex), siblings.length); // anchor absent → clamp
 }
 
 async function moveToIndex(id: string, parentId: string, finalIndex: number): Promise<void> {
