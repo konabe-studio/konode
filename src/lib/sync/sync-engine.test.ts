@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { SyncEngine } from "@/lib/sync/sync-engine";
+import { SyncEngine, statusAfterSync } from "@/lib/sync/sync-engine";
+import { BADGE_TEXT, BADGE_COLORS } from "@/lib/constants";
 import { createKeyVerifier } from "@/lib/crypto/encryption";
 import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState, setTombstones, acquireSyncLock, KEYS } from "@/lib/utils/storage";
 import type {
@@ -994,5 +995,43 @@ describe("SyncEngine — the conflict packet is parked outside konode_state", ()
     await expect(engine.resolveConflict("orphan-1", "remote")).rejects.toThrow(/no longer available/i);
     // Still pending — it must not look resolved when nothing was applied.
     expect((await getState()).pending_conflicts).toHaveLength(1);
+  });
+});
+
+describe("statusAfterSync — a queued conflict must not read as 'Synced'", () => {
+  // sync() hard-coded `problems ? "error" : "success"`, overwriting the "conflict" status
+  // syncType had just set. The popup header said "Synced" and the toolbar showed nothing
+  // while unresolved conflicts waited for a decision.
+  it("reports conflict when one is pending and nothing else went wrong", () => {
+    expect(statusAfterSync(0, 1)).toBe("conflict");
+    expect(statusAfterSync(0, 3)).toBe("conflict");
+  });
+
+  it("reports success only when there is genuinely nothing to act on", () => {
+    expect(statusAfterSync(0, 0)).toBe("success");
+  });
+
+  it("lets an error outrank a conflict — it may mean nothing synced at all", () => {
+    expect(statusAfterSync(1, 0)).toBe("error");
+    expect(statusAfterSync(2, 5)).toBe("error");
+  });
+});
+
+describe("BADGE_TEXT — every status the user must act on is visible on the toolbar", () => {
+  it("gives a conflict its own badge", () => {
+    // This rendered as "" — no badge at all — while BADGE_COLORS.conflict went unused.
+    expect(BADGE_TEXT.conflict).not.toBe("");
+    expect(BADGE_TEXT.conflict).not.toBe(BADGE_TEXT.error);
+  });
+
+  it("keeps the two quiet states quiet", () => {
+    expect(BADGE_TEXT.idle).toBe("");
+    expect(BADGE_TEXT.success).toBe("");
+  });
+
+  it("covers every status, and every colour has matching text", () => {
+    for (const status of Object.keys(BADGE_COLORS) as Array<keyof typeof BADGE_COLORS>) {
+      expect(BADGE_TEXT[status]).toBeDefined();
+    }
   });
 });

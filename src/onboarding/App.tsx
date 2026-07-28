@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { sendMessage } from "@/lib/utils/messaging";
+import { sendMessage, request } from "@/lib/utils/messaging";
 import { browser } from "@/lib/utils/ext";
 import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
 
@@ -63,6 +63,10 @@ export default function OnboardingApp() {
   const [githubUser, setGithubUser] = useState<{ login: string } | null>(null);
   const [githubChecking, setGithubChecking] = useState(false);
   const [showToken, setShowToken] = useState(false);
+  const [githubError, setGithubError] = useState<string | null>(null);
+  // Latest-wins guard + debounce timer for the token check. See scheduleVerify.
+  const verifySeq = useRef(0);
+  const verifyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // WebDAV
   const [webdavUrl, setWebdavUrl] = useState("");
@@ -170,9 +174,9 @@ export default function OnboardingApp() {
     const POLL_MS = 600;
     const TIMEOUT_MS = 20000;
     const id = setInterval(async () => {
-      const res = await sendMessage({ type: "GET_STATE" }).catch(() => null);
-      if (cancelled || !res || res.type !== "STATE") return;
-      const st = res.payload;
+      const res = await request({ type: "GET_STATE" });
+      if (cancelled || !res.ok || res.res.type !== "STATE") return;
+      const st = res.res.payload;
       setSyncCounts(st.sync_counts);
       if (st.status === "error" && st.last_error) {
         clearInterval(id);
@@ -261,9 +265,14 @@ export default function OnboardingApp() {
 
     setSaving(true);
     try {
-      const res = await sendMessage({ type: "GET_SETTINGS" });
-      if (res.type !== "SETTINGS") return;
-      const current: SyncSettings = res.payload;
+      // Never return silently here: the button reset itself, nothing was saved, and the
+      // user was given no reason at all.
+      const res = await request({ type: "GET_SETTINGS" });
+      if (!res.ok || res.res.type !== "SETTINGS") {
+        setSetupError(res.ok ? "Couldn't read your current settings. Try again." : res.error);
+        return;
+      }
+      const current: SyncSettings = res.res.payload;
 
       const backends = [];
       if (backend === "gdrive") {
@@ -284,7 +293,7 @@ export default function OnboardingApp() {
       const enabled_types = (Object.keys(dataTypes) as Array<keyof typeof dataTypes>)
         .filter((k) => dataTypes[k]) as SyncSettings["enabled_types"];
 
-      await sendMessage({
+      const saved = await request({
         type: "SAVE_SETTINGS",
         payload: {
           ...current, active_backend: backend, backends, enabled_types,
@@ -293,12 +302,18 @@ export default function OnboardingApp() {
           onboarding_completed: true,
         },
       });
+      if (!saved.ok) {
+        setSetupError(`Couldn't save your setup: ${saved.error}`);
+        return;
+      }
 
       // Capture pre-sync counts, show the live progress step, then start the first
       // sync WITHOUT awaiting — the "syncing" step polls GET_STATE and moves to
       // "done" when every enabled type's count has climbed (or surfaces an error).
-      const stRes = await sendMessage({ type: "GET_STATE" });
-      baselineRef.current = stRes.type === "STATE" ? { ...stRes.payload.sync_counts } : {};
+      // Only a baseline for the progress step — an unreadable one is not worth blocking
+      // the setup over, it just means the first counts start from zero.
+      const stRes = await request({ type: "GET_STATE" });
+      baselineRef.current = stRes.ok && stRes.res.type === "STATE" ? { ...stRes.res.payload.sync_counts } : {};
       setSyncCounts(baselineRef.current);
       setSyncError(null);
       setSyncTimedOut(false);
@@ -328,22 +343,59 @@ export default function OnboardingApp() {
 
   // ─── GitHub token verify ───────────────────────────────────────────────
 
-  const verifyToken = async (token: string) => {
-    if (token.length < 10) { setGithubUser(null); return; }
+  /**
+   * Check the token, debounced and latest-wins.
+   *
+   * This used to run on EVERY keystroke: no debounce, so typing a 40-character token
+   * fired up to 40 requests at GitHub (each carrying a partial token), and no ordering
+   * guard, so a slow response for a partial token could land after the good one and blank
+   * the result — leaving "Continue" disabled with a perfectly valid token pasted in. A
+   * failure also set no error state at all, so the step became a dead end with nothing on
+   * screen to explain it (unlike the Drive path, which does surface its error).
+   */
+  const scheduleVerify = (token: string): void => {
+    if (verifyTimer.current) clearTimeout(verifyTimer.current);
+    setGithubError(null);
+    if (token.trim().length < 10) {
+      setGithubUser(null);
+      setGithubChecking(false);
+      return;
+    }
     setGithubChecking(true);
+    verifyTimer.current = setTimeout(() => { void verifyToken(token.trim()); }, 500);
+  };
+
+  const verifyToken = async (token: string) => {
+    const seq = ++verifySeq.current;
+    const stale = (): boolean => seq !== verifySeq.current;
     try {
       const res = await fetch("https://api.github.com/user", {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" },
       });
+      if (stale()) return; // a newer keystroke already superseded this check
       if (res.ok) {
         const d = await res.json();
         setGithubUser({ login: d.login });
+        setGithubError(null);
       } else {
         setGithubUser(null);
+        setGithubError(
+          res.status === 401
+            ? "GitHub rejected this token. Check it hasn't expired, and that you pasted all of it."
+            : `GitHub couldn't verify the token (HTTP ${res.status}).`
+        );
       }
-    } catch { setGithubUser(null); }
-    setGithubChecking(false);
+    } catch {
+      if (stale()) return;
+      setGithubUser(null);
+      setGithubError("Couldn't reach GitHub. Check your connection and try again.");
+    } finally {
+      if (!stale()) setGithubChecking(false);
+    }
   };
+
+  // Don't leave a pending check to fire into an unmounted tree.
+  useEffect(() => () => { if (verifyTimer.current) clearTimeout(verifyTimer.current); }, []);
 
   // ─── Render ───────────────────────────────────────────────────────────
 
@@ -512,7 +564,7 @@ export default function OnboardingApp() {
                           type={showToken ? "text" : "password"}
                           placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
                           value={githubToken}
-                          onChange={async (e) => { setGithubToken(e.target.value); await verifyToken(e.target.value); }}
+                          onChange={(e) => { setGithubToken(e.target.value); scheduleVerify(e.target.value); }}
                         />
                         <button style={S.eyeBtn} onClick={() => setShowToken(v => !v)}>
                           {showToken ? <EyeOff size={12} /> : <Eye size={12} />}
@@ -524,6 +576,11 @@ export default function OnboardingApp() {
                       {githubUser && !githubChecking && (
                         <div style={{ ...S.verifyRow, color: "var(--success)" }}>
                           <CheckCircle2 size={12} /> @{githubUser.login}
+                        </div>
+                      )}
+                      {githubError && !githubChecking && (
+                        <div style={{ ...S.verifyRow, color: "var(--danger)" }} role="alert">
+                          <XCircle size={12} /> {githubError}
                         </div>
                       )}
                       <input style={{ ...S.input, fontFamily: "monospace" }}

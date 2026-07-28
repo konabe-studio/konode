@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, SyncExtension, SnapshotMeta } from "@/lib/types";
-import { sendMessage } from "@/lib/utils/messaging";
+import { sendMessage, request } from "@/lib/utils/messaging";
 import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
 
 // Interactive Google sign-in isn't supported on every engine (e.g. iOS WebKit /
@@ -196,6 +196,11 @@ export default function OptionsApp() {
   const [saving, setSaving]       = useState(false);
   const [saveOk, setSaveOk]       = useState(false);
   const [testStatus, setTestStatus] = useState<{ ok: boolean; message: string } | null>(null);
+  // Save-time problems get their OWN surface. They used to be written into
+  // `testStatus`, which is rendered only in the Storage tab's Test-connection row —
+  // while the passphrase field that triggers most of them lives in Advanced. So on
+  // three of the four tabs Save just did nothing, with no explanation anywhere.
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [testing, setTesting]     = useState(false);
 
   // Google Drive
@@ -249,6 +254,9 @@ export default function OptionsApp() {
   const [snapshots, setSnapshots] = useState<SnapshotMeta[]>([]);
   const [snapBusy, setSnapBusy] = useState(false);
   const [snapMsg, setSnapMsg] = useState<string | null>(null);
+  // "loading" | "ok" | an error message — so an empty list can be told apart from a
+  // list we never managed to read. See the Activity effect below.
+  const [snapLoad, setSnapLoad] = useState<"loading" | "ok" | string>("loading");
   const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
@@ -351,8 +359,14 @@ export default function OptionsApp() {
   useEffect(() => {
     if (activeNav !== "activity") return;
     void (async () => {
-      const res = await sendMessage({ type: "LIST_SNAPSHOTS" });
-      if (res.type === "SNAPSHOTS") setSnapshots(res.payload);
+      setSnapLoad("loading");
+      // "No restore points yet" must never stand in for "the list failed to load" — on a
+      // recovery screen that is the worst possible lie. The ERROR response used to be
+      // dropped and the rejection was unhandled, so both read as "you have no backups".
+      const r = await request({ type: "LIST_SNAPSHOTS" });
+      if (!r.ok) { setSnapLoad(r.error); return; }
+      if (r.res.type === "SNAPSHOTS") setSnapshots(r.res.payload);
+      setSnapLoad("ok");
     })();
   }, [activeNav]);
 
@@ -513,23 +527,30 @@ export default function OptionsApp() {
 
   const save = async () => {
     if (!settings) return;
+    setSaveError(null);
     if (passTooShort) {
-      setTestStatus({ ok: false, message: `Use at least ${MIN_PASSPHRASE_LENGTH} characters. Synced data can be attacked offline, so a short passphrase is guessable. Longer is better, or generate a key.` });
+      setSaveError(`Use at least ${MIN_PASSPHRASE_LENGTH} characters. Synced data can be attacked offline, so a short passphrase is guessable. Longer is better, or generate a key.`);
       return;
     }
     if (passMismatch) {
-      setTestStatus({ ok: false, message: "The two passphrases don't match. Re-enter to confirm before saving." });
+      setSaveError("The two passphrases don't match. Re-enter to confirm before saving.");
       return;
     }
     if (settings.active_backend === "webdav") {
       const granted = await requestWebdavHostPermission();
       if (!granted) {
-        setTestStatus({ ok: false, message: "Permission to access the WebDAV server was not granted." });
+        setSaveError("Permission to access the WebDAV server was not granted.");
         return;
       }
     }
     setSaving(true);
-    await sendMessage({ type: "SAVE_SETTINGS", payload: settings });
+    const r = await request({ type: "SAVE_SETTINGS", payload: settings });
+    if (!r.ok) {
+      // Don't claim "Saved" for a write we never confirmed.
+      setSaveError(r.error);
+      setSaving(false);
+      return;
+    }
     // The staged provider is now the live one — move the "active" badge onto it.
     setSavedProvider(providerFromConfig(
       settings.active_backend,
@@ -538,6 +559,24 @@ export default function OptionsApp() {
     setSaving(false); setSaveOk(true);
     setTimeout(() => setSaveOk(false), 2500);
   };
+
+  /** The Save button plus its own error surface. Every tab that can save renders THIS,
+   *  so a validation failure can no longer be visible on one tab and invisible on three.
+   *  `extra` carries the Storage tab's Test-connection group. */
+  const saveRow = (opts: { disabled?: boolean; extra?: ReactNode; marginTop?: number } = {}) => (
+    <div className="action-row" style={opts.marginTop === undefined ? undefined : { marginTop: opts.marginTop }}>
+      <button className={`btn-save ${saveOk ? "saved" : ""}`} onClick={save} disabled={saving || opts.disabled}>
+        {saving ? <Loader2 size={14} className="spin" /> : saveOk ? <CheckCircle2 size={14} /> : <Save size={14} />}
+        {saving ? "Saving…" : saveOk ? "Saved" : "Save changes"}
+      </button>
+      {saveError && (
+        <span className="error-row" role="alert">
+          <AlertTriangle size={12} /> {saveError}
+        </span>
+      )}
+      {opts.extra}
+    </div>
+  );
 
   const testBackend = async () => {
     if (!settings?.active_backend) return;
@@ -1090,12 +1129,8 @@ export default function OptionsApp() {
               </div>
 
               {/* Test + Save row */}
-              <div className="action-row">
-                <button className={`btn-save ${saveOk ? "saved" : ""}`} onClick={save} disabled={saving}>
-                  {saving ? <Loader2 size={14} className="spin" /> : saveOk ? <CheckCircle2 size={14} /> : <Save size={14} />}
-                  {saving ? "Saving…" : saveOk ? "Saved" : "Save changes"}
-                </button>
-                {settings.active_backend && (
+              {saveRow({
+                extra: settings.active_backend ? (
                   <div className="test-group">
                     {testStatus && (
                       <span className={`test-result ${testStatus.ok ? "ok" : "fail"}`}>
@@ -1108,8 +1143,8 @@ export default function OptionsApp() {
                       Test Connection
                     </button>
                   </div>
-                )}
-              </div>
+                ) : undefined,
+              })}
             </div>
           )}
 
@@ -1194,12 +1229,7 @@ export default function OptionsApp() {
                 </div>
               </div>
 
-              <div className="action-row" style={{ marginTop: 20 }}>
-                <button className={`btn-save ${saveOk ? "saved" : ""}`} onClick={save} disabled={saving}>
-                  {saving ? <Loader2 size={14} className="spin" /> : saveOk ? <CheckCircle2 size={14} /> : <Save size={14} />}
-                  {saving ? "Saving…" : saveOk ? "Saved" : "Save changes"}
-                </button>
-              </div>
+              {saveRow({ marginTop: 20 })}
             </div>
           )}
 
@@ -1322,12 +1352,7 @@ export default function OptionsApp() {
                 </div>
               </div>
 
-              <div className="action-row" style={{ marginTop: 20 }}>
-                <button className={`btn-save ${saveOk ? "saved" : ""}`} onClick={save} disabled={saving}>
-                  {saving ? <Loader2 size={14} className="spin" /> : saveOk ? <CheckCircle2 size={14} /> : <Save size={14} />}
-                  {saving ? "Saving…" : saveOk ? "Saved" : "Save changes"}
-                </button>
-              </div>
+              {saveRow({ marginTop: 20 })}
             </div>
           )}
 
@@ -1400,7 +1425,23 @@ export default function OptionsApp() {
                       </button>
                     </div>
                   </div>
-                  {snapshots.length === 0 ? (
+                  {snapLoad === "loading" ? (
+                    <div className="settings-row">
+                      <div className="settings-row-left"><div className="row-desc">Loading restore points…</div></div>
+                    </div>
+                  ) : snapLoad !== "ok" ? (
+                    <div className="settings-row">
+                      <div className="settings-row-left">
+                        <div className="error-row" role="alert">
+                          <AlertTriangle size={12} /> Couldn't read your restore points: {snapLoad}
+                        </div>
+                        <div className="row-desc">
+                          This does not mean you have none — they live on your storage and could not be
+                          listed just now. Check the connection in Storage Backend and reopen this tab.
+                        </div>
+                      </div>
+                    </div>
+                  ) : snapshots.length === 0 ? (
                     <div className="settings-row">
                       <div className="settings-row-left"><div className="row-desc">No restore points yet. Create one above, or one is saved automatically if an unusual deletion is ever blocked.</div></div>
                     </div>
@@ -1761,6 +1802,11 @@ export default function OptionsApp() {
                   {saving ? <Loader2 size={14} className="spin" /> : saveOk ? <CheckCircle2 size={14} /> : <Save size={14} />}
                   {saving ? "Saving…" : saveOk ? "Saved" : "Save changes"}
                 </button>
+                {saveError && (
+                  <span className="error-row" role="alert">
+                    <AlertTriangle size={12} /> {saveError}
+                  </span>
+                )}
               </div>
             </div>
           )}

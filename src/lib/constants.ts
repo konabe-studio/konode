@@ -23,6 +23,18 @@ export const AMO_SEARCH_BASE = "https://addons.mozilla.org/firefox/search/?q=";
 /** Toolbar badge color per sync status. The service worker can't read the UI's
  *  CSS custom properties, so the palette is mirrored here as plain values.
  *  `success` is the Konode signal green (kept in sync with the UI accent). */
+/** Toolbar badge TEXT per sync status. A pending conflict needs the user to choose, so
+ *  it has to be visible without opening the popup — it used to render as empty text, i.e.
+ *  no badge at all, while `BADGE_COLORS.conflict` sat here unused. An empty string means
+ *  "no badge", which is right only for the two quiet states. */
+export const BADGE_TEXT: Record<SyncStatus, string> = {
+  idle: "",
+  success: "",
+  syncing: "↑",
+  error: "!",
+  conflict: "?",
+};
+
 export const BADGE_COLORS: Record<SyncStatus, string> = {
   idle: "#71717a",
   syncing: "#fbbf24",

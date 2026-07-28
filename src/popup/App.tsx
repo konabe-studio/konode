@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { SyncState, SyncSettings, DataType, SyncExtension, RemoteSessionEntry } from "@/lib/types";
 import { providerFromConfig, providerById } from "@/lib/storage-providers";
-import { sendMessage } from "@/lib/utils/messaging";
+import { sendMessage, request } from "@/lib/utils/messaging";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { isInstalledLocally, installOrSearchUrl } from "@/lib/utils/extensions-match";
 import { KEYS, getSettings, getState, normalizeRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/storage";
 import { STATE_UPDATE } from "@/lib/constants";
+import { streamState, streamInputFor, streamColor, streamLabel } from "@/popup/stream-state";
 import {
   RefreshCw, Settings, Bookmark, Clock, Globe,
   AlertCircle, Loader2, ChevronRight,
@@ -41,6 +42,10 @@ export default function PopupApp() {
   const [missingExtensions, setMissingExtensions] = useState<SyncExtension[]>([]);
   const [remoteSessions, setRemoteSessions] = useState<RemoteSessionEntry[]>([]);
   const [loadError, setLoadError] = useState(false);
+  // Why the last button press did nothing. Every one of these handlers used to
+  // `await sendMessage(...)` and drop the answer, so an ERROR response — "a sync is
+  // already running", a peer whose data can't be applied — looked like a dead button.
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Track animation state separately from sync state
   const animTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -171,8 +176,11 @@ export default function PopupApp() {
   }, []);
 
   const handleSyncNow = async () => {
-    await sendMessage({ type: "SYNC_NOW" });
-    // State will update via STATE_UPDATE messages from background
+    setActionError(null);
+    // The engine reports whether the sync actually started (a stranded lock used to make
+    // this a no-op that answered OK). Success still arrives via STATE_UPDATE.
+    const r = await request({ type: "SYNC_NOW" });
+    if (!r.ok) setActionError(r.error);
   };
 
   const openOptions = () => browser.runtime.openOptionsPage();
@@ -192,12 +200,18 @@ export default function PopupApp() {
   };
 
   const resolveConflict = async (id: string, resolution: "local" | "remote") => {
-    await sendMessage({ type: "RESOLVE_CONFLICT", payload: { id, resolution } });
+    setActionError(null);
+    // "Use remote" can legitimately fail — an encrypted peer this device can't read, or
+    // a packet that is no longer available. Silently reloading made the click look inert.
+    const r = await request({ type: "RESOLVE_CONFLICT", payload: { id, resolution } });
+    if (!r.ok) setActionError(r.error);
     await load();
   };
 
   const restoreSession = async (id: string) => {
-    await sendMessage({ type: "RESTORE_SESSION", payload: { id } });
+    setActionError(null);
+    const r = await request({ type: "RESTORE_SESSION", payload: { id } });
+    if (!r.ok) setActionError(r.error);
   };
 
   const status = state?.status ?? "idle";
@@ -253,8 +267,14 @@ export default function PopupApp() {
       </div>
 
       {/* ── Banners ── */}
-      {(loadError || state?.last_error || state?.recovery_notice || (state?.pending_conflicts?.length ?? 0) > 0 || showNoBackend) && (
+      {(loadError || actionError || state?.last_error || state?.recovery_notice || (state?.pending_conflicts?.length ?? 0) > 0 || showNoBackend) && (
         <div className="mt-3 space-y-2">
+          {actionError && (
+            <div className="flex items-start gap-2 rounded-box border border-sk-hairline bg-sk-raised px-3 py-2" role="alert">
+              <AlertCircle size={12} className="mt-0.5 shrink-0 text-sk-danger" />
+              <span className="text-[12px] text-sk-danger">{actionError}</span>
+            </div>
+          )}
           {state?.recovery_notice && (
             <button
               onClick={openActivityLog}
@@ -349,33 +369,27 @@ export default function PopupApp() {
           {SYNC_ORDER.map((type) => {
             const meta = DATA_TYPE_META[type];
             const Icon = meta.icon;
-            const isEnabled = settings?.enabled_types.includes(type) ?? false;
-            const isCurrentlySyncing = syncingType === type;
-            const wasSynced = syncedTypes.has(type);
-            const isPending = isSyncing && isEnabled && !isCurrentlySyncing && !wasSynced;
-
-            // Green icon = OK; yellow spinner = syncing; subtle = pending/off.
-            const iconColor = isCurrentlySyncing
-              ? "text-sk-warn"
-              : isEnabled && !isPending
-                ? "text-sk-signal"
-                : "text-sk-subtle";
-            const state = isCurrentlySyncing
-              ? "syncing"
-              : !isEnabled
-                ? "off"
-                : isPending
-                  ? "pending"
-                  : "synced";
+            // Derived in one tested place — see popup/stream-state.ts. Inline, this
+            // collapsed to green/"synced" for every enabled type whenever a sync wasn't
+            // running, including before the first one and right after a failure.
+            const ss = streamState(
+              streamInputFor(type, {
+                state,
+                enabledTypes: settings?.enabled_types,
+                syncingType,
+                syncedTypes,
+              })
+            );
+            const iconColor = streamColor(ss);
 
             return (
               <div
                 key={type}
-                title={`${meta.label}: ${state}`}
-                aria-label={`${meta.label}: ${state}`}
-                className={`flex aspect-square items-center justify-center rounded-full border border-sk-hairline bg-sk-tint ${!isEnabled ? "opacity-40" : ""}`}
+                title={`${meta.label}: ${streamLabel(ss)}`}
+                aria-label={`${meta.label}: ${streamLabel(ss)}`}
+                className={`flex aspect-square items-center justify-center rounded-full border border-sk-hairline bg-sk-tint ${ss === "off" ? "opacity-40" : ""}`}
               >
-                {isCurrentlySyncing ? (
+                {ss === "syncing" ? (
                   <Loader2 size={22} className={`animate-spin ${iconColor}`} />
                 ) : (
                   <Icon size={22} strokeWidth={1.75} className={iconColor} />

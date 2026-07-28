@@ -1,13 +1,13 @@
 // ─── Konode Service Worker (MV3) ─────────────────────────────────────────
 // Handles: alarm-based polling, bookmark/tab listeners, message routing
 
-import type { ExtensionMessage, ExtensionResponse } from "@/lib/types";
+import type { ExtensionMessage, ExtensionResponse, SyncState } from "@/lib/types";
 import { getSettings, getState, setState, saveSettings, clearStaleSyncLock, KEYS } from "@/lib/utils/storage";
 import { SyncEngine } from "@/lib/sync/sync-engine";
 import { registerBookmarkListeners } from "@/lib/handlers/bookmarks-handler";
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { logger, setLoggerDebug } from "@/lib/utils/logger";
-import { BADGE_COLORS, STATE_UPDATE } from "@/lib/constants";
+import { BADGE_COLORS, BADGE_TEXT, STATE_UPDATE } from "@/lib/constants";
 import { browser } from "@/lib/utils/ext";
 import { ensureSyncAlarm, SYNC_ALARM, BOOKMARK_ALARM } from "@/lib/utils/alarms";
 
@@ -26,8 +26,12 @@ async function init(): Promise<void> {
   // ── Reset stuck "syncing" state from previous session ──
   const currentState = await getState();
   if (currentState.status === "syncing") {
-    await setState({ status: "idle", last_error: null });
+    const repaired = await setState({ status: "idle", last_error: null });
     logger.event("ServiceWorker", "Reset stuck syncing state");
+    // Tell any ALREADY-OPEN popup. It reads the state once on mount, so without this it
+    // sat on "Syncing…" with the Sync-now button disabled for its whole lifetime — the
+    // repair happened in storage where nobody was looking.
+    broadcastState(repaired);
   }
 
   // ── Drop a sync lock left behind by a worker that died mid-sync ──
@@ -49,13 +53,7 @@ async function init(): Promise<void> {
     logger.event("ServiceWorker", "Migrated: removed legacy 'tabs' data type");
   }
 
-  syncEngine = new SyncEngine(settings, (state) => {
-    updateBadge(state.status);
-    // Push live status to any open popup/options view. chrome.extension.getViews
-    // does not exist in an MV3 service worker, so just broadcast — sendMessage
-    // rejects when no view is listening, which is expected; swallow it.
-    browser.runtime.sendMessage({ type: STATE_UPDATE, payload: state }).catch(() => {});
-  });
+  syncEngine = new SyncEngine(settings, broadcastState);
 
   // Bookmark listeners are registered once at the top level (see bottom of file),
   // not here — init() re-runs on every SW wake and would stack duplicate listeners.
@@ -87,13 +85,17 @@ function ensureInit(): Promise<void> {
 // ─── Badge ────────────────────────────────────────────────────────────────
 
 function updateBadge(status: string): void {
-  browser.action.setBadgeBackgroundColor({
-    color: BADGE_COLORS[status as keyof typeof BADGE_COLORS] ?? BADGE_COLORS.idle,
-  });
+  const key = status as keyof typeof BADGE_COLORS;
+  browser.action.setBadgeBackgroundColor({ color: BADGE_COLORS[key] ?? BADGE_COLORS.idle });
+  browser.action.setBadgeText({ text: BADGE_TEXT[key] ?? "" });
+}
 
-  browser.action.setBadgeText({
-    text: status === "syncing" ? "↑" : status === "error" ? "!" : "",
-  });
+/** Update the toolbar and push the state to any open popup/options view.
+ *  chrome.extension.getViews doesn't exist in an MV3 service worker, so just broadcast —
+ *  sendMessage rejects when no view is listening, which is expected; swallow it. */
+function broadcastState(state: SyncState): void {
+  updateBadge(state.status);
+  browser.runtime.sendMessage({ type: STATE_UPDATE, payload: state }).catch(() => {});
 }
 
 // ─── Bookmark Listener ────────────────────────────────────────────────────

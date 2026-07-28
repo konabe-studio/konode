@@ -74,6 +74,20 @@ export class EncryptionMismatchError extends Error {
  */
 export type SyncOutcome = "ran" | "no-backend" | "already-running";
 
+/**
+ * The status a finished sync should report. `sync()` used to hard-code
+ * `problems ? "error" : "success"`, which OVERWROTE the "conflict" status that syncType
+ * had just set — so the popup header read "Synced" and the toolbar showed nothing while
+ * unresolved conflicts sat waiting for a decision.
+ *
+ * Errors outrank conflicts: an error may mean nothing synced at all.
+ */
+export function statusAfterSync(problems: number, pendingConflicts: number): SyncState["status"] {
+  if (problems > 0) return "error";
+  if (pendingConflicts > 0) return "conflict";
+  return "success";
+}
+
 // ─── Sync Engine ─────────────────────────────────────────────────────────
 
 export class SyncEngine {
@@ -183,7 +197,8 @@ export class SyncEngine {
       const problems = [...this.encryptionWarnings.values(), ...typeErrors];
       const prevState = await getState();
       const newState = await setState({
-        status: problems.length ? "error" : "success",
+        // Read AFTER the fold, so it sees any conflict syncType just queued.
+        status: statusAfterSync(problems.length, prevState.pending_conflicts.length),
         last_sync: new Date().toISOString(),
         last_error: problems.length ? problems.join(" ") : null,
         bytes_transferred: prevState.bytes_transferred + this.bytesThisSync,
