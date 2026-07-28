@@ -1720,8 +1720,8 @@ export default function OptionsApp() {
                       <div className="row-desc">For anything you'd rather not post publicly.</div>
                     </div>
                   </div>
-                  <a className="link-external" href="mailto:hello@konode.org">
-                    <Mail size={12} /> hello@konode.org
+                  <a className="link-external" href="mailto:konabe@proton.me">
+                    <Mail size={12} /> konabe@proton.me
                   </a>
                 </div>
               </div>
