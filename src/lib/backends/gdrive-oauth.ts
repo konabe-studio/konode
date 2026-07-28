@@ -54,6 +54,28 @@ const DRIVE_UNSUPPORTED_MSG =
   "Google Drive sign-in isn't available in this browser. Use GitHub or WebDAV instead.";
 
 /**
+ * Shown when the flow started but didn't come back with a code. Deliberately does NOT
+ * claim the browser is at fault: every non-cancel failure used to be reported as
+ * DRIVE_UNSUPPORTED_MSG, which is wrong for the most likely real cause — a redirect URI
+ * the Google OAuth client doesn't know about. Only the chromiumapp.org redirect is
+ * registered, so on any other engine (Firefox hands out a `*.extensions.allizom.org`
+ * URL) Google answers `redirect_uri_mismatch`, shows its own error page in the auth
+ * window, and never redirects back. Telling the user their browser is unsupported sent
+ * them chasing the wrong thing — including whoever is trying to register that redirect.
+ */
+const DRIVE_SIGNIN_FAILED_MSG =
+  "Google sign-in didn't complete. If it keeps failing in this browser, its redirect " +
+  "URL may not be registered with Konode's Google client — use GitHub or WebDAV instead.";
+
+/** Messages every engine uses for "the user closed the window / declined". */
+const CANCELLED_RE = /cancel|denied|did not approve/i;
+
+/** An engine whose auth bridge refuses the call outright, rather than a flow that ran
+ *  and failed. iOS WebKit (Orion) exposes launchWebAuthFlow but throws a native
+ *  TypeError-shaped error the moment it's invoked. */
+const UNSUPPORTED_RE = /not an object|not a function|parameters\.length/i;
+
+/**
  * Whether interactive Google sign-in can even be attempted here.
  *
  * `chrome.identity.launchWebAuthFlow` is absent on some engines, so the UI uses
@@ -61,7 +83,11 @@ const DRIVE_UNSUPPORTED_MSG =
  * can't catch every case: on iOS WebKit (e.g. Orion) the method is *present* but
  * throws an opaque native error when actually invoked ("undefined is not an object
  * (evaluating 'parameters.length')") — that case is handled by the try/catch in
- * interactiveSignIn, which maps any non-cancel failure to DRIVE_UNSUPPORTED_MSG.
+ * interactiveSignIn.
+ *
+ * It also can't tell whether this engine's redirect URL is one Google will accept:
+ * that depends on the OAuth client's registered redirect URIs, which we can't read.
+ * A mismatch therefore surfaces as a failed flow, not as an up-front block.
  */
 export function isDriveAuthAvailable(): boolean {
   try {
@@ -167,12 +193,17 @@ export async function interactiveSignIn(): Promise<GDriveSession> {
     responseUrl = await browser.identity.launchWebAuthFlow({ url: authUrl, interactive: true });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    // A user cancel is normal; anything else here is the browser's auth bridge
-    // refusing the call (observed on iOS WebKit/Orion, where launchWebAuthFlow
-    // exists but throws a native "parameters.length" error). Don't leak the raw
-    // engine message — treat a non-cancel failure as an unsupported platform.
-    if (/cancel/i.test(msg)) throw new Error("Sign-in cancelled");
-    throw new Error(DRIVE_UNSUPPORTED_MSG);
+    // Closing the consent window or declining is normal, and it's also what a
+    // `redirect_uri_mismatch` looks like from here: Google shows its own error page and
+    // never redirects, so the user closes the window.
+    if (CANCELLED_RE.test(msg)) throw new Error("Sign-in cancelled");
+    // The raw engine text stays out of the UI, but not out of the log — and log the
+    // redirect URI with it: that's the exact string that has to be registered with the
+    // Google OAuth client, and it's otherwise invisible.
+    logger.warn("GDrive.oauth", `Sign-in failed for redirect ${redirectUri()}: ${msg}`);
+    // Only claim the platform is unsupported when the auth bridge itself refused.
+    if (err instanceof TypeError || UNSUPPORTED_RE.test(msg)) throw new Error(DRIVE_UNSUPPORTED_MSG);
+    throw new Error(DRIVE_SIGNIN_FAILED_MSG);
   }
   if (!responseUrl) throw new Error("Sign-in cancelled");
 
