@@ -42,7 +42,11 @@ function detectDeviceName(): string {
 // ─── Default Settings ──────────────────────────────────────────────────────
 
 export const DEFAULT_SETTINGS: SyncSettings = {
-  device_id: crypto.randomUUID(),
+  // Intentionally EMPTY: the real identity is minted and persisted by getSettings().
+  // This used to be a module-load `crypto.randomUUID()`, which meant every extension
+  // context — service worker, popup, options, onboarding — carried its own different
+  // default, and nothing ever wrote it down. See getSettings().
+  device_id: "",
   device_label: detectDeviceName(),
   // Bookmarks only by default. The extension list is fingerprint-grade data and
   // history/tabs are sensitive, so those are opt-in (turned on in onboarding/settings).
@@ -139,11 +143,36 @@ export function updateKey<T>(key: string, mutate: (current: T) => T, fallback: T
 
 // ─── Settings ──────────────────────────────────────────────────────────────
 
+/**
+ * Settings, with a STABLE device identity guaranteed.
+ *
+ * Every synced file is named `konode_<type>_<device_id>.json`, so the id must never
+ * change: a new one means a fresh set of files on the backend while the old ones linger as
+ * orphans forever. It used to be a module-load `crypto.randomUUID()` in DEFAULT_SETTINGS
+ * that this function merged in but never PERSISTED — so until something happened to call
+ * saveSettings(), the answer differed per extension context (each has its own module
+ * instance) and per worker wake.
+ *
+ * That is not cosmetic. `konode_upload_checksums` is a separate key, so a device_id that
+ * changed while those survived left the NEW identity's file unwritten for any payload
+ * static enough not to change on its own — which is exactly the installed-extension list.
+ * It matches a field report where two devices each had an extensions file that was never
+ * uploaded and an orphan file from a third id sitting next to them.
+ *
+ * Minted through the serialized `updateKey`, so two contexts reading at the same moment
+ * cannot mint two different ids.
+ */
 export async function getSettings(): Promise<SyncSettings> {
-  // Merge over defaults so a settings object saved by an older build (missing a
-  // newly-added field like bulk_delete_percent) still gets a sane value.
-  const stored = await get<Partial<SyncSettings>>(KEYS.SETTINGS, DEFAULT_SETTINGS);
-  return { ...DEFAULT_SETTINGS, ...stored };
+  // Fallback `{}`, NOT DEFAULT_SETTINGS: "nothing stored" has to be distinguishable so we
+  // know to mint an identity, and the defaults get merged over it either way.
+  const stored = await get<Partial<SyncSettings>>(KEYS.SETTINGS, {});
+  if (stored.device_id) return { ...DEFAULT_SETTINGS, ...stored };
+  const settled = await updateKey<Partial<SyncSettings>>(
+    KEYS.SETTINGS,
+    (cur) => (cur.device_id ? cur : { ...cur, device_id: crypto.randomUUID() }),
+    {}
+  );
+  return { ...DEFAULT_SETTINGS, ...settled };
 }
 
 export async function saveSettings(partial: Partial<SyncSettings>): Promise<SyncSettings> {

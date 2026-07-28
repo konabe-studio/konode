@@ -4,9 +4,10 @@ import {
   acquireSyncLock, releaseSyncLock, clearStaleSyncLock,
   getImportedHistoryUrls, addImportedHistoryUrls,
   updateKey, appendAudit, KEYS,
+  getSettings, saveSettings, DEFAULT_SETTINGS,
 } from "@/lib/utils/storage";
 import { browser } from "@/lib/utils/ext";
-import type { RemoteSessionEntry, RemoteExtensionEntry, SyncExtension } from "@/lib/types";
+import type { RemoteSessionEntry, RemoteExtensionEntry, SyncExtension, SyncSettings } from "@/lib/types";
 
 function entry(device: string, ts: string, tabCount = 1): RemoteSessionEntry {
   return {
@@ -203,5 +204,67 @@ describe("clearStaleSyncLock — recovery from a worker that died mid-sync", () 
     await acquireSyncLock(60 * 60_000); // an hour-long TTL, taken just now
     expect(await clearStaleSyncLock()).toBe(true);
     expect(await acquireSyncLock(60 * 60_000)).toBe(true);
+  });
+});
+
+describe("device identity is stable and persisted", () => {
+  // Every synced file is named konode_<type>_<device_id>.json, so a changing id means a
+  // fresh set of files on the backend while the old ones linger as orphans. The id used to
+  // be a module-load randomUUID() in DEFAULT_SETTINGS that getSettings() merged in but
+  // never wrote down — so it differed per extension context and per worker wake. And since
+  // konode_upload_checksums is a separate key, an id that changed while those survived
+  // left the new identity's file unwritten for any payload static enough not to change on
+  // its own: exactly the installed-extension list.
+  const readStored = async (): Promise<Partial<SyncSettings>> =>
+    ((await browser.storage.local.get(KEYS.SETTINGS)) as Record<string, Partial<SyncSettings>>)[
+      KEYS.SETTINGS
+    ] ?? {};
+
+  it("mints an id on first read AND writes it down", async () => {
+    expect(await readStored()).toEqual({}); // nothing stored yet
+
+    const id = (await getSettings()).device_id;
+
+    expect(id).toMatch(/^[0-9a-f-]{36}$/);
+    expect((await readStored()).device_id).toBe(id); // persisted, not just returned
+  });
+
+  it("returns the same id on every later read", async () => {
+    const first = (await getSettings()).device_id;
+    expect((await getSettings()).device_id).toBe(first);
+    expect((await getSettings()).device_id).toBe(first);
+  });
+
+  it("mints only ONE id when two contexts read at the same moment", async () => {
+    // The popup and the service worker can both cold-start against a fresh store. Minted
+    // through the serialized updateKey, so they can't produce two identities.
+    const ids = await Promise.all([getSettings(), getSettings(), getSettings()]);
+    expect(new Set(ids.map((s) => s.device_id)).size).toBe(1);
+  });
+
+  it("never overwrites an id that already exists", async () => {
+    await browser.storage.local.set({ [KEYS.SETTINGS]: { device_id: "existing-install-id" } });
+    expect((await getSettings()).device_id).toBe("existing-install-id");
+    expect((await readStored()).device_id).toBe("existing-install-id");
+  });
+
+  it("survives saveSettings, which must not clobber the identity", async () => {
+    const id = (await getSettings()).device_id;
+    await saveSettings({ sync_interval_seconds: 300 });
+    expect((await getSettings()).device_id).toBe(id);
+  });
+
+  it("keeps the id out of DEFAULT_SETTINGS, so no context carries a private one", () => {
+    // The footgun at the source: a module-load random id here meant every context had a
+    // different default, and whichever one happened to save first won.
+    expect(DEFAULT_SETTINGS.device_id).toBe("");
+  });
+
+  it("still merges defaults over a settings object from an older build", async () => {
+    await browser.storage.local.set({ [KEYS.SETTINGS]: { device_id: "old", conflict_strategy: "manual" } });
+    const s = await getSettings();
+    expect(s.device_id).toBe("old");
+    expect(s.conflict_strategy).toBe("manual");
+    expect(s.bulk_delete_percent).toBe(DEFAULT_SETTINGS.bulk_delete_percent); // newly-added field
   });
 });
