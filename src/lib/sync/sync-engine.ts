@@ -213,13 +213,37 @@ export class SyncEngine {
       this.onStateChange(newState);
       logger.error("SyncEngine.sync", err);
     } finally {
-      await backend.disconnect();
-      this.isSyncing = false;
-      await releaseSyncLock();
+      await this.finishSync(backend);
     }
     // Reached whether the sync succeeded or was recorded as an error — either way it
     // ran, which is what the caller needs to distinguish from bailing at the door.
     return "ran";
+  }
+
+  /**
+   * Tear-down after a sync, in the only order that cannot strand anything.
+   *
+   * The `finally` block used to start with `await backend.disconnect()`, so a throw from
+   * it skipped everything after: `isSyncing` stayed on for the rest of the worker's
+   * lifetime (every later sync answering "already running") and the persisted lock sat
+   * there until its TTL. The in-memory guard is cleared FIRST and synchronously — it
+   * cannot fail — and the two awaits are isolated so neither can strand the other.
+   *
+   * No backend's `disconnect()` can throw today, so this is hardening rather than a live
+   * bug. It costs nothing, and the previous ordering only looked safe by accident.
+   */
+  private async finishSync(backend: ReturnType<typeof createBackend>): Promise<void> {
+    this.isSyncing = false;
+    try {
+      await releaseSyncLock();
+    } catch (e) {
+      logger.warn("SyncEngine", `Releasing the sync lock failed: ${e instanceof Error ? e.message : e}`);
+    }
+    try {
+      await backend.disconnect();
+    } catch (e) {
+      logger.warn("SyncEngine", `Backend disconnect failed: ${e instanceof Error ? e.message : e}`);
+    }
   }
 
   /**

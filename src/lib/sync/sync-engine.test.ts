@@ -1035,3 +1035,48 @@ describe("BADGE_TEXT — every status the user must act on is visible on the too
     }
   });
 });
+
+describe("SyncEngine.finishSync — tear-down must not strand its own guards", () => {
+  // The finally block used to start with `await backend.disconnect()`, so a throw from it
+  // skipped everything after: isSyncing stayed on for the rest of the worker's lifetime
+  // (every later sync answering "already running") and the persisted lock sat until its
+  // TTL. No backend's disconnect() can throw today — this is hardening, and the previous
+  // ordering only looked safe by accident.
+  type Finish = { finishSync(backend: IBackend): Promise<void> };
+  const finish = (e: SyncEngine): Finish => e as unknown as Finish;
+
+  class HostileBackend extends FakeBackend {
+    disconnect(): Promise<void> { return Promise.reject(new Error("socket gone")); }
+  }
+
+  it("clears isSyncing and releases the lock even when disconnect throws", async () => {
+    const engine = makeEngine();
+    engine.isSyncing = true;
+    expect(await acquireSyncLock(60_000)).toBe(true);
+
+    await finish(engine).finishSync(new HostileBackend());
+
+    expect(engine.isSyncing).toBe(false);
+    // Released → the next sync can start immediately instead of waiting out the TTL.
+    expect(await acquireSyncLock(60_000)).toBe(true);
+  });
+
+  it("does not let the failure escape into sync()'s caller", async () => {
+    const engine = makeEngine();
+    await expect(finish(engine).finishSync(new HostileBackend())).resolves.toBeUndefined();
+  });
+
+  it("still disconnects normally when nothing is wrong", async () => {
+    const engine = makeEngine();
+    engine.isSyncing = true;
+    let disconnected = false;
+    class Watched extends FakeBackend {
+      disconnect(): Promise<void> { disconnected = true; return Promise.resolve(); }
+    }
+
+    await finish(engine).finishSync(new Watched());
+
+    expect(disconnected).toBe(true);
+    expect(engine.isSyncing).toBe(false);
+  });
+});
