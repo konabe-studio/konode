@@ -2,21 +2,35 @@ import type { SyncSession } from "@/lib/types";
 
 type TabInfo = { url: string; title?: string; pinned: boolean; favIconUrl?: string };
 import { logger } from "@/lib/utils/logger";
-import { isSafeContentUrl } from "@/lib/utils/url";
+import { isSafeContentUrl, isSensitiveUrl } from "@/lib/utils/url";
 import { browser } from "@/lib/utils/ext";
 
 // ─── Export Current Tabs ──────────────────────────────────────────────────
 
+/**
+ * The open tabs worth publishing: plain web pages only, and never one carrying an
+ * auth secret. Same rule `exportHistory` already applies.
+ *
+ * This used to exclude only `chrome://` and `chrome-extension://` by prefix, which
+ * still uploaded `file://` (local paths, straight out of the user's disk),
+ * `about:` / `moz-extension://` on Firefox, `brave://`, `edge://`, and OAuth callback
+ * tabs whose fragment holds a live `#access_token=…` — to third-party storage,
+ * unencrypted by default. `importSession` refuses to open every one of those anyway,
+ * so this was the most sensitive data we handled, uploaded for no benefit at all.
+ */
 export async function exportCurrentTabs(): Promise<TabInfo[]> {
   const tabs = await browser.tabs.query({});
-  return tabs
-    .filter((t) => t.url && !t.url.startsWith("chrome://") && !t.url.startsWith("chrome-extension://"))
-    .map((t) => ({
-      url: t.url!,
-      title: t.title,
-      pinned: t.pinned,
-      favIconUrl: t.favIconUrl,
-    }));
+  const publishable = tabs.filter((t) => isSafeContentUrl(t.url) && !isSensitiveUrl(t.url));
+  // Debug-only (never the audit log): a count, never the URLs themselves.
+  if (publishable.length !== tabs.length) {
+    logger.debug("exportCurrentTabs", `Excluded ${tabs.length - publishable.length} non-web/sensitive tab(s)`);
+  }
+  return publishable.map((t) => ({
+    url: t.url!,
+    title: t.title,
+    pinned: t.pinned,
+    favIconUrl: t.favIconUrl,
+  }));
 }
 
 // ─── Export as Named Session ──────────────────────────────────────────────
