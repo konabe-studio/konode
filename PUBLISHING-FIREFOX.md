@@ -5,14 +5,43 @@ Step-by-step for listing Konode on [addons.mozilla.org](https://addons.mozilla.o
 Firefox counterpart.
 
 ## What you're submitting
-- **gecko id:** `konode@konode.org`. **STABLE. Never change it after the first
+- **gecko id:** `konabe@proton.me`. **STABLE. Never change it after the first
   upload** (a new id = a brand-new listing that loses your reviews/users).
+  (Was `konode@konode.org` until 2026-07-28 — a leftover pointing at a domain that
+  was dropped and is not ours. Changed while AMO was still empty, i.e. while free.)
 - **Minimum Firefox:** `128.0`.
 - **Data collection:** none. The manifest already declares
   `browser_specific_settings.gecko.data_collection_permissions: { required: ["none"] }`,
   so AMO's data prompt is "No data collected."
 
-Both come from `scripts/make-firefox-manifest.mjs`; you don't set them by hand.
+All of these come from `scripts/make-firefox-manifest.mjs`; you don't set them by hand.
+
+### ⚠️ The gecko id is tied to the Google OAuth client
+
+Firefox derives the Drive sign-in redirect from the add-on id:
+
+```
+https://<sha1(gecko id)>.extensions.allizom.org/gdrive
+```
+
+It is a plain hash of the id, so it is **stable across profiles and installs** — which
+is why it can be registered with Google at all (the `moz-extension://<uuid>/` origin is
+per-install random and could not be). The flip side: **change the gecko id and Drive
+sign-in breaks** with `redirect_uri_mismatch` until the new URL is added as an
+Authorized redirect URI in the Google Cloud Console.
+
+`npm run build:firefox` prints the current value on every run, so check it there rather
+than computing it. For the id above:
+
+```
+https://35d48e659840bd4c2ff0ecf69c470919a3a111b8.extensions.allizom.org/gdrive
+```
+
+The redirect for the old `konode@konode.org` id
+(`https://7a110f3c29a633744585eb6a2ec57ff9586b4528.extensions.allizom.org/gdrive`) is
+now dead and can be removed from the Console.
+
+GitHub and WebDAV are unaffected — neither uses OAuth.
 
 ## 0. One-time setup
 1. A **Firefox account**, signed in at the Developer Hub:
