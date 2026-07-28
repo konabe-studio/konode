@@ -132,7 +132,19 @@ export class WebDAVBackend implements IBackend {
           headers: { Authorization: this.authHeader() },
           cache: "no-store", // avoid a stale peer file from the browser HTTP cache
         });
-        if (!r.ok) continue;
+        if (!r.ok) {
+          // NOT silent. A peer whose file we can't fetch drops out of this sync entirely —
+          // its bookmarks aren't merged, its extensions aren't listed — and with no log
+          // line the sync just reported success with fewer devices than the folder holds.
+          // A field report showed exactly that: three extensions files on the server, one
+          // peer folded in, nothing anywhere saying why. Degraded, not fatal: we keep the
+          // other peers, because one unreadable file must not stop syncing altogether.
+          logger.warn(
+            "WebDAV.downloadAll",
+            `Couldn't download ${basename(href)} (HTTP ${r.status}) — that device is left out of this sync`
+          );
+          continue;
+        }
         try {
           packets.push(JSON.parse(await r.text()) as SyncPacket);
         } catch {

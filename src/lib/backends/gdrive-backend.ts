@@ -226,7 +226,15 @@ export class GDriveBackend implements IBackend {
       const packets: SyncPacket[] = [];
       for (const f of peers) {
         const r = await fetch(`${DRIVE_API}/files/${f.id}?alt=media`, { headers: h, cache: "no-store" });
-        if (!r.ok) continue;
+        if (!r.ok) {
+          // See the note in webdav-backend: a peer we can't fetch silently vanished from
+          // the sync while it still reported success.
+          logger.warn(
+            "GDrive.downloadAll",
+            `Couldn't download ${f.name} (HTTP ${r.status}) — that device is left out of this sync`
+          );
+          continue;
+        }
         try {
           packets.push(JSON.parse(await r.text()) as SyncPacket);
         } catch {
