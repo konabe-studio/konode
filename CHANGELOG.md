@@ -3,6 +3,154 @@
 All notable changes to Konode. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.0] - 2026-07-28
+
+A full code-review pass over the sync engine, the storage backends and the interface.
+Almost all of it is correctness: several ways your data could quietly fail to reach your
+other devices, and several places Konode reported success it had never actually checked.
+The sync file format is unchanged, so existing setups keep working — but every device
+re-uploads each of its files once on the first sync after updating. See Upgrade notes.
+
+### Fixed — data not reaching your other devices
+
+- **Changing where you sync synced nothing.** Konode skips an upload when the data hasn't
+  changed, but it only compared the data — not where it was going. So after switching
+  provider, or changing the GitHub repository, branch or folder, or pointing at a
+  different WebDAV server, the new location stayed empty while the popup reported a clean
+  sync. Only a later bookmark edit fixed it, which on a settled bookmark tree can be days.
+- **The extension list could stop being uploaded altogether.** Your device identity was
+  regenerated instead of being saved, and because the "already uploaded" record survived
+  that, the new identity's files were never written for anything that doesn't change on
+  its own. The installed-extension list is exactly that, which is why it was the one that
+  went missing. The identity is now created once and written down.
+- **"Manual" conflict resolution never published this device's data.** Manual is meant to
+  ask you before pulling a change IN. It also stopped this device sending anything OUT, so
+  as soon as another device existed, your changes reached nobody.
+- **Deleted bookmarks came back.** Deleting several bookmarks at once fired several
+  events, and they overwrote each other's record of the deletion — so only one was
+  remembered and the rest returned from your other devices on the next sync.
+- **Some bookmarks were silently never added.** When a device had fewer bookmarks in a
+  folder than the device it was syncing from, the browser rejected the position Konode
+  asked for and the bookmark was dropped without a word — on every sync, indefinitely.
+- **Deleting all of your bookmarks never reached your other devices.** An empty tree was
+  treated as "nothing to say", so the deletions never left the device.
+- **A device that had been offline for a while could undo your deletions.** Its older copy
+  was merged in before the newer deletion was known, and the freshly re-created bookmark
+  then looked newer than the deletion — so it survived and spread to every device.
+- **One data type failing stopped the rest.** Turning off Konode's optional history or
+  extension permission in your browser made that part of the sync fail, which silently
+  stopped your BOOKMARKS syncing too.
+- **Google Drive: two devices set up at the same moment could end up in separate folders.**
+  Both created a "Konode" folder and each kept its own, so they never saw each other.
+  They now agree on one, and a device whose folder changes re-uploads into the new one.
+
+### Fixed — privacy
+
+- **Open tabs no longer sync local file paths or sign-in links.** Only `chrome://` pages
+  were being excluded, so `file://` paths from your disk, Firefox `about:` pages, and
+  sign-in pages still holding a token in their address were uploaded — and Konode refuses
+  to reopen all of those anyway, so it was the most sensitive thing it handled, sent for
+  no benefit. The same rule the history sync already used now applies here.
+- **Restore points could have their index written back unencrypted.** A device that had
+  turned end-to-end encryption off, but still had the passphrase saved, could read the
+  shared restore-point index and write it back in the clear. It now leaves alone anything
+  it shouldn't be reading, and never overwrites an index it couldn't read.
+- **The activity log no longer records your WebDAV account name.** Every upload wrote the
+  full server address, which on Nextcloud and ownCloud contains your username.
+
+### Fixed — the interface telling you the truth
+
+- **"No restore points yet" was shown when the list had simply failed to load.** On a
+  recovery screen that is the worst possible thing to get wrong. It now tells you it
+  couldn't read them, and says plainly that this does not mean you have none.
+- **Save could do nothing, with no explanation.** Problems from saving were only ever
+  displayed on the Storage Backend tab — including the passphrase problems, whose field
+  lives on Advanced. All four tabs now show them.
+- **"Test connection" now actually tests the connection.** Google Drive reported success
+  from saved sign-in details without contacting Drive at all, so revoked access still
+  said "Connected". GitHub never checked the branch, so a typo passed the test and then
+  failed every upload, permanently and silently.
+- **Sync now, Use remote and Restore no longer look like dead buttons.** When the
+  background couldn't do what you asked, the reason was thrown away. It is now shown.
+- **A waiting conflict is visible on the toolbar**, and the popup no longer reports
+  "Synced" while one is still waiting for your decision.
+- **The popup could stay stuck on "Syncing…"** with the button disabled, if a sync had
+  been interrupted. It's told about the repair now.
+- **The data-type icons no longer show green "synced"** before anything has ever synced,
+  or right after a sync that failed. Those two states look different now.
+- **Setting up GitHub: a rejected token now says so.** Continue simply stayed greyed out
+  with nothing on screen. The token is also checked once you stop typing, rather than on
+  every keystroke.
+
+### Fixed — other browsers
+
+- **WebDAV passwords with accented or non-Latin characters.** A password containing `ő`,
+  `ű`, Cyrillic, an emoji or `€` made every sync fail outright; one with `á`, `ö` or `ü`
+  was sent in the wrong encoding, so a correct password was rejected as wrong, forever.
+- **A Firefox "Bookmarks Menu" landed in Chrome's bookmarks bar** instead of Other
+  bookmarks, because the fallback depended on the order a browser happens to list its
+  bookmark roots.
+- **Google sign-in failures no longer blame your browser.** Anything other than a cancel
+  was reported as "Google Drive sign-in isn't available in this browser", including
+  problems that had nothing to do with the browser.
+
+### Fixed — history and extensions
+
+- **Synced history was re-added on every single sync.** Browsers normalize a web address
+  when they store it, and Konode compared the un-normalized one, so the same page was
+  recorded as a new visit every cycle — inflating visit counts and your most-visited
+  list. It also meant pages you only received from another device were published back out
+  as your own visits.
+- **"Missing extensions" was effectively always empty.** Chrome uses the Web Store page as
+  an extension's homepage when the extension doesn't provide one, so almost every
+  extension looked like a match for almost every other. A store page is no longer treated
+  as evidence.
+
+### Changed
+
+- **The activity log keeps what matters.** It used to fill with routine per-sync lines and
+  turned over completely in about 17 minutes, so the "unusual deletion blocked" warning
+  it points you to was usually gone before you looked. Warnings, errors and notable events
+  (restore points, sign-ins, deletions recorded, recoveries) are kept; routine detail goes
+  to the console only, where Debug mode already shows it.
+- **A blocked mass deletion saves one restore point per incident, not one per sync.** It
+  used to save one every cycle, which pushed all ten of your existing restore points out
+  within about ten minutes — exactly when you'd want them.
+- **The Git provider is listed as "GitHub".** It was labelled "GitHub / Gitea / GitLab",
+  but only GitHub is supported; anyone following the label sent a self-hosted instance's
+  token to GitHub and got a confusing "invalid token" back.
+- **Firefox add-on id is now `konabe@proton.me`** (it was `konode@konode.org`, a domain
+  that isn't ours). Nothing is published on Firefox Add-ons yet, so this is free to change
+  now — but a Firefox test install has to be removed and re-added, and its Drive redirect
+  URL changes with it.
+
+### Upgrade notes
+
+- **Nothing to do on Chrome.** Every device re-uploads each of its files once on the first
+  sync after updating; after that it settles down. If a sync had previously got stuck,
+  updating clears that too.
+- **Your other devices may show "an unusual deletion was blocked"** if bookmarks you
+  deleted a while ago never managed to propagate. That is the safety net doing its job —
+  a restore point is saved, and nothing is lost.
+- **"Test connection" may now report a problem it used to hide** — that's the fix, not a
+  new fault.
+- **Sensitive tab addresses that were already synced stay in the file's history** if you
+  sync to GitHub, because every sync is a commit. Konode stops sending them, and
+  overwrites the current file, but it can't rewrite your repository's past.
+- **A Firefox test install must be removed and re-added** because of the add-on id change;
+  it starts fresh, and its old files on your storage become unused.
+- **Optional:** clearing the activity log (Settings → Activity) drops the old noisy
+  entries, and with them the WebDAV addresses recorded before this release.
+
+### Tooling
+
+- The test suite went from 180 to 324 tests. Every fix was checked by putting the old
+  behaviour back and confirming the new tests fail — including four places where the test
+  doubles were hiding the bug and had to be made to behave like a real browser
+  (bookmark position validation, alarm scheduling, history normalization and visit counts).
+- `npm run build:firefox` now prints the Drive redirect URL derived from the add-on id, so
+  the link between the two can't drift silently again.
+
 ## [1.1.0] - 2026-07-27
 
 Bookmark restore points, a storage picker built around real providers, and two new
