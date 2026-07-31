@@ -24,8 +24,45 @@ function resetBookmarks() {
 resetBookmarks();
 
 // ─── chrome.history in-memory fake ─────────────────────────────────────────
+//
+// `__engine` selects which browser's addUrl semantics to model. Chrome's addUrl takes no
+// visitTime at all and always stamps the visit NOW; Firefox's honors the one it is given.
+// Konode's history sync turns on exactly that difference — it is how a visit that arrived
+// from a peer is told apart from one the user made — so both have to be testable. The
+// default is firefox, which is what the original tests were written against.
 let histEntries = new Map();
-function resetHistory() { histEntries = new Map(); }
+const histApi = {
+  __engine: "firefox",
+  search: ({ maxResults } = {}) =>
+    Promise.resolve([...histEntries.values()].slice(0, maxResults ?? Infinity)),
+  addUrl: ({ url, visitTime }) => {
+    // Browsers CANONICALIZE on write: a bare origin gains its trailing slash, the
+    // host lowercases, a default port drops. The fake used to store the string
+    // verbatim, which hid a re-add loop — the import de-duped on the raw peer string
+    // while the browser had stored the normalized one, so the same URL was added as a
+    // fresh visit on every single sync.
+    let key = url;
+    try { key = new URL(url).href; } catch { /* unparseable — store as given */ }
+    const prev = histEntries.get(key);
+    // The fake used to KEEP the previous time when no visitTime was passed, which is
+    // neither engine — it made a plain user visit invisible in the timeline, so a
+    // republish loop couldn't be observed at all.
+    const stamp = histApi.__engine === "chrome" ? Date.now() : (visitTime ?? Date.now());
+    histEntries.set(key, {
+      id: key, url: key, title: "",
+      lastVisitTime: stamp,
+      // addUrl records a VISIT. The URL row already exists, so a repeat add doesn't
+      // create a second row — it bumps the count. Modelling that is what makes a
+      // re-add loop observable at all; a plain Map.set() just overwrote it silently.
+      visitCount: (prev?.visitCount ?? 0) + 1,
+    });
+    return Promise.resolve();
+  },
+  // Lets one test play BOTH devices in turn: export here, wipe, replay the packet as the
+  // other machine. A round trip is the only way to show a visit doesn't ping-pong.
+  __reset: () => { histEntries = new Map(); },
+};
+function resetHistory() { histEntries = new Map(); histApi.__engine = "firefox"; }
 resetHistory();
 
 // ─── chrome.tabs / chrome.windows in-memory fake ───────────────────────────
@@ -145,6 +182,12 @@ function makeChrome() {
           store.delete(key);
           return Promise.resolve();
         },
+        // Real chrome.storage.local has this, and a test that plays two devices in turn
+        // needs it to become the second machine mid-test.
+        clear: () => {
+          store.clear();
+          return Promise.resolve();
+        },
       },
     },
     bookmarks: makeBookmarks(),
@@ -163,29 +206,7 @@ function makeChrome() {
         return Promise.resolve({ id: 1, focused: !!props.focused, tabs });
       },
     },
-    history: {
-      search: ({ maxResults } = {}) =>
-        Promise.resolve([...histEntries.values()].slice(0, maxResults ?? Infinity)),
-      addUrl: ({ url, visitTime }) => {
-        // Browsers CANONICALIZE on write: a bare origin gains its trailing slash, the
-        // host lowercases, a default port drops. The fake used to store the string
-        // verbatim, which hid a re-add loop — the import de-duped on the raw peer string
-        // while the browser had stored the normalized one, so the same URL was added as a
-        // fresh visit on every single sync.
-        let key = url;
-        try { key = new URL(url).href; } catch { /* unparseable — store as given */ }
-        const prev = histEntries.get(key);
-        histEntries.set(key, {
-          id: key, url: key, title: "",
-          lastVisitTime: visitTime ?? prev?.lastVisitTime ?? 1,
-          // addUrl records a VISIT. The URL row already exists, so a repeat add doesn't
-          // create a second row — it bumps the count. Modelling that is what makes a
-          // re-add loop observable at all; a plain Map.set() just overwrote it silently.
-          visitCount: (prev?.visitCount ?? 0) + 1,
-        });
-        return Promise.resolve();
-      },
-    },
+    history: histApi,
     notifications: { create: vi.fn() },
     // A real in-memory alarms registry, not a mock: the scheduling rule under test is
     // "don't recreate an alarm that already exists", which a create() stub can't show.
