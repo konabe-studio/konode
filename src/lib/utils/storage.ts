@@ -278,43 +278,78 @@ export function updateFolderMoves(
 
 const HIST_IMPORTED_CAP = 20_000;
 
-export async function getImportedHistoryUrls(): Promise<string[]> {
-  return get<string[]>(KEYS.HIST_IMPORTED, []);
-}
-
-export async function addImportedHistoryUrls(urls: string[]): Promise<void> {
-  if (!urls.length) return;
-  // Serialized like the other logs (see updateKey) — this was a get/set pair.
-  await updateKey<string[]>(KEYS.HIST_IMPORTED, (current) => {
-    const seen = new Set(current);
-    const merged = [...current];
-    for (const u of urls) if (!seen.has(u)) { seen.add(u); merged.push(u); }
-    // FIFO cap to bound storage. Dropping the oldest can at worst let one very old
-    // imported URL be re-exported once — it won't perpetually resurrect.
-    return merged.length > HIST_IMPORTED_CAP ? merged.slice(-HIST_IMPORTED_CAP) : merged;
-  }, []);
-}
+/**
+ * Canonical URL → the local last-visit time that OUR OWN import produced for it.
+ *
+ * Read it as "suppress until": while the page's local last-visit time is still this
+ * value, every visit we hold for it arrived from a peer, so publishing it would be
+ * claiming someone else's browsing as ours (CO-6). The moment the user genuinely
+ * navigates there, the local time moves past the stamp and the page becomes ours to
+ * publish.
+ *
+ * This replaces a plain `string[]`. The list could only answer "did this ever arrive
+ * here", which is not the question — it conflated "arrived here" with "never visited
+ * here", so a page stopped being published FOREVER once any peer had sent it.
+ */
+export type ImportedHistoryStamps = Record<string, number>;
 
 /**
- * Take URLs back OUT of the imported set, because this device has since genuinely visited
- * them itself.
- *
- * The set only ever grew before, and nothing ever released an entry — so once a page had
- * arrived from any peer, this device stopped publishing it FOREVER, even when the user
- * later browsed it here. With three devices each having received most of the mesh's URLs,
- * a day spent on familiar sites exported as nothing at all. Reported from the field as
- * "a day of activity on my Mac, nothing appears on Windows".
- *
- * Compared on the canonical key so the legacy raw entries are removed too.
+ * The legacy `string[]` becomes a map stamped with the current time — i.e. "suppressed as
+ * of now". That keeps today's behaviour exactly (nothing suddenly re-floods the mesh on
+ * upgrade) while making every one of those pages publishable again the next time the user
+ * actually visits it.
  */
-export async function dropImportedHistoryUrls(urls: string[]): Promise<void> {
+function asStampMap(current: unknown, stamp: number): ImportedHistoryStamps {
+  if (Array.isArray(current)) {
+    const migrated: ImportedHistoryStamps = {};
+    for (const u of current as string[]) {
+      if (typeof u === "string") migrated[canonicalUrlKey(u)] = stamp;
+    }
+    return migrated;
+  }
+  return { ...((current as ImportedHistoryStamps) ?? {}) };
+}
+
+export async function getImportedHistoryStamps(): Promise<ImportedHistoryStamps> {
+  const raw = await get<unknown>(KEYS.HIST_IMPORTED, {});
+  if (!Array.isArray(raw)) return (raw as ImportedHistoryStamps) ?? {};
+  // Legacy shape — convert once and write it back, so the stamp is fixed at the upgrade
+  // moment instead of drifting forward on every read (which would suppress the pages
+  // permanently, the very bug this replaces).
+  return updateKey<ImportedHistoryStamps>(
+    KEYS.HIST_IMPORTED,
+    (cur) => asStampMap(cur, Date.now()),
+    {}
+  );
+}
+
+/** Record that these URLs' newest local visit came from an import made at `stamp`. */
+export async function recordImportedHistory(urls: string[], stamp: number): Promise<void> {
+  if (!urls.length) return;
+  await updateKey<ImportedHistoryStamps>(KEYS.HIST_IMPORTED, (current) => {
+    const map = asStampMap(current, stamp);
+    for (const u of urls) map[canonicalUrlKey(u)] = stamp;
+    const keys = Object.keys(map);
+    if (keys.length <= HIST_IMPORTED_CAP) return map;
+    // Cap to bound storage, evicting the OLDEST imports first. Dropping an entry makes
+    // that page publishable again, so at worst a very old imported URL circulates once
+    // more — it can't perpetually resurrect, because the receiving side only adds a visit
+    // for a time genuinely newer than its own.
+    keys.sort((a, b) => (map[a] ?? 0) - (map[b] ?? 0));
+    for (const k of keys.slice(0, keys.length - HIST_IMPORTED_CAP)) delete map[k];
+    return map;
+  }, {});
+}
+
+/** These pages have since been visited here for real — they're ours to publish now. */
+export async function releaseImportedHistory(urls: string[]): Promise<void> {
   if (!urls.length) return;
   const drop = new Set(urls.map(canonicalUrlKey));
-  await updateKey<string[]>(
-    KEYS.HIST_IMPORTED,
-    (current) => current.filter((u) => !drop.has(canonicalUrlKey(u))),
-    []
-  );
+  await updateKey<ImportedHistoryStamps>(KEYS.HIST_IMPORTED, (current) => {
+    const map = asStampMap(current, Date.now());
+    for (const k of Object.keys(map)) if (drop.has(k)) delete map[k];
+    return map;
+  }, {});
 }
 
 // ─── Last resolved Drive folder ──────────────────────────────────────────────

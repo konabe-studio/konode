@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   normalizeRemoteSessions, normalizeRemoteExtensions,
   acquireSyncLock, releaseSyncLock, clearStaleSyncLock,
-  getImportedHistoryUrls, addImportedHistoryUrls,
+  getImportedHistoryStamps, recordImportedHistory, releaseImportedHistory,
   updateKey, appendAudit, KEYS,
   getSettings, saveSettings, DEFAULT_SETTINGS,
 } from "@/lib/utils/storage";
@@ -163,18 +163,61 @@ describe("updateKey — serialized read-modify-write", () => {
   });
 });
 
-describe("imported-history set (CO-6)", () => {
-  it("merges, de-dups, and reports imported URLs", async () => {
-    await addImportedHistoryUrls(["https://a.com", "https://b.com"]);
-    await addImportedHistoryUrls(["https://b.com", "https://c.com"]); // b.com is a dup
-    expect((await getImportedHistoryUrls()).sort()).toEqual([
-      "https://a.com", "https://b.com", "https://c.com",
-    ]);
+describe("imported-history stamps (CO-6)", () => {
+  // Was a string[] that could only say "this arrived here once". That is not the question
+  // — it conflated "arrived here" with "never visited here", so a page stopped being
+  // published the moment any peer sent it, permanently. The map records WHEN it arrived,
+  // which is what lets a genuine later visit be told apart from an import.
+  it("records a stamp per canonical URL, newest write winning", async () => {
+    await recordImportedHistory(["https://a.com", "https://b.com"], 1000);
+    await recordImportedHistory(["https://b.com", "https://c.com"], 2000);
+
+    expect(await getImportedHistoryStamps()).toEqual({
+      "https://a.com/": 1000,
+      "https://b.com/": 2000, // re-imported later — the newer arrival is what matters
+      "https://c.com/": 2000,
+    });
   });
 
-  it("no-ops on an empty list", async () => {
-    await addImportedHistoryUrls([]);
-    expect(await getImportedHistoryUrls()).toEqual([]);
+  it("releases a URL, and no-ops on empty input", async () => {
+    await recordImportedHistory(["https://a.com", "https://b.com"], 1000);
+    await releaseImportedHistory(["https://a.com"]);
+    await recordImportedHistory([], 3000);
+    await releaseImportedHistory([]);
+
+    expect(Object.keys(await getImportedHistoryStamps())).toEqual(["https://b.com/"]);
+  });
+
+  it("migrates a legacy string[] to a map stamped at the upgrade moment", async () => {
+    // Upgrading must not re-flood the mesh: everything already received stays suppressed.
+    // But the stamp has to be FIXED at migration, not recomputed on every read — a drifting
+    // stamp is always "now", which suppresses the page forever and is the original bug.
+    await chrome.storage.local.set({
+      [KEYS.HIST_IMPORTED]: ["https://old.com", "https://legacy.com"],
+    });
+
+    const first = await getImportedHistoryStamps();
+    expect(Object.keys(first).sort()).toEqual(["https://legacy.com/", "https://old.com/"]);
+
+    await new Promise((r) => setTimeout(r, 5));
+    expect(await getImportedHistoryStamps()).toEqual(first); // persisted, not recomputed
+  });
+
+  it("canonicalizes legacy entries, so a raw-form URL still matches", async () => {
+    await chrome.storage.local.set({ [KEYS.HIST_IMPORTED]: ["https://old.com"] });
+    expect(Object.keys(await getImportedHistoryStamps())).toEqual(["https://old.com/"]);
+  });
+
+  it("caps storage by evicting the OLDEST imports first", async () => {
+    // Eviction makes a page publishable again, so it must take the stalest entries — not
+    // whatever the object happens to iterate first.
+    await recordImportedHistory(["https://ancient.com"], 1);
+    const bulk = Array.from({ length: 20_000 }, (_, i) => `https://fresh${i}.com`);
+    await recordImportedHistory(bulk, 9_999);
+
+    const stamps = await getImportedHistoryStamps();
+    expect(Object.keys(stamps)).toHaveLength(20_000);
+    expect(stamps["https://ancient.com/"]).toBeUndefined();
   });
 });
 
