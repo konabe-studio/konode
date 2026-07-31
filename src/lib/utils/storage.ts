@@ -2,7 +2,9 @@ import type {
   DataType,
   SyncPacket,
   FolderMoveRecord,
+  FolderRenameRecord,
   MoveRecord,
+  TitleRecord,
   RemoteExtensionEntry,
   RemoteSessionEntry,
   SyncExtension,
@@ -97,6 +99,8 @@ export const KEYS = {
   BOOKMARK_TOMBSTONES: "konode_bm_tombstones",
   BOOKMARK_MOVES: "konode_bm_moves",
   BOOKMARK_FOLDER_MOVES: "konode_bm_folder_moves",
+  BOOKMARK_TITLES: "konode_bm_titles",
+  BOOKMARK_FOLDER_RENAMES: "konode_bm_folder_renames",
   // Superseded by the backend-side `konode_snap_index.json`, which every device can
   // read. Kept only so the one-time migration in sync/snapshots.ts can drain the
   // counts this device recorded before dropping the key.
@@ -293,6 +297,30 @@ export function updateFolderMoves(
   mutate: (current: FolderMoveRecord[]) => FolderMoveRecord[]
 ): Promise<FolderMoveRecord[]> {
   return updateKey<FolderMoveRecord[]>(KEYS.BOOKMARK_FOLDER_MOVES, mutate, []);
+}
+
+export async function getTitles(): Promise<TitleRecord[]> {
+  return get<TitleRecord[]>(KEYS.BOOKMARK_TITLES, []);
+}
+export async function setTitles(list: TitleRecord[]): Promise<void> {
+  await set(KEYS.BOOKMARK_TITLES, list);
+}
+export function updateTitles(
+  mutate: (current: TitleRecord[]) => TitleRecord[]
+): Promise<TitleRecord[]> {
+  return updateKey<TitleRecord[]>(KEYS.BOOKMARK_TITLES, mutate, []);
+}
+
+export async function getFolderRenames(): Promise<FolderRenameRecord[]> {
+  return get<FolderRenameRecord[]>(KEYS.BOOKMARK_FOLDER_RENAMES, []);
+}
+export async function setFolderRenames(list: FolderRenameRecord[]): Promise<void> {
+  await set(KEYS.BOOKMARK_FOLDER_RENAMES, list);
+}
+export function updateFolderRenames(
+  mutate: (current: FolderRenameRecord[]) => FolderRenameRecord[]
+): Promise<FolderRenameRecord[]> {
+  return updateKey<FolderRenameRecord[]>(KEYS.BOOKMARK_FOLDER_RENAMES, mutate, []);
 }
 
 // ─── Imported history (CO-6) ─────────────────────────────────────────────────

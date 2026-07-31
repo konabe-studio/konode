@@ -63,6 +63,34 @@ export interface MoveRecord {
 // sibling — an absolute index doesn't translate when the two devices have different
 // (device-local) siblings. `index` is kept only as a last-resort fallback when
 // neither anchor exists locally.
+/**
+ * LWW record of a bookmark's TITLE, keyed by URL — the same identity the rest of the
+ * bookmark sync uses. The tree already carries titles; what was missing was any way to
+ * decide WHOSE title is newer, so the merge had no basis to overwrite one and simply
+ * never did.
+ */
+export interface TitleRecord {
+  url: string;
+  title: string;
+  at: number; // epoch ms
+}
+
+/**
+ * A folder rename, recorded as an OPERATION (from → to) rather than as a state.
+ *
+ * A folder has no cross-device id: its identity IS its path, i.e. its title and its
+ * ancestors' titles. So a rename changes the very key a state record would be filed
+ * under, and the receiver would see an unrelated folder appear rather than a rename.
+ * Recording the operation keeps both ends of the change, so the receiver can find the
+ * folder it already has and rename it in place.
+ */
+export interface FolderRenameRecord {
+  path: string[]; // the PARENT's path: [rootKind, …ancestorTitles]
+  from: string;
+  to: string;
+  at: number; // epoch ms
+}
+
 export interface FolderMoveRecord {
   path: string[];
   index: number;   // fallback only (absolute position on the source device)
@@ -78,6 +106,8 @@ export interface BookmarkPayload {
   tombstones: Tombstone[];
   moves?: MoveRecord[]; // optional for back-compat with packets written before move-sync
   folderMoves?: FolderMoveRecord[]; // optional for back-compat (added with folder-reorder sync)
+  titles?: TitleRecord[]; // optional for back-compat (added with rename sync)
+  folderRenames?: FolderRenameRecord[]; // optional for back-compat (added with rename sync)
 }
 
 // ─── History ───────────────────────────────────────────────────────────────

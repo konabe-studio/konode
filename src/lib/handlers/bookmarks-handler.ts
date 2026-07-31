@@ -1,10 +1,15 @@
-import type { SyncBookmark, Tombstone, MoveRecord, FolderMoveRecord, BookmarkPayload, ConflictStrategy } from "@/lib/types";
+import type {
+  SyncBookmark, Tombstone, MoveRecord, FolderMoveRecord, TitleRecord, FolderRenameRecord,
+  BookmarkPayload, ConflictStrategy,
+} from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import {
   setBookmarkCache, getBookmarkCache,
   getTombstones, setTombstones, updateTombstones,
   getMoves, setMoves, updateMoves,
   getFolderMoves, setFolderMoves, updateFolderMoves,
+  getTitles, setTitles, updateTitles,
+  getFolderRenames, setFolderRenames, updateFolderRenames,
 } from "@/lib/utils/storage";
 import { defaultOtherRootId, matchLocalRoot, matchLocalRootEx, rootKind } from "@/lib/utils/bookmark-roots";
 import { canonicalUrlKey } from "@/lib/utils/url";
@@ -118,6 +123,55 @@ export function mergeFolderMoveLists(a: FolderMoveRecord[], b: FolderMoveRecord[
   return gcFolderMoves([...a, ...b]);
 }
 
+// ─── Titles (rename log — same TTL/dedup shape as the move logs) ────────────
+//
+// The merge had three verbs — CREATE, MOVE, REMOVE — and no UPDATE, so once a peer's
+// bookmark matched a local URL the merge considered it satisfied and never compared
+// titles. Renaming a bookmark therefore reached every other device's packet and was
+// discarded on arrival. These two logs supply the one thing that was missing: a
+// timestamp, so there is a basis for deciding whose title is newer.
+
+export function toTitleMap(list: TitleRecord[]): Map<string, TitleRecord> {
+  const m = new Map<string, TitleRecord>();
+  for (const r of list) {
+    const k = canonicalUrlKey(r.url);
+    const existing = m.get(k);
+    if (!existing || r.at > existing.at) m.set(k, r);
+  }
+  return m;
+}
+
+export function gcTitles(list: TitleRecord[]): TitleRecord[] {
+  const cutoff = Date.now() - TOMBSTONE_TTL_MS;
+  return [...toTitleMap(list.filter((r) => r.at >= cutoff)).values()];
+}
+
+export function mergeTitleLists(a: TitleRecord[], b: TitleRecord[]): TitleRecord[] {
+  return gcTitles([...a, ...b]);
+}
+
+// ─── Folder renames (path-keyed operation log) ──────────────────────────────
+
+export function gcFolderRenames(list: FolderRenameRecord[]): FolderRenameRecord[] {
+  const cutoff = Date.now() - TOMBSTONE_TTL_MS;
+  // Keyed by parent path + the OLD name, so two renames of the same folder collapse to
+  // the newest, while renaming two different folders in one parent both survive.
+  const byKey = new Map<string, FolderRenameRecord>();
+  for (const r of list) {
+    if (r.at < cutoff) continue;
+    const k = folderPathKey([...r.path, r.from]);
+    const existing = byKey.get(k);
+    if (!existing || r.at > existing.at) byKey.set(k, r);
+  }
+  return [...byKey.values()];
+}
+
+export function mergeFolderRenameLists(
+  a: FolderRenameRecord[], b: FolderRenameRecord[]
+): FolderRenameRecord[] {
+  return gcFolderRenames([...a, ...b]);
+}
+
 /** URLs present anywhere in the CURRENT local tree (called after a mutation). */
 async function localUrlSet(): Promise<Set<string>> {
   return new Set(flattenNodes(await exportBookmarks()).filter((n) => n.url).map((n) => n.url as string));
@@ -171,6 +225,40 @@ async function recordUrlChange(id: string, newUrl: string | undefined): Promise<
   const now = Date.now();
   await updateTombstones((current) => mergeTombstoneLists(current, [{ url: oldUrl, deletedAt: now }]));
   logger.event("Tombstones", "Recorded a URL-change deletion");
+}
+
+/**
+ * Record a rename so it can reach the other devices.
+ *
+ * A bookmark is keyed by its URL, which the rename doesn't change — a plain LWW record.
+ * A folder has no such key, so the OLD title has to be captured here, from the last
+ * synced snapshot (konode_bm_cache), which is exactly the state the peers still hold.
+ * recordUrlChange already reads the cache this way for the same reason.
+ */
+async function recordTitleChange(id: string, newTitle: string | undefined): Promise<void> {
+  if (importing || newTitle === undefined) return;
+  let node: BookmarkNode | undefined;
+  try { [node] = await browser.bookmarks.get(id); } catch { return; }
+  if (!node) return;
+  const now = Date.now();
+
+  if (node.url) {
+    await updateTitles((current) => mergeTitleLists(current, [{ url: node!.url!, title: newTitle, at: now }]));
+    logger.info("Titles", "Recorded a bookmark rename");
+    return;
+  }
+
+  // A folder. Its identity is its path, so we need what it was called BEFORE.
+  const cache = await getBookmarkCache<SyncBookmark[]>();
+  const oldTitle = cache ? flattenNodes(cache).find((n) => n.id === id)?.title : undefined;
+  if (!oldTitle || oldTitle === newTitle) return;
+  if (!node.parentId) return;
+  const parentPath = await folderPath(node.parentId);
+  if (!parentPath) return;
+  await updateFolderRenames((current) =>
+    mergeFolderRenameLists(current, [{ path: parentPath, from: oldTitle, to: newTitle, at: now }])
+  );
+  logger.info("Titles", "Recorded a folder rename");
 }
 
 /** Record a move (per URL) for a moved bookmark/folder subtree, so the new
@@ -257,25 +345,36 @@ export async function exportBookmarkPayload(): Promise<BookmarkPayload> {
   // either undoing the prune or dropping the event's own record, depending on which
   // write happened to land last. Nothing here is exempt from the burst just because it
   // runs inside a sync: `importing` only suppresses the recorders during an IMPORT.
-  const [tree, gced, gcedMoves, gcedFolderMoves] = await Promise.all([
+  const [tree, gced, gcedMoves, gcedFolderMoves, gcedTitles, gcedRenames] = await Promise.all([
     exportBookmarks(),
     updateTombstones(gcTombstones),
     updateMoves(gcMoves),
     updateFolderMoves(gcFolderMoves),
+    updateTitles(gcTitles),
+    updateFolderRenames(gcFolderRenames),
   ]);
   // Snapshot the current (full) tree so a later URL edit can find the replaced
   // url by id and tombstone it (see recordUrlChange). This is the state peers hold.
   await setBookmarkCache(tree);
   // Don't sync empty folders — a folder carries no tombstone, so leaving empty
   // folders in the payload is what made a deleted folder resurrect from a peer.
-  return { tree: pruneEmptyFolders(tree), tombstones: gced, moves: gcedMoves, folderMoves: gcedFolderMoves };
+  return {
+    tree: pruneEmptyFolders(tree), tombstones: gced, moves: gcedMoves,
+    folderMoves: gcedFolderMoves, titles: gcedTitles, folderRenames: gcedRenames,
+  };
 }
 
 /** Normalize a parsed bookmark payload (supports the legacy bare-array format). */
 export function normalizePayload(payload: unknown): BookmarkPayload {
-  if (Array.isArray(payload)) return { tree: payload as SyncBookmark[], tombstones: [], moves: [], folderMoves: [] };
+  const empty = { tombstones: [], moves: [], folderMoves: [], titles: [], folderRenames: [] };
+  if (Array.isArray(payload)) return { tree: payload as SyncBookmark[], ...empty };
   const p = (payload ?? {}) as Partial<BookmarkPayload>;
-  return { tree: p.tree ?? [], tombstones: p.tombstones ?? [], moves: p.moves ?? [], folderMoves: p.folderMoves ?? [] };
+  // Every log is optional: a peer on an older build sends none of them, and must
+  // keep working rather than being read as "everything was deleted/renamed".
+  return {
+    tree: p.tree ?? [], tombstones: p.tombstones ?? [], moves: p.moves ?? [],
+    folderMoves: p.folderMoves ?? [], titles: p.titles ?? [], folderRenames: p.folderRenames ?? [],
+  };
 }
 
 // ─── Write (import from remote) ──────────────────────────────────────────
@@ -289,23 +388,33 @@ export async function importBookmarks(
   // `blocked` is how many local bookmarks the guard refused to remove this merge.
   onBulkBlocked?: (blocked: number) => void
 ): Promise<void> {
-  const { tree, tombstones: remoteTombstones, moves: remoteMoves = [], folderMoves: remoteFolderMoves = [] } = normalizePayload(payload);
+  const {
+    tree, tombstones: remoteTombstones, moves: remoteMoves = [],
+    folderMoves: remoteFolderMoves = [], titles: remoteTitles = [],
+    folderRenames: remoteFolderRenames = [],
+  } = normalizePayload(payload);
   importing = true;
   try {
     // Capture our own deletions/moves before folding in the peer's, so the merge
     // can compare "mine vs theirs" (matters for prefer-* and move LWW). Then
     // persist the merged logs so this device propagates them onward.
-    const localTombstones = await getTombstones();
-    const localMoves = await getMoves();
-    const localFolderMoves = await getFolderMoves();
-    await setTombstones(mergeTombstoneLists(localTombstones, remoteTombstones));
-    await setMoves(mergeMoveLists(localMoves, remoteMoves));
-    await setFolderMoves(mergeFolderMoveLists(localFolderMoves, remoteFolderMoves));
+    const logs: MergeLogs = {
+      tombstones: { local: await getTombstones(), remote: remoteTombstones },
+      moves: { local: await getMoves(), remote: remoteMoves },
+      folderMoves: { local: await getFolderMoves(), remote: remoteFolderMoves },
+      titles: { local: await getTitles(), remote: remoteTitles },
+      folderRenames: { local: await getFolderRenames(), remote: remoteFolderRenames },
+    };
+    await setTombstones(mergeTombstoneLists(logs.tombstones.local, logs.tombstones.remote));
+    await setMoves(mergeMoveLists(logs.moves.local, logs.moves.remote));
+    await setFolderMoves(mergeFolderMoveLists(logs.folderMoves.local, logs.folderMoves.remote));
+    await setTitles(mergeTitleLists(logs.titles.local, logs.titles.remote));
+    await setFolderRenames(mergeFolderRenameLists(logs.folderRenames.local, logs.folderRenames.remote));
 
     if (strategy === "replace") {
       await clearAndImport(tree);
     } else {
-      await mergeBookmarks(tree, localTombstones, remoteTombstones, localMoves, remoteMoves, localFolderMoves, remoteFolderMoves, conflictStrategy, deletePercent, onBulkBlocked);
+      await mergeBookmarks(tree, logs, conflictStrategy, deletePercent, onBulkBlocked);
     }
   } finally {
     importing = false;
@@ -389,14 +498,25 @@ async function restoreNode(
   }
 }
 
+/**
+ * Every change log the merge compares, as ONE named parameter.
+ *
+ * These used to be six positional arguments in local/remote pairs, so adding a log meant
+ * threading two more parameters through in exactly the right order — and getting the
+ * order wrong would type-check perfectly while silently comparing the wrong sides. The
+ * next log is now a single field.
+ */
+interface MergeLogs {
+  tombstones: { local: Tombstone[]; remote: Tombstone[] };
+  moves: { local: MoveRecord[]; remote: MoveRecord[] };
+  folderMoves: { local: FolderMoveRecord[]; remote: FolderMoveRecord[] };
+  titles: { local: TitleRecord[]; remote: TitleRecord[] };
+  folderRenames: { local: FolderRenameRecord[]; remote: FolderRenameRecord[] };
+}
+
 async function mergeBookmarks(
   remoteTree: SyncBookmark[],
-  localTombstones: Tombstone[],
-  remoteTombstones: Tombstone[],
-  localMoves: MoveRecord[],
-  remoteMoves: MoveRecord[],
-  localFolderMoves: FolderMoveRecord[],
-  remoteFolderMoves: FolderMoveRecord[],
+  logs: MergeLogs,
   strategy: ConflictStrategy,
   deletePercent = 60,
   onBulkBlocked?: (blocked: number) => void,
@@ -425,10 +545,12 @@ async function mergeBookmarks(
     localByUrl.set(key, e);
   }
 
-  const localDel = canonMap(toDeletedMap(localTombstones));
-  const remoteDel = canonMap(toDeletedMap(remoteTombstones));
-  const localMoveAt = canonMap(toMoveMap(localMoves));
-  const remoteMoveAt = canonMap(toMoveMap(remoteMoves));
+  const localDel = canonMap(toDeletedMap(logs.tombstones.local));
+  const remoteDel = canonMap(toDeletedMap(logs.tombstones.remote));
+  const localMoveAt = canonMap(toMoveMap(logs.moves.local));
+  const remoteMoveAt = canonMap(toMoveMap(logs.moves.remote));
+  const localTitleAt = toTitleMap(logs.titles.local);
+  const remoteTitleAt = toTitleMap(logs.titles.remote);
   const remoteAdd = new Map<string, number>();
   for (const n of flattenNodes(remoteTree)) {
     if (n.url) remoteAdd.set(canonicalUrlKey(n.url), Math.max(remoteAdd.get(canonicalUrlKey(n.url)) ?? 0, n.dateAdded ?? 0));
@@ -471,11 +593,13 @@ async function mergeBookmarks(
   // a folder change and a reorder, and skip a move that's already in the right spot.
   // Keyed by canonical url (see canonMap above) so lookups from the remote tree
   // match regardless of bare-origin trailing-slash differences between engines.
-  const placement = new Map<string, { id: string; parentId: string | null; index: number }>();
+  const placement = new Map<string, { id: string; parentId: string | null; index: number; title: string }>();
   const indexLocal = (nodes: SyncBookmark[]): void => {
     nodes.forEach((n, i) => {
       const k = n.url ? canonicalUrlKey(n.url) : undefined;
-      if (k && !placement.has(k)) placement.set(k, { id: n.id, parentId: n.parentId, index: i });
+      // `title` rides along so the rename check below needs no extra bookmarks.get per
+      // matched bookmark — the nodes are already in hand.
+      if (k && !placement.has(k)) placement.set(k, { id: n.id, parentId: n.parentId, index: i, title: n.title });
       if (n.children) indexLocal(n.children);
     });
   };
@@ -489,6 +613,24 @@ async function mergeBookmarks(
     const newestDel = Math.max(lAt ?? 0, rAt ?? 0);              // lww
     return newestDel > 0 && newestDel >= (remoteAdd.get(key) ?? 0);
   };
+  /**
+   * Which title wins for a bookmark we already have.
+   *
+   * Only ever acts on a RECORDED rename. Two bookmarks can differ in title with neither
+   * side having renamed anything (one device typed it differently when the page was
+   * bookmarked), and overwriting on that basis would make the two devices trade titles
+   * back and forth every cycle. No record on either side means nobody renamed anything,
+   * so there is nothing to propagate.
+   */
+  const winningTitle = (url: string, currentTitle: string): string | null => {
+    const key = canonicalUrlKey(url);
+    const rt = remoteTitleAt.get(key);
+    if (!rt) return null;
+    if (strategy === "prefer-local") return null;
+    if (strategy !== "prefer-remote" && rt.at <= (localTitleAt.get(key)?.at ?? 0)) return null;
+    return rt.title === currentTitle ? null : rt.title;
+  };
+
   const shouldMove = (url: string): boolean => {
     if (strategy === "prefer-local") return false;               // local placement wins
     if (strategy === "prefer-remote") return true;               // peer placement wins
@@ -503,8 +645,42 @@ async function mergeBookmarks(
     return;
   }
 
+  let renamedFolders = 0;
+
+  // ── Step 0: apply the peer's folder RENAMES, before anything matches on a title.
+  //    A folder has no cross-device id — its identity is its path — so a rename is
+  //    recorded as an operation (from → to) and replayed here. It has to run before the
+  //    fold, or the fold matches folders by their OLD names and creates a duplicate
+  //    alongside the renamed one.
+  if (strategy !== "prefer-local") {
+    // Our own renames of the same folder, so LWW has something to compare against.
+    const localRenameByKey = new Map<string, FolderRenameRecord>();
+    for (const r of logs.folderRenames.local) localRenameByKey.set(folderPathKey([...r.path, r.from]), r);
+
+    for (const r of logs.folderRenames.remote) {
+      const mine = localRenameByKey.get(folderPathKey([...r.path, r.from]));
+      if (strategy !== "prefer-remote" && mine && mine.at >= r.at) continue; // ours is newer
+      try {
+        const parentId = await resolveFolderPath(r.path, localRoots);
+        if (!parentId) continue; // path doesn't exist here — fail safe, same as Step C
+        const children = await browser.bookmarks.getChildren(parentId);
+        // If we renamed it too and the peer's is newer, the folder is sitting under OUR
+        // new name, not under `from` — look for that as well, or the peer's newer rename
+        // would silently find nothing and be lost.
+        const target = children.find((c) => !c.url && c.title === r.from)
+          ?? (mine ? children.find((c) => !c.url && c.title === mine.to) : undefined);
+        if (!target || target.title === r.to) continue;
+        await browser.bookmarks.update(target.id, { title: r.to });
+        renamedFolders++;
+      } catch (err) {
+        logger.error(`Folder rename: ${r.from}`, err);
+      }
+    }
+  }
+
   let added = 0;
   let moved = 0;
+  let renamed = 0;
   const addedUrls = new Set<string>();
   // Folders a cross-parent bookmark move emptied on THIS device — the receiver
   // relocated the bookmarks (URL move-log) but the folder they left behind is a
@@ -554,6 +730,18 @@ async function mergeBookmarks(
             }
           } catch (err) {
             logger.error(`Bookmark move: ${node.title}`, err);
+          }
+        }
+        const newTitle = winningTitle(node.url, loc.title);
+        if (newTitle !== null) {
+          // The merge had CREATE, MOVE and REMOVE but no UPDATE: once a peer's bookmark
+          // matched a local URL it was considered satisfied and returned right here, so a
+          // rename travelled in every packet and was discarded on arrival by every device.
+          try {
+            await browser.bookmarks.update(loc.id, { title: newTitle });
+            renamed++;
+          } catch (err) {
+            logger.error(`Bookmark rename: ${node.url}`, err);
           }
         }
         return; // present → never add a duplicate
@@ -625,9 +813,9 @@ async function mergeBookmarks(
   //    siblings; the absolute `index` is only a last-resort fallback. Path
   //    resolution fails safe (skips) when the root kind or a path segment is absent,
   //    so no confidence gate is needed. ──
-  const localFolderMoveAt = toFolderMoveMap(localFolderMoves);
+  const localFolderMoveAt = toFolderMoveMap(logs.folderMoves.local);
   let folderMoved = 0;
-  for (const rec of remoteFolderMoves) {
+  for (const rec of logs.folderMoves.remote) {
     const winsLWW = strategy === "prefer-local" ? false
       : strategy === "prefer-remote" ? true
       : rec.at > (localFolderMoveAt.get(folderPathKey(rec.path)) ?? 0);
@@ -684,15 +872,20 @@ async function mergeBookmarks(
   // The most informative line about what a sync actually DID to the tree, so it belongs
   // in the user's Activity log — but only when it changed something. Every idle cycle
   // logging "+0 / -0 / moved 0" is exactly the noise that used to evict the warnings.
-  const summary = `Merged +${added} / -${toRemove.length} / moved ${moved} / folders ${folderMoved} / shells ${shells} (folders preserved)`;
-  if (added || toRemove.length || moved || folderMoved || shells) logger.event("mergeBookmarks", summary);
+  const summary = `Merged +${added} / -${toRemove.length} / moved ${moved} / renamed ${renamed}+${renamedFolders} / folders ${folderMoved} / shells ${shells} (folders preserved)`;
+  if (added || toRemove.length || moved || renamed || renamedFolders || folderMoved || shells) logger.event("mergeBookmarks", summary);
   else logger.info("mergeBookmarks", summary);
 }
 
 /** Resolve a browser-agnostic folder path (`[rootKind, …titles]`) to a local
  *  folder id, or null if the root kind or any path segment is missing locally. */
 async function resolveFolderPath(path: string[], localRoots: BookmarkNode[]): Promise<string | null> {
-  if (path.length < 2) return null;
+  // A bare [rootKind] resolves to the root itself. The old guard rejected it because the
+  // only caller was the folder-reposition step, whose paths always carry the folder own
+  // title and so are never shorter than two — but a RENAME is keyed by its parent path,
+  // and a folder sitting directly in the bookmarks bar has exactly ["bar"] as its parent.
+  // Rejecting that silently dropped the most common rename there is.
+  if (path.length < 1) return null;
   const [kind, ...titles] = path;
   const root = localRoots.find((r) => rootKind(r.id) === kind);
   if (!root) return null;
@@ -862,6 +1055,10 @@ export function registerBookmarkListeners(onChange: BookmarkChangeCallback): voi
     // A URL edit is a delete(old)+add(new) in the URL-keyed sync model — record a
     // tombstone for the replaced url so a peer doesn't resurrect it as a duplicate.
     void recordUrlChange(id, changeInfo.url);
+    // A title edit is the other half of onChanged, and nothing was listening for it:
+    // the new title rode along in the tree but the receiver had no way to know it was
+    // newer than its own, so it kept the old one. Both renames land here.
+    void recordTitleChange(id, changeInfo.title);
     onChange();
   });
   browser.bookmarks.onMoved.addListener((id, moveInfo) => {

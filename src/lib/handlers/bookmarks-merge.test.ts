@@ -610,3 +610,190 @@ describe("importBookmarks — canonical URL dedup (bare-origin trailing slash ac
     expect(urls).toContain("https://site.com/b");
   });
 });
+
+describe("renames reach the other devices", () => {
+  // The merge had three verbs — CREATE, MOVE, REMOVE — and no UPDATE. Once a peer's
+  // bookmark matched a local URL the merge treated it as satisfied and returned without
+  // ever comparing titles, so a rename travelled in every packet and was discarded on
+  // arrival by every device. Folders were worse: their identity IS their title, so a
+  // renamed folder read as an unrelated folder to everyone else.
+  //
+  // What was missing was never the title (the tree always carried it) but a TIMESTAMP —
+  // any basis for deciding whose title is newer. These two logs supply exactly that.
+
+  const NOW = Date.now();
+  const titled = (url: string, title: string, at: number): BookmarkPayload["titles"] =>
+    [{ url, title, at }];
+
+  async function titleOf(url: string): Promise<string | undefined> {
+    const all = await chrome.bookmarks.getTree();
+    let found: string | undefined;
+    const walk = (n: chrome.bookmarks.BookmarkTreeNode): void => {
+      if (n.url === url) found = n.title;
+      n.children?.forEach(walk);
+    };
+    all.forEach(walk);
+    return found;
+  }
+
+  async function folderTitles(parentId = "1"): Promise<string[]> {
+    return (await chrome.bookmarks.getChildren(parentId)).filter((c) => !c.url).map((c) => c.title);
+  }
+
+  /** Registers the real listeners and hands back the onChanged the handler installed. */
+  function captureOnChanged(): (id: string, info: { title: string; url?: string }) => void {
+    let cb: ((id: string, info: { title: string; url?: string }) => void) | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (chrome.bookmarks.onChanged as any).addListener = (fn: never) => { cb = fn; };
+    registerBookmarkListeners(() => {});
+    return (id, info) => cb!(id, info);
+  }
+
+  it("applies a peer's bookmark rename to the copy we already have", async () => {
+    await seed("Old name", "https://a.com");
+
+    await importBookmarks(
+      { ...payload([link("New name", "https://a.com")]), titles: titled("https://a.com", "New name", NOW) },
+      "merge", "lww"
+    );
+
+    expect(await titleOf("https://a.com")).toBe("New name");
+    expect(await localUrls()).toEqual(["https://a.com"]); // renamed, not duplicated
+  });
+
+  it("does NOT overwrite a title when nobody actually renamed anything", async () => {
+    // Two devices can hold the same URL under different titles with no rename involved —
+    // one of them just typed it differently when bookmarking. Acting on that would make
+    // the two trade titles back and forth on every cycle, forever.
+    await seed("My name for it", "https://a.com");
+
+    await importBookmarks(payload([link("Their name for it", "https://a.com")]), "merge", "lww");
+
+    expect(await titleOf("https://a.com")).toBe("My name for it");
+  });
+
+  it("keeps OUR rename when it is the newer one", async () => {
+    const onChanged = captureOnChanged();
+    const a = await chrome.bookmarks.create({ parentId: "1", title: "Old", url: "https://a.com" });
+    await exportBookmarkPayload();
+    await chrome.bookmarks.update(a.id, { title: "Mine" });
+    onChanged(a.id, { title: "Mine" });
+    await new Promise((r) => setTimeout(r, 0));
+
+    await importBookmarks(
+      { ...payload([link("Theirs", "https://a.com")]), titles: titled("https://a.com", "Theirs", NOW - 60_000) },
+      "merge", "lww"
+    );
+
+    expect(await titleOf("https://a.com")).toBe("Mine");
+  });
+
+  it("takes THEIR rename when it is the newer one", async () => {
+    const onChanged = captureOnChanged();
+    const a = await chrome.bookmarks.create({ parentId: "1", title: "Old", url: "https://a.com" });
+    await exportBookmarkPayload();
+    await chrome.bookmarks.update(a.id, { title: "Mine" });
+    onChanged(a.id, { title: "Mine" });
+    await new Promise((r) => setTimeout(r, 0));
+
+    await importBookmarks(
+      { ...payload([link("Theirs", "https://a.com")]), titles: titled("https://a.com", "Theirs", Date.now() + 60_000) },
+      "merge", "lww"
+    );
+
+    expect(await titleOf("https://a.com")).toBe("Theirs");
+  });
+
+  it("prefer-local never adopts a peer's rename", async () => {
+    await seed("Mine", "https://a.com");
+
+    await importBookmarks(
+      { ...payload([link("Theirs", "https://a.com")]), titles: titled("https://a.com", "Theirs", Date.now() + 60_000) },
+      "merge", "prefer-local"
+    );
+
+    expect(await titleOf("https://a.com")).toBe("Mine");
+  });
+
+  it("renames a folder in place instead of leaving two of them", async () => {
+    // A folder has no cross-device id, so a rename used to read as "an unrelated folder
+    // appeared": the fold matched folders by title, found nothing called Job, and created
+    // it alongside the one the user had renamed.
+    const f = await chrome.bookmarks.create({ parentId: "1", title: "Work" });
+    await chrome.bookmarks.create({ parentId: f.id, title: "A", url: "https://a.com" });
+
+    await importBookmarks(
+      {
+        ...payload([folder("Job", [link("A", "https://a.com")])]),
+        folderRenames: [{ path: ["bar"], from: "Work", to: "Job", at: NOW }],
+      },
+      "merge", "lww"
+    );
+
+    expect(await folderTitles()).toEqual(["Job"]);
+    expect(await localUrls()).toEqual(["https://a.com"]); // the bookmark stayed put
+  });
+
+  it("a folder rename lands before the fold, so new bookmarks go into the renamed folder", async () => {
+    // Order matters: if the fold ran first it would match on the OLD name, create a
+    // duplicate, and the rename would then collide with it.
+    const f = await chrome.bookmarks.create({ parentId: "1", title: "Work" });
+    await chrome.bookmarks.create({ parentId: f.id, title: "A", url: "https://a.com" });
+
+    await importBookmarks(
+      {
+        ...payload([folder("Job", [link("A", "https://a.com"), link("B", "https://b.com")])]),
+        folderRenames: [{ path: ["bar"], from: "Work", to: "Job", at: NOW }],
+      },
+      "merge", "lww"
+    );
+
+    expect(await folderTitles()).toEqual(["Job"]);
+    const kids = await chrome.bookmarks.getChildren(f.id);
+    expect(kids.map((k) => k.url).sort()).toEqual(["https://a.com", "https://b.com"]);
+  });
+
+  it("ignores a folder rename whose path doesn't exist here", async () => {
+    // Same fail-safe rule as the folder-reposition step: an unresolvable path is skipped,
+    // never guessed at.
+    await seed("A", "https://a.com");
+
+    await importBookmarks(
+      {
+        ...payload([link("A", "https://a.com")]),
+        folderRenames: [{ path: ["bar", "Nowhere"], from: "Work", to: "Job", at: NOW }],
+      },
+      "merge", "lww"
+    );
+
+    expect(await folderTitles()).toEqual([]);
+  });
+
+  it("a peer on an older build sends neither log, and nothing breaks", async () => {
+    // Both fields are optional. A packet without them must read as "nobody renamed
+    // anything", not as an empty rename that wipes a title.
+    await seed("Mine", "https://a.com");
+
+    await importBookmarks(payload([link("Mine", "https://a.com")]), "merge", "lww");
+    await importBookmarks([link("Mine", "https://a.com")], "merge", "lww"); // legacy bare array
+
+    expect(await titleOf("https://a.com")).toBe("Mine");
+  });
+
+  it("puts both renames into the payload it publishes", async () => {
+    const onChanged = captureOnChanged();
+    const f = await chrome.bookmarks.create({ parentId: "1", title: "Work" });
+    const a = await chrome.bookmarks.create({ parentId: f.id, title: "Old", url: "https://a.com" });
+    await exportBookmarkPayload(); // snapshots the cache — the folder's OLD name lives here
+
+    await chrome.bookmarks.update(a.id, { title: "New" });
+    onChanged(a.id, { title: "New" });
+    await chrome.bookmarks.update(f.id, { title: "Job" });
+    onChanged(f.id, { title: "Job" });
+    await new Promise((r) => setTimeout(r, 0));
+
+    const out = await exportBookmarkPayload();
+    expect(out.titles?.map((t) => t.title)).toEqual(["New"]);
+    expect(out.folderRenames?.map((r) => `${r.from}->${r.to}`)).toEqual(["Work->Job"]);
+  });
+});
