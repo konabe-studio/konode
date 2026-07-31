@@ -68,9 +68,44 @@ export class WebDAVBackend implements IBackend {
       method: "MKCOL",
       headers: this.headers(),
     });
-    if (!res.ok && res.status !== 405 && res.status !== 301) {
-      logger.warn("WebDAV.ensureFolder", `MKCOL returned ${res.status}`);
+
+    // The configured URL is not the canonical one. fetch followed the redirect for us, so
+    // this still worked — but it costs an extra round trip on every request, and plenty of
+    // servers and reverse proxies DROP the Authorization header when redirecting, which
+    // shows up later as a baffling 401 on a password that is perfectly correct. Say so
+    // now, while the user is looking at the connection settings.
+    if (res.redirected) {
+      logger.warn(
+        "WebDAV.ensureFolder",
+        `The server redirects ${new URL(this.w.url).hostname} to a different address. Sync should still work, but use the final URL your server shows — some servers drop the login across a redirect and then reject a correct password.`
+      );
     }
+
+    // 405 means the collection is already there. A bare 301 used to be waved through as
+    // well, which was wrong twice over: fetch follows redirects by default, so a 301 only
+    // ever reaches this line when it could NOT be followed (no usable Location), and that
+    // is a failure, not a success.
+    if (res.ok || res.status === 405) return;
+
+    // Anything else: this used to be a warning and nothing more, so connect() went on to
+    // log "WebDAV connected" and Test connection reported success even when the folder had
+    // not been created — every upload then failed against a folder that wasn't there.
+    // Don't guess from the status code, though: WebDAV servers answer MKCOL with a wide
+    // spread of codes, and a 403 can mean "you may not create it" on a collection that
+    // already exists. Ask.
+    const check = await fetch(this.baseUrl + "/", {
+      method: "PROPFIND",
+      headers: { ...this.headers(), Depth: "0" },
+      cache: "no-store",
+    });
+    if (check.ok) {
+      logger.info("WebDAV.ensureFolder", `MKCOL returned ${res.status}, but the folder is there`);
+      return;
+    }
+    throw new HttpError(
+      res.status,
+      `Couldn't create the sync folder on the WebDAV server (MKCOL ${res.status}, and it isn't there: ${check.status}). Check the path and that the account may write to it.`
+    );
   }
 
   async upload(packet: SyncPacket): Promise<void> {
