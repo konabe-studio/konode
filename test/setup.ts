@@ -66,8 +66,43 @@ function resetHistory() { histEntries = new Map(); histApi.__engine = "firefox";
 resetHistory();
 
 // ─── chrome.tabs / chrome.windows in-memory fake ───────────────────────────
+//
+// `__popupBlocked` models WebKit/Orion: only the FIRST programmatic tab is allowed and
+// every later tabs.create is SILENTLY swallowed — it resolves with a Tab object and opens
+// nothing. That silence is the whole difficulty (a thrown error would be easy), and the
+// old fake couldn't express it, so the 1.0.2 workaround and its cost were both untestable.
+// windows.create is one user-initiated action, so it is never blocked.
 let openTabs = [];
-function resetTabs() { openTabs = []; }
+let windowsCreated = [];
+const tabsApi = {
+  __popupBlocked: false,
+  __programmaticTabs: 0,
+  query: () => Promise.resolve(openTabs.slice()),
+  create: (props = {}) => {
+    const t = { id: openTabs.length + 1, url: props.url, pinned: !!props.pinned, active: props.active ?? true };
+    tabsApi.__programmaticTabs++;
+    if (tabsApi.__popupBlocked && tabsApi.__programmaticTabs > 1) {
+      return Promise.resolve(t); // resolves, opens nothing — exactly the hard case
+    }
+    openTabs.push(t);
+    return Promise.resolve(t);
+  },
+};
+const windowsApi = {
+  create: (props = {}) => {
+    const urls = Array.isArray(props.url) ? props.url : props.url != null ? [props.url] : [];
+    windowsCreated.push({ urls, focused: !!props.focused });
+    const tabs = urls.map((u) => { const t = { id: openTabs.length + 1, url: u }; openTabs.push(t); return t; });
+    return Promise.resolve({ id: 1, focused: !!props.focused, tabs });
+  },
+  __created: () => windowsCreated.slice(),
+};
+function resetTabs() {
+  openTabs = [];
+  windowsCreated = [];
+  tabsApi.__popupBlocked = false;
+  tabsApi.__programmaticTabs = 0;
+}
 resetTabs();
 
 function bmChildren(parentId) {
@@ -191,21 +226,8 @@ function makeChrome() {
       },
     },
     bookmarks: makeBookmarks(),
-    tabs: {
-      query: () => Promise.resolve(openTabs.slice()),
-      create: (props = {}) => {
-        const t = { id: openTabs.length + 1, url: props.url, pinned: !!props.pinned, active: props.active ?? true };
-        openTabs.push(t);
-        return Promise.resolve(t);
-      },
-    },
-    windows: {
-      create: (props = {}) => {
-        const urls = Array.isArray(props.url) ? props.url : props.url != null ? [props.url] : [];
-        const tabs = urls.map((u) => { const t = { id: openTabs.length + 1, url: u }; openTabs.push(t); return t; });
-        return Promise.resolve({ id: 1, focused: !!props.focused, tabs });
-      },
-    },
+    tabs: tabsApi,
+    windows: windowsApi,
     history: histApi,
     notifications: { create: vi.fn() },
     // A real in-memory alarms registry, not a mock: the scheduling rule under test is

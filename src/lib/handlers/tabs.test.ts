@@ -87,3 +87,65 @@ describe("exportCurrentTabs — only plain, non-secret web pages leave the devic
     expect((await exportCurrentTabs()).map((t) => t.url)).toHaveLength(2);
   });
 });
+
+// chrome.tabs/windows real typings have none of these; they are the fake's popup-blocker
+// switch and its record of created windows. See test/setup.ts.
+const tabsFake = chrome.tabs as unknown as { __popupBlocked: boolean };
+const windowsFake = chrome.windows as unknown as {
+  __created: () => Array<{ urls: string[]; focused: boolean }>;
+};
+
+describe("restoring a session lands in the window you're already in", () => {
+  // 1.0.2 swapped the per-tab loop for one windows.create to get past WebKit/Orion's
+  // popup blocker. It worked, but it was applied to every engine: the session started
+  // arriving in a NEW window, and `pinned` was silently dropped, for everyone. Reported
+  // from the field as "it used to open in the current window".
+  const withPinned = (urls: string[], pinnedIdx: number[]): SyncSession => ({
+    id: "s1", device_id: "peer", savedAt: "2026-07-21T00:00:00.000Z", label: "Peer session",
+    tabs: urls.map((url, i) => ({ url, title: `t${i}`, pinned: pinnedIdx.includes(i) })),
+  });
+
+  it("uses the current window and opens no new one", async () => {
+    await importSession(withPinned(["https://a.com/", "https://b.com/", "https://c.com/"], []));
+
+    expect((await chrome.tabs.query({})).map((t) => t.url)).toEqual([
+      "https://a.com/", "https://b.com/", "https://c.com/",
+    ]);
+    expect(windowsFake.__created()).toEqual([]); // the assertion the old test was missing
+  });
+
+  it("brings pinned tabs back pinned", async () => {
+    // The url-array form of windows.create has no way to carry this, so it was lost.
+    await importSession(withPinned(["https://a.com/", "https://b.com/"], [1]));
+
+    const tabs = await chrome.tabs.query({});
+    expect(tabs.map((t) => t.pinned)).toEqual([false, true]);
+  });
+
+  it("still restores every tab on an engine that blocks the second one", async () => {
+    // Orion is not hypothetical — session restore works there with a backend you can sign
+    // into on that engine (Koofr/WebDAV). Its blocker SILENTLY swallows tab 2 onward, so
+    // the return value looks like success and only a tab count can catch it.
+    tabsFake.__popupBlocked = true;
+
+    await importSession(withPinned(["https://a.com/", "https://b.com/", "https://c.com/"], []));
+
+    expect((await chrome.tabs.query({})).map((t) => t.url).sort()).toEqual([
+      "https://a.com/", "https://b.com/", "https://c.com/",
+    ]);
+    const wins = windowsFake.__created();
+    expect(wins).toHaveLength(1);
+    expect(wins[0].urls).toEqual(["https://b.com/", "https://c.com/"]); // the ones that didn't land
+    expect(wins[0].focused).toBe(true); // it used to open unfocused, behind everything
+  });
+
+  it("doesn't open a window for a single-tab session on a blocking engine", async () => {
+    // The first tab is the one every engine allows, so there is nothing to fall back to.
+    tabsFake.__popupBlocked = true;
+
+    await importSession(withPinned(["https://only.com/"], []));
+
+    expect(windowsFake.__created()).toEqual([]);
+    expect((await chrome.tabs.query({})).map((t) => t.url)).toEqual(["https://only.com/"]);
+  });
+});

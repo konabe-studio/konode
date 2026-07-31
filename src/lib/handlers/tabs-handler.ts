@@ -51,35 +51,60 @@ export async function exportSession(label?: string): Promise<SyncSession> {
 export async function importSession(session: SyncSession): Promise<void> {
   // Never open a non-web URL from a remote packet (javascript:/data:/file: are
   // an injection/exfiltration vector); only http(s) tabs are restored.
-  const urls = session.tabs
-    .filter((t) => {
-      if (isSafeContentUrl(t.url)) return true;
-      logger.warn("importSession", "Skipping an unsafe tab URL");
-      return false;
-    })
-    .map((t) => t.url);
+  const openable = session.tabs.filter((t) => {
+    if (isSafeContentUrl(t.url)) return true;
+    logger.warn("importSession", "Skipping an unsafe tab URL");
+    return false;
+  });
 
-  logger.event("importSession", `Opening ${urls.length} tabs from "${session.label}"`);
-  if (urls.length === 0) return;
+  logger.event("importSession", `Opening ${openable.length} tabs from "${session.label}"`);
+  if (openable.length === 0) return;
 
-  try {
-    // Open ALL tabs in a single new window. A loop of tabs.create is blocked after
-    // the first tab by WebKit/Orion's popup blocker (only the 1st programmatic tab
-    // opened — confirmed against a 15-tab Brave session restoring as 1 on Orion).
-    // One windows.create with a url array is a single, non-popup-limited action and
-    // keeps the restored session in its own window. (pinned state isn't preserved
-    // this way — an acceptable trade for actually restoring every tab.)
-    await browser.windows.create({ url: urls, focused: false });
-  } catch (err) {
-    // Fallback for an engine without windows.create: best-effort per-tab (may hit
-    // the same popup limit, but never worse than before).
-    logger.warn("importSession", `windows.create failed, falling back to per-tab: ${err instanceof Error ? err.message : String(err)}`);
-    for (const url of urls) {
+  /**
+   * Restore into the CURRENT window, one tab at a time — and notice if that isn't working.
+   *
+   * 1.0.2 replaced this loop with a single `windows.create({ url: urls })` because
+   * WebKit/Orion's popup blocker lets only the FIRST programmatic tab through, so a 15-tab
+   * session restored as one. The workaround was correct about the problem, but it was
+   * applied to every engine, and it cost two visible things everywhere: the session landed
+   * in a new window instead of the one you were in, and `pinned` was dropped because the
+   * url-array form has no way to carry it.
+   *
+   * Orion is not hypothetical — session restore genuinely works there when the backend is
+   * one you can actually sign into on that engine (Koofr / WebDAV rather than Drive), so
+   * simply reverting would break real users.
+   *
+   * So: don't guess the engine, MEASURE it. Open the first two tabs and count whether they
+   * actually appeared. A blocker that throws and a blocker that silently swallows the tab
+   * look identical from the return value, but neither can hide from a tab count. Engines
+   * that open them get the current window and their pinned state; an engine that doesn't
+   * gets the remainder in one window, exactly as before.
+   */
+  const tabCount = async (): Promise<number> => (await browser.tabs.query({})).length;
+  const before = await tabCount();
+
+  for (let i = 0; i < openable.length; i++) {
+    const t = openable[i];
+    try {
+      await browser.tabs.create({ url: t.url, pinned: t.pinned, active: false });
+    } catch (e) {
+      logger.error(`Tab open: ${t.url}`, e);
+    }
+
+    // Check once, after the second tab — the first is the one every engine allows, so it
+    // proves nothing on its own.
+    if (i === 1 && (await tabCount()) - before < 2) {
+      const rest = openable.slice(1).map((x) => x.url as string);
+      logger.warn(
+        "importSession",
+        `This browser blocked the second tab, so ${rest.length} tab(s) are opening in their own window instead`
+      );
       try {
-        await browser.tabs.create({ url, active: false });
-      } catch (e) {
-        logger.error(`Tab open: ${url}`, e);
+        await browser.windows.create({ url: rest, focused: true });
+      } catch (err) {
+        logger.error("importSession", err);
       }
+      return;
     }
   }
 }
