@@ -40,6 +40,18 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
 - **One data type failing stopped the rest.** Turning off Konode's optional history or
   extension permission in your browser made that part of the sync fail, which silently
   stopped your BOOKMARKS syncing too.
+- **GitHub: setting up an empty repository could silently half-finish.** The first commit
+  Konode writes to a new repository wasn't checked, so a token without write access failed
+  there but was reported later as an unexplained upload error, once per data type, with
+  nothing saying why. That commit also always went to `main` — so if you'd chosen any other
+  branch, every upload afterwards failed against a branch that was never created.
+- **WebDAV: "Connected" no longer appears when the sync folder couldn't be created.** The
+  failure was only logged, so setup looked fine and every upload afterwards failed against
+  a folder that wasn't there. Konode now checks whether the folder exists before deciding,
+  which also stops it from giving up on servers that refuse the create call for a folder
+  that's already present. If your server redirects the address you entered, it says so —
+  that still works, but some servers drop the login across a redirect and then reject a
+  correct password.
 - **Google Drive: two devices set up at the same moment could end up in separate folders.**
   Both created a "Konode" folder and each kept its own, so they never saw each other.
   They now agree on one, and a device whose folder changes re-uploads into the new one.
@@ -100,6 +112,11 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
 - **A Firefox "Bookmarks Menu" landed in Chrome's bookmarks bar** instead of Other
   bookmarks, because the fallback depended on the order a browser happens to list its
   bookmark roots.
+- **Your device is no longer labelled with the wrong operating system.** A Windows 10
+  machine was called Windows 11 (both send the same identifier, and they can't be told
+  apart this way), an Android phone on a Chromium browser was called Linux, and an iPhone
+  was called a Mac. The label names your device in Settings and names the other device
+  whose tabs or extensions you're looking at, so it was wrong in the place it's most read.
 - **Google sign-in failures no longer blame your browser.** Anything other than a cancel
   was reported as "Google Drive sign-in isn't available in this browser", including
   problems that had nothing to do with the browser.
