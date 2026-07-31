@@ -3,6 +3,7 @@ import { logger } from "@/lib/utils/logger";
 import { canonicalUrlKey, isSafeContentUrl, isSensitiveUrl } from "@/lib/utils/url";
 import {
   getImportedHistoryStamps, recordImportedHistory, releaseImportedHistory,
+  getRejectedHistoryUrls, recordRejectedHistoryUrls, rejectionStillHolds,
 } from "@/lib/utils/storage";
 import { browser } from "@/lib/utils/ext";
 
@@ -50,7 +51,12 @@ export async function exportHistory(daysLimit = 30): Promise<SyncHistoryItem[]> 
     // Never sync a URL that embeds an auth secret (OAuth callback token, reset link, …) —
     // even E2EE'd, that's uploading a live credential to third-party storage. It stays in
     // the local browser history; it just isn't published.
-    if (!item.url || isSensitiveUrl(item.url)) continue;
+    // Non-web URLs are dropped BEFORE they go out. Only isSensitiveUrl was checked here,
+    // so a Chromium device happily published its `file://` paths and `chrome://` pages —
+    // a privacy leak in its own right (the tab sync already refuses these for that very
+    // reason), and the far end can never store them, so it re-rejects the same URLs on
+    // every cycle forever. The loop was feeding itself.
+    if (!item.url || !isSafeContentUrl(item.url) || isSensitiveUrl(item.url)) continue;
     const key = canonicalUrlKey(item.url);
     const stamp = stamps[key];
     if (stamp !== undefined) {
@@ -100,8 +106,16 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
   // One stamp for the whole batch: the moment these visits arrived here. exportHistory
   // compares against it to tell an import apart from the user's own later visit.
   const stamp = Date.now();
+  // What this browser has already refused. Re-attempting those every cycle was the single
+  // biggest source of both wasted work and audit-log noise (see HIST_REJECT_RETRY_MS).
+  const rejectedBefore = await getRejectedHistoryUrls();
   let added = 0;
+  let staleRejects = 0;
   const importedUrls: string[] = [];
+  const freshlyRejected: string[] = [];
+  const rejectedHosts = new Set<string>();
+  let rejectReason = "";
+  let unsafeSkipped = 0;
   for (const item of items) {
     if (!item.url) continue;
     const key = canonicalUrlKey(item.url);
@@ -114,11 +128,10 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
     // Without it, addUrl would re-record the same visit every cycle — the visit-count
     // inflation that made the blanket skip necessary in the first place.
     if (localTime !== undefined && !(item.lastVisitTime !== undefined && item.lastVisitTime > localTime)) continue;
+    // Already known to be unstorable here — don't spend another call finding out.
+    if (rejectionStillHolds(rejectedBefore[key], stamp)) { staleRejects++; continue; }
     // Only add plain web URLs from a remote packet — never javascript:/data:/file:.
-    if (!isSafeContentUrl(item.url)) {
-      logger.warn("importHistory", "Skipping an unsafe URL");
-      continue;
-    }
+    if (!isSafeContentUrl(item.url)) { unsafeSkipped++; continue; }
     // Defense in depth: a legacy packet (written before export filtered these) may
     // still carry an auth-secret URL — don't re-add it locally either.
     if (isSensitiveUrl(item.url)) continue;
@@ -139,20 +152,48 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
       localLastVisit.set(key, Math.max(localTime ?? 0, stamp));
       importedUrls.push(key);
       added++;
-    } catch {
-      // A per-URL rejection is non-fatal and expected for some entries the local
-      // browser refuses to add (Firefox rejects over-long / malformed URLs, etc.).
-      // Warn (not error) and log only the host — never the full URL, which could
-      // carry sensitive query/fragment data — so one bad entry can't flood or leak.
-      let host = "?";
-      try { host = new URL(item.url).host; } catch { /* keep "?" */ }
-      logger.warn("importHistory", `Skipped a history URL the browser rejected (${host})`);
+    } catch (err) {
+      // A per-URL rejection is non-fatal and expected for some entries the local browser
+      // refuses to add (Firefox rejects over-long / malformed URLs, etc.). Collected and
+      // reported ONCE below rather than a line each: these arrive in bursts, every line is
+      // a whole-array rewrite of the audit log, and a burst of them used to bury
+      // everything else in the 200-entry ring within two cycles.
+      freshlyRejected.push(key);
+      try { rejectedHosts.add(new URL(item.url).host); } catch { rejectedHosts.add("?"); }
+      // The reason used to be discarded entirely (`catch {}`), which is why nobody ever
+      // found out WHY Firefox refuses accounts.google.com. One message per batch is
+      // affordable, and it's the only way that question ever gets answered.
+      if (!rejectReason) rejectReason = err instanceof Error ? err.message : String(err);
     }
   }
   // Remember WHEN these arrived, so exportHistory won't re-publish them as native visits
   // (CO-6: stops old history from circulating the mesh indefinitely) while still letting
   // the user's own later visit through.
   await recordImportedHistory(importedUrls, stamp);
+
+  // ── One line per outcome, and each says WHAT was skipped and WHY. The old messages
+  // ("Skipping an unsafe URL") named neither, so a user reading their Activity log saw a
+  // wall of red that told them nothing except that something was wrong.
+  if (freshlyRejected.length) {
+    await recordRejectedHistoryUrls(freshlyRejected, stamp);
+    const hosts = [...rejectedHosts].slice(0, 3).join(", ");
+    const more = rejectedHosts.size > 3 ? ` and ${rejectedHosts.size - 3} more` : "";
+    logger.warn(
+      "importHistory",
+      `Your browser wouldn't store ${freshlyRejected.length} page(s) from another device (${hosts}${more})` +
+        `${rejectReason ? `: ${rejectReason}` : ""}. Konode won't keep retrying them.`
+    );
+  }
+  if (unsafeSkipped) {
+    logger.warn(
+      "importHistory",
+      `Skipped ${unsafeSkipped} page(s) that aren't ordinary web addresses. Konode only syncs http and https pages, never local files or browser-internal pages.`
+    );
+  }
+  if (staleRejects) {
+    logger.info("importHistory", `Skipped ${staleRejects} page(s) this browser refused earlier`);
+  }
+
   const summary = `Added ${added} new history entries (skipped existing)`;
   // Only worth remembering when it actually added something.
   if (added) logger.event("importHistory", summary);

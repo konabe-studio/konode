@@ -102,6 +102,7 @@ export const KEYS = {
   // counts this device recorded before dropping the key.
   LEGACY_SNAPSHOTS: "konode_bm_snapshots",
   HIST_IMPORTED: "konode_hist_imported",
+  HIST_REJECTED: "konode_hist_rejected",
   REMOTE_SESSIONS: "konode_remote_sessions",
   REMOTE_EXTENSIONS: "konode_remote_extensions",
   UPLOAD_CHECKSUMS: "konode_upload_checksums",
@@ -300,6 +301,21 @@ export function updateFolderMoves(
 // as native visits and resurrect across the device mesh forever.
 
 const HIST_IMPORTED_CAP = 20_000;
+const HIST_REJECTED_CAP = 5_000;
+/**
+ * How long a URL this browser refused stays refused.
+ *
+ * Nothing remembered a rejection, so every cycle re-attempted every URL the browser will
+ * never accept — and wrote a warning for each one. Measured on a reported first sync: with
+ * nothing at all to do, a cycle still made 100 addUrl calls, took 100 rejections, and did
+ * 100 whole-array rewrites of the 200-entry audit log. The log therefore turned over
+ * completely every two cycles, which is why a user's Activity read 176 errors out of 188.
+ *
+ * Not forever, though: a rejection can be transient (a locked Places database, a
+ * momentarily malformed entry), so this expires and the URL gets one more chance a week
+ * later instead of one a minute.
+ */
+const HIST_REJECT_RETRY_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Canonical URL → the local last-visit time that OUR OWN import produced for it.
@@ -362,6 +378,31 @@ export async function recordImportedHistory(urls: string[], stamp: number): Prom
     for (const k of keys.slice(0, keys.length - HIST_IMPORTED_CAP)) delete map[k];
     return map;
   }, {});
+}
+
+/** Canonical URL → when this browser last refused to store it. */
+export async function getRejectedHistoryUrls(): Promise<Record<string, number>> {
+  const raw = await get<Record<string, number>>(KEYS.HIST_REJECTED, {});
+  return raw ?? {};
+}
+
+/** Note that the browser refused these, so the next cycles don't try them all again. */
+export async function recordRejectedHistoryUrls(urls: string[], at: number): Promise<void> {
+  if (!urls.length) return;
+  await updateKey<Record<string, number>>(KEYS.HIST_REJECTED, (current) => {
+    const map = { ...(current ?? {}) };
+    for (const u of urls) map[canonicalUrlKey(u)] = at;
+    const keys = Object.keys(map);
+    if (keys.length <= HIST_REJECTED_CAP) return map;
+    keys.sort((a, b) => (map[a] ?? 0) - (map[b] ?? 0));
+    for (const k of keys.slice(0, keys.length - HIST_REJECTED_CAP)) delete map[k];
+    return map;
+  }, {});
+}
+
+/** True while the rejection is still fresh enough to trust. */
+export function rejectionStillHolds(at: number | undefined, now: number): boolean {
+  return at !== undefined && now - at < HIST_REJECT_RETRY_MS;
 }
 
 /** These pages have since been visited here for real — they're ours to publish now. */
