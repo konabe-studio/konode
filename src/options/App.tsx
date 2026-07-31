@@ -1192,6 +1192,16 @@ export default function OptionsApp() {
                     <span className="slider-val">{settings.history_days_limit}d</span>
                   </div>
                 </div>
+                {/* Nothing said this anywhere, and it makes a working sync look broken: a
+                    user checks yesterday on the receiving machine, finds nothing, and
+                    concludes the history never arrived. Chrome's history.addUrl takes no
+                    visit time (Firefox's does, and we pass it), so on Chromium the arriving
+                    page can only be stamped with the moment it arrived. */}
+                <p className="config-hint">
+                  Pages from your other devices are added with the time they arrived, not the
+                  time you first visited them — so on Chromium browsers they show up under
+                  today rather than the day you were browsing. Firefox keeps the original date.
+                </p>
               </div>
 
               {missingExtensions.length > 0 && (
