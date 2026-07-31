@@ -26,6 +26,11 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
 - **"Manual" conflict resolution never published this device's data.** Manual is meant to
   ask you before pulling a change IN. It also stopped this device sending anything OUT, so
   as soon as another device existed, your changes reached nobody.
+- **Renaming a bookmark or a folder never reached your other devices.** The rename was
+  sent every time, and every device threw it away on arrival — there was no way to tell
+  whose title was newer, so the safe thing was to change nothing. Renames now carry a
+  timestamp and the newest one wins. Folders are renamed in place instead of a
+  second folder appearing under the new name.
 - **Deleted bookmarks came back.** Deleting several bookmarks at once fired several
   events, and they overwrote each other's record of the deletion — so only one was
   remembered and the rest returned from your other devices on the next sync.
