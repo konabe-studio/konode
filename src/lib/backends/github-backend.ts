@@ -133,15 +133,30 @@ export class GitHubBackend implements IBackend {
 
     // If repo is empty (no commits), initialize it
     if (!repoData.default_branch) {
-      await fetch(`${GITHUB_API}/repos/${this.repoSlug}/contents/README.md`, {
+      const initRes = await fetch(`${GITHUB_API}/repos/${this.repoSlug}/contents/README.md`, {
         method: "PUT",
         headers: this.headers(),
         body: JSON.stringify({
           message: "chore: initialize Konode sync repository",
           content: btoa("# Konode Sync\n\nThis repository is used by the Konode browser extension to sync browser data.\n"),
-          branch: "main",
+          // The CONFIGURED branch, not a hardcoded "main". Every other request here uses
+          // `this.branch`, so pinning the first commit to main meant a user who had set
+          // any other branch got their initial commit on a branch nothing else ever
+          // touches — and then every single upload failed against a branch that did not
+          // exist. On an empty repo this call is what creates the branch.
+          branch: this.branch,
         }),
       });
+      // The result was thrown away, and `repoInitialized` was set regardless. A token
+      // without Contents: write fails HERE, where we know exactly what went wrong — but
+      // the error surfaced later as an unexplained upload failure instead, once per data
+      // type, with nothing pointing at the real cause.
+      if (!initRes.ok) {
+        throw new HttpError(
+          initRes.status,
+          `Couldn't initialize '${this.repoSlug}': writing the first commit failed (HTTP ${initRes.status}). The token likely doesn't have Contents: write on this repository.`
+        );
+      }
     }
 
     this.repoInitialized = true;
