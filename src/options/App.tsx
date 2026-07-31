@@ -1542,9 +1542,13 @@ export default function OptionsApp() {
                     <div className="audit-list">
                       {shown.map((e, i) => (
                         <div key={`${e.timestamp}-${i}`} className="audit-row">
-                          {e.ok
+                          {/* `level` when the entry has one; older entries only have
+                              `ok`, so fall back to the old two-way read for those. */}
+                          {(e.level ?? (e.ok ? "ok" : "error")) === "ok"
                             ? <CheckCircle2 size={13} className="audit-icon ok" />
-                            : <XCircle size={13} className="audit-icon fail" />}
+                            : (e.level ?? "error") === "notice"
+                              ? <AlertTriangle size={13} className="audit-icon notice" />
+                              : <XCircle size={13} className="audit-icon fail" />}
                           <div className="audit-main">
                             <div className="audit-action">{e.action}</div>
                             {e.detail && <div className="audit-detail">{e.detail}</div>}
@@ -2010,6 +2014,9 @@ const STYLES = `
   .audit-icon { flex-shrink: 0; margin-top: 2px; }
   .audit-icon.ok { color: var(--success); }
   .audit-icon.fail { color: var(--danger); }
+  /* A deliberate skip is not a failure. Warnings used to render in --danger, which is
+     why a routine import read as 176 errors out of 188. */
+  .audit-icon.notice { color: var(--warn-border); }
   .audit-main { flex: 1; min-width: 0; }
   .audit-action { font-size: 13px; color: var(--text-primary); }
   .audit-detail { font-size: 12px; color: var(--text-secondary); margin-top: 1px; word-break: break-word; }

@@ -45,16 +45,16 @@ export const logger = {
   /** A notable event worth keeping in the user's Activity log. */
   event(action: string, detail?: string) {
     console.info(`${PREFIX} [INFO] ${action}`, detail ?? "");
-    appendAudit({ timestamp: timestamp(), action, detail, ok: true });
+    appendAudit({ timestamp: timestamp(), action, detail, ok: true, level: "ok" });
   },
   warn(action: string, detail?: string) {
     console.warn(`${PREFIX} [WARN] ${action}`, detail ?? "");
-    appendAudit({ timestamp: timestamp(), action, detail, ok: false });
+    appendAudit({ timestamp: timestamp(), action, detail, ok: false, level: "notice" });
   },
   error(action: string, err: unknown) {
     const detail = err instanceof Error ? err.message : String(err);
     console.error(`${PREFIX} [ERROR] ${action}`, detail);
-    appendAudit({ timestamp: timestamp(), action, detail, ok: false });
+    appendAudit({ timestamp: timestamp(), action, detail, ok: false, level: "error" });
   },
   debug(action: string, data?: unknown) {
     if (!debugEnabled) return; // gated by settings.debug_mode
@@ -68,6 +68,6 @@ export const logger = {
     // chasing a missing device needs, such as "Skipping plaintext peer". Yes, this crowds
     // the 200-entry log; that is the trade Debug mode is asking for, and it stops the
     // moment the toggle goes off.
-    appendAudit({ timestamp: timestamp(), action, detail, ok: true });
+    appendAudit({ timestamp: timestamp(), action, detail, ok: true, level: "ok" });
   },
 };

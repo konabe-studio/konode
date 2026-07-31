@@ -206,11 +206,27 @@ export async function setState(partial: Partial<SyncState>): Promise<SyncState> 
 
 // ─── Audit Log ─────────────────────────────────────────────────────────────
 
+/**
+ * `level` says what an entry MEANS; `ok` says only whether it went well.
+ *
+ * Two states were being asked to carry a three-state idea. logger has five levels but
+ * flattened them onto `ok` at write time — warn and error both wrote `ok: false` — so a
+ * warning and a failure were identical in STORAGE, not merely rendered alike. The
+ * information was gone before the UI ever saw it, and since almost every deliberate
+ * "we're not syncing this" path is a warn, a normal import painted the log red. A field
+ * report put it at 176 of 188 entries flagged as errors, nearly all of them benign.
+ *
+ * Optional on purpose: entries already on users' devices have no `level`, and the renderer
+ * falls back to `ok` for those. `ok` is still written, so nothing that reads it breaks.
+ */
+export type AuditLevel = "ok" | "notice" | "error";
+
 export interface AuditEntry {
   timestamp: string;
   action: string;
   detail?: string;
   ok: boolean;
+  level?: AuditLevel;
 }
 
 export async function appendAudit(entry: AuditEntry): Promise<void> {

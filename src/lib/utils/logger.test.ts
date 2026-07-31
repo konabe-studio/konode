@@ -121,3 +121,38 @@ describe("logger — which levels reach the audit log", () => {
     expect(spy).toHaveBeenCalled();
   });
 });
+
+describe("what an audit entry MEANS, not just whether it went well", () => {
+  // `ok` is two states; warn and error both wrote `ok: false`, so a deliberate skip and a
+  // real failure were identical in STORAGE, not merely rendered alike. Since almost every
+  // "we're not syncing this" path is a warn, a routine import painted the log red — a
+  // field report had 176 of 188 entries flagged as errors, nearly all of them harmless.
+  const entries = async (): Promise<Array<{ action: string; ok: boolean; level?: string }>> => {
+    await new Promise((r) => setTimeout(r, 0));
+    const r = await chrome.storage.local.get(KEYS.AUDIT_LOG);
+    return (r[KEYS.AUDIT_LOG] as Array<{ action: string; ok: boolean; level?: string }>) ?? [];
+  };
+
+  it("tells a deliberate skip apart from a failure", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "info").mockImplementation(() => {});
+
+    logger.warn("importHistory", "Skipping an unsafe URL");
+    logger.error("SyncEngine.sync", new Error("network down"));
+    logger.event("Snapshots", "Created a restore point");
+
+    const byAction = Object.fromEntries((await entries()).map((e) => [e.action, e]));
+    expect(byAction["importHistory"].level).toBe("notice");
+    expect(byAction["SyncEngine.sync"].level).toBe("error");
+    expect(byAction["Snapshots"].level).toBe("ok");
+  });
+
+  it("keeps writing `ok`, so nothing that already reads it breaks", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    logger.warn("importHistory", "Skipping an unsafe URL");
+
+    const [e] = await entries();
+    expect(e.ok).toBe(false); // a notice is still not a success
+  });
+});
