@@ -16,19 +16,26 @@ import { canonicalUrlKey } from "@/lib/utils/url";
 
 // ─── Device name detection ─────────────────────────────────────────────────
 
-function detectDeviceName(): string {
+export function detectDeviceName(): string {
   const ua = navigator.userAgent;
 
-  // OS detection
+  // OS detection. ORDER MATTERS, and it used to be wrong in both directions: an Android
+  // user agent contains "Linux" and an iPhone's contains "Mac OS X", so those two were
+  // caught by the desktop branch above them and no device ever identified as Android or
+  // iOS. The mobile platforms have to be tested FIRST, because they are the specific case.
   let os = "Device";
-  if (ua.includes("Windows NT 10.0")) os = "Windows 11";
+  if (ua.includes("Android")) os = "Android";
+  else if (ua.includes("iPhone") || ua.includes("iPad")) os = "iOS";
+  // "Windows NT 10.0" is sent by BOTH Windows 10 and Windows 11 — Microsoft never bumped
+  // it — so calling it Windows 11 was simply wrong for every Windows 10 user, in a label
+  // they see next to their device. Telling them apart needs an async high-entropy
+  // client-hint this sync function can't make.
+  else if (ua.includes("Windows NT 10.0")) os = "Windows 10/11";
   else if (ua.includes("Windows NT 6.3")) os = "Windows 8.1";
   else if (ua.includes("Windows NT 6.1")) os = "Windows 7";
   else if (ua.includes("Windows")) os = "Windows";
   else if (ua.includes("Mac OS X")) os = "Mac";
   else if (ua.includes("Linux")) os = "Linux";
-  else if (ua.includes("Android")) os = "Android";
-  else if (ua.includes("iPhone") || ua.includes("iPad")) os = "iOS";
 
   // Browser detection
   let browser = "";
