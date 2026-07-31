@@ -81,6 +81,12 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
 - **Setting up GitHub: a rejected token now says so.** Continue simply stayed greyed out
   with nothing on screen. The token is also checked once you stop typing, rather than on
   every keystroke.
+- **Settings now says that arriving history is stamped with the time it arrived.** On
+  Chromium browsers a page from another device can only be recorded at the moment it
+  reached you — the browser gives extensions no way to set the original date (Firefox
+  does, and Konode uses it there). Nothing said so, which made a working sync look broken:
+  you check yesterday on the other machine, find nothing, and reasonably conclude the
+  history never came through.
 - **A device that couldn't be read just disappeared from the sync.** If one device's file
   couldn't be downloaded — a permission problem on the server, a transient error — it was
   skipped without a word, and the sync still reported success with fewer devices than were
@@ -105,13 +111,20 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
   recorded as a new visit every cycle — inflating visit counts and your most-visited
   list. It also meant pages you only received from another device were published back out
   as your own visits.
+- **History sync only carried pages your other device had never seen, so browsing the
+  same sites on two machines synced nothing.** A page already in the receiving device's
+  history was skipped outright, which meant a *new visit* was never transferred and the
+  log read "Added 0 new history entries". If you and your other device visit a similar set
+  of sites — the normal case — history sync did almost nothing. A visit newer than
+  anything that device already holds now comes through.
 - **History could stop being published from a device entirely.** Konode remembers which
   pages arrived from another device so it doesn't send them back out as your own visits —
   but nothing ever left that list. Once a page had arrived from any device, this one
   stopped publishing it forever, even after you genuinely browsed there yourself. With
   three devices that had each already received most of the shared history, a full day of
   browsing familiar sites could export nothing at all — it looked exactly like history
-  being filtered out. Pages you have since visited here are published again now.
+  being filtered out. Konode now records *when* a page arrived, so your own later visit to
+  it is published while the arrival itself still isn't.
 - **"Missing extensions" was effectively always empty.** Chrome uses the Web Store page as
   an extension's homepage when the extension doesn't provide one, so almost every
   extension looked like a match for almost every other. A store page is no longer treated
