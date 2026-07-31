@@ -93,6 +93,16 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
 - **Setting up GitHub: a rejected token now says so.** Continue simply stayed greyed out
   with nothing on screen. The token is also checked once you stop typing, rather than on
   every keystroke.
+- **The activity log no longer shows deliberate skips as errors.** A warning and a failure
+  were stored identically, so anything Konode chose not to sync appeared as a red error.
+  One reported log had 176 of 188 entries flagged that way, nearly all of them harmless. It
+  now distinguishes them, and the messages say what was skipped and why instead of leaving
+  you to guess.
+- **Restoring a session opens the tabs in the window you're in again**, and pinned tabs
+  come back pinned. Since 1.0.2 a restore always opened a new window and lost the pinned
+  state, as a workaround for one browser that refuses to open more than one tab at a time.
+  Konode now checks whether the tabs actually opened rather than assuming, so that browser
+  still gets all its tabs while everyone else gets the old behaviour back.
 - **Settings now says that arriving history is stamped with the time it arrived.** On
   Chromium browsers a page from another device can only be recorded at the moment it
   reached you — the browser gives extensions no way to set the original date (Firefox
@@ -142,6 +152,17 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
   browsing familiar sites could export nothing at all — it looked exactly like history
   being filtered out. Konode now records *when* a page arrived, so your own later visit to
   it is published while the arrival itself still isn't.
+- **Konode kept re-trying pages your browser had already refused, forever.** Nothing
+  remembered a rejection, so every sync attempted them again and wrote a log line for each
+  one. On one reported setup an idle sync still did a hundred pointless attempts a minute,
+  and the activity log filled up so fast that anything useful was gone within two cycles.
+  Rejections are now remembered for a week — long enough to stop the churn, short enough
+  that a temporary problem still fixes itself.
+- **Local files and browser-internal pages are no longer published from your history.**
+  Only addresses containing a sign-in token were filtered, so `file://` paths from your
+  disk and `chrome://` pages went to your storage — the tab sync already refused those for
+  the same reason. They were also the pages other browsers reject, which is what kept the
+  retrying going.
 - **"Missing extensions" was effectively always empty.** Chrome uses the Web Store page as
   an extension's homepage when the extension doesn't provide one, so almost every
   extension looked like a match for almost every other. A store page is no longer treated
