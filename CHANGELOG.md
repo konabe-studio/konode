@@ -149,6 +149,9 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
   log read "Added 0 new history entries". If you and your other device visit a similar set
   of sites — the normal case — history sync did almost nothing. A visit newer than
   anything that device already holds now comes through.
+- **The first sync is much faster, especially on Firefox.** Konode wrote incoming pages
+  one at a time, waiting for each before starting the next, so a first sync of a few
+  thousand pages meant a few thousand round trips end to end. They overlap now.
 - **History could stop being published from a device entirely.** Konode remembers which
   pages arrived from another device so it doesn't send them back out as your own visits —
   but nothing ever left that list. Once a page had arrived from any device, this one
