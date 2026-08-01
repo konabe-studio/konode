@@ -19,6 +19,21 @@ const EXPORT_MAX_RESULTS = 5000;
  */
 const IMPORT_STAMP_TOLERANCE_MS = 5_000;
 
+/**
+ * How many history writes are allowed in flight at once.
+ *
+ * The import used to await one addUrl per URL, in order. Every one of those is a round
+ * trip out to the browser process, so a first sync of 3,737 entries was 3,737 round trips
+ * end to end, with nothing else happening in between. That is the reported "Firefox takes
+ * forever on the first sync", and it is a shape problem, not a volume problem: the same
+ * number of writes overlapped is a fraction of the wall clock.
+ *
+ * Bounded rather than unbounded. Both engines funnel these into one history database, so
+ * firing several thousand at once buys nothing over a modest window and risks starving
+ * the rest of the browser on a big first sync.
+ */
+const IMPORT_CONCURRENCY = 16;
+
 // ─── Export ──────────────────────────────────────────────────────────────
 
 export async function exportHistory(daysLimit = 30): Promise<SyncHistoryItem[]> {
@@ -116,6 +131,14 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
   const rejectedHosts = new Set<string>();
   let rejectReason = "";
   let unsafeSkipped = 0;
+
+  // ── Decide everything first, write afterwards.
+  //
+  // Every test below is synchronous, so the whole work list can be settled in one pass
+  // and the writes can then overlap. Interleaving them was what forced the writes to be
+  // sequential: each iteration's decision depended on the previous iteration's await.
+  const pending: Array<{ url: string; key: string; visitTime?: number }> = [];
+  const claimed = new Set<string>();
   for (const item of items) {
     if (!item.url) continue;
     const key = canonicalUrlKey(item.url);
@@ -135,22 +158,33 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
     // Defense in depth: a legacy packet (written before export filtered these) may
     // still carry an auth-secret URL — don't re-add it locally either.
     if (isSensitiveUrl(item.url)) continue;
+    // A packet is URL-keyed, so it shouldn't list one page twice — but the writes overlap
+    // now, and two concurrent adds of the same URL would each record a visit. Dedupe here
+    // instead of relying on the loop's own bookkeeping to catch it.
+    if (claimed.has(key)) continue;
+    claimed.add(key);
+    pending.push({
+      url: item.url,
+      key,
+      // Firefox's addUrl requires an INTEGER visitTime and rejects a fractional value
+      // (Chrome's history search returns sub-millisecond floats like 1783492571151.999),
+      // so round here. Chrome ignores it either way.
+      visitTime: item.lastVisitTime ? Math.round(item.lastVisitTime) : undefined,
+    });
+  }
+
+  // ── Write, several at a time.
+  const writeOne = async (job: { url: string; key: string; visitTime?: number }): Promise<void> => {
     try {
-      // Firefox's history.addUrl honors visitTime, so the restored entry keeps
-      // its real date; Chrome's ignores everything but url and always stamps the
-      // current time (its UrlDetails type has no visitTime — hence the cast).
-      // Passing it is a harmless no-op on Chrome and preserves the timeline on
-      // Firefox. The original time can't otherwise be set from an extension.
-      const details: chrome.history.Url & { visitTime?: number } = { url: item.url };
-      // Firefox's addUrl requires an INTEGER visitTime and rejects a fractional
-      // value (Chrome's history search returns sub-millisecond floats like
-      // 1783492571151.999), so round before passing. Chrome ignores it either way.
-      if (item.lastVisitTime) details.visitTime = Math.round(item.lastVisitTime);
+      // Firefox's history.addUrl honors visitTime, so the restored entry keeps its real
+      // date; Chrome's ignores everything but url and always stamps the current time (its
+      // UrlDetails type has no visitTime — hence the cast). Passing it is a harmless no-op
+      // on Chrome and preserves the timeline on Firefox. The original time can't otherwise
+      // be set from an extension.
+      const details: chrome.history.Url & { visitTime?: number } = { url: job.url };
+      if (job.visitTime) details.visitTime = job.visitTime;
       await browser.history.addUrl(details);
-      // Assume the worst case for a repeat within this same batch: Chrome will have
-      // stamped the visit now, so nothing older than `stamp` can be newer than it.
-      localLastVisit.set(key, Math.max(localTime ?? 0, stamp));
-      importedUrls.push(key);
+      importedUrls.push(job.key);
       added++;
     } catch (err) {
       // A per-URL rejection is non-fatal and expected for some entries the local browser
@@ -158,13 +192,16 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
       // reported ONCE below rather than a line each: these arrive in bursts, every line is
       // a whole-array rewrite of the audit log, and a burst of them used to bury
       // everything else in the 200-entry ring within two cycles.
-      freshlyRejected.push(key);
-      try { rejectedHosts.add(new URL(item.url).host); } catch { rejectedHosts.add("?"); }
+      freshlyRejected.push(job.key);
+      try { rejectedHosts.add(new URL(job.url).host); } catch { rejectedHosts.add("?"); }
       // The reason used to be discarded entirely (`catch {}`), which is why nobody ever
       // found out WHY Firefox refuses accounts.google.com. One message per batch is
       // affordable, and it's the only way that question ever gets answered.
       if (!rejectReason) rejectReason = err instanceof Error ? err.message : String(err);
     }
+  };
+  for (let i = 0; i < pending.length; i += IMPORT_CONCURRENCY) {
+    await Promise.all(pending.slice(i, i + IMPORT_CONCURRENCY).map(writeOne));
   }
   // Remember WHEN these arrived, so exportHistory won't re-publish them as native visits
   // (CO-6: stops old history from circulating the mesh indefinitely) while still letting

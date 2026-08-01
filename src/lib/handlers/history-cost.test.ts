@@ -138,3 +138,61 @@ describe("we don't publish what the other browser can never store", () => {
     expect(urls).toEqual(["https://ok.example/page"]);
   });
 });
+
+describe("a first sync must not write one page at a time", () => {
+  // The import awaited one addUrl per URL, in order. Each of those is a round trip out to
+  // the browser process, so a reported first sync of 3,737 entries was 3,737 round trips
+  // end to end with nothing overlapping. That is the "Firefox takes forever on the first
+  // sync" report, and it is a shape problem rather than a volume one: the call COUNT is
+  // the same either way, so counting calls can't catch a regression here. What can is how
+  // many are allowed in flight at once.
+  it("overlaps the writes instead of serializing them", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "info").mockImplementation(() => {});
+
+    let inFlight = 0;
+    let maxInFlight = 0;
+    let calls = 0;
+    const h = chrome.history as unknown as { addUrl: (d: { url: string }) => Promise<void> };
+    const realAdd = h.addUrl.bind(h);
+    h.addUrl = async (d) => {
+      calls++;
+      inFlight++;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      // Yield twice, so a genuinely sequential loop can never look concurrent by accident.
+      await new Promise((r) => setTimeout(r, 0));
+      await realAdd(d);
+      inFlight--;
+    };
+
+    const packet = Array.from({ length: 200 }, (_, i) => ({
+      url: `https://site${i}.example/page`,
+      title: `Page ${i}`,
+      lastVisitTime: 1_700_000_000_000 + i,
+      visitCount: 1,
+    }));
+
+    await importHistory(packet);
+
+    expect(calls).toBe(200); // same work…
+    expect(maxInFlight).toBeGreaterThan(8); // …but not one at a time
+  });
+
+  it("still writes each page exactly once when the peer repeats a URL", async () => {
+    // Sequencing used to be what stopped a repeat inside one batch: each iteration saw the
+    // previous one's result. Overlapped writes don't, so the dedupe has to be explicit or
+    // the same page picks up two visits.
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "info").mockImplementation(() => {});
+
+    await importHistory([
+      { url: "https://dup.example/page", title: "A", lastVisitTime: 1_700_000_000_000, visitCount: 1 },
+      { url: "https://dup.example/page", title: "A", lastVisitTime: 1_700_000_000_001, visitCount: 1 },
+      { url: "https://dup.example/page/", title: "A", lastVisitTime: 1_700_000_000_002, visitCount: 1 },
+    ]);
+
+    const all = await chrome.history.search({ text: "", startTime: 0, maxResults: 100 });
+    const row = all.find((e) => e.url === "https://dup.example/page");
+    expect(row?.visitCount).toBe(1);
+  });
+});
