@@ -16,12 +16,31 @@ import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-o
  * with the window width, not with scrolling. `revision` re-measures when the CONTENT
  * changes without the box changing, which is how the log grows.
  */
+// Interactive Google sign-in isn't supported on every engine (e.g. iOS WebKit /
+// Orion); gate the Drive sign-in so users get a note instead of a dead end.
+const DRIVE_AVAILABLE = isDriveAuthAvailable();
+import {
+  Github, Info,
+  Puzzle, AlertTriangle, CheckCircle2, XCircle,
+  Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
+  Pencil, Key, Copy, Check, ArrowRight,
+  Trash2, RotateCcw, Camera, Mail,
+} from "lucide-react";
+// Shown in the About section. The manifest is the single source of truth for the
+// version — bump `package.json` and the build stamps it into the manifest.
+const APP_VERSION = browser.runtime.getManifest().version;
+
 function useScrollEdges<T extends HTMLElement>(axis: "x" | "y", revision: unknown = 0) {
-  const ref = useRef<T>(null);
+  // A CALLBACK ref, not useRef, and that distinction was the whole bug. The audit list
+  // only exists on the Activity tab, so on first mount ref.current was null and the effect
+  // bailed. Switching to that tab attaches the node but changes nothing the effect depends
+  // on, so it never ran again: no measure, no observer, no fade, forever. Holding the node
+  // in state means mounting IS a dependency. The tab strip never showed this because it is
+  // always mounted.
+  const [el, setEl] = useState<T | null>(null);
   const [edges, setEdges] = useState({ start: false, end: false });
 
   useEffect(() => {
-    const el = ref.current;
     if (!el) return;
     const measure = (): void => {
       const [pos, box, content] = axis === "x"
@@ -40,25 +59,12 @@ function useScrollEdges<T extends HTMLElement>(axis: "x" | "y", revision: unknow
       el.removeEventListener("scroll", measure);
       ro.disconnect();
     };
-  }, [axis, revision]);
+  }, [el, axis, revision]);
 
   const className = `scroll-fade${edges.start ? " fade-start" : ""}${edges.end ? " fade-end" : ""}`;
-  return { ref, className };
+  return { ref: setEl, className };
 }
 
-// Interactive Google sign-in isn't supported on every engine (e.g. iOS WebKit /
-// Orion); gate the Drive sign-in so users get a note instead of a dead end.
-const DRIVE_AVAILABLE = isDriveAuthAvailable();
-import {
-  Github, Info,
-  Puzzle, AlertTriangle, CheckCircle2, XCircle,
-  Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
-  Pencil, Key, Copy, Check, ArrowRight,
-  Trash2, RotateCcw, Camera, Mail,
-} from "lucide-react";
-// Shown in the About section. The manifest is the single source of truth for the
-// version — bump `package.json` and the build stamps it into the manifest.
-const APP_VERSION = browser.runtime.getManifest().version;
 
 // Konode brand mark — the glyph only; the container supplies the green tile.
 function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color?: string }) {
