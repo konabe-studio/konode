@@ -10,6 +10,16 @@ export type ConflictStrategy = "lww" | "prefer-local" | "prefer-remote" | "manua
 export interface SyncPacket {
   version: "1.0";
   device_id: string;
+  /**
+   * The human-readable name of the device that wrote this, so a peer can list devices by
+   * something other than a UUID.
+   *
+   * Optional: a packet from an older build carries none, and the reader falls back to a
+   * shortened id. Nothing keys off it — the file name and every identity check use
+   * device_id — so a rename never orphans a file. It travelled only inside the sessions
+   * payload before, which meant a device with Sessions turned off was nameless to its peers.
+   */
+  device_label?: string;
   timestamp: string; // ISO-8601
   data_type: DataType;
   checksum: string; // SHA-256 hex of the plaintext payload

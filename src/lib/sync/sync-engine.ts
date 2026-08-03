@@ -753,6 +753,9 @@ export class SyncEngine {
     return {
       version: "1.0",
       device_id: this.settings.device_id,
+      // Carried on every packet, not just the session one, so a device is nameable to its
+      // peers even with Sessions turned off. Purely for display; nothing keys off it.
+      device_label: this.settings.device_label,
       timestamp: new Date().toISOString(),
       data_type: dataType,
       // SHA-256 over the plaintext, so identical content across devices still

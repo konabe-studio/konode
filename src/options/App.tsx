@@ -341,10 +341,8 @@ export default function OptionsApp() {
   const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  // Statistics tab data (fetched once on mount; see the effect below).
+  // Activity tab data (fetched once on mount; see the effect below).
   const [syncState, setSyncState] = useState<SyncState | null>(null);
-  const [bookmarkCount, setBookmarkCount] = useState<number | null>(null);
-  const [openTabCount, setOpenTabCount] = useState<number | null>(null);
   const [peerSessionCount, setPeerSessionCount] = useState(0);
   const [peerDeviceCount, setPeerDeviceCount] = useState(0);
 
@@ -394,16 +392,6 @@ export default function OptionsApp() {
       const res = await sendMessage({ type: "GET_STATE" });
       if (res.type === "STATE") setSyncState(res.payload);
 
-      try {
-        const tree = await browser.bookmarks.getTree();
-        let n = 0;
-        const walk = (nodes: chrome.bookmarks.BookmarkTreeNode[]) => {
-          for (const node of nodes) { if (node.url) n++; if (node.children) walk(node.children); }
-        };
-        walk(tree);
-        setBookmarkCount(n);
-      } catch { /* bookmarks unavailable — leave null */ }
-
       try { setPeerSessionCount((await getRemoteSessions()).length); } catch { /* ignore */ }
 
       try {
@@ -425,12 +413,6 @@ export default function OptionsApp() {
         setPeerDeviceCount(ids.size);
       } catch { /* ignore */ }
 
-      // Open tabs is a "sessions" stat, gated behind the optional tabs permission.
-      try {
-        if (await browser.permissions.contains({ permissions: ["tabs"] })) {
-          setOpenTabCount((await browser.tabs.query({})).length);
-        }
-      } catch { /* ignore */ }
     })();
   }, []);
 
@@ -1657,16 +1639,6 @@ export default function OptionsApp() {
                 </p>
 
                 <div className="settings-section">
-                  <div className="settings-card-head">This device</div>
-                  <div className="stat-grid">
-                    <div className="stat-tile"><div className="stat-value">{bookmarkCount ?? "n/a"}</div><div className="stat-label">Bookmarks</div></div>
-                    <div className="stat-tile"><div className="stat-value">{openTabCount ?? "n/a"}</div><div className="stat-label">Open tabs</div></div>
-                    <div className="stat-tile"><div className="stat-value">{localExts.length || "n/a"}</div><div className="stat-label">Extensions</div></div>
-                    <div className="stat-tile"><div className="stat-value">{settings.enabled_types.length}</div><div className="stat-label">Data types on</div></div>
-                  </div>
-                </div>
-
-                <div className="settings-section">
                   <div className="settings-card-head">Sync activity</div>
                   <div className="stat-grid">
                     <div className="stat-tile"><div className="stat-value">{formatBytes(syncState?.bytes_transferred ?? 0)}</div><div className="stat-label">Data transferred</div></div>
@@ -1680,7 +1652,6 @@ export default function OptionsApp() {
                   <div className="stat-grid">
                     <div className="stat-tile"><div className="stat-value">{peerDeviceCount + 1}</div><div className="stat-label">Devices (incl. this one)</div></div>
                     <div className="stat-tile"><div className="stat-value">{peerSessionCount}</div><div className="stat-label">Peer sessions</div></div>
-                    <div className="stat-tile"><div className="stat-value">{missingExtensions.length}</div><div className="stat-label">Missing extensions here</div></div>
                   </div>
                 </div>
 
