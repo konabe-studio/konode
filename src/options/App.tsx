@@ -199,7 +199,7 @@ function SecretField({
 
 // ─── Nav ──────────────────────────────────────────────────────────────────
 
-type NavSection = "backend" | "data" | "device" | "stats" | "activity" | "advanced";
+type NavSection = "backend" | "data" | "device" | "activity" | "advanced";
 
 /** Tabs with settings to save. Statistics and Activity have none, so no bar there. */
 const SAVEABLE_TABS = new Set<NavSection>(["backend", "data", "device", "advanced"]);
@@ -211,7 +211,6 @@ const NAV: { id: NavSection; label: string }[] = [
   { id: "backend",  label: "Storage" },
   { id: "data",     label: "Data Types" },
   { id: "device",   label: "Device" },
-  { id: "stats",    label: "Statistics" },
   { id: "activity", label: "Activity" },
   { id: "advanced", label: "Advanced" },
 ];
@@ -963,9 +962,7 @@ export default function OptionsApp() {
       </header>
 
       {/* ── Content ── */}
-      {/* Activity is the one tab whose content should claim the leftover height instead of
-          growing the page. Everywhere else .content scrolls normally. */}
-      <main className={`content ${activeNav === "activity" ? "fill" : ""}`}>
+      <main className="content">
         <div className="content-inner">
 
           {/* ── First-run setup (esp. Orion/WebKit, where the wizard tab never opens) ── */}
@@ -1642,41 +1639,6 @@ export default function OptionsApp() {
           )}
 
           {/* ── STATISTICS ── */}
-          {activeNav === "stats" && (
-            <div className="section-wrap">
-              <h1 className="page-title">Statistics</h1>
-              <p className="page-subtitle">A local snapshot, computed on this device. Nothing here is sent anywhere.</p>
-
-              <div className="settings-section">
-                <div className="settings-card-head">This device</div>
-                <div className="stat-grid">
-                  <div className="stat-tile"><div className="stat-value">{bookmarkCount ?? "n/a"}</div><div className="stat-label">Bookmarks</div></div>
-                  <div className="stat-tile"><div className="stat-value">{openTabCount ?? "n/a"}</div><div className="stat-label">Open tabs</div></div>
-                  <div className="stat-tile"><div className="stat-value">{localExts.length || "n/a"}</div><div className="stat-label">Extensions</div></div>
-                  <div className="stat-tile"><div className="stat-value">{settings.enabled_types.length}</div><div className="stat-label">Data types on</div></div>
-                </div>
-              </div>
-
-              <div className="settings-section">
-                <div className="settings-card-head">Sync activity</div>
-                <div className="stat-grid">
-                  <div className="stat-tile"><div className="stat-value">{formatBytes(syncState?.bytes_transferred ?? 0)}</div><div className="stat-label">Data transferred</div></div>
-                  <div className="stat-tile"><div className="stat-value">{totalSyncRuns}</div><div className="stat-label">Sync runs</div></div>
-                  <div className="stat-tile"><div className="stat-value stat-value-sm">{lastSyncLabel}</div><div className="stat-label">Last sync</div></div>
-                </div>
-              </div>
-
-              <div className="settings-section">
-                <div className="settings-card-head">Across your devices</div>
-                <div className="stat-grid">
-                  <div className="stat-tile"><div className="stat-value">{peerDeviceCount + 1}</div><div className="stat-label">Devices (incl. this one)</div></div>
-                  <div className="stat-tile"><div className="stat-value">{peerSessionCount}</div><div className="stat-label">Peer sessions</div></div>
-                  <div className="stat-tile"><div className="stat-value">{missingExtensions.length}</div><div className="stat-label">Missing extensions here</div></div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* ── ACTIVITY ── */}
           {activeNav === "activity" && (() => {
             const shown = auditOnlyErrors ? audit.filter((e) => !e.ok) : audit;
@@ -1686,12 +1648,41 @@ export default function OptionsApp() {
             const errorCount = audit.filter((e) => (e.level ?? (e.ok ? "ok" : "error")) === "error").length;
             const noticeCount = audit.filter((e) => e.level === "notice").length;
             return (
-              <div className="section-wrap fill">
+              <div className="section-wrap">
                 <h1 className="page-title">Activity</h1>
                 <p className="page-subtitle">
-                  What Konode did on this device: uploads, downloads, conflicts and errors.
-                  Stored locally (last 200 entries), never uploaded.
+                  What Konode did on this device, and what it has to work with. All computed
+                  here: the numbers, the restore points and the last 200 log entries are local
+                  and nothing on this page is ever uploaded.
                 </p>
+
+                <div className="settings-section">
+                  <div className="settings-card-head">This device</div>
+                  <div className="stat-grid">
+                    <div className="stat-tile"><div className="stat-value">{bookmarkCount ?? "n/a"}</div><div className="stat-label">Bookmarks</div></div>
+                    <div className="stat-tile"><div className="stat-value">{openTabCount ?? "n/a"}</div><div className="stat-label">Open tabs</div></div>
+                    <div className="stat-tile"><div className="stat-value">{localExts.length || "n/a"}</div><div className="stat-label">Extensions</div></div>
+                    <div className="stat-tile"><div className="stat-value">{settings.enabled_types.length}</div><div className="stat-label">Data types on</div></div>
+                  </div>
+                </div>
+
+                <div className="settings-section">
+                  <div className="settings-card-head">Sync activity</div>
+                  <div className="stat-grid">
+                    <div className="stat-tile"><div className="stat-value">{formatBytes(syncState?.bytes_transferred ?? 0)}</div><div className="stat-label">Data transferred</div></div>
+                    <div className="stat-tile"><div className="stat-value">{totalSyncRuns}</div><div className="stat-label">Sync runs</div></div>
+                    <div className="stat-tile"><div className="stat-value stat-value-sm">{lastSyncLabel}</div><div className="stat-label">Last sync</div></div>
+                  </div>
+                </div>
+
+                <div className="settings-section">
+                  <div className="settings-card-head">Across your devices</div>
+                  <div className="stat-grid">
+                    <div className="stat-tile"><div className="stat-value">{peerDeviceCount + 1}</div><div className="stat-label">Devices (incl. this one)</div></div>
+                    <div className="stat-tile"><div className="stat-value">{peerSessionCount}</div><div className="stat-label">Peer sessions</div></div>
+                    <div className="stat-tile"><div className="stat-value">{missingExtensions.length}</div><div className="stat-label">Missing extensions here</div></div>
+                  </div>
+                </div>
 
                 {/* ── Restore points ── */}
                 <div className="settings-section">
@@ -1774,7 +1765,7 @@ export default function OptionsApp() {
                   ))}
                 </div>
 
-                <div className="settings-section fill">
+                <div className="settings-section">
                   <div className="settings-card-head">
                     Log
                     <span className="head-sub">
@@ -2019,15 +2010,6 @@ const STYLES = `
      height. min-height:100% is what still fills the window when a tab is short. */
   .content { flex: 1; min-height: 0; overflow-y: auto; padding: 0; }
 
-  /* Activity only. Nothing scrolls at this level, so the chain from here down to the log
-     can hand its height off and the log fills whatever is left. Every level needs
-     min-height:0, or a flex child refuses to shrink below its content and the overflow
-     pops back out to the page. Here the container IS flex, which is safe precisely
-     because nothing overflows it. */
-  .content.fill { overflow: hidden; display: flex; flex-direction: column; }
-  .content.fill .content-inner { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-  .section-wrap.fill { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-  .settings-section.fill { display: flex; flex-direction: column; flex: 1; min-height: 0; }
   /* The column is a SHEET, not just a width constraint. Cards sitting directly on the
      page had nothing holding them together; this is the layer that says "these belong
      to each other". Cards keep their own surface, so the depth reads page → sheet → card. */
@@ -2218,11 +2200,11 @@ const STYLES = `
 
   /* Audit log rows. Denser than a settings-row (a log is scanned, not read), with the
      timestamp right-aligned and tabular so the column stays straight. */
-  /* Fills the leftover height rather than a fixed 60vh. At 60vh the section was often
-     taller than the space left under it, so the PAGE scrolled and the list's own bottom
-     edge (and its fade with it) sat below the fold. min-height keeps it usable when the
-     window is short. */
-  .audit-list { flex: 1; min-height: 12rem; overflow-y: auto; }
+  /* Bounded, and the page scrolls around it. It used to claim the whole leftover height,
+     which only worked while the log was the ONLY thing on this tab. Now that the sync
+     numbers sit above it that premise is gone, and a height that depends on how much wraps
+     above it is a height that collapses on a narrow window. */
+  .audit-list { min-height: 12rem; max-height: 60vh; overflow-y: auto; }
 
   /* ─── Scroll fades ────────────────────────────────────────────────────────
      A MASK rather than a gradient overlay, for two reasons: an overlay has to know the
@@ -2287,23 +2269,4 @@ const STYLES = `
     .stat-grid { grid-template-columns: 1fr; }
   }
 
-  /* ─── When the Activity log must NOT claim the leftover height ──────────────
-     Either axis being small is enough to make the fill layout actively harmful. The
-     heading, the intro paragraph and the restore-points card all wrap to more lines on a
-     narrow screen, so there is nothing left over to give the log, and because .content.fill
-     is overflow:hidden the log gets CLIPPED AWAY rather than merely squeezed. On a phone
-     the whole section vanished.
-
-     Height matters as much as width — a 1200x500 desktop window clips exactly the same
-     way — so this is a comma query, which is an OR. Below either threshold the page just
-     scrolls, and the log is bounded by min/max-height instead of by flex. */
-  @media (max-width: 560px), (max-height: 44rem) {
-    .content.fill { display: block; overflow-y: auto; }
-    .content.fill .content-inner { display: block; }
-    .section-wrap.fill,
-    .settings-section.fill { display: block; }
-    /* flex:1 is inert in block flow, so these two are what size it: tall enough to be
-       worth scrolling, short enough that the rest of the page stays reachable. */
-    .audit-list { min-height: 12rem; max-height: 60vh; }
-  }
 `;

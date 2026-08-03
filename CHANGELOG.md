@@ -185,6 +185,10 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
 
 ### Changed
 
+- **Statistics and Activity are one tab.** They answered the same question at different
+  resolutions: how much has synced, and what happened. Encryption also moves to Storage,
+  next to the provider it protects you from, instead of sitting in Advanced among the
+  backups and developer options.
 - **Settings has been reworked.** The panels now sit on one sheet rather than floating as
   separate cards, spacing and type follow a single scale, and the interface scales with
   your browser's font-size setting instead of ignoring it. Icons that only repeated the
