@@ -631,18 +631,36 @@ export default function OptionsApp() {
 
   /** The Save button plus its own error surface. Every tab that can save renders THIS,
    *  so a validation failure can no longer be visible on one tab and invisible on three.
-   *  `extra` carries the Storage tab's Test-connection group. */
-  const saveRow = (opts: { disabled?: boolean; extra?: ReactNode; marginTop?: number } = {}) => (
+   *
+   *  Buttons on one line, messages on the next, and that split is the point. This used to
+   *  be one `space-between` row holding a VARIABLE number of children, so the arrival of a
+   *  status message rearranged everything around it, and on a narrow screen flex-wrap turned
+   *  it into a ragged three-line staircase: Save, then the message, then Test Connection.
+   *  Separating them fixes the layout at every width. The two buttons stay adjacent and in
+   *  order, and a message appears underneath without moving anything.
+   *
+   *  `extraAction` is the Storage tab's Test-connection button; `extraMessage` is its
+   *  result. Two slots rather than one group, so this function decides the composition. */
+  const saveRow = (opts: {
+    disabled?: boolean; extraAction?: ReactNode; extraMessage?: ReactNode; marginTop?: number;
+  } = {}) => (
     <div className="action-row" style={opts.marginTop === undefined ? undefined : { marginTop: opts.marginTop }}>
-      <button className={`btn-save ${saveOk ? "saved" : ""}`} onClick={save} disabled={saving || opts.disabled}>
-        {saving ? "Saving…" : saveOk ? "Saved" : "Save changes"}
-      </button>
-      {saveError && (
-        <span className="error-row" role="alert">
-          <AlertTriangle size={12} /> {saveError}
-        </span>
+      <div className="action-buttons">
+        <button className={`btn-save ${saveOk ? "saved" : ""}`} onClick={save} disabled={saving || opts.disabled}>
+          {saving ? "Saving…" : saveOk ? "Saved" : "Save changes"}
+        </button>
+        {opts.extraAction}
+      </div>
+      {(saveError || opts.extraMessage) && (
+        <div className="action-messages">
+          {saveError && (
+            <span className="error-row" role="alert">
+              <AlertTriangle size={12} /> {saveError}
+            </span>
+          )}
+          {opts.extraMessage}
+        </div>
       )}
-      {opts.extra}
     </div>
   );
 
@@ -1199,19 +1217,17 @@ export default function OptionsApp() {
 
               {/* Test + Save row */}
               {saveRow({
-                extra: settings.active_backend ? (
-                  <div className="test-group">
-                    {testStatus && (
-                      <span className={`test-result ${testStatus.ok ? "ok" : "fail"}`}>
-                        {testStatus.ok ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                        {testStatus.message}
-                      </span>
-                    )}
-                    <button className="btn-secondary" onClick={testBackend} disabled={testing}>
-                      {testing && <Loader2 size={12} className="spin" />}
-                      Test Connection
-                    </button>
-                  </div>
+                extraAction: settings.active_backend ? (
+                  <button className="btn-secondary" onClick={testBackend} disabled={testing}>
+                    {testing && <Loader2 size={12} className="spin" />}
+                    Test Connection
+                  </button>
+                ) : undefined,
+                extraMessage: testStatus ? (
+                  <span className={`test-result ${testStatus.ok ? "ok" : "fail"}`}>
+                    {testStatus.ok ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+                    {testStatus.message}
+                  </span>
                 ) : undefined,
               })}
             </div>
@@ -2040,9 +2056,14 @@ const STYLES = `
   .link-external { display: inline-flex; align-items: center; gap: var(--sp-2xs); font-size: var(--fs-xs); color: var(--text-link); text-decoration: none; margin-top: var(--sp-ms); }
   .link-external:hover { text-decoration: underline; }
 
-  .action-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-md); margin-top: var(--sp-lg); }
-  .test-group { display: flex; align-items: center; gap: var(--sp-sm); }
-  .test-result { display: flex; align-items: center; gap: var(--sp-2xs); font-size: var(--fs-xs); white-space: nowrap; }
+  .action-row { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-md); margin-top: var(--sp-lg); }
+  /* Primary first, secondary beside it. They wrap as a PAIR when there isn't room,
+     rather than being separated by whatever message happens to be showing. */
+  .action-buttons { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-md); }
+  .action-messages { display: flex; flex-direction: column; gap: var(--sp-2xs); }
+  /* Wraps freely now that it has a line to itself; it used to be nowrap because it was
+     competing with the buttons for the same row. */
+  .test-result { display: flex; align-items: center; gap: var(--sp-2xs); font-size: var(--fs-xs); }
   .test-result.ok { color: var(--success); }
   .test-result.fail { color: var(--danger); }
 
@@ -2175,9 +2196,6 @@ const STYLES = `
     /* auto-fit still fits two 128px columns on a phone, which leaves the numbers and
        their labels fighting for about 60px each. One per row. */
     .stat-grid { grid-template-columns: 1fr; }
-    .action-row { flex-wrap: wrap; }
-    .test-group { flex-wrap: wrap; }
-    .test-result { white-space: normal; }
   }
 
   /* ─── When the Activity log must NOT claim the leftover height ──────────────
