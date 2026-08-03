@@ -476,15 +476,24 @@ export class SyncEngine {
         let label: string | null = null;
         let lastSeen: string | null = null;
         if (pick) {
+          const name = `konode_${pick}_${device_id}.json`;
           try {
-            const raw = await b.getFile(`konode_${pick}_${device_id}.json`);
-            if (raw) {
+            const raw = await b.getFile(name);
+            if (raw === null) {
+              // The listing named this file a moment ago, so a null here is a real fetch
+              // problem, not an old peer. Without saying so, an unreadable file and a
+              // pre-name build look identical: both just show up as unnamed.
+              logger.warn("listDevices", `${name} is in the folder listing but came back empty, so that device has no name here`);
+            } else {
               const p = JSON.parse(raw) as Partial<SyncPacket>;
               label = p.device_label ?? null;
               lastSeen = p.timestamp ?? null;
+              if (!label) {
+                logger.info("listDevices", `${name} carries no device name yet; it will once that device syncs on a build that sends one`);
+              }
             }
           } catch (err) {
-            logger.warn("listDevices", `Couldn't read ${pick} for one device (${device_id.slice(0, 8)}), so it has no name here: ${err instanceof Error ? err.message : err}`);
+            logger.warn("listDevices", `Couldn't read ${name} (${err instanceof Error ? err.message : err}), so that device has no name here`);
           }
         }
         out.push({
