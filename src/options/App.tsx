@@ -665,8 +665,8 @@ export default function OptionsApp() {
    *
    *  `extraAction` is the Storage tab's Test-connection button; `extraMessage` is its
    *  result. Two slots rather than one group, so this function decides the composition. */
-  const saveRow = (opts: { disabled?: boolean; marginTop?: number } = {}) => (
-    <div className="action-row" style={opts.marginTop === undefined ? undefined : { marginTop: opts.marginTop }}>
+  const saveRow = (opts: { disabled?: boolean } = {}) => (
+    <div className="action-row">
       <div className="action-buttons">
         <button className={`btn-save ${saveOk ? "saved" : ""} ${dirty ? "pending" : ""}`} onClick={save} disabled={saving || opts.disabled}>
           {saving ? "Saving…" : saveOk ? "Saved" : "Save changes"}
@@ -1357,7 +1357,7 @@ export default function OptionsApp() {
                 </div>
               </div>
 
-              {saveRow({ marginTop: 20 })}
+              {saveRow()}
             </div>
           )}
 
@@ -1480,7 +1480,7 @@ export default function OptionsApp() {
                 </div>
               </div>
 
-              {saveRow({ marginTop: 20 })}
+              {saveRow()}
             </div>
           )}
 
@@ -1932,17 +1932,7 @@ export default function OptionsApp() {
                 </div>
               </div>
 
-              <div className="action-row" style={{ marginTop: 20 }}>
-                <button className={`btn-save ${saveOk ? "saved" : ""}`} onClick={save} disabled={saving || passMismatch}>
-
-                  {saving ? "Saving…" : saveOk ? "Saved" : "Save changes"}
-                </button>
-                {saveError && (
-                  <span className="error-row" role="alert">
-                    <AlertTriangle size={12} /> {saveError}
-                  </span>
-                )}
-              </div>
+              {saveRow({ disabled: passMismatch })}
             </div>
           )}
 
@@ -2009,7 +1999,10 @@ const STYLES = `
   /* The column is a SHEET, not just a width constraint. Cards sitting directly on the
      page had nothing holding them together; this is the layer that says "these belong
      to each other". Cards keep their own surface, so the depth reads page → sheet → card. */
-  .content-inner { width: 100%; max-width: var(--content-max); min-height: 100%; margin: 0 auto; background: var(--bg-sheet); padding: var(--sp-xl); }
+    /* The inset is a VARIABLE because the sticky action bar has to bleed out to the
+     sheet's edges by exactly this much. Hardcoding it in two places is how the two
+     drift apart the next time one of them is tuned. */
+  .content-inner { width: 100%; max-width: var(--content-max); min-height: 100%; margin: 0 auto; background: var(--bg-sheet); --sheet-pad: var(--sp-xl); padding: var(--sheet-pad); }
   .section-wrap { padding-bottom: var(--sp-lg); }
   .page-title { font-size: var(--fs-lg); font-weight: 400; color: var(--text-primary); margin-bottom: var(--sp-2xs); }
   .page-subtitle { font-size: var(--fs-sm); color: var(--text-secondary); margin-bottom: var(--sp-xl); line-height: 1.5; }
@@ -2090,7 +2083,15 @@ const STYLES = `
   .link-external { display: inline-flex; align-items: center; gap: var(--sp-2xs); font-size: var(--fs-xs); color: var(--text-link); text-decoration: none; margin-top: var(--sp-ms); }
   .link-external:hover { text-decoration: underline; }
 
-  .action-row { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-md); margin-top: var(--sp-lg); }
+  /* STICKY, not fixed, and the difference is the whole requirement. Sticky keeps its
+     place in the flow: it rides the bottom of the scroller while its natural position is
+     still below the fold, and once you reach that position it settles into the page. So at
+     the bottom of a tab it covers nothing, with no compensating padding to maintain. Fixed
+     leaves the flow entirely, which means it sits on top of the last row forever unless
+     something reserves space for it by hand.
+     Bleeds to the sheet's edges via --sheet-pad so it reads as a bar rather than a floating
+     button, and carries the sheet's own background so the rows don't show through. */
+  .action-row { position: sticky; bottom: 0; z-index: 5; display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-md); margin: var(--sp-lg) calc(var(--sheet-pad) * -1) 0; padding: var(--sp-md) var(--sheet-pad); background: var(--bg-sheet); border-top: 1px solid var(--border); }
   /* Primary first, secondary beside it. They wrap as a PAIR when there isn't room,
      rather than being separated by whatever message happens to be showing. */
   .action-buttons { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-md); }
@@ -2233,7 +2234,7 @@ const STYLES = `
     /* The sheet goes nearly edge to edge on a phone. Its 20px inset plus the page
        padding ate a third of the width on an iPhone, which is real: Konode runs on
        Orion on iOS today, with a WebDAV backend. */
-    .content-inner { padding: var(--sp-md); }
+    .content-inner { --sheet-pad: var(--sp-md); }
     /* auto-fit still fits two 128px columns on a phone, which leaves the numbers and
        their labels fighting for about 60px each. One per row. */
     .stat-grid { grid-template-columns: 1fr; }
