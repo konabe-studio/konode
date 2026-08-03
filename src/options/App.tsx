@@ -2036,7 +2036,7 @@ const STYLES = `
   .settings-card-head { padding: var(--sp-xl); border-bottom: 1px solid var(--border); font-size: var(--fs-sm); font-weight: 600; color: var(--text-primary); background: var(--bg); }
   .settings-card-head .head-sub { display: block; font-size: var(--fs-xs); font-weight: 400; color: var(--text-secondary); margin-top: var(--sp-3xs); line-height: 1.45; }
 
-  .settings-section { background: transparent; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: var(--sp-lg); }
+  .settings-section { background: transparent; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; margin-bottom: var(--sp-lg); }
   .settings-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-lg); padding: var(--sp-xl); border-bottom: 1px solid var(--border); min-height: 52px; background: transparent; transition: background .1s; }
   .settings-row:last-child { border-bottom: none; }
   .settings-row:hover:not(.row-disabled) { background: var(--bg-hover); }
@@ -2047,7 +2047,10 @@ const STYLES = `
   .row-label { font-size: var(--fs-sm); color: var(--text-primary); }
   .row-desc { font-size: var(--fs-xs); color: var(--text-secondary); margin-top: var(--sp-3xs); line-height: 1.45; }
 
-  .card-list { background: transparent; border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
+    /* Same radius and the same bottom gap as .settings-section: it IS one of these groups,
+     it just happens to hold provider cards. It was the only 16px corner on the page, and
+     the only group that let the next section butt straight up against it. */
+  .card-list { background: transparent; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; margin-bottom: var(--sp-lg); }
   .backend-card { padding: var(--sp-xl); cursor: pointer; border-bottom: 1px solid var(--border); transition: background .1s; background: transparent; }
   .backend-card:last-child { border-bottom: none; }
   .backend-card:hover { background: var(--bg-hover); }

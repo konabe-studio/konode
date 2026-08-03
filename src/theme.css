@@ -9,7 +9,7 @@
    Tailwind classes) — intentionally separate. It does not use --bg, so the page/sheet
    split below doesn't reach it. Don't collapse the two without a visual pass. */
 :root {
-  --sidebar-w: 200px; --content-max: 736px; --radius: 8px;
+  --sidebar-w: 200px; --content-max: 736px;
   /* One height for every standalone button so adjacent controls line up. Buttons
      set `height` and centre with flex rather than relying on vertical padding —
      padding leaves the height at the mercy of the font's line box, which differed
