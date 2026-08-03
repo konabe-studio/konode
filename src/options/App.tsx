@@ -1950,7 +1950,11 @@ export default function OptionsApp() {
 
             Which tabs get one is a fact about the tab, not something each tab remembers to
             render, so it lives here instead of being called in four places. */}
-        {SAVEABLE_TABS.has(activeNav) && saveRow({ disabled: activeNav === "advanced" && passMismatch })}
+        {/* Never disabled on a passphrase mismatch. save() already refuses and says exactly
+            why, and the bar shows that error on every tab — whereas a disabled Save is a dead
+            button whose cause can be on a tab you are not looking at. Same rule as the unsaved
+            check: a misleading disable costs more than a redundant click. */}
+        {SAVEABLE_TABS.has(activeNav) && saveRow()}
       </main>
     </div>
   );
