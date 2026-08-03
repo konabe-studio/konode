@@ -149,6 +149,13 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
   log read "Added 0 new history entries". If you and your other device visit a similar set
   of sites — the normal case — history sync did almost nothing. A visit newer than
   anything that device already holds now comes through.
+- **History from your other devices was almost never saved on Chrome, Brave or any other
+  Chromium browser.** Konode sent the original visit date along with each page, and those
+  browsers reject the whole request when it is present rather than ignoring it. Since
+  nearly every page carries a visit date, nearly every page from another device was turned
+  away, and the reason was being discarded before anyone could see it. The date is now
+  only sent to browsers that accept it, which is why pages arriving on Chromium are dated
+  when they arrive.
 - **The first sync is much faster, especially on Firefox.** Konode wrote incoming pages
   one at a time, waiting for each before starting the next, so a first sync of a few
   thousand pages meant a few thousand round trips end to end. They overlap now.
