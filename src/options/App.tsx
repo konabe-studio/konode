@@ -1199,7 +1199,7 @@ export default function OptionsApp() {
                     page can only be stamped with the moment it arrived. */}
                 <p className="config-hint">
                   Pages from your other devices are added with the time they arrived, not the
-                  time you first visited them — so on Chromium browsers they show up under
+                  time you first visited them, so on Chromium browsers they show up under
                   today rather than the day you were browsing. Firefox keeps the original date.
                 </p>
               </div>
@@ -1450,7 +1450,7 @@ export default function OptionsApp() {
                           <AlertTriangle size={12} /> Couldn't read your restore points: {snapLoad}
                         </div>
                         <div className="row-desc">
-                          This does not mean you have none — they live on your storage and could not be
+                          This does not mean you have none. They live on your storage and could not be
                           listed just now. Check the connection in Storage Backend and reopen this tab.
                         </div>
                       </div>
@@ -1868,7 +1868,7 @@ const STYLES = `
   .tab-item:hover { color: var(--text-primary); }
   .tab-item.active { color: var(--nav-active-text); font-weight: 500; border-bottom-color: var(--nav-active-bar); }
 
-  .content { flex: 1; display: flex; justify-content: center; padding: 28px var(--sp-2xl) 60px; }
+  .content { flex: 1; display: flex; justify-content: center; padding: 0; }
   /* The column is a SHEET, not just a width constraint. Cards sitting directly on the
      page had nothing holding them together; this is the layer that says "these belong
      to each other". Cards keep their own surface, so the depth reads page → sheet → card. */
@@ -1878,11 +1878,11 @@ const STYLES = `
   .page-subtitle { font-size: var(--fs-sm); color: var(--text-secondary); margin-bottom: var(--sp-xl); line-height: 1.5; }
   /* Card header lives INSIDE the section so the whole group reads as one titled
      card (a single shadow/ring — no seam from stacking two shadowed elements). */
-  .settings-card-head { padding: var(--sp-md) var(--sp-lg); border-bottom: 1px solid var(--border); font-size: var(--fs-sm); font-weight: 600; color: var(--text-primary); background: var(--bg-card); }
+  .settings-card-head { padding: var(--sp-xl); border-bottom: 1px solid var(--border); font-size: var(--fs-sm); font-weight: 600; color: var(--text-primary); background: var(--bg); }
   .settings-card-head .head-sub { display: block; font-size: var(--fs-xs); font-weight: 400; color: var(--text-secondary); margin-top: var(--sp-3xs); line-height: 1.45; }
 
-  .settings-section { background: var(--bg-card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); margin-bottom: var(--sp-lg); }
-  .settings-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-lg); padding: var(--sp-md) var(--sp-lg); border-bottom: 1px solid var(--border); min-height: 52px; background: var(--bg-card); transition: background .1s; }
+  .settings-section { background: transparent; border-radius: var(--radius); overflow: hidden; margin-bottom: var(--sp-lg); }
+  .settings-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-lg); padding: var(--sp-xl); border-bottom: 1px solid var(--border); min-height: 52px; background: transparent; transition: background .1s; }
   .settings-row:last-child { border-bottom: none; }
   .settings-row:hover:not(.row-disabled) { background: var(--bg-hover); }
   .settings-row.radio-row { cursor: pointer; }
@@ -1892,8 +1892,8 @@ const STYLES = `
   .row-label { font-size: var(--fs-sm); color: var(--text-primary); }
   .row-desc { font-size: var(--fs-xs); color: var(--text-secondary); margin-top: var(--sp-3xs); line-height: 1.45; }
 
-  .card-list { background: var(--bg-card); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow); }
-  .backend-card { padding: var(--sp-md) var(--sp-lg); cursor: pointer; border-bottom: 1px solid var(--border); transition: background .1s; background: var(--bg-card); }
+  .card-list { background: transparent; border-radius: var(--r-lg); overflow: hidden; }
+  .backend-card { padding: var(--sp-xl); cursor: pointer; border-bottom: 1px solid var(--border); transition: background .1s; background: transparent; }
   .backend-card:last-child { border-bottom: none; }
   .backend-card:hover { background: var(--bg-hover); }
   .backend-card.selected { background: var(--bg-card-sel); }
@@ -1943,7 +1943,7 @@ const STYLES = `
   .btn-connect-google:disabled { opacity: .55; cursor: not-allowed; }
   .btn-disconnect { display: flex; align-items: center; gap: var(--sp-2xs); padding: var(--sp-xs) var(--sp-md); border-radius: var(--r-md); border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; font-family: var(--font); font-size: var(--fs-xs); color: var(--text-secondary); transition: color .1s, border-color .1s, background .1s; white-space: nowrap; }
   .btn-disconnect:hover { color: var(--danger); border-color: var(--danger); }
-  .config-hint { font-size: var(--fs-xs); color: var(--text-secondary); margin-top: var(--sp-sm); line-height: 1.4; }
+  .config-hint { font-size: var(--fs-xs); color: var(--info-text); background: var(--info-bg); border: 1px solid var(--info-border); border-radius: var(--r-sm); padding: var(--sp-xl); margin-top: var(--sp-sm); line-height: 1.4; }
   .config-hint code { font-family: var(--font-mono); font-size: var(--fs-xs); background: var(--bg-hover); padding: var(--sp-3xs) var(--sp-2xs); border-radius: var(--sp-3xs); }
   .error-row { display: flex; align-items: center; gap: var(--sp-2xs); font-size: var(--fs-xs); color: var(--danger); margin-top: var(--sp-sm); }
   .link-external { display: inline-flex; align-items: center; gap: var(--sp-2xs); font-size: var(--fs-xs); color: var(--text-link); text-decoration: none; margin-top: var(--sp-ms); }
@@ -1980,11 +1980,11 @@ const STYLES = `
   .btn-icon:disabled { opacity: .5; cursor: not-allowed; }
   /* Borderless, so padding alone left it 2px shorter than the bordered Test
      Connection button beside it. Height comes from the shared token instead. */
-  .btn-save { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-sm); height: var(--control-h); padding: 0 18px; border-radius: var(--r-md); border: none; background: var(--accent-solid); color: var(--on-accent); font-family: var(--font); font-size: var(--fs-sm); font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
+  .btn-save { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-sm); height: var(--control-h); padding: 0 var(--sp-2xl); border-radius: var(--r-md); border: none; background: var(--accent-solid); color: var(--on-accent); font-family: var(--font); font-size: var(--fs-sm); font-weight: 500; cursor: pointer; transition: background .15s; white-space: nowrap; }
   .btn-save:hover { background: var(--accent-solid-hover); }
   .btn-save.saved { background: var(--accent-solid); }
   .btn-save:disabled { opacity: .6; cursor: not-allowed; }
-  .btn-install { display: inline-flex; align-items: center; padding: var(--sp-xs) var(--sp-md); border-radius: var(--r-md); background: var(--accent-solid); color: var(--on-accent); font-size: var(--fs-xs); font-weight: 600; text-decoration: none; flex-shrink: 0; transition: background .1s; }
+  .btn-install { display: inline-flex; align-items: center; padding: var(--sp-sm) var(--sp-xl); border-radius: var(--r-md); background: var(--accent-solid); color: var(--on-accent); font-size: var(--fs-xs); font-weight: 500; text-decoration: none; flex-shrink: 0; transition: background .1s; }
   .btn-install:hover { background: var(--accent-solid-hover); }
 
   .notice-warn { display: flex; align-items: flex-start; gap: var(--sp-ms); padding: var(--sp-md) 14px; margin-top: 14px; background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: var(--r-md); font-size: var(--fs-xs); color: var(--warn-text); line-height: 1.5; }

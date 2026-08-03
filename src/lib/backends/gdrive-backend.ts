@@ -126,7 +126,7 @@ export class GDriveBackend implements IBackend {
     if (previous) {
       logger.warn(
         "GDrive",
-        "The Konode folder changed — re-uploading this device's files into the new one."
+        "The Konode folder changed, re-uploading this device's files into the new one."
       );
       await clearUploadChecksums();
     }

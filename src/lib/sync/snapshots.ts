@@ -91,20 +91,20 @@ async function getIndex(backend: IBackend, settings: SyncSettings): Promise<Snap
   try {
     file = JSON.parse(raw) as IndexFile;
   } catch {
-    logger.warn("Snapshots", "Shared index is not valid JSON — replacing it");
+    logger.warn("Snapshots", "Shared index is not valid JSON, replacing it");
     return []; // garbage for everyone, so nothing is lost by replacing it
   }
 
   let plain = file.payload;
   if (file.encrypted) {
     if (!e2eeActive(settings)) {
-      logger.warn("Snapshots", "Shared index is encrypted but E2EE is off here — leaving it alone");
+      logger.warn("Snapshots", "Shared index is encrypted but E2EE is off here, leaving it alone");
       return null;
     }
     try {
       plain = await decrypt(file.payload, settings.encryption_passphrase as string);
     } catch {
-      logger.warn("Snapshots", "Shared index won't decrypt with this passphrase — leaving it alone");
+      logger.warn("Snapshots", "Shared index won't decrypt with this passphrase, leaving it alone");
       return null;
     }
   }
@@ -142,7 +142,7 @@ async function mergeIndex(
 ): Promise<SnapshotMeta[] | null> {
   const remote = await getIndex(backend, settings);
   if (remote === null) {
-    logger.warn("Snapshots", "Leaving the shared index untouched — only the counts are affected, the restore points themselves are fine");
+    logger.warn("Snapshots", "Leaving the shared index untouched, only the counts are affected, the restore points themselves are fine");
     return null;
   }
   const byName = new Map<string, SnapshotMeta>();
@@ -202,7 +202,7 @@ async function migrateLegacyIndex(
     // The shared index couldn't be read, so nothing was published. KEEP the legacy
     // counts and retry later — dropping the key here deleted them for good, and these
     // counts exist nowhere else.
-    logger.warn("Snapshots", "Keeping the legacy snapshot counts — the shared index could not be updated yet");
+    logger.warn("Snapshots", "Keeping the legacy snapshot counts, the shared index could not be updated yet");
     return null;
   }
   await browser.storage.local.remove(KEYS.LEGACY_SNAPSHOTS);

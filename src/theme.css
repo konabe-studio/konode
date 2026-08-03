@@ -15,7 +15,7 @@
      padding leaves the height at the mercy of the font's line box, which differed
      per button (text vs icon-only) and per platform. Icon-only buttons use this for
      width too, which is what keeps them square. */
-  --control-h: 2.125rem; /* 34px at the default root size */
+  --control-h: 3rem; /* 48px at the default root size */
 
   /* ─── Scale ────────────────────────────────────────────────────────────────
      Every value divisible by 2 or 4. Half-steps are where "it looks slightly off
@@ -65,7 +65,7 @@
      own, which is what makes grouped cards read as a set rather than as debris.
      Page is one step down from what it used to be, and the old page tone is promoted to
      the sheet, so the cards themselves are untouched. */
-  --bg: #eceff3; --bg-sheet: #f7f8fa;
+  --bg: #f7f8fa; --bg-sheet: #ffffff;
   --bg-sidebar: #ffffff; --bg-card: #ffffff; --bg-card-sel: #e7f7ef;
   --bg-hover: #f1f3f5; --bg-input: #ffffff;
   --border: #e6e8eb; --border-input: #d4d8dd;
@@ -80,6 +80,7 @@
      be even worse there → keep the bright fill but flip to near-black text. */
   --accent-solid: #0b8348; --accent-solid-hover: #0a7540; --on-accent: #ffffff;
   --toggle-off: #d4d8dd; --toggle-on: #12b76a; --toggle-thumb: #ffffff;
+  --info-bg: #eaf2fd; --info-border: #2563eb; --info-text: #1c3f8f;
   --warn-bg: #fdf4e3; --warn-border: #b7791f; --warn-text: #7a4f08;
   --danger: #dc2626; --success: #12b76a;
   --shadow: 0 1px 2px rgba(17,21,26,.05), 0 0 0 1px rgba(17,21,26,.06);
@@ -87,7 +88,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0a0d11; --bg-sheet: #0f1216;
+    --bg: #0f1216; --bg-sheet: #161a20;
     --bg-sidebar: #161a20; --bg-card: #161a20; --bg-card-sel: #173a30;
     --bg-hover: #1e232b; --bg-input: #1e232b;
     --border: #2a2f37; --border-input: #353b45;
@@ -97,6 +98,7 @@
     --accent: #34d399; --accent-hover: #5ee0b0; --accent-light: #173a30;
     --accent-solid: #34d399; --accent-solid-hover: #5ee0b0; --on-accent: #05271c;
     --toggle-off: #353b45; --toggle-on: #34d399;
+    --info-bg: #11243c; --info-border: #60a5fa; --info-text: #a8cbfb;
     --warn-bg: #3a2e10; --warn-border: #f5a524; --warn-text: #f5c97a;
     --danger: #f87171; --success: #34d399;
     --shadow: 0 1px 3px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.05);
