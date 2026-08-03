@@ -7,10 +7,10 @@ import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-o
 // Orion); gate the Drive sign-in so users get a note instead of a dead end.
 const DRIVE_AVAILABLE = isDriveAuthAvailable();
 import {
-  Github, Bookmark, Clock, Info,
-  Globe, Puzzle, AlertTriangle, CheckCircle2, XCircle,
+  Github, Info,
+  Puzzle, AlertTriangle, CheckCircle2, XCircle,
   Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
-  Save, Pencil, Key, Copy, Check, ArrowRight,
+  Pencil, Key, Copy, Check, ArrowRight,
   Trash2, RotateCcw, Camera, Mail,
 } from "lucide-react";
 // Shown in the About section. The manifest is the single source of truth for the
@@ -191,11 +191,11 @@ const BACKEND_LABEL: Record<BackendType, string> = {
   github: "GitHub", // GitHub only — see the provider card note in storage-providers.ts
 };
 
-const DATA_TYPE_META: { type: DataType; Icon: typeof Bookmark; label: string; desc: string }[] = [
-  { type: "bookmarks",  Icon: Bookmark, label: "Bookmarks",  desc: "Full bookmark tree with folders and ordering." },
-  { type: "sessions",   Icon: Globe,    label: "Sessions",   desc: "Named tab sessions you can restore anywhere." },
-  { type: "history",    Icon: Clock,    label: "History",    desc: "Browsing history, limited by days setting." },
-  { type: "extensions", Icon: Puzzle,   label: "Extensions", desc: "Extension list, showing missing ones with install links." },
+const DATA_TYPE_META: { type: DataType; label: string; desc: string }[] = [
+  { type: "bookmarks",  label: "Bookmarks",  desc: "Full bookmark tree with folders and ordering." },
+  { type: "sessions",   label: "Sessions",   desc: "Named tab sessions you can restore anywhere." },
+  { type: "history",    label: "History",    desc: "Browsing history, limited by days setting." },
+  { type: "extensions", label: "Extensions", desc: "Extension list, showing missing ones with install links." },
 ];
 
 // ─── App ──────────────────────────────────────────────────────────────────
@@ -1168,10 +1168,9 @@ export default function OptionsApp() {
 
               <div className="settings-section">
                 <div className="settings-card-head">Data to sync</div>
-                {DATA_TYPE_META.map(({ type, Icon, label, desc }) => (
+                {DATA_TYPE_META.map(({ type, label, desc }) => (
                   <div key={type} className="settings-row">
                     <div className="settings-row-left">
-                      <Icon size={16} className="row-icon" />
                       <div>
                         <div className="row-label">{label}</div>
                         <div className="row-desc">{desc}</div>
@@ -1438,7 +1437,6 @@ export default function OptionsApp() {
                   </div>
                   <div className="settings-row">
                     <div className="settings-row-left">
-                      <Camera size={16} className="row-icon" />
                       <div>
                         <div className="row-label">Save a snapshot now</div>
                         <div className="row-desc">A restore point of your current bookmark tree.</div>
@@ -1447,7 +1445,7 @@ export default function OptionsApp() {
                     <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
                       {snapMsg && <span className="row-desc">{snapMsg}</span>}
                       <button className="btn-secondary" onClick={createSnapshot} disabled={snapBusy}>
-                        {snapBusy ? <Loader2 size={12} className="spin" /> : <Save size={12} />} Create snapshot
+                        {snapBusy ? <Loader2 size={12} className="spin" /> : <Camera size={12} />} Create snapshot
                       </button>
                     </div>
                   </div>
@@ -1876,7 +1874,7 @@ const STYLES = `
   .topbar-title { font-size: var(--fs-md); font-weight: 600; color: var(--text-primary); }
   .tabbar { display: flex; align-items: stretch; height: 100%; gap: var(--sp-3xs); overflow-x: auto; scrollbar-width: none; }
   .tabbar::-webkit-scrollbar { display: none; }
-  .tab-item { display: flex; align-items: center; gap: var(--sp-sm); padding: 0 14px; border: none; background: transparent; color: var(--text-secondary); font-family: var(--font); font-size: var(--fs-sm); cursor: pointer; white-space: nowrap; position: relative; border-bottom: 2px solid transparent; transition: color .1s, border-color .1s; }
+  .tab-item { display: flex; align-items: center; padding: 0 var(--sp-md); border: none; background: transparent; color: var(--text-secondary); font-family: var(--font); font-size: var(--fs-sm); cursor: pointer; white-space: nowrap; position: relative; border-bottom: 2px solid transparent; transition: color .1s, border-color .1s; }
   .tab-item:hover { color: var(--text-primary); }
   .tab-item.active { color: var(--nav-active-text); font-weight: 500; border-bottom-color: var(--nav-active-bar); }
 
@@ -1934,7 +1932,10 @@ const STYLES = `
   .field-input-inline:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(18,183,106,.18); }
 
   .input-pw-wrap { position: relative; }
-  .input-pw-wrap .field-input { padding-right: 36px; }
+  .input-pw-wrap /* Not spacing: room for the icon buttons that sit INSIDE the field (three of them on
+     the password field). Derived from the control sizes, so rounding these to the spacing
+     scale would slide the icons over the text. */
+  .field-input { padding-right: 36px; }
   .input-pw-wrap-2 .field-input { padding-right: 86px; }
   .btn-eye { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: var(--sp-3xs); display: flex; align-items: center; }
   .btn-eye:hover { color: var(--text-primary); }
@@ -2030,8 +2031,21 @@ const STYLES = `
 
   /* Audit log rows. Denser than a settings-row (a log is scanned, not read), with the
      timestamp right-aligned and tabular so the column stays straight. */
-  .audit-list { max-height: 60vh; overflow-y: auto; }
-  .audit-row { display: flex; align-items: flex-start; gap: var(--sp-ms); padding: 9px var(--sp-lg); border-bottom: 1px solid var(--border); }
+  /* Fade the cut edges so it's visible that the list continues. A MASK rather than a
+     gradient overlay: an overlay has to know the background colour to fade into, and it
+     sits on top of the rows, so it needs pointer-events:none or it eats clicks. A mask
+     fades the content itself, which is background-independent and can't intercept
+     anything. -webkit- included for WebKit, which matters here: Konode runs on Orion.
+
+     The fade is always on rather than only at the ends. Hiding it when you have scrolled
+     to the top needs the scroll-shadow background trick (background-attachment: local),
+     which pins you to a known solid colour, or JS. Not worth either for a 200-row log
+     that is essentially always longer than its box. */
+  .audit-list { max-height: 60vh; overflow-y: auto;
+    --edge: var(--sp-2xl);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--edge), #000 calc(100% - var(--edge)), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 var(--edge), #000 calc(100% - var(--edge)), transparent 100%); }
+  .audit-row { display: flex; align-items: flex-start; gap: var(--sp-ms); padding: var(--sp-sm) var(--sp-xl); border-bottom: 1px solid var(--border); }
   .audit-row:last-child { border-bottom: none; }
   .audit-icon { flex-shrink: 0; margin-top: var(--sp-3xs); }
   .audit-icon.ok { color: var(--success); }
@@ -2063,6 +2077,13 @@ const STYLES = `
        padding ate a third of the width on an iPhone, which is real: Konode runs on
        Orion on iOS today, with a WebDAV backend. */
     .content-inner { padding: var(--sp-md); }
+    /* Only here: this is the width at which the tab strip actually overflows. It has
+       scrolled silently until now, with the scrollbar hidden and no hint that there was
+       anything past "Advanced". */
+    .tabbar {
+      -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--sp-lg), #000 calc(100% - var(--sp-lg)), transparent 100%);
+      mask-image: linear-gradient(to right, transparent 0, #000 var(--sp-lg), #000 calc(100% - var(--sp-lg)), transparent 100%);
+    }
     .action-row { flex-wrap: wrap; }
     .test-group { flex-wrap: wrap; }
     .test-result { white-space: normal; }
