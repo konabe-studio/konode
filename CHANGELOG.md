@@ -185,6 +185,12 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
 
 ### Changed
 
+- **Settings has been reworked.** The panels now sit on one sheet rather than floating as
+  separate cards, spacing and type follow a single scale, and the interface scales with
+  your browser's font-size setting instead of ignoring it. Icons that only repeated the
+  label next to them are gone. Long lists fade at the edge when there is more to scroll,
+  and only then. Narrow windows and phones get a layout that fits, which matters because
+  Konode does run on a phone today.
 - **The activity log keeps what matters.** It used to fill with routine per-sync lines and
   turned over completely in about 17 minutes, so the "unusual deletion blocked" warning
   it points you to was usually gone before you looked. Warnings, errors and notable events

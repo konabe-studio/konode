@@ -2172,7 +2172,6 @@ const STYLES = `
        padding ate a third of the width on an iPhone, which is real: Konode runs on
        Orion on iOS today, with a WebDAV backend. */
     .content-inner { padding: var(--sp-md); }
-    .topbar-inner { padding: 0 var(--sp-md); }
     /* auto-fit still fits two 128px columns on a phone, which leaves the numbers and
        their labels fighting for about 60px each. One per row. */
     .stat-grid { grid-template-columns: 1fr; }
