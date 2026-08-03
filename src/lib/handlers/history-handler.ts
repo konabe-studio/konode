@@ -4,6 +4,7 @@ import { canonicalUrlKey, isSafeContentUrl, isSensitiveUrl } from "@/lib/utils/u
 import {
   getImportedHistoryStamps, recordImportedHistory, releaseImportedHistory,
   getRejectedHistoryUrls, recordRejectedHistoryUrls, rejectionStillHolds,
+  clearRejectedHistoryUrls, getVisitTimeSupport, setVisitTimeSupport,
 } from "@/lib/utils/storage";
 import { browser } from "@/lib/utils/ext";
 
@@ -34,6 +35,23 @@ const IMPORT_STAMP_TOLERANCE_MS = 5_000;
  */
 const IMPORT_CONCURRENCY = 16;
 
+/**
+ * Does this browser's history.addUrl accept a `visitTime`?
+ *
+ * Firefox does, and keeps the page's real date. CHROME REJECTS THE WHOLE CALL: its
+ * `details` parameter is validated strictly, and an unknown property throws "Error at
+ * parameter 'details': Unexpected property: 'visitTime'". The code here claimed for a long
+ * time that passing it was "a harmless no-op on Chrome", which was simply wrong. Because
+ * the failure was swallowed by a bare `catch {}`, the consequence stayed invisible: on
+ * Chromium virtually every page arriving from another device was refused, since virtually
+ * every one carries a visit time. It surfaced only once rejections began reporting why.
+ *
+ * Detected by CAPABILITY, not by engine: send it, and if the call fails, try the same page
+ * again without it. A browser that accepts the property is never charged for the probe,
+ * and the answer holds for any engine, including ones that don't exist yet. The answer is
+ * persisted so an MV3 worker restart doesn't have to rediscover it.
+ */
+
 // ─── Export ──────────────────────────────────────────────────────────────
 
 export async function exportHistory(daysLimit = 30): Promise<SyncHistoryItem[]> {
@@ -46,7 +64,11 @@ export async function exportHistory(daysLimit = 30): Promise<SyncHistoryItem[]> 
   });
 
   if (items.length >= EXPORT_MAX_RESULTS) {
-    logger.warn("exportHistory", `Hit the ${EXPORT_MAX_RESULTS}-entry export cap: older history in the window is not synced this cycle`);
+    // Console only. This is a standing fact about the user's history size, not an event:
+    // warning about it every cycle put one line a minute into a 200-entry log and pushed
+    // out everything worth reading. The cap belongs in Settings, where it stays visible
+    // without repeating.
+    logger.info("exportHistory", `Hit the ${EXPORT_MAX_RESULTS}-entry export cap: older history in the window is not synced this cycle`);
   }
 
   // Exclude pages this device only RECEIVED (CO-6) — publishing those as native visits
@@ -124,6 +146,8 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
   // What this browser has already refused. Re-attempting those every cycle was the single
   // biggest source of both wasted work and audit-log noise (see HIST_REJECT_RETRY_MS).
   const rejectedBefore = await getRejectedHistoryUrls();
+  // null until this browser has told us, one way or the other.
+  let visitTimeAccepted = await getVisitTimeSupport();
   let added = 0;
   let staleRejects = 0;
   const importedUrls: string[] = [];
@@ -175,18 +199,42 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
 
   // ── Write, several at a time.
   const writeOne = async (job: { url: string; key: string; visitTime?: number }): Promise<void> => {
+    // Only send the visit time to a browser that takes it. Firefox keeps the page's real
+    // date that way; Chrome throws on the property, so there it must not be sent at all.
+    const sendTime = job.visitTime !== undefined && visitTimeAccepted !== false;
     try {
-      // Firefox's history.addUrl honors visitTime, so the restored entry keeps its real
-      // date; Chrome's ignores everything but url and always stamps the current time (its
-      // UrlDetails type has no visitTime — hence the cast). Passing it is a harmless no-op
-      // on Chrome and preserves the timeline on Firefox. The original time can't otherwise
-      // be set from an extension.
       const details: chrome.history.Url & { visitTime?: number } = { url: job.url };
-      if (job.visitTime) details.visitTime = job.visitTime;
+      if (sendTime) details.visitTime = job.visitTime;
       await browser.history.addUrl(details);
+      if (sendTime && visitTimeAccepted === null) {
+        visitTimeAccepted = true;
+        await setVisitTimeSupport(true);
+      }
       importedUrls.push(job.key);
       added++;
+      return;
     } catch (err) {
+      // Only worth a second try while we still don't know whether this browser takes the
+      // property. Once it has accepted one, a failure is the page's own problem.
+      if (sendTime && visitTimeAccepted === null) {
+        // We sent a property this browser may not accept, so the page itself isn't
+        // necessarily the problem. Try it again plainly before blaming it.
+        try {
+          await browser.history.addUrl({ url: job.url });
+          if (visitTimeAccepted !== false) {
+            visitTimeAccepted = false;
+            await setVisitTimeSupport(false);
+            logger.info("importHistory", "This browser doesn't accept visit times; pages will be dated when they arrive");
+            // Every rejection recorded up to now was recorded while we were sending a
+            // property this browser refuses, so all of them are suspect. Forget them
+            // rather than leaving pages suppressed for a week over our own mistake.
+            await clearRejectedHistoryUrls();
+          }
+          importedUrls.push(job.key);
+          added++;
+          return;
+        } catch { /* genuinely unstorable — fall through and record it */ }
+      }
       // A per-URL rejection is non-fatal and expected for some entries the local browser
       // refuses to add (Firefox rejects over-long / malformed URLs, etc.). Collected and
       // reported ONCE below rather than a line each: these arrive in bursts, every line is

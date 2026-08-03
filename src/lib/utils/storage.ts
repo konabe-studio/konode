@@ -107,6 +107,7 @@ export const KEYS = {
   LEGACY_SNAPSHOTS: "konode_bm_snapshots",
   HIST_IMPORTED: "konode_hist_imported",
   HIST_REJECTED: "konode_hist_rejected",
+  HIST_VISITTIME_OK: "konode_hist_visittime_ok",
   REMOTE_SESSIONS: "konode_remote_sessions",
   REMOTE_EXTENSIONS: "konode_remote_extensions",
   UPLOAD_CHECKSUMS: "konode_upload_checksums",
@@ -426,6 +427,24 @@ export async function recordRejectedHistoryUrls(urls: string[], at: number): Pro
     for (const k of keys.slice(0, keys.length - HIST_REJECTED_CAP)) delete map[k];
     return map;
   }, {});
+}
+
+/**
+ * Whether this browser's history.addUrl accepts a `visitTime`, once we've found out.
+ * Persisted rather than kept in memory so an MV3 worker restart doesn't re-probe, and so
+ * the answer can't leak between tests.
+ */
+export async function getVisitTimeSupport(): Promise<boolean | null> {
+  const v = await get<boolean | null>(KEYS.HIST_VISITTIME_OK, null);
+  return typeof v === "boolean" ? v : null;
+}
+export async function setVisitTimeSupport(ok: boolean): Promise<void> {
+  await set(KEYS.HIST_VISITTIME_OK, ok);
+}
+
+/** Forget every recorded rejection, e.g. once we learn WE were the cause. */
+export async function clearRejectedHistoryUrls(): Promise<void> {
+  await set(KEYS.HIST_REJECTED, {});
 }
 
 /** True while the rejection is still fresh enough to trust. */

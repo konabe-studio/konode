@@ -36,6 +36,16 @@ const histApi = {
   search: ({ maxResults } = {}) =>
     Promise.resolve([...histEntries.values()].slice(0, maxResults ?? Infinity)),
   addUrl: ({ url, visitTime }) => {
+    // Chrome validates `details` STRICTLY and throws on an unknown property. It does not
+    // quietly ignore visitTime, which the handler assumed for a long time — so on Chromium
+    // virtually every page arriving from a peer was refused, and a bare catch hid it. The
+    // fake accepted anything, which is why the suite never saw it.
+    if (histApi.__engine === "chrome" && visitTime !== undefined) {
+      return Promise.reject(new Error(
+        "Error in invocation of history.addUrl(history.UrlDetails details, optional function callback): " +
+        "Error at parameter 'details': Unexpected property: 'visitTime'."
+      ));
+    }
     // Browsers CANONICALIZE on write: a bare origin gains its trailing slash, the
     // host lowercases, a default port drops. The fake used to store the string
     // verbatim, which hid a re-add loop — the import de-duped on the raw peer string

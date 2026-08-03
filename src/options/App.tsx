@@ -1405,7 +1405,11 @@ export default function OptionsApp() {
           {/* ── ACTIVITY ── */}
           {activeNav === "activity" && (() => {
             const shown = auditOnlyErrors ? audit.filter((e) => !e.ok) : audit;
-            const errorCount = audit.filter((e) => !e.ok).length;
+            // Count the two apart. `!e.ok` lumps a deliberate skip in with a failure, so a
+            // log made entirely of harmless notices announced itself as "143 with errors"
+            // right above 143 yellow warning icons.
+            const errorCount = audit.filter((e) => (e.level ?? (e.ok ? "ok" : "error")) === "error").length;
+            const noticeCount = audit.filter((e) => e.level === "notice").length;
             return (
               <div className="section-wrap">
                 <h1 className="page-title">Activity</h1>
@@ -1502,7 +1506,7 @@ export default function OptionsApp() {
                     <span className="head-sub">
                       {audit.length === 0
                         ? "No entries yet."
-                        : `${audit.length} entr${audit.length === 1 ? "y" : "ies"}${errorCount ? ` · ${errorCount} with errors` : ""}.`}
+                        : `${audit.length} entr${audit.length === 1 ? "y" : "ies"}${errorCount ? ` · ${errorCount} with errors` : ""}${noticeCount ? ` · ${noticeCount} skipped` : ""}.`}
                     </span>
                   </div>
 

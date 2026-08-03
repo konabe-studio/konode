@@ -55,7 +55,11 @@ describe("an idle history sync must cost nothing", () => {
 
     await importHistory(packet);
     await settle();
-    expect(c.addUrls).toBe(PEER_ENTRIES); // first sync does the work, as it must
+    // At least one call per page. A genuinely unstorable page costs one extra attempt
+    // while we still don't know whether THIS browser accepts a visit time, because a
+    // failure could be our property rather than their URL. Bounded, and only until the
+    // first successful call settles the question.
+    expect(c.addUrls).toBeGreaterThanOrEqual(PEER_ENTRIES);
 
     // ── Every later cycle, with nothing new on the peer. This is what runs forever.
     const before = { ...c };
@@ -194,5 +198,100 @@ describe("a first sync must not write one page at a time", () => {
     const all = await chrome.history.search({ text: "", startTime: 0, maxResults: 100 });
     const row = all.find((e) => e.url === "https://dup.example/page");
     expect(row?.visitCount).toBe(1);
+  });
+});
+
+describe("the visit time is only sent to a browser that takes it", () => {
+  // Chrome validates addUrl's `details` strictly and THROWS on an unknown property, so
+  // sending visitTime refused the whole call. The handler assumed for a long time that
+  // passing it was "a harmless no-op on Chrome", and a bare `catch {}` hid the result: on
+  // Chromium virtually every page arriving from a peer was silently dropped, because
+  // virtually every one carries a visit time. It only came to light once rejections
+  // started reporting their reason, in a real browser.
+  const histFake = chrome.history as unknown as { __engine: "chrome" | "firefox" };
+
+  const packet = [
+    { url: "https://a.example/page", title: "A", lastVisitTime: 1_700_000_000_000, visitCount: 1 },
+    { url: "https://b.example/page", title: "B", lastVisitTime: 1_700_000_000_001, visitCount: 1 },
+    { url: "https://c.example/page", title: "C", lastVisitTime: 1_700_000_000_002, visitCount: 1 },
+  ];
+
+  const storedUrls = async (): Promise<string[]> =>
+    (await chrome.history.search({ text: "", startTime: 0, maxResults: 100 })).map((h) => h.url as string).sort();
+
+  it("stores the pages on a browser that refuses the property", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    histFake.__engine = "chrome";
+
+    await importHistory(packet);
+
+    expect(await storedUrls()).toEqual([
+      "https://a.example/page", "https://b.example/page", "https://c.example/page",
+    ]);
+  });
+
+  it("does not report them as pages the browser wouldn't store", async () => {
+    // The user's Activity log filled with "Your browser wouldn't store 107 page(s)", which
+    // read as the peer's data being at fault when the caller was.
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    histFake.__engine = "chrome";
+
+    await importHistory(packet);
+    await new Promise((r) => setTimeout(r, 20));
+
+    const r = await chrome.storage.local.get(KEYS.AUDIT_LOG);
+    const log = (r[KEYS.AUDIT_LOG] ?? []) as Array<{ detail?: string }>;
+    expect(log.filter((e) => e.detail?.includes("wouldn't store"))).toHaveLength(0);
+  });
+
+  it("stops sending the property once the browser has refused it", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    histFake.__engine = "chrome";
+
+    const seen: Array<number | undefined> = [];
+    const h = chrome.history as unknown as {
+      addUrl: (d: { url: string; visitTime?: number }) => Promise<void>;
+    };
+    const realAdd = h.addUrl.bind(h);
+    h.addUrl = async (d) => { seen.push(d.visitTime); return realAdd(d); };
+
+    await importHistory(packet);
+    const firstRound = seen.length;
+    await importHistory([
+      { url: "https://d.example/page", title: "D", lastVisitTime: 1_700_000_000_003, visitCount: 1 },
+    ]);
+
+    // Whatever happened while probing, the calls AFTER the answer is known carry no time.
+    expect(seen.slice(firstRound).every((t) => t === undefined)).toBe(true);
+  });
+
+  it("still passes the real date to a browser that accepts it", async () => {
+    // Firefox keeps the original date, which is the whole reason to send it at all.
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    histFake.__engine = "firefox";
+
+    await importHistory([packet[0]]);
+
+    const all = await chrome.history.search({ text: "", startTime: 0, maxResults: 100 });
+    expect(all.find((h) => h.url === "https://a.example/page")?.lastVisitTime).toBe(1_700_000_000_000);
+  });
+
+  it("forgets rejections it recorded while it was the one at fault", async () => {
+    // The rejection memory added alongside this would otherwise hold those pages back for
+    // a week over our own bad call.
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    await chrome.storage.local.set({
+      [KEYS.HIST_REJECTED]: { "https://a.example/page": Date.now() },
+    });
+    histFake.__engine = "chrome";
+
+    await importHistory(packet);
+
+    const r = await chrome.storage.local.get(KEYS.HIST_REJECTED);
+    expect(Object.keys((r[KEYS.HIST_REJECTED] ?? {}) as object)).toEqual([]);
   });
 });
