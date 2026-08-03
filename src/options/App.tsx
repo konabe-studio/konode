@@ -1271,6 +1271,151 @@ export default function OptionsApp() {
                 })}
               </div>
 
+              {/* Under the provider list, not on Advanced. The question encryption answers
+                  is about the provider: can the place I just chose read this? That question
+                  only exists because a provider was chosen, so it belongs beside it, and the
+                  threat model differs per provider (your own Nextcloud versus Drive). It also
+                  matches the order onboarding already walks: pick the storage, then decide
+                  whether it can read your data. On Advanced it sat in a drawer with Feedback,
+                  Debug mode and About, which undersold one of the reasons to use Konode. */}
+              <div className="settings-section">
+                <div className="settings-card-head">Encryption</div>
+                <div className="settings-row">
+                  <div className="settings-row-left">
+                    <div>
+                      <div className="row-label">End-to-End Encryption</div>
+                      <div className="row-desc">
+                        AES-256-GCM. Data is encrypted with your passphrase before it leaves this
+                        device, so the storage provider can never read it. Keep the passphrase safe:
+                        without it, encrypted data can't be recovered, and every device must use the same one.
+                      </div>
+                    </div>
+                  </div>
+                  <label className="toggle-wrap">
+                    <input type="checkbox" className="toggle-input"
+                      checked={settings.encryption_enabled}
+                      onChange={(e) => {
+                        const next = e.target.checked;
+                        // Turning E2EE OFF is a downgrade — the next sync re-uploads
+                        // this device's data unencrypted. Require an explicit confirm
+                        // (don't flip the toggle yet) so it can't be switched off by a
+                        // stray click. Turning it on needs no confirm.
+                        if (!next && (settings.encryption_passphrase ?? "").length > 0) {
+                          setConfirmDisableEnc(true);
+                        } else {
+                          update({ encryption_enabled: next });
+                        }
+                      }} />
+                    <span className="toggle-track"><span className="toggle-thumb" /></span>
+                  </label>
+                </div>
+                {confirmDisableEnc && (
+                  <div className="settings-row" style={{ paddingTop: 0 }}>
+                    <div className="settings-row-left">
+                      <div className="row-desc" style={{ color: "var(--danger)" }}>
+                        Turn off encryption? Your synced data will be stored <b>unencrypted</b> on your
+                        backend from the next sync on. Every device must then also turn it off.
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                      <button className="btn-secondary" type="button" onClick={() => setConfirmDisableEnc(false)}>
+                        Cancel
+                      </button>
+                      <button
+                        className="btn-secondary"
+                        type="button"
+                        style={{ color: "var(--danger)", borderColor: "var(--danger)" }}
+                        onClick={() => { update({ encryption_enabled: false }); setConfirmDisableEnc(false); }}
+                      >
+                        Turn off
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {settings.encryption_enabled && (
+                  <div className="settings-row">
+                    <div className="settings-row-left">
+                      <div>
+                        <div className="row-label">Passphrase</div>
+                        <div className="row-desc">Derives the encryption key. Stored only on this device, never uploaded.</div>
+                      </div>
+                    </div>
+                    <div style={{ width: 220 }}>
+                      <SecretField
+                        value={settings.encryption_passphrase ?? ""}
+                        placeholder="Choose a strong passphrase"
+                        sensitive
+                        onChange={(v) => update({ encryption_passphrase: v })}
+                      />
+                      {passTooShort && (
+                        <div className="row-desc" style={{ marginTop: 4, color: "var(--danger)" }}>
+                          At least {MIN_PASSPHRASE_LENGTH} characters. Synced data can be attacked offline, so short passphrases are guessable.
+                        </div>
+                      )}
+                      {needsPassConfirm && (
+                        <div style={{ marginTop: 8 }}>
+                          <input
+                            className="field-input mono"
+                            type="password"
+                            value={passConfirm}
+                            placeholder="Confirm passphrase"
+                            autoComplete="off"
+                            onChange={(e) => setPassConfirm(e.target.value)}
+                          />
+                          {passMismatch ? (
+                            <div className="row-desc" style={{ marginTop: 4, color: "var(--danger)" }}>
+                              Passphrases don't match yet.
+                            </div>
+                          ) : (
+                            <div className="row-desc" style={{ marginTop: 4, color: "var(--accent)", display: "flex", alignItems: "center", gap: 4 }}>
+                              <CheckCircle2 size={12} style={{ flexShrink: 0 }} /> Passphrases match.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => { const k = generateRecoveryKey(); setGenKey(k); update({ encryption_passphrase: k }); }}
+                        style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                        <Key size={12} /> Generate a strong key
+                      </button>
+                      {genKey && (
+                        <div className="row-desc" style={{ marginTop: 8, color: "var(--text-primary)" }}>
+                          Save this now. It's the only way to recover your data if you forget it. Enter the same key on your other devices.
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                            <code style={{ userSelect: "all", fontSize: 12, wordBreak: "break-all" }}>{genKey}</code>
+                            <button type="button" title="Copy" onClick={() => navigator.clipboard?.writeText(genKey)}
+                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", flexShrink: 0 }}>
+                              <Copy size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {settings.encryption_enabled && !settings.encryption_passphrase && (
+                  <div className="settings-row" style={{ paddingTop: 0 }}>
+                    <div className="settings-row-left">
+                      <div className="row-desc" style={{ color: "var(--danger)" }}>
+                        Encryption is on but no passphrase is set, so sync keeps uploading plaintext until you add one.
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {!settings.encryption_enabled && (
+                  <div className="settings-row" style={{ background: "var(--warn-bg)" }}>
+                    <div className="settings-row-left">
+                      <AlertTriangle size={14} className="row-icon" style={{ color: "var(--warn-border)" }} />
+                      <div className="row-desc" style={{ color: "var(--warn-text)" }}>
+                        Encryption is off, so your synced data (bookmarks, history, sessions, extensions) is stored
+                        <b> unencrypted</b> on your backend. Turn it on to encrypt everything before it leaves this device.
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
 
@@ -1698,7 +1843,7 @@ export default function OptionsApp() {
           {activeNav === "advanced" && (
             <div className="section-wrap">
               <h1 className="page-title">Advanced</h1>
-              <p className="page-subtitle">Encryption and developer options.</p>
+              <p className="page-subtitle">Backups, feedback and developer options.</p>
 
               <div className="settings-section">
                 <div className="settings-card-head">Import / Export</div>
@@ -1738,144 +1883,6 @@ export default function OptionsApp() {
                     />
                   </label>
                 </div>
-              </div>
-
-              <div className="settings-section">
-                <div className="settings-card-head">Encryption</div>
-                <div className="settings-row">
-                  <div className="settings-row-left">
-                    <div>
-                      <div className="row-label">End-to-End Encryption</div>
-                      <div className="row-desc">
-                        AES-256-GCM. Data is encrypted with your passphrase before it leaves this
-                        device, so the storage provider can never read it. Keep the passphrase safe:
-                        without it, encrypted data can't be recovered, and every device must use the same one.
-                      </div>
-                    </div>
-                  </div>
-                  <label className="toggle-wrap">
-                    <input type="checkbox" className="toggle-input"
-                      checked={settings.encryption_enabled}
-                      onChange={(e) => {
-                        const next = e.target.checked;
-                        // Turning E2EE OFF is a downgrade — the next sync re-uploads
-                        // this device's data unencrypted. Require an explicit confirm
-                        // (don't flip the toggle yet) so it can't be switched off by a
-                        // stray click. Turning it on needs no confirm.
-                        if (!next && (settings.encryption_passphrase ?? "").length > 0) {
-                          setConfirmDisableEnc(true);
-                        } else {
-                          update({ encryption_enabled: next });
-                        }
-                      }} />
-                    <span className="toggle-track"><span className="toggle-thumb" /></span>
-                  </label>
-                </div>
-                {confirmDisableEnc && (
-                  <div className="settings-row" style={{ paddingTop: 0 }}>
-                    <div className="settings-row-left">
-                      <div className="row-desc" style={{ color: "var(--danger)" }}>
-                        Turn off encryption? Your synced data will be stored <b>unencrypted</b> on your
-                        backend from the next sync on. Every device must then also turn it off.
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                      <button className="btn-secondary" type="button" onClick={() => setConfirmDisableEnc(false)}>
-                        Cancel
-                      </button>
-                      <button
-                        className="btn-secondary"
-                        type="button"
-                        style={{ color: "var(--danger)", borderColor: "var(--danger)" }}
-                        onClick={() => { update({ encryption_enabled: false }); setConfirmDisableEnc(false); }}
-                      >
-                        Turn off
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {settings.encryption_enabled && (
-                  <div className="settings-row">
-                    <div className="settings-row-left">
-                      <div>
-                        <div className="row-label">Passphrase</div>
-                        <div className="row-desc">Derives the encryption key. Stored only on this device, never uploaded.</div>
-                      </div>
-                    </div>
-                    <div style={{ width: 220 }}>
-                      <SecretField
-                        value={settings.encryption_passphrase ?? ""}
-                        placeholder="Choose a strong passphrase"
-                        sensitive
-                        onChange={(v) => update({ encryption_passphrase: v })}
-                      />
-                      {passTooShort && (
-                        <div className="row-desc" style={{ marginTop: 4, color: "var(--danger)" }}>
-                          At least {MIN_PASSPHRASE_LENGTH} characters. Synced data can be attacked offline, so short passphrases are guessable.
-                        </div>
-                      )}
-                      {needsPassConfirm && (
-                        <div style={{ marginTop: 8 }}>
-                          <input
-                            className="field-input mono"
-                            type="password"
-                            value={passConfirm}
-                            placeholder="Confirm passphrase"
-                            autoComplete="off"
-                            onChange={(e) => setPassConfirm(e.target.value)}
-                          />
-                          {passMismatch ? (
-                            <div className="row-desc" style={{ marginTop: 4, color: "var(--danger)" }}>
-                              Passphrases don't match yet.
-                            </div>
-                          ) : (
-                            <div className="row-desc" style={{ marginTop: 4, color: "var(--accent)", display: "flex", alignItems: "center", gap: 4 }}>
-                              <CheckCircle2 size={12} style={{ flexShrink: 0 }} /> Passphrases match.
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => { const k = generateRecoveryKey(); setGenKey(k); update({ encryption_passphrase: k }); }}
-                        style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                        <Key size={12} /> Generate a strong key
-                      </button>
-                      {genKey && (
-                        <div className="row-desc" style={{ marginTop: 8, color: "var(--text-primary)" }}>
-                          Save this now. It's the only way to recover your data if you forget it. Enter the same key on your other devices.
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                            <code style={{ userSelect: "all", fontSize: 12, wordBreak: "break-all" }}>{genKey}</code>
-                            <button type="button" title="Copy" onClick={() => navigator.clipboard?.writeText(genKey)}
-                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", flexShrink: 0 }}>
-                              <Copy size={12} />
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                {settings.encryption_enabled && !settings.encryption_passphrase && (
-                  <div className="settings-row" style={{ paddingTop: 0 }}>
-                    <div className="settings-row-left">
-                      <div className="row-desc" style={{ color: "var(--danger)" }}>
-                        Encryption is on but no passphrase is set, so sync keeps uploading plaintext until you add one.
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {!settings.encryption_enabled && (
-                  <div className="settings-row" style={{ background: "var(--warn-bg)" }}>
-                    <div className="settings-row-left">
-                      <AlertTriangle size={14} className="row-icon" style={{ color: "var(--warn-border)" }} />
-                      <div className="row-desc" style={{ color: "var(--warn-text)" }}>
-                        Encryption is off, so your synced data (bookmarks, history, sessions, extensions) is stored
-                        <b> unencrypted</b> on your backend. Turn it on to encrypt everything before it leaves this device.
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="settings-section">
