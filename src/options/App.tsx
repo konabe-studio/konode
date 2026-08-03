@@ -902,7 +902,9 @@ export default function OptionsApp() {
       </header>
 
       {/* ── Content ── */}
-      <main className="content">
+      {/* Activity is the one tab whose content should claim the leftover height instead of
+          growing the page. Everywhere else .content scrolls normally. */}
+      <main className={`content ${activeNav === "activity" ? "fill" : ""}`}>
         <div className="content-inner">
 
           {/* ── First-run setup (esp. Orion/WebKit, where the wizard tab never opens) ── */}
@@ -1471,7 +1473,7 @@ export default function OptionsApp() {
             const errorCount = audit.filter((e) => (e.level ?? (e.ok ? "ok" : "error")) === "error").length;
             const noticeCount = audit.filter((e) => e.level === "notice").length;
             return (
-              <div className="section-wrap">
+              <div className="section-wrap fill">
                 <h1 className="page-title">Activity</h1>
                 <p className="page-subtitle">
                   What Konode did on this device: uploads, downloads, conflicts and errors.
@@ -1559,7 +1561,7 @@ export default function OptionsApp() {
                   ))}
                 </div>
 
-                <div className="settings-section">
+                <div className="settings-section fill">
                   <div className="settings-card-head">
                     Log
                     <span className="head-sub">
@@ -1908,7 +1910,7 @@ const STYLES = `
   /* Always reserve the vertical scrollbar gutter so switching between a short tab
      (no scrollbar) and a tall one (scrollbar) doesn't shift the centered layout. */
   html { scrollbar-gutter: stable; }
-  .settings-root { display: flex; flex-direction: column; min-height: 100vh; font-family: var(--font); font-size: var(--fs-sm); color: var(--text-primary); background: var(--bg); -webkit-font-smoothing: antialiased; }
+  .settings-root { display: flex; flex-direction: column; height: 100vh; font-family: var(--font); font-size: var(--fs-sm); color: var(--text-primary); background: var(--bg); -webkit-font-smoothing: antialiased; }
 
   /* Top horizontal tab bar (Proton Pass settings pattern): brand at the left,
      horizontal tabs that scroll on narrow widths, active tab underlined in accent. */
@@ -1917,7 +1919,7 @@ const STYLES = `
      left edge instead of floating at their own natural width. The bar itself still
      spans the window; only this block is constrained. A too-narrow window scrolls the
      tabbar (overflow-x:auto below). */
-  .topbar-inner { display: flex; align-items: center; justify-content: flex-start; gap: var(--sp-xl); width: 100%; max-width: var(--content-max); height: 100%; }
+  .topbar-inner { display: flex; align-items: center; justify-content: flex-start; gap: var(--sp-xl); width: 100%; max-width: var(--content-max); height: 100%; padding: 0 var(--sp-xl); }
   .topbar-brand { display: flex; align-items: center; gap: var(--sp-ms); flex-shrink: 0; }
   .topbar-logo { width: 24px; height: 24px; background: var(--accent); border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
   .topbar-title { font-size: var(--fs-md); font-weight: 600; color: var(--text-primary); }
@@ -1927,7 +1929,19 @@ const STYLES = `
   .tab-item:hover { color: var(--text-primary); }
   .tab-item.active { color: var(--nav-active-text); font-weight: 500; border-bottom-color: var(--nav-active-bar); }
 
-  .content { flex: 1; display: flex; justify-content: center; padding: 0; }
+  /* The document itself no longer scrolls: .content does. That is what makes the sticky
+     topbar actually stick, and it is what lets the Activity log claim the leftover
+     height instead of pushing the page taller than the window. */
+  .content { flex: 1; min-height: 0; overflow-y: auto; display: flex; justify-content: center; padding: 0; }
+
+  /* Activity only. Nothing scrolls at this level, so the chain from here down to the log
+     can hand its height off and the log fills whatever is left. Every level needs
+     min-height:0, or a flex child refuses to shrink below its content and the overflow
+     pops back out to the page. */
+  .content.fill { overflow: hidden; }
+  .content.fill .content-inner { display: flex; flex-direction: column; min-height: 0; }
+  .section-wrap.fill { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .settings-section.fill { display: flex; flex-direction: column; flex: 1; min-height: 0; }
   /* The column is a SHEET, not just a width constraint. Cards sitting directly on the
      page had nothing holding them together; this is the layer that says "these belong
      to each other". Cards keep their own surface, so the depth reads page → sheet → card. */
@@ -2080,7 +2094,11 @@ const STYLES = `
 
   /* Audit log rows. Denser than a settings-row (a log is scanned, not read), with the
      timestamp right-aligned and tabular so the column stays straight. */
-  .audit-list { max-height: 60vh; overflow-y: auto; }
+  /* Fills the leftover height rather than a fixed 60vh. At 60vh the section was often
+     taller than the space left under it, so the PAGE scrolled and the list's own bottom
+     edge (and its fade with it) sat below the fold. min-height keeps it usable when the
+     window is short. */
+  .audit-list { flex: 1; min-height: 12rem; overflow-y: auto; }
 
   /* ─── Scroll fades ────────────────────────────────────────────────────────
      A MASK rather than a gradient overlay, for two reasons: an overlay has to know the
