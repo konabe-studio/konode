@@ -6,8 +6,8 @@
    there. Light defaults; flips to dark on the OS/browser preference.
 
    NOTE: the popup uses its OWN --sk-* tokens (src/index.css, consumed via
-   Tailwind classes) — intentionally separate, incl. its #ffffff surface vs the
-   #f7f8fa page background here. Don't collapse the two without a visual pass. */
+   Tailwind classes) — intentionally separate. It does not use --bg, so the page/sheet
+   split below doesn't reach it. Don't collapse the two without a visual pass. */
 :root {
   --sidebar-w: 200px; --content-max: 736px; --radius: 8px;
   /* One height for every standalone button so adjacent controls line up. Buttons
@@ -18,7 +18,14 @@
   --control-h: 34px;
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
-  --bg: #f7f8fa; --bg-sidebar: #ffffff; --bg-card: #ffffff; --bg-card-sel: #e7f7ef;
+  /* THREE surfaces, not two. The settings used to be cards floating straight on the
+     page, so nothing framed them as one thing — the eye had no boundary between "the
+     page" and "your settings". A middle surface gives the content column a body of its
+     own, which is what makes grouped cards read as a set rather than as debris.
+     Page is one step down from what it used to be, and the old page tone is promoted to
+     the sheet, so the cards themselves are untouched. */
+  --bg: #eceff3; --bg-sheet: #f7f8fa;
+  --bg-sidebar: #ffffff; --bg-card: #ffffff; --bg-card-sel: #e7f7ef;
   --bg-hover: #f1f3f5; --bg-input: #ffffff;
   --border: #e6e8eb; --border-input: #d4d8dd;
   --text-primary: #11151a; --text-secondary: #5b6470; --text-disabled: #aab2bd;
@@ -39,7 +46,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1216; --bg-sidebar: #161a20; --bg-card: #161a20; --bg-card-sel: #173a30;
+    --bg: #0a0d11; --bg-sheet: #0f1216;
+    --bg-sidebar: #161a20; --bg-card: #161a20; --bg-card-sel: #173a30;
     --bg-hover: #1e232b; --bg-input: #1e232b;
     --border: #2a2f37; --border-input: #353b45;
     --text-primary: #e6e9ee; --text-secondary: #97a0ad; --text-disabled: #6b7480;

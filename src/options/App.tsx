@@ -1869,7 +1869,10 @@ const STYLES = `
   .tab-item.active { color: var(--nav-active-text); font-weight: 500; border-bottom-color: var(--nav-active-bar); }
 
   .content { flex: 1; display: flex; justify-content: center; padding: 28px 24px 60px; }
-  .content-inner { width: 100%; max-width: var(--content-max); }
+  /* The column is a SHEET, not just a width constraint. Cards sitting directly on the
+     page had nothing holding them together; this is the layer that says "these belong
+     to each other". Cards keep their own surface, so the depth reads page → sheet → card. */
+  .content-inner { width: 100%; max-width: var(--content-max); background: var(--bg-sheet); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
   .section-wrap { padding-bottom: 16px; }
   .page-title { font-size: 20px; font-weight: 400; color: var(--text-primary); margin-bottom: 4px; }
   .page-subtitle { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5; }
@@ -2040,7 +2043,11 @@ const STYLES = `
      tab): let the save/test row wrap instead of pushing content off-screen, and tuck
      the horizontal padding in. The connection-status text no longer forces overflow. */
   @media (max-width: 560px) {
-    .content { padding: 20px 16px 48px; }
+    .content { padding: 12px 8px 48px; }
+    /* The sheet goes nearly edge to edge on a phone. Its 20px inset plus the page
+       padding ate a third of the width on an iPhone, which is real: Konode runs on
+       Orion on iOS today, with a WebDAV backend. */
+    .content-inner { padding: 12px; border-radius: 12px; }
     .action-row { flex-wrap: wrap; }
     .test-group { flex-wrap: wrap; }
     .test-result { white-space: normal; }
