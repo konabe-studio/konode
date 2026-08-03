@@ -177,3 +177,69 @@ describe("forgetDevice", () => {
     expect(h.files.has("konode_bookmarks_me.json")).toBe(true);
   });
 });
+
+describe("a device notices when its own file has gone missing", () => {
+  // uploadIfChanged skips an upload when the LOCAL checksum record says this exact content
+  // already went out. That record lives on this device, so it knows nothing about the file
+  // being deleted at the other end — and a payload that doesn't change on its own is then
+  // never re-uploaded. The installed-extension list is exactly that. Three ways this
+  // happens for real: another device used Forget on us, the user tidied the folder by hand
+  // at their provider (which we have actively suggested), or the provider lost a file.
+  type EnginePrivate = {
+    restoreOwnMissingFiles: (b: unknown, types: string[]) => Promise<void>;
+  };
+  const priv = (e: unknown): EnginePrivate => e as EnginePrivate;
+
+  const backend = (opts: { fail?: boolean } = {}) => ({
+    listFiles: async (prefix: string) => {
+      if (opts.fail) throw new Error("503");
+      return [...h.files.keys()].filter((n) => n.startsWith(prefix));
+    },
+  });
+
+  const checksums = async (): Promise<Record<string, string>> => {
+    const r = await chrome.storage.local.get(KEYS.UPLOAD_CHECKSUMS);
+    return (r[KEYS.UPLOAD_CHECKSUMS] as Record<string, string>) ?? {};
+  };
+
+  beforeEach(async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  it("clears the checksum so the next sync uploads it again", async () => {
+    await chrome.storage.local.set({ [KEYS.UPLOAD_CHECKSUMS]: { extensions: "plain:abc" } });
+    // The folder has our bookmarks but NOT our extensions.
+    h.files.set("konode_bookmarks_me.json", packet("me", "bookmarks", "My Laptop", "2026-08-03T10:00:00.000Z"));
+
+    await priv(new SyncEngine(settings(), () => {})).restoreOwnMissingFiles(backend(), ["extensions"]);
+
+    expect((await checksums()).extensions).toBe("");
+  });
+
+  it("leaves the checksum alone when the file is right where it should be", async () => {
+    await chrome.storage.local.set({ [KEYS.UPLOAD_CHECKSUMS]: { extensions: "plain:abc" } });
+    h.files.set("konode_extensions_me.json", packet("me", "extensions", "My Laptop", "2026-08-03T10:00:00.000Z"));
+
+    await priv(new SyncEngine(settings(), () => {})).restoreOwnMissingFiles(backend(), ["extensions"]);
+
+    expect((await checksums()).extensions).toBe("plain:abc");
+  });
+
+  it("does nothing for a type this device has never uploaded", async () => {
+    // No record means nothing has gone missing; the ordinary first-upload path handles it.
+    await priv(new SyncEngine(settings(), () => {})).restoreOwnMissingFiles(backend(), ["history"]);
+
+    expect(await checksums()).toEqual({});
+  });
+
+  it("stays quiet and harmless when the folder can't be listed", async () => {
+    // A sync that works is worth more than this check, so a failed listing means "don't
+    // know" rather than "missing".
+    await chrome.storage.local.set({ [KEYS.UPLOAD_CHECKSUMS]: { extensions: "plain:abc" } });
+
+    await expect(
+      priv(new SyncEngine(settings(), () => {})).restoreOwnMissingFiles(backend({ fail: true }), ["extensions"])
+    ).resolves.toBeUndefined();
+    expect((await checksums()).extensions).toBe("plain:abc");
+  });
+});

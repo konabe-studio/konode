@@ -310,6 +310,7 @@ export class SyncEngine {
     state: SyncState
   ): Promise<string[]> {
     const errors: string[] = [];
+    await this.restoreOwnMissingFiles(backend, types);
     for (const dataType of types) {
       try {
         await this.syncType(dataType, backend, state);
@@ -319,6 +320,52 @@ export class SyncEngine {
       }
     }
     return errors;
+  }
+
+  /**
+   * Put back anything of OURS that has gone missing from the folder.
+   *
+   * `uploadIfChanged` skips an upload when the LOCAL checksum record says this exact
+   * content already went out. That record lives on this device, so it knows nothing about
+   * the file being deleted at the other end — and then a payload that does not change on
+   * its own is never re-uploaded. The installed-extension list is exactly that: it can sit
+   * unchanged for months.
+   *
+   * Three ways that happens, all real:
+   *  - another device used "Forget this device" on us,
+   *  - the user tidied the folder by hand at their storage provider (which we have
+   *    actively suggested as a workaround),
+   *  - the provider lost a file.
+   *
+   * In every case the device carries on syncing and quietly stops publishing, which is the
+   * same silent shape as the device_id bug fixed earlier: present, working, invisible.
+   * Clearing the checksum makes the next upload write it again.
+   *
+   * One listing per sync, not per type. Never fatal: if the listing fails we simply do not
+   * know, and a sync that works is worth more than this check.
+   */
+  private async restoreOwnMissingFiles(
+    backend: ReturnType<typeof createBackend>,
+    types: DataType[]
+  ): Promise<void> {
+    let names: string[];
+    try {
+      names = await backend.listFiles("konode_");
+    } catch {
+      return;
+    }
+    const present = new Set(names);
+    for (const dataType of types) {
+      if (present.has(`konode_${dataType}_${this.settings.device_id}.json`)) continue;
+      // Nothing recorded means we have never uploaded this type, so there is nothing that
+      // has gone missing — leave the normal first-upload path to handle it.
+      if ((await getLastUploadChecksum(dataType)) === null) continue;
+      await setLastUploadChecksum(dataType, "");
+      logger.warn(
+        "SyncEngine",
+        `This device's ${dataType} file is no longer on the backend, so it will be uploaded again`
+      );
+    }
   }
 
   /**

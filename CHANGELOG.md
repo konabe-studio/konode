@@ -185,6 +185,13 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
 
 ### Changed
 
+- **A device now notices when its own file has gone missing from your storage, and puts it
+  back.** Konode skips an upload when nothing has changed since the last one, but it decided
+  that from a record kept on the device itself, which knew nothing about the file being
+  deleted at the other end. So if you tidied your sync folder by hand, or your provider lost
+  a file, anything that does not change on its own was never uploaded again. The installed
+  extension list is exactly that: it can sit unchanged for months. The device carried on
+  syncing and silently stopped publishing.
 - **You can see your devices, and forget the ones you no longer use.** Activity now lists
   every device with files in your sync folder, by name, with what it last uploaded and
   when. A device you have retired can be removed from there, which deletes its files from
