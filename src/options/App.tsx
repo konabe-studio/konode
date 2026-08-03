@@ -1937,21 +1937,29 @@ const STYLES = `
 
   /* The document itself no longer scrolls: .content does. That is what makes the sticky
      topbar actually stick, and it is what lets the Activity log claim the leftover
-     height instead of pushing the page taller than the window. */
-  .content { flex: 1; min-height: 0; overflow-y: auto; display: flex; justify-content: center; padding: 0; }
+     height instead of pushing the page taller than the window.
+
+     NOT a flex container, and that matters. As display:flex with the default
+     align-items:stretch, a scrolling container sizes its child to the VISIBLE height
+     rather than to the content, so the sheet's background stopped at the fold while the
+     rows kept going, and the last section and the Save button sat outside it on the bare
+     page. Plain block flow plus margin auto centres the column without lying about its
+     height. min-height:100% is what still fills the window when a tab is short. */
+  .content { flex: 1; min-height: 0; overflow-y: auto; padding: 0; }
 
   /* Activity only. Nothing scrolls at this level, so the chain from here down to the log
      can hand its height off and the log fills whatever is left. Every level needs
      min-height:0, or a flex child refuses to shrink below its content and the overflow
-     pops back out to the page. */
-  .content.fill { overflow: hidden; }
-  .content.fill .content-inner { display: flex; flex-direction: column; min-height: 0; }
+     pops back out to the page. Here the container IS flex, which is safe precisely
+     because nothing overflows it. */
+  .content.fill { overflow: hidden; display: flex; flex-direction: column; }
+  .content.fill .content-inner { display: flex; flex-direction: column; flex: 1; min-height: 0; }
   .section-wrap.fill { display: flex; flex-direction: column; flex: 1; min-height: 0; }
   .settings-section.fill { display: flex; flex-direction: column; flex: 1; min-height: 0; }
   /* The column is a SHEET, not just a width constraint. Cards sitting directly on the
      page had nothing holding them together; this is the layer that says "these belong
      to each other". Cards keep their own surface, so the depth reads page → sheet → card. */
-  .content-inner { width: 100%; max-width: var(--content-max); background: var(--bg-sheet); padding: var(--sp-xl); }
+  .content-inner { width: 100%; max-width: var(--content-max); min-height: 100%; margin: 0 auto; background: var(--bg-sheet); padding: var(--sp-xl); }
   .section-wrap { padding-bottom: var(--sp-lg); }
   .page-title { font-size: var(--fs-lg); font-weight: 400; color: var(--text-primary); margin-bottom: var(--sp-2xs); }
   .page-subtitle { font-size: var(--fs-sm); color: var(--text-secondary); margin-bottom: var(--sp-xl); line-height: 1.5; }
