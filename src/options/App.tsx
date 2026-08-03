@@ -201,6 +201,9 @@ function SecretField({
 
 type NavSection = "backend" | "data" | "device" | "stats" | "activity" | "advanced";
 
+/** Tabs with settings to save. Statistics and Activity have none, so no bar there. */
+const SAVEABLE_TABS = new Set<NavSection>(["backend", "data", "device", "advanced"]);
+
 // Text only. The tab icons were noise: six glyphs competing with six words that
 // already said the same thing, in the one strip that has to stay legible when the
 // window is narrow.
@@ -682,10 +685,15 @@ export default function OptionsApp() {
           {/* Filling a field in changes nothing until it is saved, and there was no sign of
               that anywhere. Deliberately never DISABLES Save when it thinks nothing changed:
               the check compares a serialised copy, so a false "nothing to save" would be a
-              button that refuses to work, which is far worse than one extra click. */}
+              button that refuses to work, which is far worse than one extra click.
+
+              It says "on any tab" on purpose. There is ONE settings object behind all four
+              tabs and Save sends the whole thing, so switching tabs neither saves nor
+              discards. Without saying so, someone can leave a half-finished edit on one tab,
+              assume it was dropped, and then have it go out with an unrelated save later. */}
           {dirty && !saveError && (
             <span className="unsaved-note">
-              <AlertTriangle size={12} /> Unsaved changes. Click Save changes to apply them.
+              <AlertTriangle size={12} /> Unsaved changes on this or another tab. Saving applies all of them.
             </span>
           )}
         </div>
@@ -1263,7 +1271,6 @@ export default function OptionsApp() {
                 })}
               </div>
 
-              {saveRow()}
             </div>
           )}
 
@@ -1357,7 +1364,6 @@ export default function OptionsApp() {
                 </div>
               </div>
 
-              {saveRow()}
             </div>
           )}
 
@@ -1480,7 +1486,6 @@ export default function OptionsApp() {
                 </div>
               </div>
 
-              {saveRow()}
             </div>
           )}
 
@@ -1932,11 +1937,20 @@ export default function OptionsApp() {
                 </div>
               </div>
 
-              {saveRow({ disabled: passMismatch })}
             </div>
           )}
 
         </div>
+
+        {/* ONE bar, and a direct child of the scroller rather than of the sheet. A sticky
+            element cannot be painted below its containing block, so while this lived inside
+            .section-wrap it could never reach the bottom of the window: the sheet's own
+            bottom padding sat under it and page content showed through the gap. On a desktop
+            the page fitted, so the bar was at its natural position and this never showed.
+
+            Which tabs get one is a fact about the tab, not something each tab remembers to
+            render, so it lives here instead of being called in four places. */}
+        {SAVEABLE_TABS.has(activeNav) && saveRow({ disabled: activeNav === "advanced" && passMismatch })}
       </main>
     </div>
   );
@@ -1956,7 +1970,7 @@ const STYLES = `
   /* Always reserve the vertical scrollbar gutter so switching between a short tab
      (no scrollbar) and a tall one (scrollbar) doesn't shift the centered layout. */
   html { scrollbar-gutter: stable; }
-  .settings-root { display: flex; flex-direction: column; height: 100vh; font-family: var(--font); font-size: var(--fs-sm); color: var(--text-primary); background: var(--bg); -webkit-font-smoothing: antialiased; }
+  .settings-root { --sheet-pad: var(--sp-xl); display: flex; flex-direction: column; height: 100vh; font-family: var(--font); font-size: var(--fs-sm); color: var(--text-primary); background: var(--bg); -webkit-font-smoothing: antialiased; }
 
   /* Top horizontal tab bar (Proton Pass settings pattern): brand at the left,
      horizontal tabs that scroll on narrow widths, active tab underlined in accent. */
@@ -2002,7 +2016,7 @@ const STYLES = `
     /* The inset is a VARIABLE because the sticky action bar has to bleed out to the
      sheet's edges by exactly this much. Hardcoding it in two places is how the two
      drift apart the next time one of them is tuned. */
-  .content-inner { width: 100%; max-width: var(--content-max); min-height: 100%; margin: 0 auto; background: var(--bg-sheet); --sheet-pad: var(--sp-xl); padding: var(--sheet-pad); }
+  .content-inner { width: 100%; max-width: var(--content-max); min-height: 100%; margin: 0 auto; background: var(--bg-sheet); padding: var(--sheet-pad); }
   .section-wrap { padding-bottom: var(--sp-lg); }
   .page-title { font-size: var(--fs-lg); font-weight: 400; color: var(--text-primary); margin-bottom: var(--sp-2xs); }
   .page-subtitle { font-size: var(--fs-sm); color: var(--text-secondary); margin-bottom: var(--sp-xl); line-height: 1.5; }
@@ -2091,7 +2105,13 @@ const STYLES = `
      something reserves space for it by hand.
      Bleeds to the sheet's edges via --sheet-pad so it reads as a bar rather than a floating
      button, and carries the sheet's own background so the rows don't show through. */
-  .action-row { position: sticky; bottom: 0; z-index: 5; display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-md); margin: var(--sp-lg) calc(var(--sheet-pad) * -1) 0; padding: var(--sp-md) var(--sheet-pad); background: var(--bg-sheet); border-top: 1px solid var(--border); }
+  /* Sticky, not fixed, and the difference is the requirement: sticky keeps its place in
+     the flow, so it rides the bottom of the scroller while its natural position is still
+     below the fold and settles into the page once reached. At the end of a tab it therefore
+     covers nothing, with no reserved padding to keep in sync. Fixed leaves the flow, and
+     then sits on the last row forever unless something compensates by hand.
+     Same width as the sheet, centred the same way, so it reads as the sheet's own footer. */
+  .action-row { position: sticky; bottom: 0; z-index: 5; width: 100%; max-width: var(--content-max); margin: 0 auto; display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-md); padding: var(--sp-md) var(--sheet-pad); background: var(--bg-sheet); border-top: 1px solid var(--border); }
   /* Primary first, secondary beside it. They wrap as a PAIR when there isn't room,
      rather than being separated by whatever message happens to be showing. */
   .action-buttons { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-md); }
@@ -2234,7 +2254,7 @@ const STYLES = `
     /* The sheet goes nearly edge to edge on a phone. Its 20px inset plus the page
        padding ate a third of the width on an iPhone, which is real: Konode runs on
        Orion on iOS today, with a WebDAV backend. */
-    .content-inner { --sheet-pad: var(--sp-md); }
+    .settings-root { --sheet-pad: var(--sp-md); }
     /* auto-fit still fits two 128px columns on a phone, which leaves the numbers and
        their labels fighting for about 60px each. One per row. */
     .stat-grid { grid-template-columns: 1fr; }
