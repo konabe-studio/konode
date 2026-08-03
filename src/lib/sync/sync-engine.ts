@@ -93,6 +93,19 @@ export function statusAfterSync(problems: number, pendingConflicts: number): Syn
 
 // ─── Sync Engine ─────────────────────────────────────────────────────────
 
+/**
+ * Bump this whenever a field is added to the packet ENVELOPE (anything outside `payload`).
+ *
+ * The upload check compares a checksum of the payload, so a change to the envelope does not
+ * look like a change at all: adding `device_label` left every existing file on the backend
+ * without one, forever, because nothing about the bookmark tree had changed. The device
+ * list then showed "Unnamed device" for machines that were perfectly well named.
+ *
+ * Folding this into the tag means one re-upload per device per bump, which is exactly the
+ * cost of the change. Same mechanism the encryption form and the destination already use.
+ */
+const PACKET_ENVELOPE = "env2";
+
 export class SyncEngine {
   public isSyncing = false;
   private resolver: ConflictResolver;
@@ -861,7 +874,7 @@ export class SyncEngine {
    * install re-uploads once and then stabilizes — no need to re-save settings.
    */
   private uploadTag(payloadChecksum: string, useE2ee: boolean): string {
-    return `${this.destinationTag()}|${useE2ee ? "enc" : "plain"}:${payloadChecksum}`;
+    return `${PACKET_ENVELOPE}|${this.destinationTag()}|${useE2ee ? "enc" : "plain"}:${payloadChecksum}`;
   }
 
   /**

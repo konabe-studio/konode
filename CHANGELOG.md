@@ -199,7 +199,8 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
   whatever it contributed long ago, and all this stops is a machine that is gone from going
   on offering its old state forever. A device that is still running will upload itself again
   on its next sync, and the screen says so.
-- **Devices carry their name to your other devices now.** It used to travel only with your
+- **Devices carry their name to your other devices now**, and existing setups pick it up on
+  the first sync after updating rather than showing every machine as unnamed. It used to travel only with your
   open tabs, so a device with Sessions turned off had no name anywhere but its own screen.
   Onboarding also lets you set the name during setup, which matters once you have two
   laptops the browser describes identically.

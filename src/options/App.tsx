@@ -2162,11 +2162,14 @@ const STYLES = `
      covers nothing, with no reserved padding to keep in sync. Fixed leaves the flow, and
      then sits on the last row forever unless something compensates by hand.
      Same width as the sheet, centred the same way, so it reads as the sheet's own footer. */
-  .action-row { position: sticky; bottom: 0; z-index: 5; width: 100%; max-width: var(--content-max); margin: 0 auto; display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-md); padding: var(--sp-md) var(--sheet-pad); background: var(--bg-sheet); border-top: 1px solid var(--border); }
+  .action-row { position: sticky; bottom: 0; z-index: 5; width: 100%; max-width: var(--content-max); margin: 0 auto; display: flex; align-items: center; gap: var(--sp-lg); padding: var(--sp-md) var(--sheet-pad); background: var(--bg-sheet); border-top: 1px solid var(--border); }
   /* Primary first, secondary beside it. They wrap as a PAIR when there isn't room,
      rather than being separated by whatever message happens to be showing. */
   .action-buttons { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-md); }
-  .action-messages { display: flex; flex-direction: column; gap: var(--sp-2xs); }
+  /* Beside the buttons, not under them. This was a column because the row used to hold a
+     variable number of children with space-between, so a message arriving rearranged
+     everything; the messages have their own container now, which makes a row stable. */
+  .action-messages { display: flex; flex-direction: column; gap: var(--sp-2xs); min-width: 0; }
   .unsaved-note { display: flex; align-items: center; gap: var(--sp-2xs); font-size: var(--fs-xs); color: var(--warn-text); }
   /* A ring rather than a different fill: the button keeps reading as the primary action,
      it just gains something to notice. */
@@ -2315,6 +2318,8 @@ const STYLES = `
     /* auto-fit still fits two 128px columns on a phone, which leaves the numbers and
        their labels fighting for about 60px each. One per row. */
     .stat-grid { grid-template-columns: 1fr; }
+    /* Under the buttons on a phone: there is no room for a sentence beside them. */
+    .action-row { flex-direction: column; align-items: flex-start; gap: var(--sp-md); }
   }
 
 `;

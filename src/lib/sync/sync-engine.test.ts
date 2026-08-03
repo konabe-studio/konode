@@ -1140,3 +1140,50 @@ describe("SyncEngine.syncType — manual strategy reports encryption disagreemen
     expect(priv(engine).encryptionWarnings.size).toBe(0);
   });
 });
+
+describe("SyncEngine.syncType — an envelope change forces one re-upload", () => {
+  // The dedup checksum covers the PAYLOAD, so a new field on the envelope is invisible to
+  // it. Adding device_label therefore left every existing file on the backend without one,
+  // permanently, because nothing about the bookmark tree had changed — and the device list
+  // read "Unnamed device" for machines that were perfectly well named. Same class as the
+  // destination bug above, and fixed the same way: fold it into the tag.
+  function engine(): SyncEngine {
+    return new SyncEngine(
+      {
+        ...DEFAULT_SETTINGS,
+        device_id: "me",
+        device_label: "Brave WINX",
+        conflict_strategy: "lww",
+        active_backend: "github",
+        backends: [{ type: "github", label: "GitHub", enabled: true, github: { token: "t", repo: "owner/repo" } }],
+      },
+      () => {}
+    );
+  }
+
+  it("uploads again when the recorded tag came from an older envelope", async () => {
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    const backend = new FakeBackend();
+    await priv(engine()).syncType("bookmarks", backend, DEFAULT_STATE);
+    expect(backend.uploads).toHaveLength(1);
+
+    // Rewrite the stored tag as a previous envelope version would have left it: same
+    // destination, same payload checksum, different envelope.
+    const r = await chrome.storage.local.get(KEYS.UPLOAD_CHECKSUMS);
+    const map = r[KEYS.UPLOAD_CHECKSUMS] as Record<string, string>;
+    map.bookmarks = map.bookmarks.replace(/^env\d+\|/, "env1|");
+    await chrome.storage.local.set({ [KEYS.UPLOAD_CHECKSUMS]: map });
+
+    await priv(engine()).syncType("bookmarks", backend, DEFAULT_STATE);
+    expect(backend.uploads).toHaveLength(2);
+  });
+
+  it("carries the device name on the packet, so peers can name it", async () => {
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    const backend = new FakeBackend();
+
+    await priv(engine()).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    expect(backend.uploads[0].device_label).toBe("Brave WINX");
+  });
+});
