@@ -7,11 +7,11 @@ import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-o
 // Orion); gate the Drive sign-in so users get a note instead of a dead end.
 const DRIVE_AVAILABLE = isDriveAuthAvailable();
 import {
-  Github, Server, Bookmark, Clock,
+  Github, Bookmark, Clock,
   Globe, Puzzle, AlertTriangle, CheckCircle2, XCircle,
   Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
-  Sliders, Shield, Save, Pencil, Key, Copy, Check, ArrowRight, BarChart3,
-  ScrollText, Trash2, RotateCcw, Camera, Mail,
+  Save, Pencil, Key, Copy, Check, ArrowRight,
+  Trash2, RotateCcw, Camera, Mail,
 } from "lucide-react";
 // Shown in the About section. The manifest is the single source of truth for the
 // version — bump `package.json` and the build stamps it into the manifest.
@@ -152,13 +152,16 @@ function SecretField({
 
 type NavSection = "backend" | "data" | "device" | "stats" | "activity" | "advanced";
 
-const NAV: { id: NavSection; label: string; icon: typeof Server }[] = [
-  { id: "backend",  label: "Storage", icon: Server },
-  { id: "data",     label: "Data Types",      icon: Bookmark },
-  { id: "device",   label: "Device",          icon: Sliders },
-  { id: "stats",    label: "Statistics",      icon: BarChart3 },
-  { id: "activity", label: "Activity",        icon: ScrollText },
-  { id: "advanced", label: "Advanced",        icon: Shield },
+// Text only. The tab icons were noise: six glyphs competing with six words that
+// already said the same thing, in the one strip that has to stay legible when the
+// window is narrow.
+const NAV: { id: NavSection; label: string }[] = [
+  { id: "backend",  label: "Storage" },
+  { id: "data",     label: "Data Types" },
+  { id: "device",   label: "Device" },
+  { id: "stats",    label: "Statistics" },
+  { id: "activity", label: "Activity" },
+  { id: "advanced", label: "Advanced" },
 ];
 
 // Human-readable byte size for the transfer stat (cumulative up + down).
@@ -825,14 +828,13 @@ export default function OptionsApp() {
             <span className="topbar-title">Konode</span>
           </div>
           <nav className="tabbar">
-            {NAV.map(({ id, label, icon: Icon }) => (
+            {NAV.map(({ id, label }) => (
               <button
                 key={id}
                 className={`tab-item ${activeNav === id ? "active" : ""}`}
                 onClick={() => setActiveNav(id)}
                 aria-current={activeNav === id ? "page" : undefined}
               >
-                <Icon size={16} />
                 <span>{label}</span>
               </button>
             ))}
@@ -1853,12 +1855,12 @@ const STYLES = `
 
   /* Top horizontal tab bar (Proton Pass settings pattern): brand at the left,
      horizontal tabs that scroll on narrow widths, active tab underlined in accent. */
-  .topbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: center; align-items: center; height: 56px; padding: 0 var(--sp-2xl); background: var(--bg-sidebar); border-bottom: 1px solid var(--border); }
-  /* Natural width (brand + all tabs), centered by the topbar's justify-content —
-     NOT width:100%, which would stretch it edge-to-edge and pin the brand hard left.
-     This keeps the menu centered like the content; a too-narrow window scrolls the
+  .topbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: center; align-items: center; height: var(--control-h); padding: 0 var(--sp-2xl); background: var(--bg-sidebar); border-bottom: 1px solid var(--border); }
+  /* The same column as the content, so the brand and tabs line up with the sheet's
+     left edge instead of floating at their own natural width. The bar itself still
+     spans the window; only this block is constrained. A too-narrow window scrolls the
      tabbar (overflow-x:auto below). */
-  .topbar-inner { display: flex; align-items: center; gap: var(--sp-xl); max-width: 100%; height: 100%; }
+  .topbar-inner { display: flex; align-items: center; justify-content: flex-start; gap: var(--sp-xl); width: 100%; max-width: var(--content-max); height: 100%; }
   .topbar-brand { display: flex; align-items: center; gap: var(--sp-ms); flex-shrink: 0; }
   .topbar-logo { width: 24px; height: 24px; background: var(--accent); border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
   .topbar-title { font-size: var(--fs-md); font-weight: 600; color: var(--text-primary); }
