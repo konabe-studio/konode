@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, type ReactNode } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, SyncExtension, SnapshotMeta } from "@/lib/types";
 import { sendMessage, request } from "@/lib/utils/messaging";
 import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
@@ -303,6 +303,16 @@ export default function OptionsApp() {
   // badge has to follow this, not the selection. Refreshed on load and on save.
   const [savedProvider, setSavedProvider] = useState<ProviderId | null>(null);
 
+  /**
+   * The settings as last loaded or saved, so "you have edits" can be told from "you don't".
+   *
+   * Two fields are excluded because the extension writes them itself and the user never
+   * edits them here: `onboarding_completed` is latched (and separately persisted) the first
+   * time a working config appears, and `device_id` is minted on first read. Counting either
+   * as an edit would leave the page permanently claiming unsaved work.
+   */
+  const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
+
   // Per-card WebDAV credentials (and the custom URL), remembered for the session.
   // Every preset card shares the single `webdav` backend slot, so switching cards
   // must swap that slot's contents — parking the outgoing card's values here
@@ -336,10 +346,18 @@ export default function OptionsApp() {
   const [peerSessionCount, setPeerSessionCount] = useState(0);
   const [peerDeviceCount, setPeerDeviceCount] = useState(0);
 
+  const settingsFingerprint = (s: SyncSettings | null): string => {
+    if (!s) return "";
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { onboarding_completed, device_id, ...userEditable } = s;
+    return JSON.stringify(userEditable);
+  };
+
   const load = useCallback(async () => {
     const res = await sendMessage({ type: "GET_SETTINGS" });
     if (res.type === "SETTINGS") {
       setSettings(res.payload);
+      setSavedFingerprint(settingsFingerprint(res.payload));
       setInitialPass(res.payload.encryption_passphrase ?? "");
       const url = res.payload.backends.find((b) => b.type === "webdav")?.webdav?.url;
       setSavedProvider(providerFromConfig(res.payload.active_backend, url));
@@ -457,6 +475,11 @@ export default function OptionsApp() {
       void sendMessage({ type: "SAVE_SETTINGS", payload: { onboarding_completed: true } });
     }
   }, [settings, gdriveUser]);
+
+  /** A false positive here is harmless (Save stays clickable); a false negative would not
+   *  be, which is why nothing is ever disabled on the strength of it. */
+  const dirty = savedFingerprint !== null && settings !== null
+    && settingsFingerprint(settings) !== savedFingerprint;
 
   const update = (partial: Partial<SyncSettings>) =>
     setSettings((p) => p ? { ...p, ...partial } : p);
@@ -625,6 +648,7 @@ export default function OptionsApp() {
       settings.active_backend,
       settings.backends.find((b) => b.type === "webdav")?.webdav?.url,
     ));
+    setSavedFingerprint(settingsFingerprint(settings));
     setSaving(false); setSaveOk(true);
     setTimeout(() => setSaveOk(false), 2500);
   };
@@ -641,24 +665,29 @@ export default function OptionsApp() {
    *
    *  `extraAction` is the Storage tab's Test-connection button; `extraMessage` is its
    *  result. Two slots rather than one group, so this function decides the composition. */
-  const saveRow = (opts: {
-    disabled?: boolean; extraAction?: ReactNode; extraMessage?: ReactNode; marginTop?: number;
-  } = {}) => (
+  const saveRow = (opts: { disabled?: boolean; marginTop?: number } = {}) => (
     <div className="action-row" style={opts.marginTop === undefined ? undefined : { marginTop: opts.marginTop }}>
       <div className="action-buttons">
-        <button className={`btn-save ${saveOk ? "saved" : ""}`} onClick={save} disabled={saving || opts.disabled}>
+        <button className={`btn-save ${saveOk ? "saved" : ""} ${dirty ? "pending" : ""}`} onClick={save} disabled={saving || opts.disabled}>
           {saving ? "Saving…" : saveOk ? "Saved" : "Save changes"}
         </button>
-        {opts.extraAction}
       </div>
-      {(saveError || opts.extraMessage) && (
+      {(saveError || dirty) && (
         <div className="action-messages">
           {saveError && (
             <span className="error-row" role="alert">
               <AlertTriangle size={12} /> {saveError}
             </span>
           )}
-          {opts.extraMessage}
+          {/* Filling a field in changes nothing until it is saved, and there was no sign of
+              that anywhere. Deliberately never DISABLES Save when it thinks nothing changed:
+              the check compares a serialised copy, so a false "nothing to save" would be a
+              button that refuses to work, which is far worse than one extra click. */}
+          {dirty && !saveError && (
+            <span className="unsaved-note">
+              <AlertTriangle size={12} /> Unsaved changes. Click Save changes to apply them.
+            </span>
+          )}
         </div>
       )}
     </div>
@@ -1210,26 +1239,31 @@ export default function OptionsApp() {
                           </a>
                         </div>
                       )}
+
+                      {/* Inside the card, under the fields it checks. It tests what is in
+                          the form rather than what is saved, and the form IS this card, so
+                          down here it sits with the inputs it validates instead of at the
+                          bottom of the page next to an unrelated Save. */}
+                      {isActive && (
+                        <div className="card-test">
+                          <button className="btn-secondary" onClick={testBackend} disabled={testing}>
+                            {testing && <Loader2 size={12} className="spin" />}
+                            Test Connection
+                          </button>
+                          {testStatus && (
+                            <span className={`test-result ${testStatus.ok ? "ok" : "fail"}`}>
+                              {testStatus.ok ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+                              {testStatus.message}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
 
-              {/* Test + Save row */}
-              {saveRow({
-                extraAction: settings.active_backend ? (
-                  <button className="btn-secondary" onClick={testBackend} disabled={testing}>
-                    {testing && <Loader2 size={12} className="spin" />}
-                    Test Connection
-                  </button>
-                ) : undefined,
-                extraMessage: testStatus ? (
-                  <span className={`test-result ${testStatus.ok ? "ok" : "fail"}`}>
-                    {testStatus.ok ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                    {testStatus.message}
-                  </span>
-                ) : undefined,
-              })}
+              {saveRow()}
             </div>
           )}
 
@@ -2061,6 +2095,13 @@ const STYLES = `
      rather than being separated by whatever message happens to be showing. */
   .action-buttons { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-md); }
   .action-messages { display: flex; flex-direction: column; gap: var(--sp-2xs); }
+  .unsaved-note { display: flex; align-items: center; gap: var(--sp-2xs); font-size: var(--fs-xs); color: var(--warn-text); }
+  /* A ring rather than a different fill: the button keeps reading as the primary action,
+     it just gains something to notice. */
+  .btn-save.pending { box-shadow: 0 0 0 3px var(--warn-bg); }
+  /* Sits under the fields, separated by the same hairline the rows use. Wraps so the result
+     drops below the button instead of squeezing it on a phone. */
+  .card-test { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-md); margin-top: var(--sp-lg); padding-top: var(--sp-lg); border-top: 1px solid var(--border); }
   /* Wraps freely now that it has a line to itself; it used to be nowrap because it was
      competing with the buttons for the same row. */
   .test-result { display: flex; align-items: center; gap: var(--sp-2xs); font-size: var(--fs-xs); }
