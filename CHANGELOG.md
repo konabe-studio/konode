@@ -185,6 +185,17 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
 
 ### Changed
 
+- **You can see your devices, and forget the ones you no longer use.** Activity now lists
+  every device with files in your sync folder, by name, with what it last uploaded and
+  when. A device you have retired can be removed from there, which deletes its files from
+  your storage. It removes no bookmarks from any browser: your other devices merged in
+  whatever it contributed long ago, and all this stops is a machine that is gone from going
+  on offering its old state forever. A device that is still running will upload itself again
+  on its next sync, and the screen says so.
+- **Devices carry their name to your other devices now.** It used to travel only with your
+  open tabs, so a device with Sessions turned off had no name anywhere but its own screen.
+  Onboarding also lets you set the name during setup, which matters once you have two
+  laptops the browser describes identically.
 - **Statistics and Activity are one tab.** They answered the same question at different
   resolutions: how much has synced, and what happened. Encryption also moves to Storage,
   next to the provider it protects you from, instead of sitting in Advanced among the

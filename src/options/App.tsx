@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, SyncExtension, SnapshotMeta } from "@/lib/types";
+import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, SyncExtension, SnapshotMeta, DeviceInfo } from "@/lib/types";
 import { sendMessage, request } from "@/lib/utils/messaging";
 import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
 
@@ -76,7 +76,7 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 }
 
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
-import { KEYS, normalizeRemoteExtensions, getRemoteSessions, type AuditEntry } from "@/lib/utils/storage";
+import { KEYS, normalizeRemoteExtensions, type AuditEntry } from "@/lib/utils/storage";
 import { isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
 import { browser, currentStore } from "@/lib/utils/ext";
@@ -343,8 +343,10 @@ export default function OptionsApp() {
 
   // Activity tab data (fetched once on mount; see the effect below).
   const [syncState, setSyncState] = useState<SyncState | null>(null);
-  const [peerSessionCount, setPeerSessionCount] = useState(0);
-  const [peerDeviceCount, setPeerDeviceCount] = useState(0);
+  const [devices, setDevices] = useState<DeviceInfo[] | null>(null);
+  const [devicesError, setDevicesError] = useState<string | null>(null);
+  const [forgetting, setForgetting] = useState<string | null>(null);
+  const [confirmForget, setConfirmForget] = useState<string | null>(null);
 
   const settingsFingerprint = (s: SyncSettings | null): string => {
     if (!s) return "";
@@ -392,26 +394,11 @@ export default function OptionsApp() {
       const res = await sendMessage({ type: "GET_STATE" });
       if (res.type === "STATE") setSyncState(res.payload);
 
-      try { setPeerSessionCount((await getRemoteSessions()).length); } catch { /* ignore */ }
-
       try {
         const r = await browser.storage.local.get(KEYS.AUDIT_LOG);
         setAudit((r[KEYS.AUDIT_LOG] as AuditEntry[]) ?? []);
       } catch { /* ignore */ }
 
-      // Distinct peer devices across the two device-keyed maps (a device may sync
-      // sessions, extensions, or both). Legacy single-object shape carries device_id.
-      try {
-        const maps = await browser.storage.local.get([KEYS.REMOTE_SESSIONS, KEYS.REMOTE_EXTENSIONS]);
-        const ids = new Set<string>();
-        for (const raw of [maps[KEYS.REMOTE_SESSIONS], maps[KEYS.REMOTE_EXTENSIONS]]) {
-          if (raw && typeof raw === "object") {
-            if ("device_id" in raw) ids.add((raw as { device_id: string }).device_id);
-            else for (const k of Object.keys(raw)) ids.add(k);
-          }
-        }
-        setPeerDeviceCount(ids.size);
-      } catch { /* ignore */ }
 
     })();
   }, []);
@@ -424,6 +411,33 @@ export default function OptionsApp() {
     const url = settings.backends.find((b) => b.type === "webdav")?.webdav?.url;
     setSelectedProvider(providerFromConfig(settings.active_backend, url));
   }, [settings, selectedProvider]);
+
+  // Devices come from the backend too, so they wait for the tab as well. Reused by the
+  // forget action to refresh the list in place.
+  const loadDevices = useCallback(async () => {
+    setDevicesError(null);
+    const r = await request({ type: "LIST_DEVICES" });
+    if (!r.ok) { setDevicesError(r.error); setDevices([]); return; }
+    // "No devices" must never stand in for "the list failed to load", the same rule the
+    // restore points learned the hard way. request() already folds an ERROR reply into
+    // ok:false, so the only surprise left is a reply of the wrong shape.
+    if (r.res.type === "DEVICES") setDevices(r.res.payload);
+    else { setDevicesError("Couldn't read the device list."); setDevices([]); }
+  }, []);
+
+  useEffect(() => {
+    if (activeNav !== "activity") return;
+    void loadDevices();
+  }, [activeNav, loadDevices]);
+
+  const forgetDevice = async (id: string) => {
+    setForgetting(id);
+    setConfirmForget(null);
+    const r = await request({ type: "FORGET_DEVICE", payload: { device_id: id } });
+    if (!r.ok) setDevicesError(r.error);
+    await loadDevices();
+    setForgetting(null);
+  };
 
   // Load restore points when the Activity tab opens (LIST_SNAPSHOTS hits the backend,
   // so don't fetch it until the user actually looks).
@@ -1647,12 +1661,75 @@ export default function OptionsApp() {
                   </div>
                 </div>
 
+                {/* Replaces the "Devices: 3" and "Peer sessions" tiles. A count answered the
+                    wrong question: with two Windows laptops both on Brave, knowing there are
+                    three of them doesn't tell you WHICH is which, and that is exactly what
+                    cost half a day on a field report. */}
                 <div className="settings-section">
-                  <div className="settings-card-head">Across your devices</div>
-                  <div className="stat-grid">
-                    <div className="stat-tile"><div className="stat-value">{peerDeviceCount + 1}</div><div className="stat-label">Devices (incl. this one)</div></div>
-                    <div className="stat-tile"><div className="stat-value">{peerSessionCount}</div><div className="stat-label">Peer sessions</div></div>
+                  <div className="settings-card-head">
+                    Devices
+                    <span className="head-sub">
+                      Every device with files in your sync folder. Forgetting one deletes its
+                      files from your storage. It removes no bookmarks from any browser, and a
+                      device that is still running will upload itself again on its next sync.
+                    </span>
                   </div>
+                  {devicesError && (
+                    <div className="settings-row">
+                      <div className="settings-row-left">
+                        <div className="row-desc" style={{ color: "var(--danger)" }}>
+                          Couldn't read your devices: {devicesError}. This does not mean you have
+                          none. Check the connection in Storage and reopen this tab.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {devices === null && !devicesError && (
+                    <div className="settings-row">
+                      <div className="settings-row-left">
+                        <div className="row-desc"><Loader2 size={12} className="spin" /> Reading your sync folder…</div>
+                      </div>
+                    </div>
+                  )}
+                  {devices?.length === 0 && !devicesError && (
+                    <div className="settings-row">
+                      <div className="settings-row-left">
+                        <div className="row-desc">Nothing in the folder yet. Run a sync and this device will appear.</div>
+                      </div>
+                    </div>
+                  )}
+                  {devices?.map((d) => (
+                    <div key={d.device_id} className="settings-row">
+                      <div className="settings-row-left">
+                        <div>
+                          <div className="row-label">
+                            {d.label ?? `Unnamed device (${d.device_id.slice(0, 8)})`}
+                            {d.isSelf && <span className="badge-active" style={{ marginLeft: 8 }}>THIS DEVICE</span>}
+                          </div>
+                          <div className="row-desc">
+                            {d.types.join(", ")}
+                            {d.lastSeen && ` · last upload ${new Date(d.lastSeen).toLocaleString()}`}
+                          </div>
+                        </div>
+                      </div>
+                      {!d.isSelf && (
+                        confirmForget === d.device_id ? (
+                          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                            <button className="btn-secondary" onClick={() => setConfirmForget(null)}>Cancel</button>
+                            <button className="btn-secondary" style={{ color: "var(--danger)" }}
+                              onClick={() => void forgetDevice(d.device_id)}>
+                              Forget it
+                            </button>
+                          </div>
+                        ) : (
+                          <button className="btn-secondary" disabled={forgetting !== null}
+                            onClick={() => setConfirmForget(d.device_id)}>
+                            {forgetting === d.device_id ? <Loader2 size={12} className="spin" /> : <Trash2 size={12} />} Forget
+                          </button>
+                        )
+                      )}
+                    </div>
+                  ))}
                 </div>
 
                 {/* ── Restore points ── */}

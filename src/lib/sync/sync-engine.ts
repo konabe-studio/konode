@@ -1,4 +1,6 @@
-import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncExtension, ConflictItem, BackendConfig } from "@/lib/types";
+import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncExtension, ConflictItem, BackendConfig,
+  DeviceInfo,
+} from "@/lib/types";
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { normalizeRepoSlug } from "@/lib/backends/github-backend";
 import { createSnapshot as writeSnapshot, listSnapshots as readSnapshots, restoreSnapshot as applySnapshot, deleteSnapshot as dropSnapshot, type SnapshotMeta } from "@/lib/sync/snapshots";
@@ -24,6 +26,7 @@ import {
   setRecoverySnapshotTaken,
   acquireSyncLock,
   releaseSyncLock,
+  dropRemoteDevice,
 } from "@/lib/utils/storage";
 import { logger } from "@/lib/utils/logger";
 import { encrypt, decrypt, sha256, verifyPassphrase } from "@/lib/crypto/encryption";
@@ -374,6 +377,100 @@ export class SyncEngine {
     await backend.connect();
     try { return await fn(backend); }
     finally { await backend.disconnect(); }
+  }
+
+  /**
+   * Every device with files in the sync folder.
+   *
+   * Deliberately cheap. The inventory comes from the file NAMES, and then ONE file per
+   * device is fetched for its name and its timestamp — the smallest type that device has,
+   * because a history packet can be megabytes and a device list has no business downloading
+   * it. Both fields sit outside the encrypted payload, so this works with E2EE on and
+   * without the passphrase.
+   *
+   * An unreadable file costs that device its name, not the whole list: the same rule as
+   * downloadAll, and for the same reason.
+   */
+  async listDevices(): Promise<DeviceInfo[]> {
+    const cfg = this.activeBackendConfig();
+    if (!cfg) return [];
+    return this.withBackend(async (b) => {
+      const names = await b.listFiles("konode_");
+      const types = new Map<string, Set<DataType>>();
+      for (const name of names) {
+        // konode_snap_* files live alongside these and are not per-device, so match the
+        // four data types by name rather than accepting anything with an id in it.
+        const m = /^konode_(bookmarks|history|sessions|extensions)_(.+)\.json$/.exec(name);
+        if (!m) continue;
+        const set = types.get(m[2]) ?? new Set<DataType>();
+        set.add(m[1] as DataType);
+        types.set(m[2], set);
+      }
+
+      // Smallest first: an extension list is a few KB, a session a few more, a bookmark
+      // tree tens, history can be megabytes.
+      const CHEAPEST: DataType[] = ["extensions", "sessions", "bookmarks", "history"];
+      const out: DeviceInfo[] = [];
+      for (const [device_id, set] of types) {
+        const pick = CHEAPEST.find((t) => set.has(t));
+        let label: string | null = null;
+        let lastSeen: string | null = null;
+        if (pick) {
+          try {
+            const raw = await b.getFile(`konode_${pick}_${device_id}.json`);
+            if (raw) {
+              const p = JSON.parse(raw) as Partial<SyncPacket>;
+              label = p.device_label ?? null;
+              lastSeen = p.timestamp ?? null;
+            }
+          } catch (err) {
+            logger.warn("listDevices", `Couldn't read ${pick} for one device (${device_id.slice(0, 8)}), so it has no name here: ${err instanceof Error ? err.message : err}`);
+          }
+        }
+        out.push({
+          device_id, label, lastSeen,
+          types: [...set].sort(),
+          isSelf: device_id === this.settings.device_id,
+        });
+      }
+      // This device first, then the rest newest-seen first; nameless ones sink to the end.
+      out.sort((a, c) => {
+        if (a.isSelf !== c.isSelf) return a.isSelf ? -1 : 1;
+        return (c.lastSeen ?? "").localeCompare(a.lastSeen ?? "");
+      });
+      return out;
+    });
+  }
+
+  /**
+   * Delete another device's files from the shared folder.
+   *
+   * This removes NO bookmarks from any browser. The merge is additive, so whatever that
+   * device contributed was folded into the others long ago; all this stops is a machine
+   * that is gone from going on offering its old state forever. A device that is still
+   * running will upload itself again on its next sync, which the UI says out loud.
+   *
+   * Refuses to target this device. Doing that would delete our own contribution from every
+   * peer's view, and it is not what anyone means by "forget a device"; resetting this
+   * device is a different action.
+   */
+  async forgetDevice(deviceId: string): Promise<number> {
+    if (deviceId === this.settings.device_id) {
+      throw new Error("That's this device. Use Reset to disconnect this one instead.");
+    }
+    const removed = await this.withBackend(async (b) => {
+      let n = 0;
+      for (const t of ["bookmarks", "history", "sessions", "extensions"] as DataType[]) {
+        try { await b.deleteFile(`konode_${t}_${deviceId}.json`); n++; }
+        catch { /* not every device syncs every type; a missing file is the normal case */ }
+      }
+      return n;
+    });
+    // Its cached session and extension list are local to us, so they have to go too or the
+    // popup keeps listing a device the folder no longer has.
+    await dropRemoteDevice(deviceId);
+    logger.event("forgetDevice", `Removed ${removed} file(s) for a device that is no longer in use`);
+    return removed;
   }
 
   /** Write a snapshot of the current bookmark tree to the backend. */

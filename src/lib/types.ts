@@ -313,7 +313,27 @@ export type ExtensionMessage =
   | { type: "CREATE_SNAPSHOT" }
   | { type: "LIST_SNAPSHOTS" }
   | { type: "RESTORE_SNAPSHOT"; payload: { name: string } }
-  | { type: "DELETE_SNAPSHOT"; payload: { name: string } };
+  | { type: "DELETE_SNAPSHOT"; payload: { name: string } }
+  | { type: "LIST_DEVICES" }
+  | { type: "FORGET_DEVICE"; payload: { device_id: string } };
+
+/**
+ * One device with files in the sync folder.
+ *
+ * Built from the file NAMES plus one small packet per device, never from the payloads: a
+ * history packet can be well over a megabyte, and listing devices has no business
+ * downloading it. `device_label` and `timestamp` sit outside the encrypted payload, so both
+ * are readable even with E2EE on and without the passphrase.
+ */
+export interface DeviceInfo {
+  device_id: string;
+  /** null when every packet we could read came from a build that didn't carry a name. */
+  label: string | null;
+  /** ISO-8601 of the newest packet we read for this device, or null if none was readable. */
+  lastSeen: string | null;
+  types: DataType[];
+  isSelf: boolean;
+}
 
 export type ExtensionResponse =
   | { type: "STATE"; payload: SyncState }
@@ -322,4 +342,6 @@ export type ExtensionResponse =
   | { type: "ERROR"; payload: string }
   | { type: "TEST_RESULT"; payload: { ok: boolean; message: string } }
   | { type: "SNAPSHOTS"; payload: SnapshotMeta[] }
-  | { type: "SNAPSHOT_RESTORED"; payload: { restored: number } };
+  | { type: "SNAPSHOT_RESTORED"; payload: { restored: number } }
+  | { type: "DEVICES"; payload: DeviceInfo[] }
+  | { type: "DEVICE_FORGOTTEN"; payload: { removed: number } };

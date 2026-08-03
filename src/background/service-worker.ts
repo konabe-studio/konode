@@ -227,6 +227,17 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
       return { type: "SNAPSHOTS", payload: await syncEngine.getSnapshots() };
     }
 
+    case "LIST_DEVICES": {
+      if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
+      return { type: "DEVICES", payload: await syncEngine.listDevices() };
+    }
+
+    case "FORGET_DEVICE": {
+      if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
+      const removed = await syncEngine.forgetDevice(message.payload.device_id);
+      return { type: "DEVICE_FORGOTTEN", payload: { removed } };
+    }
+
     case "LIST_SNAPSHOTS": {
       if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
       return { type: "SNAPSHOTS", payload: await syncEngine.getSnapshots() };

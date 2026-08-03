@@ -576,6 +576,27 @@ export async function setRemoteSession(entry: RemoteSessionEntry): Promise<void>
  * current device-keyed map, the legacy single-object shape, and empty/undefined.
  * Pure so the popup can use it synchronously after a `chrome.storage.local.get`.
  */
+/**
+ * Forget one device in both device-keyed caches.
+ *
+ * Local only: these are this device's view of its peers. Without it, the popup keeps
+ * listing a session and an extension set for a device whose files are gone.
+ */
+export async function dropRemoteDevice(deviceId: string): Promise<void> {
+  for (const key of [KEYS.REMOTE_SESSIONS, KEYS.REMOTE_EXTENSIONS]) {
+    await updateKey<Record<string, unknown>>(key, (current) => {
+      // The legacy single-object shape has no id key to delete; clear it outright when it
+      // is the device being forgotten.
+      if (current && typeof current === "object" && "device_id" in current) {
+        return (current as { device_id?: string }).device_id === deviceId ? {} : current;
+      }
+      const next = { ...(current ?? {}) };
+      delete next[deviceId];
+      return next;
+    }, {});
+  }
+}
+
 export function normalizeRemoteExtensions(raw: unknown): SyncExtension[] {
   if (!raw || typeof raw !== "object") return [];
   const entries: RemoteExtensionEntry[] =
