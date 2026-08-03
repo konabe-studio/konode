@@ -7,7 +7,7 @@ import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-o
 // Orion); gate the Drive sign-in so users get a note instead of a dead end.
 const DRIVE_AVAILABLE = isDriveAuthAvailable();
 import {
-  Github, Bookmark, Clock,
+  Github, Bookmark, Clock, Info,
   Globe, Puzzle, AlertTriangle, CheckCircle2, XCircle,
   Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
   Save, Pencil, Key, Copy, Check, ArrowRight,
@@ -163,6 +163,17 @@ const NAV: { id: NavSection; label: string }[] = [
   { id: "activity", label: "Activity" },
   { id: "advanced", label: "Advanced" },
 ];
+
+/** An information box. The icon belongs to the pattern, the same way notice-warn owns
+ *  its warning triangle — kept in one place so it can't go missing from one instance. */
+function InfoHint({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="config-hint">
+      <Info size={14} />
+      <div>{children}</div>
+    </div>
+  );
+}
 
 // Human-readable byte size for the transfer stat (cumulative up + down).
 const formatBytes = (n: number): string => {
@@ -569,7 +580,6 @@ export default function OptionsApp() {
   const saveRow = (opts: { disabled?: boolean; extra?: ReactNode; marginTop?: number } = {}) => (
     <div className="action-row" style={opts.marginTop === undefined ? undefined : { marginTop: opts.marginTop }}>
       <button className={`btn-save ${saveOk ? "saved" : ""}`} onClick={save} disabled={saving || opts.disabled}>
-        {saving ? <Loader2 size={14} className="spin" /> : saveOk ? <CheckCircle2 size={14} /> : <Save size={14} />}
         {saving ? "Saving…" : saveOk ? "Saved" : "Save changes"}
       </button>
       {saveError && (
@@ -957,7 +967,7 @@ export default function OptionsApp() {
                                 {gdriveConnecting ? "Connecting…" : "Sign in with Google"}
                               </button>
                               {gdriveError && <div className="error-row"><XCircle size={12} /> {gdriveError}</div>}
-                              <p className="config-hint">Only the <code>drive.file</code> scope, so Konode can only access files it creates.</p>
+                              <InfoHint>Only the <code>drive.file</code> scope, so Konode can only access files it creates.</InfoHint>
                             </div>
                           )}
                           {gdriveUser && (
@@ -977,9 +987,9 @@ export default function OptionsApp() {
                       {/* ── Koofr / Fastmail (fixed endpoint) ── */}
                       {isActive && (p.id === "koofr" || p.id === "fastmail") && (
                         <div className="backend-config" onClick={(e) => e.stopPropagation()}>
-                          <p className="config-hint">
+                          <InfoHint>
                             Syncing to <code>{p.fixedUrl}</code>.{p.note ? ` ${p.note}` : null}
-                          </p>
+                          </InfoHint>
                           {webdavCreds()}
                           {webdavHttpWarn()}
                         </div>
@@ -1006,9 +1016,9 @@ export default function OptionsApp() {
                               })}
                             </div>
                           </div>
-                          <p className="config-hint">
+                          <InfoHint>
                             Syncing to <code>{getBackend("webdav")?.webdav?.url}</code>.{p.note ? ` ${p.note}` : null}
-                          </p>
+                          </InfoHint>
                           {webdavCreds()}
                           {webdavHttpWarn()}
                         </div>
@@ -1051,11 +1061,11 @@ export default function OptionsApp() {
                               onChange={(v) => updateBackend("webdav", { webdav: { ...getBackend("webdav")?.webdav, password: v } as any })}
                             />
                           </div>
-                          <p className="config-hint">
+                          <InfoHint>
                             {getBackend("webdav")?.webdav?.url
                               ? <>Syncing to <code>{getBackend("webdav")?.webdav?.url}</code>. {p.note}</>
                               : p.note}
-                          </p>
+                          </InfoHint>
                           {webdavHttpWarn()}
                         </div>
                       )}
@@ -1141,7 +1151,7 @@ export default function OptionsApp() {
                       </span>
                     )}
                     <button className="btn-secondary" onClick={testBackend} disabled={testing}>
-                      {testing ? <Loader2 size={12} className="spin" /> : <CheckCircle2 size={12} />}
+                      {testing && <Loader2 size={12} className="spin" />}
                       Test Connection
                     </button>
                   </div>
@@ -1199,11 +1209,11 @@ export default function OptionsApp() {
                     concludes the history never arrived. Chrome's history.addUrl takes no
                     visit time (Firefox's does, and we pass it), so on Chromium the arriving
                     page can only be stamped with the moment it arrived. */}
-                <p className="config-hint">
+                <InfoHint>
                   Pages from your other devices are added with the time they arrived, not the
                   time you first visited them, so on Chromium browsers they show up under
                   today rather than the day you were browsing. Firefox keeps the original date.
-                </p>
+                </InfoHint>
               </div>
 
               {missingExtensions.length > 0 && (
@@ -1819,7 +1829,7 @@ export default function OptionsApp() {
 
               <div className="action-row" style={{ marginTop: 20 }}>
                 <button className={`btn-save ${saveOk ? "saved" : ""}`} onClick={save} disabled={saving || passMismatch}>
-                  {saving ? <Loader2 size={14} className="spin" /> : saveOk ? <CheckCircle2 size={14} /> : <Save size={14} />}
+
                   {saving ? "Saving…" : saveOk ? "Saved" : "Save changes"}
                 </button>
                 {saveError && (
@@ -1874,7 +1884,7 @@ const STYLES = `
   /* The column is a SHEET, not just a width constraint. Cards sitting directly on the
      page had nothing holding them together; this is the layer that says "these belong
      to each other". Cards keep their own surface, so the depth reads page → sheet → card. */
-  .content-inner { width: 100%; max-width: var(--content-max); background: var(--bg-sheet); border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--sp-xl); }
+  .content-inner { width: 100%; max-width: var(--content-max); background: var(--bg-sheet); padding: var(--sp-xl); }
   .section-wrap { padding-bottom: var(--sp-lg); }
   .page-title { font-size: var(--fs-lg); font-weight: 400; color: var(--text-primary); margin-bottom: var(--sp-2xs); }
   .page-subtitle { font-size: var(--fs-sm); color: var(--text-secondary); margin-bottom: var(--sp-xl); line-height: 1.5; }
@@ -1883,7 +1893,7 @@ const STYLES = `
   .settings-card-head { padding: var(--sp-xl); border-bottom: 1px solid var(--border); font-size: var(--fs-sm); font-weight: 600; color: var(--text-primary); background: var(--bg); }
   .settings-card-head .head-sub { display: block; font-size: var(--fs-xs); font-weight: 400; color: var(--text-secondary); margin-top: var(--sp-3xs); line-height: 1.45; }
 
-  .settings-section { background: transparent; border-radius: var(--radius); overflow: hidden; margin-bottom: var(--sp-lg); }
+  .settings-section { background: transparent; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: var(--sp-lg); }
   .settings-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-lg); padding: var(--sp-xl); border-bottom: 1px solid var(--border); min-height: 52px; background: transparent; transition: background .1s; }
   .settings-row:last-child { border-bottom: none; }
   .settings-row:hover:not(.row-disabled) { background: var(--bg-hover); }
@@ -1894,7 +1904,7 @@ const STYLES = `
   .row-label { font-size: var(--fs-sm); color: var(--text-primary); }
   .row-desc { font-size: var(--fs-xs); color: var(--text-secondary); margin-top: var(--sp-3xs); line-height: 1.45; }
 
-  .card-list { background: transparent; border-radius: var(--r-lg); overflow: hidden; }
+  .card-list { background: transparent; border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
   .backend-card { padding: var(--sp-xl); cursor: pointer; border-bottom: 1px solid var(--border); transition: background .1s; background: transparent; }
   .backend-card:last-child { border-bottom: none; }
   .backend-card:hover { background: var(--bg-hover); }
@@ -1945,7 +1955,8 @@ const STYLES = `
   .btn-connect-google:disabled { opacity: .55; cursor: not-allowed; }
   .btn-disconnect { display: flex; align-items: center; gap: var(--sp-2xs); padding: var(--sp-xs) var(--sp-md); border-radius: var(--r-md); border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; font-family: var(--font); font-size: var(--fs-xs); color: var(--text-secondary); transition: color .1s, border-color .1s, background .1s; white-space: nowrap; }
   .btn-disconnect:hover { color: var(--danger); border-color: var(--danger); }
-  .config-hint { font-size: var(--fs-xs); color: var(--info-text); background: var(--info-bg); border: 1px solid var(--info-border); border-radius: var(--r-sm); padding: var(--sp-xl); margin-top: var(--sp-sm); line-height: 1.4; }
+  .config-hint { display: flex; align-items: flex-start; gap: var(--sp-ms); font-size: var(--fs-xs); color: var(--info-text); background: var(--info-bg); border: 1px solid var(--info-border); border-radius: var(--r-sm); padding: var(--sp-xl); margin-top: var(--sp-sm); line-height: 1.4; }
+  .config-hint svg { margin-top: 1px; flex-shrink: 0; color: var(--info-border); }
   .config-hint code { font-family: var(--font-mono); font-size: var(--fs-xs); background: var(--bg-hover); padding: var(--sp-3xs) var(--sp-2xs); border-radius: var(--sp-3xs); }
   .error-row { display: flex; align-items: center; gap: var(--sp-2xs); font-size: var(--fs-xs); color: var(--danger); margin-top: var(--sp-sm); }
   .link-external { display: inline-flex; align-items: center; gap: var(--sp-2xs); font-size: var(--fs-xs); color: var(--text-link); text-decoration: none; margin-top: var(--sp-ms); }
@@ -1971,7 +1982,9 @@ const STYLES = `
   .slider-val { font-size: var(--fs-xs); font-family: var(--font-mono); color: var(--text-secondary); min-width: 30px; text-align: right; }
   .mono-value { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-secondary); }
 
-  .btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-xs); height: var(--control-h); padding: 0 14px; border-radius: var(--r-md); border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; font-family: var(--font); font-size: var(--fs-sm); color: var(--text-secondary); transition: background .1s, border-color .1s, color .1s; white-space: nowrap; }
+  /* Sized by padding, like .btn-install, instead of a fixed control height. Ben wanted
+     the Activity and Advanced actions to match the Install buttons next to them. */
+  .btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-xs); padding: var(--sp-sm) var(--sp-xl); border-radius: var(--r-md); border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; font-family: var(--font); font-size: var(--fs-sm); color: var(--text-secondary); transition: background .1s, border-color .1s, color .1s; white-space: nowrap; }
   .btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--accent); }
   .btn-secondary:disabled { opacity: .5; cursor: not-allowed; }
   /* Icon-only: square by construction — one token drives both width and height, and
@@ -2049,7 +2062,7 @@ const STYLES = `
     /* The sheet goes nearly edge to edge on a phone. Its 20px inset plus the page
        padding ate a third of the width on an iPhone, which is real: Konode runs on
        Orion on iOS today, with a WebDAV backend. */
-    .content-inner { padding: var(--sp-md); border-radius: var(--r-md); }
+    .content-inner { padding: var(--sp-md); }
     .action-row { flex-wrap: wrap; }
     .test-group { flex-wrap: wrap; }
     .test-result { white-space: normal; }
