@@ -3,6 +3,49 @@ import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, Syn
 import { sendMessage, request } from "@/lib/utils/messaging";
 import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
 
+/**
+ * Which edges of a scroller still have content past them.
+ *
+ * A fixed mask is wrong in both directions: with nothing to scroll it fades edges that
+ * aren't cut off, and sitting at the top of a long list it claims there is something
+ * above. The platform has purpose-built answers for this — `scroll-state()` container
+ * queries, and scroll-driven animations — but both are Chromium-only today, and Konode
+ * runs on Firefox and on Orion (WebKit). So this measures instead.
+ *
+ * The ResizeObserver is what covers the tab strip: its overflow appears and disappears
+ * with the window width, not with scrolling. `revision` re-measures when the CONTENT
+ * changes without the box changing, which is how the log grows.
+ */
+function useScrollEdges<T extends HTMLElement>(axis: "x" | "y", revision: unknown = 0) {
+  const ref = useRef<T>(null);
+  const [edges, setEdges] = useState({ start: false, end: false });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = (): void => {
+      const [pos, box, content] = axis === "x"
+        ? [el.scrollLeft, el.clientWidth, el.scrollWidth]
+        : [el.scrollTop, el.clientHeight, el.scrollHeight];
+      // 1px of slack: fractional layout means scrollTop rarely lands on an exact 0 or on
+      // an exact scrollHeight - clientHeight, so a strict compare leaves a hairline fade
+      // stuck on at either end.
+      setEdges({ start: pos > 1, end: pos + box < content - 1 });
+    };
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      ro.disconnect();
+    };
+  }, [axis, revision]);
+
+  const className = `scroll-fade${edges.start ? " fade-start" : ""}${edges.end ? " fade-end" : ""}`;
+  return { ref, className };
+}
+
 // Interactive Google sign-in isn't supported on every engine (e.g. iOS WebKit /
 // Orion); gate the Drive sign-in so users get a note instead of a dead end.
 const DRIVE_AVAILABLE = isDriveAuthAvailable();
@@ -263,6 +306,12 @@ export default function OptionsApp() {
   // Activity tab: the audit log (newest first, capped at 200 by the logger).
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [auditOnlyErrors, setAuditOnlyErrors] = useState(false);
+
+  // Scroll hints. The tab strip's overflow tracks the WINDOW (ResizeObserver), and the
+  // active tab going semibold nudges its width, hence activeNav as the revision. The log's
+  // height tracks its rows, so filtering it or clearing it has to re-measure.
+  const tabbarFade = useScrollEdges<HTMLElement>("x", activeNav);
+  const auditFade = useScrollEdges<HTMLDivElement>("y", audit.length + (auditOnlyErrors ? 1e6 : 0));
 
   // Activity tab: bookmark restore points (loaded when the tab opens).
   const [snapshots, setSnapshots] = useState<SnapshotMeta[]>([]);
@@ -837,7 +886,7 @@ export default function OptionsApp() {
             <div className="topbar-logo"><BrandMark size={14} /></div>
             <span className="topbar-title">Konode</span>
           </div>
-          <nav className="tabbar">
+          <nav ref={tabbarFade.ref} className={`tabbar ${tabbarFade.className}`}>
             {NAV.map(({ id, label }) => (
               <button
                 key={id}
@@ -1553,7 +1602,7 @@ export default function OptionsApp() {
                       </div>
                     </div>
                   ) : (
-                    <div className="audit-list">
+                    <div ref={auditFade.ref} className={`audit-list ${auditFade.className}`}>
                       {shown.map((e, i) => (
                         <div key={`${e.timestamp}-${i}`} className="audit-row">
                           {/* `level` when the entry has one; older entries only have
@@ -2031,20 +2080,34 @@ const STYLES = `
 
   /* Audit log rows. Denser than a settings-row (a log is scanned, not read), with the
      timestamp right-aligned and tabular so the column stays straight. */
-  /* Fade the cut edges so it's visible that the list continues. A MASK rather than a
-     gradient overlay: an overlay has to know the background colour to fade into, and it
-     sits on top of the rows, so it needs pointer-events:none or it eats clicks. A mask
-     fades the content itself, which is background-independent and can't intercept
-     anything. -webkit- included for WebKit, which matters here: Konode runs on Orion.
+  .audit-list { max-height: 60vh; overflow-y: auto; }
 
-     The fade is always on rather than only at the ends. Hiding it when you have scrolled
-     to the top needs the scroll-shadow background trick (background-attachment: local),
-     which pins you to a known solid colour, or JS. Not worth either for a 200-row log
-     that is essentially always longer than its box. */
-  .audit-list { max-height: 60vh; overflow-y: auto;
-    --edge: var(--sp-2xl);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--edge), #000 calc(100% - var(--edge)), transparent 100%);
-    mask-image: linear-gradient(to bottom, transparent 0, #000 var(--edge), #000 calc(100% - var(--edge)), transparent 100%); }
+  /* ─── Scroll fades ────────────────────────────────────────────────────────
+     A MASK rather than a gradient overlay, for two reasons: an overlay has to know the
+     colour it fades into (so it lies the moment a surface colour changes), and it sits on
+     top of the content, so it needs pointer-events:none or it swallows clicks. A mask
+     fades the content itself. -webkit- goes with it for WebKit, i.e. Orion.
+
+     ONE declaration covers all four states, because a zero-length fade is no fade: with
+     --fade-start at 0 the gradient is transparent at 0 and opaque at 0, which is simply
+     opaque. So the classes only have to set a length, and useScrollEdges only has to say
+     which edges are live. No combinatorial CSS. */
+  .scroll-fade { --fade-start: 0px; --fade-end: 0px; }
+  .scroll-fade.fade-start { --fade-start: var(--sp-2xl); }
+  .scroll-fade.fade-end   { --fade-end: var(--sp-2xl); }
+  .audit-list.scroll-fade {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
+  }
+  .tabbar.scroll-fade {
+    /* Shorter than the vertical fade: the strip is one row tall, and eating 24px of a tab
+       label is worse than the hint is worth. */
+    --fade-start: 0px; --fade-end: 0px;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
+  }
+  .tabbar.scroll-fade.fade-start { --fade-start: var(--sp-lg); }
+  .tabbar.scroll-fade.fade-end   { --fade-end: var(--sp-lg); }
   .audit-row { display: flex; align-items: flex-start; gap: var(--sp-ms); padding: var(--sp-sm) var(--sp-xl); border-bottom: 1px solid var(--border); }
   .audit-row:last-child { border-bottom: none; }
   .audit-icon { flex-shrink: 0; margin-top: var(--sp-3xs); }
@@ -2077,13 +2140,6 @@ const STYLES = `
        padding ate a third of the width on an iPhone, which is real: Konode runs on
        Orion on iOS today, with a WebDAV backend. */
     .content-inner { padding: var(--sp-md); }
-    /* Only here: this is the width at which the tab strip actually overflows. It has
-       scrolled silently until now, with the scrollbar hidden and no hint that there was
-       anything past "Advanced". */
-    .tabbar {
-      -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--sp-lg), #000 calc(100% - var(--sp-lg)), transparent 100%);
-      mask-image: linear-gradient(to right, transparent 0, #000 var(--sp-lg), #000 calc(100% - var(--sp-lg)), transparent 100%);
-    }
     .action-row { flex-wrap: wrap; }
     .test-group { flex-wrap: wrap; }
     .test-result { white-space: normal; }
