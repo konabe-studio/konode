@@ -46,6 +46,9 @@ const TYPE_META: Record<"bookmarks" | "extensions" | "history" | "sessions", { I
 
 export default function OnboardingApp() {
   const [step, setStep] = useState<Step>("welcome");
+  // Pre-filled from the auto-detected name, so this is a field to correct rather than a
+  // question to answer. Left alone it costs the user nothing.
+  const [deviceLabel, setDeviceLabel] = useState("");
   // Selected storage-provider card. `backend` + the effective WebDAV URL are derived
   // from it below (several cards map to the WebDAV backend).
   const [provider, setProvider] = useState<ProviderId | null>(null);
@@ -166,6 +169,14 @@ export default function OnboardingApp() {
   // construction): synced blobs sit on third-party storage and can be brute-forced
   // offline, so a short passphrase would hollow out the E2EE promise.
   const passTooShort = confirmNeeded && encPass.length < MIN_PASSPHRASE_LENGTH;
+
+  // Read the name the extension detected for this device, so the field starts filled.
+  useEffect(() => {
+    void (async () => {
+      const res = await request({ type: "GET_SETTINGS" });
+      if (res.ok && res.res.type === "SETTINGS") setDeviceLabel(res.res.payload.device_label ?? "");
+    })();
+  }, []);
 
   useEffect(() => {
     if (step !== "syncing") return;
@@ -297,6 +308,9 @@ export default function OnboardingApp() {
         type: "SAVE_SETTINGS",
         payload: {
           ...current, active_backend: backend, backends, enabled_types,
+          // Blank falls back to what was detected: an unnamed device is worse than a
+          // generically named one, and the field is optional by design.
+          device_label: deviceLabel.trim() || current.device_label,
           encryption_enabled: encEnabled,
           encryption_passphrase: encEnabled ? encPass : undefined,
           onboarding_completed: true,
@@ -659,8 +673,27 @@ export default function OnboardingApp() {
             ))}
           </div>
 
+          {/* Here rather than on a step of its own. Which types this device syncs and what
+              this device is called are the same kind of setting, and the auto-detected name
+              is only good enough while you have one machine: two Windows laptops both on
+              Brave are both "Windows 10/11 · Brave", and then the popup's session list and
+              any future device management can't tell them apart. */}
+          <div style={{ marginTop: 20 }}>
+            <div style={S.backendName}>Name this device</div>
+            <div style={{ ...S.backendDesc, marginBottom: 8 }}>
+              How it appears in the session list on your other devices.
+            </div>
+            <input
+              style={S.input}
+              value={deviceLabel}
+              onChange={(e) => setDeviceLabel(e.target.value)}
+              placeholder="Work laptop"
+              aria-label="Name this device"
+            />
+          </div>
+
           {setupError && (
-            <div style={{ ...S.errorRow, marginBottom: 12 }}><XCircle size={12} /> {setupError}</div>
+            <div style={{ ...S.errorRow, marginTop: 12, marginBottom: 12 }}><XCircle size={12} /> {setupError}</div>
           )}
           <div style={S.navRow}>
             <button style={S.btnSecondary} onClick={() => setStep("backend")}>Back</button>
