@@ -15,7 +15,48 @@
      padding leaves the height at the mercy of the font's line box, which differed
      per button (text vs icon-only) and per platform. Icon-only buttons use this for
      width too, which is what keeps them square. */
-  --control-h: 34px;
+  --control-h: 2.125rem; /* 34px at the default root size */
+
+  /* ─── Scale ────────────────────────────────────────────────────────────────
+     Every value divisible by 2 or 4. Half-steps are where "it looks slightly off
+     and nobody can say why" comes from, and the rhythm had drifted: 13px and 15px
+     type, 9px radius, 7px padding, all one-offs.
+
+     In REM, so the interface follows the user's browser font-size setting. That is
+     not theoretical here — Konode runs on phones today (Orion on iOS, with a WebDAV
+     backend), where system text scaling is common.
+
+     HAIRLINES STAY IN PX and are deliberately absent from this scale. A 1px border
+     written as 0.0625rem lands on a fractional pixel the moment the root size moves,
+     and browsers draw that as a blurred grey smear. The same goes for the 1px optical
+     nudges: those are device-pixel corrections, not spacing. */
+
+  /* Type — 10 / 12 / 14 / 16 / 20 */
+  --fs-2xs: 0.625rem;  /* 10 — uppercase micro-labels only */
+  --fs-xs:  0.75rem;   /* 12 */
+  --fs-sm:  0.875rem;  /* 14 — body default */
+  --fs-md:  1rem;      /* 16 */
+  --fs-lg:  1.25rem;   /* 20 */
+
+  /* Space — 2 / 4 / 6 / 8 / 10 / 12 / 16 / 20 / 24 / 32 / 40 / 48 */
+  --sp-3xs: 0.125rem;  /* 2  */
+  --sp-2xs: 0.25rem;   /* 4  */
+  --sp-xs:  0.375rem;  /* 6  */
+  --sp-sm:  0.5rem;    /* 8  */
+  --sp-ms:  0.625rem;  /* 10 */
+  --sp-md:  0.75rem;   /* 12 */
+  --sp-lg:  1rem;      /* 16 */
+  --sp-xl:  1.25rem;   /* 20 */
+  --sp-2xl: 1.5rem;    /* 24 */
+  --sp-3xl: 2rem;      /* 32 */
+  --sp-4xl: 2.5rem;    /* 40 */
+  --sp-5xl: 3rem;      /* 48 */
+
+  /* Radius — 4 / 8 / 12 / 16 */
+  --r-xs: 0.25rem;     /* 4  */
+  --r-sm: 0.5rem;      /* 8  */
+  --r-md: 0.75rem;     /* 12 */
+  --r-lg: 1rem;        /* 16 */
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
   /* THREE surfaces, not two. The settings used to be cards floating straight on the
