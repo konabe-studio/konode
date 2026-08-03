@@ -1601,9 +1601,16 @@ export default function OptionsApp() {
                     <div className="settings-row-left">
                       <div><div className="row-label">{label}</div><div className="row-desc">{desc}</div></div>
                     </div>
-                    <input type="radio" name="conflict" className="native-radio"
+                    {/* The real input stays, hidden, so this is still a radio GROUP to the
+                        keyboard and to a screen reader: arrow keys move between options and
+                        the name attribute ties them together. The circle beside it is the
+                        same one the storage cards draw, which is what makes them match. The
+                        native control was styled with accent-color alone, so it rendered
+                        differently on every platform. */}
+                    <input type="radio" name="conflict" className="radio-input"
                       value={value} checked={settings.conflict_strategy === value}
                       onChange={() => update({ conflict_strategy: value })} />
+                    <span className="radio-circle" aria-hidden="true" />
                   </label>
                 ))}
               </div>
@@ -2150,7 +2157,13 @@ const STYLES = `
   .toggle-input:disabled ~ .toggle-track { opacity: .4; cursor: not-allowed; }
   .toggle-thumb { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: var(--toggle-thumb); border-radius: 50%; transition: transform .18s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
   .toggle-input:checked ~ .toggle-track .toggle-thumb { transform: translateX(16px); }
-  .native-radio { width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; }
+  /* Visually hidden, not display:none — display:none would take it out of the tab order
+     and out of the accessibility tree, which is the whole reason it is still here. */
+  .radio-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .radio-input:checked + .radio-circle { border-color: var(--accent); background: radial-gradient(circle at center, var(--accent) 38%, transparent 42%); }
+  .radio-input:focus-visible + .radio-circle { box-shadow: 0 0 0 3px var(--accent-light); }
+  /* The card version nudges down to line up with a two-line block; these rows centre. */
+  .radio-row .radio-circle { margin-top: 0; }
   .slider-wrap { display: flex; align-items: center; gap: var(--sp-sm); }
   .slider { width: 110px; accent-color: var(--accent); cursor: pointer; -webkit-appearance: none; height: 4px; background: var(--border); border-radius: var(--sp-3xs); outline: none; }
   .slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; }
