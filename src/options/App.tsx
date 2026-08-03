@@ -1920,7 +1920,7 @@ const STYLES = `
 
   /* Top horizontal tab bar (Proton Pass settings pattern): brand at the left,
      horizontal tabs that scroll on narrow widths, active tab underlined in accent. */
-  .topbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: center; align-items: center; height: var(--control-h); padding: 0 var(--sp-2xl); background: var(--bg-sidebar); border-bottom: 1px solid var(--border); }
+  .topbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: center; align-items: center; height: var(--control-h); padding: 0; background: var(--bg-sidebar); border-bottom: 1px solid var(--border); }
   /* The same column as the content, so the brand and tabs line up with the sheet's
      left edge instead of floating at their own natural width. The bar itself still
      spans the window; only this block is constrained. A too-narrow window scrolls the
@@ -2172,8 +2172,32 @@ const STYLES = `
        padding ate a third of the width on an iPhone, which is real: Konode runs on
        Orion on iOS today, with a WebDAV backend. */
     .content-inner { padding: var(--sp-md); }
+    .topbar-inner { padding: 0 var(--sp-md); }
+    /* auto-fit still fits two 128px columns on a phone, which leaves the numbers and
+       their labels fighting for about 60px each. One per row. */
+    .stat-grid { grid-template-columns: 1fr; }
     .action-row { flex-wrap: wrap; }
     .test-group { flex-wrap: wrap; }
     .test-result { white-space: normal; }
+  }
+
+  /* ─── When the Activity log must NOT claim the leftover height ──────────────
+     Either axis being small is enough to make the fill layout actively harmful. The
+     heading, the intro paragraph and the restore-points card all wrap to more lines on a
+     narrow screen, so there is nothing left over to give the log, and because .content.fill
+     is overflow:hidden the log gets CLIPPED AWAY rather than merely squeezed. On a phone
+     the whole section vanished.
+
+     Height matters as much as width — a 1200x500 desktop window clips exactly the same
+     way — so this is a comma query, which is an OR. Below either threshold the page just
+     scrolls, and the log is bounded by min/max-height instead of by flex. */
+  @media (max-width: 560px), (max-height: 44rem) {
+    .content.fill { display: block; overflow-y: auto; }
+    .content.fill .content-inner { display: block; }
+    .section-wrap.fill,
+    .settings-section.fill { display: block; }
+    /* flex:1 is inert in block flow, so these two are what size it: tall enough to be
+       worth scrolling, short enough that the rest of the page stays reachable. */
+    .audit-list { min-height: 12rem; max-height: 60vh; }
   }
 `;
