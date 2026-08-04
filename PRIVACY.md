@@ -172,5 +172,6 @@ issue** on the Konode repository:
 For privacy-specific questions you can also email **konabe@proton.me**.
 
 _This policy is published at
-**https://github.com/konabe-studio/konode/blob/main/PRIVACY.md** and linked from the
-Konode Chrome Web Store listing and the Google OAuth consent screen._
+**https://github.com/konabe-studio/konode/blob/main/PRIVACY.md** and applies to every
+build of Konode: the Chrome Web Store listing, the Firefox Add-ons listing, and builds
+you make yourself from source. It is also linked from the Google OAuth consent screen._
