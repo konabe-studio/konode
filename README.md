@@ -96,6 +96,22 @@ prefer this device, always prefer the other, or resolve it yourself from the pop
 > (`launchWebAuthFlow`), so Drive sync works even where `chrome.identity.getAuthToken`
 > isn't available.
 
+## Translations
+
+Konode speaks **English, Hungarian and German**, and follows your browser's language.
+Dates and numbers follow your browser's locale everywhere.
+
+Translations are edited on
+[Hosted Weblate](https://hosted.weblate.org/projects/konode/) — you don't need git, a
+pull request, or any knowledge of the code to help. If your language is missing, ask
+for it there and it will appear. The strings themselves live in this repository, under
+`public/_locales/<lang>/messages.json`.
+
+Most strings carry a note explaining what they are and why they are worded the way
+they are; a few of them make promises about not losing your data, and those have to be
+translated literally. If a string's meaning isn't clear, leave it and ask — an
+untranslated string falls back to English, which is safe.
+
 ## Install
 
 - **Chrome / Brave / other Chromium browsers**: install from the
