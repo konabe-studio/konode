@@ -280,7 +280,7 @@
     "message": "Syncs every change as it happens, not only on a timer."
   },
   "onb_feature_browsers": {
-    "message": "Works in Chromium and Firefox based browsers, and in Orion on iOS."
+    "message": "Works in Chromium and Firefox based browsers."
   },
   "onb_feature_providers": {
     "message": "Google Drive, Nextcloud, ownCloud, pCloud, Koofr, Fastmail, GitHub or any WebDAV storage. You decide where your data lives."

@@ -12,7 +12,7 @@
     "message": "Lapok"
   },
   "datatype_extensions": {
-    "message": "Kiegészítők"
+    "message": "Bővítmények"
   },
   "status_idle": {
     "message": "Készenlétben"
@@ -87,7 +87,7 @@
     "message": "Aktív folyamok"
   },
   "popup_missing_extensions_one": {
-    "message": "$COUNT$ hiányzó kiegészítő",
+    "message": "$COUNT$ hiányzó bővítmény",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -96,7 +96,7 @@
     }
   },
   "popup_missing_extensions_other": {
-    "message": "$COUNT$ hiányzó kiegészítő",
+    "message": "$COUNT$ hiányzó bővítmény",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -234,7 +234,7 @@
     "message": "Minden módosítást azonnal szinkronizál, nem csak időközönként."
   },
   "onb_feature_browsers": {
-    "message": "Működik Chromium- és Firefox-alapú böngészőkben, valamint Orionon (iOS)."
+    "message": "Működik Chromium- és Firefox-alapú böngészőkben."
   },
   "onb_feature_providers": {
     "message": "Google Drive, Nextcloud, ownCloud, pCloud, Koofr, Fastmail, GitHub vagy bármely WebDAV-tárhely. Te döntöd el, hol tárolod az adataidat."
@@ -438,7 +438,7 @@
     "message": "A teljes könyvjelzőfa, mappákkal és sorrenddel."
   },
   "datatype_sessions_desc": {
-    "message": "Elnevezett lap-munkamenetek, amelyeket bárhol visszaállíthatsz."
+    "message": "A nyitott lapjaid, bárhol visszaállíthatod."
   },
   "datatype_history_desc": {
     "message": "Böngészési előzmények, a napok beállítása szerint korlátozva."

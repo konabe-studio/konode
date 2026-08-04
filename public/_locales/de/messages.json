@@ -234,7 +234,7 @@
     "message": "Synchronisiert jede Änderung sofort, nicht nur nach einem Zeitplan."
   },
   "onb_feature_browsers": {
-    "message": "Funktioniert in Chromium- und Firefox-basierten Browsern sowie in Orion unter iOS."
+    "message": "Funktioniert in Chromium- und Firefox-basierten Browsern."
   },
   "onb_feature_providers": {
     "message": "Google Drive, Nextcloud, ownCloud, pCloud, Koofr, Fastmail, GitHub oder ein beliebiger WebDAV-Speicher. Du entscheidest, wo deine Daten liegen."
