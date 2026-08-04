@@ -367,13 +367,13 @@
     "message": "Encrypt your data?"
   },
   "onb_encrypt_subtitle": {
-    "message": "Your choice. Konode works either way. Encryption scrambles everything on this device before it's uploaded, so your storage provider can never read it."
+    "message": "If you turn encryption on, your data is encrypted on this device before it is uploaded. Not even your storage provider can read what it contains."
   },
   "onb_e2ee_desc": {
     "message": "AES-256-GCM. Recommended."
   },
   "onb_pass_placeholder": {
-    "message": "Choose a passphrase, or generate a key →"
+    "message": "Choose a passphrase, or generate an encryption key"
   },
   "onb_pass_missing": {
     "message": "Enter a passphrase, or generate a key."
@@ -401,10 +401,10 @@
     "description": "Shown in bold, immediately before onb_save_passphrase_rest. One sentence on its own."
   },
   "onb_save_passphrase_rest": {
-    "message": "It never leaves your device and can't be recovered if lost, and every device must use the same one."
+    "message": "It never leaves this device and cannot be recovered if you lose it. You have to enter the same passphrase on every device."
   },
   "onb_plaintext_note": {
-    "message": "Your data will be stored $WORD$ on your backend. Fine for storage you fully trust; you can turn encryption on later in Settings.",
+    "message": "Without encryption, your data goes to your own storage $WORD$. That can be the right choice if you fully trust your storage provider. You can turn encryption on later in Settings at any time.",
     "description": "$WORD$ is onb_plaintext_word, shown in bold inside this sentence, so the sentence is split at the placeholder.",
     "placeholders": {
       "word": {
@@ -414,7 +414,7 @@
     }
   },
   "onb_plaintext_word": {
-    "message": "unencrypted",
+    "message": "in readable form",
     "description": "The bold word dropped into onb_plaintext_note. Lower case: it sits mid-sentence."
   },
   "onb_setting_up": {

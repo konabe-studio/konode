@@ -318,13 +318,13 @@
     "message": "Deine Daten verschlüsseln?"
   },
   "onb_encrypt_subtitle": {
-    "message": "Deine Entscheidung. Konode funktioniert in beiden Fällen. Die Verschlüsselung verschlüsselt alles noch auf diesem Gerät, bevor es hochgeladen wird — dein Speicheranbieter kann es also nie lesen."
+    "message": "Wenn du die Verschlüsselung aktivierst, werden deine Daten noch auf diesem Gerät verschlüsselt, bevor sie hochgeladen werden. Nicht einmal dein Speicheranbieter kann den Inhalt lesen."
   },
   "onb_e2ee_desc": {
     "message": "AES-256-GCM. Empfohlen."
   },
   "onb_pass_placeholder": {
-    "message": "Wähle eine Passphrase oder erzeuge einen Schlüssel →"
+    "message": "Wähle eine Passphrase oder erzeuge einen Verschlüsselungsschlüssel"
   },
   "onb_pass_missing": {
     "message": "Gib eine Passphrase ein oder erzeuge einen Schlüssel."
@@ -351,10 +351,10 @@
     "message": "Speichere diese Passphrase."
   },
   "onb_save_passphrase_rest": {
-    "message": "Sie verlässt dein Gerät nie und kann nicht wiederhergestellt werden, und jedes Gerät muss dieselbe verwenden."
+    "message": "Sie verlässt dieses Gerät nie und kann nicht wiederhergestellt werden, wenn sie verloren geht. Auf jedem Gerät musst du dieselbe Passphrase eingeben."
   },
   "onb_plaintext_note": {
-    "message": "Deine Daten werden $WORD$ in deinem Speicher abgelegt. In Ordnung bei einem Speicher, dem du voll vertraust; du kannst die Verschlüsselung später in den Einstellungen aktivieren.",
+    "message": "Ohne Verschlüsselung landen deine Daten $WORD$ in deinem eigenen Speicher. Das kann die richtige Wahl sein, wenn du deinem Speicheranbieter voll vertraust. Du kannst die Verschlüsselung später jederzeit in den Einstellungen aktivieren.",
     "placeholders": {
       "word": {
         "example": "unencrypted",
@@ -363,7 +363,7 @@
     }
   },
   "onb_plaintext_word": {
-    "message": "unverschlüsselt"
+    "message": "in lesbarer Form"
   },
   "onb_setting_up": {
     "message": "Wird eingerichtet…"

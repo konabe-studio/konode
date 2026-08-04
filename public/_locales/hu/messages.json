@@ -318,13 +318,13 @@
     "message": "Titkosítsuk az adataidat?"
   },
   "onb_encrypt_subtitle": {
-    "message": "A te döntésed. A Konode így is, úgy is működik. A titkosítás még ezen az eszközön összekeveri az adatokat, feltöltés előtt, így a tárhelyszolgáltató soha nem tudja elolvasni őket."
+    "message": "Ha bekapcsolod a titkosítást, az adatok még ezen az eszközön, feltöltés előtt titkosításra kerülnek. Így a tárhelyszolgáltató sem tudja elolvasni a tartalmukat."
   },
   "onb_e2ee_desc": {
     "message": "AES-256-GCM. Ajánlott."
   },
   "onb_pass_placeholder": {
-    "message": "Adj meg egy jelmondatot, vagy generálj kulcsot →"
+    "message": "Adj meg egy jelmondatot, vagy generálj egy titkosítási kulcsot."
   },
   "onb_pass_missing": {
     "message": "Adj meg egy jelmondatot, vagy generálj kulcsot."
@@ -351,10 +351,10 @@
     "message": "Mentsd el ezt a jelmondatot."
   },
   "onb_save_passphrase_rest": {
-    "message": "Soha nem hagyja el az eszközt, és ha elveszik, nem állítható vissza. Minden eszközön ugyanaznak kell lennie."
+    "message": "Nem hagyja el ezt az eszközt, és elvesztése esetén nem állítható vissza. Minden eszközön ugyanazt a jelmondatot kell megadnod."
   },
   "onb_plaintext_note": {
-    "message": "Az adataid $WORD$ kerülnek a tárhelyedre. Ez rendben van olyan tárhelynél, amiben teljesen megbízol, és a titkosítást később is bekapcsolhatod a Beállításokban.",
+    "message": "Ha nem használod a titkosítást, az adatok $WORD$ kerülnek a saját tárhelyedre. Ez megfelelő választás lehet, ha teljes mértékben megbízol a tárhelyszolgáltatóban. A titkosítást bármikor bekapcsolhatod később a Beállítások menüben.",
     "placeholders": {
       "word": {
         "example": "unencrypted",
@@ -363,7 +363,7 @@
     }
   },
   "onb_plaintext_word": {
-    "message": "titkosítás nélkül"
+    "message": "olvasható formában"
   },
   "onb_setting_up": {
     "message": "Beállítás…"
