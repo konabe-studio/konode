@@ -717,7 +717,7 @@ export class SyncEngine {
           // forever. (The reverse — we're plaintext, a peer is encrypted — is surfaced
           // below as a non-fatal "enable E2EE here" nudge, on the device that can fix it.)
           if (this.encryptionBarrier(peer) === "silent") {
-            logger.debug("SyncEngine", `Skipping plaintext peer ${peer.device_id} (E2EE on here) — stale/unencrypted, not merged`);
+            logger.debug("SyncEngine", `Skipping plaintext peer ${peer.device_id} (E2EE on here): stale or unencrypted, not merged`);
             continue;
           }
           try {
