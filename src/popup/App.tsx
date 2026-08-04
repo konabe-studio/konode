@@ -366,7 +366,7 @@ export default function PopupApp() {
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
       {/* ── Active streams (live per-type status) ── */}
       <section className="mt-4">
-        <h2 className="mb-2 pl-0.5 font-mono text-[12px] font-medium tracking-[0.08em] text-sk-subtle">
+        <h2 className="mb-2 pl-0.5 font-mono text-[12px] font-medium uppercase tracking-[0.08em] text-sk-subtle">
           {t("popup_active_streams")}
         </h2>
         <div className="grid grid-cols-4 gap-2.5">
@@ -423,7 +423,7 @@ export default function PopupApp() {
       {/* ── Restore sessions (one per peer device) ── */}
       {remoteSessions.length > 0 && (
         <section className="mt-4">
-          <h2 className="mb-2 pl-0.5 font-mono text-[12px] font-medium tracking-[0.08em] text-sk-subtle">
+          <h2 className="mb-2 pl-0.5 font-mono text-[12px] font-medium uppercase tracking-[0.08em] text-sk-subtle">
             {t("popup_sessions_head")}
           </h2>
           <div className="space-y-1.5">

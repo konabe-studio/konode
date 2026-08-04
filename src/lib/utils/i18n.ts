@@ -40,3 +40,23 @@ export function t(key: string, subs?: string | string[]): string {
 export function plural(baseKey: string, count: number, subs?: string | string[]): string {
   return t(`${baseKey}_${count === 1 ? "one" : "other"}`, subs ?? String(count));
 }
+
+/**
+ * A one-placeholder message split into the text before and after the placeholder, so the
+ * value can be rendered as its own element — `<code>` for a URL, `<b>` for an emphasised
+ * word — instead of being flattened into the sentence.
+ *
+ * The alternative was two keys ("Syncing to" + ""), which quietly assumes every language
+ * puts the value in the same place. It does not: Hungarian says "Szinkronizálás ide: URL",
+ * and a language that ends with the verb would need the value first. Splitting the
+ * translated string keeps word order the translator's business.
+ *
+ * The sentinel is a NUL, which cannot occur in a message.
+ */
+export function tParts(key: string): [string, string] {
+  // Written as an escape on purpose: a raw NUL byte in a source file is invisible in
+  // every editor and every diff, and a tool that rewrites the file can silently eat it.
+  const SENTINEL = "\u0000";
+  const [before, after = ""] = t(key, SENTINEL).split(SENTINEL);
+  return [before, after];
+}

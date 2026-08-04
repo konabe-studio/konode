@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef, Fragment } from "react";
 import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, SyncExtension, SnapshotMeta, DeviceInfo } from "@/lib/types";
 import { sendMessage, request } from "@/lib/utils/messaging";
+import { t, tParts } from "@/lib/utils/i18n";
 import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
 
 /**
@@ -534,6 +535,14 @@ export default function OptionsApp() {
     update({ active_backend: "webdav" });
   };
 
+  // "Syncing to <url>." with the URL as its own monospace element. `tParts` splits the
+  // translated sentence at its placeholder, so a language that puts the address first or
+  // last still reads correctly — two half-sentence keys would have assumed otherwise.
+  const syncingTo = (url: string) => {
+    const [before, after] = tParts("provider_syncing_to");
+    return <>{before}<code>{url}</code>{after}</>;
+  };
+
   // Shared WebDAV username + password fields (used by every WebDAV preset card).
   const webdavCreds = () => {
     const w = getBackend("webdav")?.webdav;
@@ -1045,7 +1054,7 @@ export default function OptionsApp() {
                             {p.label}
                             {isSaved && <span className="badge-active">active</span>}
                           </div>
-                          <div className="backend-desc">{p.desc}</div>
+                          <div className="backend-desc">{t(p.descKey)}</div>
                         </div>
                         <div className={`radio-circle ${isActive ? "checked" : ""}`} />
                       </div>
@@ -1104,7 +1113,7 @@ export default function OptionsApp() {
                       {isActive && (p.id === "koofr" || p.id === "fastmail") && (
                         <div className="backend-config" onClick={(e) => e.stopPropagation()}>
                           <InfoHint>
-                            Syncing to <code>{p.fixedUrl}</code>.{p.note ? ` ${p.note}` : null}
+                            {syncingTo(p.fixedUrl!)}{p.noteKey ? ` ${t(p.noteKey)}` : null}
                           </InfoHint>
                           {webdavCreds()}
                           {webdavHttpWarn()}
@@ -1133,7 +1142,7 @@ export default function OptionsApp() {
                             </div>
                           </div>
                           <InfoHint>
-                            Syncing to <code>{getBackend("webdav")?.webdav?.url}</code>.{p.note ? ` ${p.note}` : null}
+                            {syncingTo(getBackend("webdav")?.webdav?.url ?? "")}{p.noteKey ? ` ${t(p.noteKey)}` : null}
                           </InfoHint>
                           {webdavCreds()}
                           {webdavHttpWarn()}
@@ -1179,8 +1188,8 @@ export default function OptionsApp() {
                           </div>
                           <InfoHint>
                             {getBackend("webdav")?.webdav?.url
-                              ? <>Syncing to <code>{getBackend("webdav")?.webdav?.url}</code>. {p.note}</>
-                              : p.note}
+                              ? <>{syncingTo(getBackend("webdav")!.webdav!.url!)} {p.noteKey ? t(p.noteKey) : null}</>
+                              : p.noteKey ? t(p.noteKey) : null}
                           </InfoHint>
                           {webdavHttpWarn()}
                         </div>

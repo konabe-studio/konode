@@ -14,12 +14,14 @@ export interface ProviderDef {
   id: ProviderId;
   backend: BackendType;
   label: string;
-  desc: string;
+  /** Message key, not text — resolve with `t()` at the render site. */
+  descKey: string;
   fixedUrl?: string;                                        // koofr, fastmail
   regions?: { id: string; label: string; url: string }[];  // pcloud (EU/US)
   needsHost?: boolean;                                      // nextcloud/ownCloud
   custom?: boolean;                                         // generic WebDAV (Synology, kDrive, …)
-  note?: string;
+  /** Message key, not text. Extra hint shown once the card is selected. */
+  noteKey?: string;
 }
 
 // Endpoints verified against each provider's own docs (2026-07): Koofr, pCloud EU/US,
@@ -31,31 +33,31 @@ export interface ProviderDef {
 export const PROVIDERS: ProviderDef[] = [
   {
     id: "gdrive", backend: "gdrive", label: "Google Drive",
-    desc: "Sync via your Google Drive. OAuth, with a short-lived access token cached on this device only.",
+    descKey: "provider_gdrive_desc",
   },
   {
     id: "nextcloud", backend: "webdav", label: "Nextcloud / ownCloud", needsHost: true,
-    desc: "Your own Nextcloud or ownCloud server.",
-    note: "Enter just your server host; use an App Password (Settings → Security).",
+    descKey: "provider_nextcloud_desc",
+    noteKey: "provider_nextcloud_note",
   },
   {
     id: "pcloud", backend: "webdav", label: "pCloud",
-    desc: "pCloud storage. Needs a paid pCloud plan.",
+    descKey: "provider_pcloud_desc",
     regions: [
       { id: "eu", label: "EU", url: "https://ewebdav.pcloud.com" },
       { id: "us", label: "US", url: "https://webdav.pcloud.com" },
     ],
-    note: "Pick the region your pCloud account lives in.",
+    noteKey: "provider_pcloud_note",
   },
   {
     id: "koofr", backend: "webdav", label: "Koofr", fixedUrl: "https://app.koofr.net/dav/Koofr",
-    desc: "Koofr cloud storage.",
-    note: "Username is your Koofr email; use a Koofr app password.",
+    descKey: "provider_koofr_desc",
+    noteKey: "provider_koofr_note",
   },
   {
     id: "fastmail", backend: "webdav", label: "Fastmail", fixedUrl: "https://myfiles.fastmail.com",
-    desc: "Fastmail file storage.",
-    note: "Username is your full Fastmail address; use an app password with Files (WebDAV) access.",
+    descKey: "provider_fastmail_desc",
+    noteKey: "provider_fastmail_note",
   },
   {
     // GitHub ONLY. The backend hardcodes api.github.com and BackendConfig.github has
@@ -66,11 +68,11 @@ export const PROVIDERS: ProviderDef[] = [
     // API differs entirely and needs its own backend. Until either ships, don't
     // advertise them.
     id: "github", backend: "github", label: "GitHub",
-    desc: "Store sync data in a private repository using a Personal Access Token.",
+    descKey: "provider_github_desc",
   },
   {
     id: "webdav", backend: "webdav", label: "WebDAV (other)", custom: true,
-    desc: "Synology, kDrive, or any other WebDAV server.",
+    descKey: "provider_webdav_desc",
   },
 ];
 

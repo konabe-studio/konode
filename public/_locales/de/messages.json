@@ -2,69 +2,442 @@
   "extension_description": {
     "message": "Datenschutzfreundliche Browser-Synchronisierung in deinen eigenen Speicher: Google Drive, WebDAV, GitHub."
   },
-
-  "datatype_bookmarks":  { "message": "Lesezeichen" },
-  "datatype_history":    { "message": "Verlauf" },
-  "datatype_sessions":   { "message": "Tabs" },
-  "datatype_extensions": { "message": "Erweiterungen" },
-
-  "status_idle":     { "message": "Bereit" },
-  "status_syncing":  { "message": "Synchronisiere…" },
-  "status_success":  { "message": "Synchronisiert" },
-  "status_error":    { "message": "Fehler" },
-  "status_conflict": { "message": "Konflikt" },
-
-  "stream_off":     { "message": "aus" },
-  "stream_syncing": { "message": "synchronisiert…" },
-  "stream_pending": { "message": "wartet" },
-  "stream_never":   { "message": "noch nicht synchronisiert" },
-  "stream_stale":   { "message": "letzte Synchronisierung fehlgeschlagen" },
-  "stream_synced":  { "message": "synchronisiert" },
-
-  "popup_settings_aria": { "message": "Einstellungen" },
-  "popup_sync_now":      { "message": "Jetzt synchronisieren" },
-
-  "popup_load_error": { "message": "Konode war nicht erreichbar. Zum erneuten Versuch klicken." },
+  "datatype_bookmarks": {
+    "message": "Lesezeichen"
+  },
+  "datatype_history": {
+    "message": "Verlauf"
+  },
+  "datatype_sessions": {
+    "message": "Tabs"
+  },
+  "datatype_extensions": {
+    "message": "Erweiterungen"
+  },
+  "status_idle": {
+    "message": "Bereit"
+  },
+  "status_syncing": {
+    "message": "Synchronisiere…"
+  },
+  "status_success": {
+    "message": "Synchronisiert"
+  },
+  "status_error": {
+    "message": "Fehler"
+  },
+  "status_conflict": {
+    "message": "Konflikt"
+  },
+  "stream_off": {
+    "message": "aus"
+  },
+  "stream_syncing": {
+    "message": "synchronisiert…"
+  },
+  "stream_pending": {
+    "message": "wartet"
+  },
+  "stream_never": {
+    "message": "noch nicht synchronisiert"
+  },
+  "stream_stale": {
+    "message": "letzte Synchronisierung fehlgeschlagen"
+  },
+  "stream_synced": {
+    "message": "synchronisiert"
+  },
+  "popup_settings_aria": {
+    "message": "Einstellungen"
+  },
+  "popup_sync_now": {
+    "message": "Jetzt synchronisieren"
+  },
+  "popup_load_error": {
+    "message": "Konode war nicht erreichbar. Zum erneuten Versuch klicken."
+  },
   "popup_recovery_notice": {
     "message": "Ein ungewöhnlicher Löschvorgang ($COUNT$ Lesezeichen) wurde verhindert und ein Wiederherstellungspunkt gespeichert. Nachzulesen unter Einstellungen → Aktivität.",
-    "placeholders": { "count": { "content": "$1", "example": "412" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
   },
-  "popup_no_backend": { "message": "Kein Speicher eingerichtet" },
-
+  "popup_no_backend": {
+    "message": "Kein Speicher eingerichtet"
+  },
   "popup_conflict_title": {
     "message": "Konflikt bei $TYPE$: Version wählen",
-    "placeholders": { "type": { "content": "$1", "example": "Lesezeichen" } }
+    "placeholders": {
+      "type": {
+        "content": "$1",
+        "example": "Lesezeichen"
+      }
+    }
   },
-  "popup_keep_local": { "message": "Lokale behalten" },
-  "popup_use_remote": { "message": "Entfernte übernehmen" },
-
-  "popup_active_streams": { "message": "Aktive Datenströme" },
-
+  "popup_keep_local": {
+    "message": "Lokale behalten"
+  },
+  "popup_use_remote": {
+    "message": "Entfernte übernehmen"
+  },
+  "popup_active_streams": {
+    "message": "Aktive Datenströme"
+  },
   "popup_missing_extensions_one": {
     "message": "$COUNT$ fehlende Erweiterung",
-    "placeholders": { "count": { "content": "$1", "example": "1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
   },
   "popup_missing_extensions_other": {
     "message": "$COUNT$ fehlende Erweiterungen",
-    "placeholders": { "count": { "content": "$1", "example": "7" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "7"
+      }
+    }
   },
-  "popup_open_all": { "message": "Alle öffnen" },
-
-  "popup_sessions_head":  { "message": "Tabs anderer Geräte" },
-  "popup_unknown_device": { "message": "Unbekanntes Gerät" },
+  "popup_open_all": {
+    "message": "Alle öffnen"
+  },
+  "popup_sessions_head": {
+    "message": "Tabs anderer Geräte"
+  },
+  "popup_unknown_device": {
+    "message": "Unbekanntes Gerät"
+  },
   "popup_tabs_one": {
     "message": "$COUNT$ Tab",
-    "placeholders": { "count": { "content": "$1", "example": "1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
   },
   "popup_tabs_other": {
     "message": "$COUNT$ Tabs",
-    "placeholders": { "count": { "content": "$1", "example": "23" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "23"
+      }
+    }
   },
-  "popup_restore": { "message": "Wiederherstellen" },
-
-  "popup_backend_label": { "message": "Speicher" },
-  "popup_backend_none":  { "message": "Keiner" },
-  "popup_device_label":  { "message": "Gerät" },
-  "popup_configure":     { "message": "Einrichten →" },
-  "popup_activity_log":  { "message": "Aktivitätsprotokoll →" }
+  "popup_restore": {
+    "message": "Wiederherstellen"
+  },
+  "popup_backend_label": {
+    "message": "Speicher"
+  },
+  "popup_backend_none": {
+    "message": "Keiner"
+  },
+  "popup_device_label": {
+    "message": "Gerät"
+  },
+  "popup_configure": {
+    "message": "Einrichten →"
+  },
+  "popup_activity_log": {
+    "message": "Aktivitätsprotokoll →"
+  },
+  "common_back": {
+    "message": "Zurück"
+  },
+  "common_continue": {
+    "message": "Weiter"
+  },
+  "common_open_settings": {
+    "message": "Einstellungen öffnen"
+  },
+  "common_close": {
+    "message": "Schließen"
+  },
+  "common_show": {
+    "message": "Anzeigen"
+  },
+  "common_hide": {
+    "message": "Verbergen"
+  },
+  "common_e2ee": {
+    "message": "Ende-zu-Ende-Verschlüsselung"
+  },
+  "common_generate_key": {
+    "message": "Starken Schlüssel erzeugen"
+  },
+  "provider_gdrive_desc": {
+    "message": "Synchronisierung über dein Google Drive. OAuth, das kurzlebige Zugriffstoken bleibt nur auf diesem Gerät."
+  },
+  "provider_nextcloud_desc": {
+    "message": "Dein eigener Nextcloud- oder ownCloud-Server."
+  },
+  "provider_nextcloud_note": {
+    "message": "Gib nur den Server-Host ein und verwende ein App-Passwort (Einstellungen → Sicherheit)."
+  },
+  "provider_pcloud_desc": {
+    "message": "pCloud-Speicher. Erfordert einen kostenpflichtigen pCloud-Tarif."
+  },
+  "provider_pcloud_note": {
+    "message": "Wähle die Region, in der dein pCloud-Konto liegt."
+  },
+  "provider_koofr_desc": {
+    "message": "Koofr-Cloud-Speicher."
+  },
+  "provider_koofr_note": {
+    "message": "Benutzername ist deine Koofr-E-Mail-Adresse; verwende ein Koofr-App-Passwort."
+  },
+  "provider_fastmail_desc": {
+    "message": "Fastmail-Dateispeicher."
+  },
+  "provider_fastmail_note": {
+    "message": "Benutzername ist deine vollständige Fastmail-Adresse; verwende ein App-Passwort mit Files-(WebDAV-)Zugriff."
+  },
+  "provider_github_desc": {
+    "message": "Speichert die Sync-Daten in einem privaten Repository mit einem Personal Access Token."
+  },
+  "provider_webdav_desc": {
+    "message": "Synology, kDrive oder ein beliebiger anderer WebDAV-Server."
+  },
+  "provider_syncing_to": {
+    "message": "Synchronisierung nach $URL$.",
+    "placeholders": {
+      "url": {
+        "example": "https://app.koofr.net/dav/Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_welcome_title": {
+    "message": "Willkommen bei Konode"
+  },
+  "onb_welcome_subtitle": {
+    "message": "Datenschutzfreundliche Browser-Synchronisierung. Deine Lesezeichen, Tabs und Erweiterungen in deinem eigenen Speicher. Ohne Zwischenstation."
+  },
+  "onb_feature_storage": {
+    "message": "Deine Daten bleiben in deinem Speicher"
+  },
+  "onb_feature_instant": {
+    "message": "Synchronisiert bei jeder Änderung, nicht nur nach Zeitplan"
+  },
+  "onb_feature_browsers": {
+    "message": "Funktioniert mit Chrome, Brave und weiteren"
+  },
+  "onb_feature_providers": {
+    "message": "Google Drive, WebDAV, GitHub. Du entscheidest"
+  },
+  "onb_get_started": {
+    "message": "Los geht's"
+  },
+  "onb_backend_title": {
+    "message": "Wähle deinen Speicher"
+  },
+  "onb_backend_subtitle": {
+    "message": "Wo soll Konode deine Daten speichern?"
+  },
+  "onb_use_provider": {
+    "message": "$PROVIDER$ verwenden",
+    "placeholders": {
+      "provider": {
+        "example": "Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_drive_unavailable": {
+    "message": "Die Google-Anmeldung ist in diesem Browser nicht verfügbar. Wähle eine andere Option."
+  },
+  "onb_connecting": {
+    "message": "Verbinde…"
+  },
+  "onb_sign_in_google": {
+    "message": "Mit Google anmelden"
+  },
+  "onb_signin_failed": {
+    "message": "Anmeldung fehlgeschlagen."
+  },
+  "onb_webdav_user_placeholder": {
+    "message": "Benutzername"
+  },
+  "onb_webdav_pass_placeholder": {
+    "message": "Passwort / App-Token"
+  },
+  "onb_verifying": {
+    "message": "Prüfe…"
+  },
+  "onb_github_401": {
+    "message": "GitHub hat dieses Token abgelehnt. Prüfe, ob es abgelaufen ist und ob du es vollständig eingefügt hast."
+  },
+  "onb_github_http": {
+    "message": "GitHub konnte das Token nicht prüfen (HTTP $STATUS$).",
+    "placeholders": {
+      "status": {
+        "example": "500",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_github_unreachable": {
+    "message": "GitHub war nicht erreichbar. Prüfe deine Verbindung und versuche es erneut."
+  },
+  "onb_github_branch_placeholder": {
+    "message": "Branch (Standard: main)"
+  },
+  "onb_github_token_link": {
+    "message": "Fine-grained Token erstellen (nur dieses Repository) →"
+  },
+  "onb_data_title": {
+    "message": "Was soll synchronisiert werden?"
+  },
+  "onb_data_subtitle": {
+    "message": "Du kannst das jederzeit in den Einstellungen ändern."
+  },
+  "onb_data_bookmarks_desc": {
+    "message": "Ordner, Reihenfolge, alle Seiten"
+  },
+  "onb_data_extensions_desc": {
+    "message": "Zeigt, welche auf anderen Geräten fehlen"
+  },
+  "onb_data_history_desc": {
+    "message": "Die letzten 30 Tage"
+  },
+  "onb_data_sessions_desc": {
+    "message": "Benannte Tab-Gruppen"
+  },
+  "onb_device_name_label": {
+    "message": "Diesem Gerät einen Namen geben"
+  },
+  "onb_device_name_desc": {
+    "message": "So erscheint es in der Tab-Liste deiner anderen Geräte."
+  },
+  "onb_device_name_placeholder": {
+    "message": "Arbeits-Laptop"
+  },
+  "onb_encrypt_title": {
+    "message": "Deine Daten verschlüsseln?"
+  },
+  "onb_encrypt_subtitle": {
+    "message": "Deine Entscheidung. Konode funktioniert in beiden Fällen. Die Verschlüsselung verschlüsselt alles noch auf diesem Gerät, bevor es hochgeladen wird — dein Speicheranbieter kann es also nie lesen."
+  },
+  "onb_e2ee_desc": {
+    "message": "AES-256-GCM. Empfohlen."
+  },
+  "onb_pass_placeholder": {
+    "message": "Wähle eine Passphrase oder erzeuge einen Schlüssel →"
+  },
+  "onb_pass_missing": {
+    "message": "Gib eine Passphrase ein oder erzeuge einen Schlüssel."
+  },
+  "onb_pass_too_short": {
+    "message": "Mindestens $MIN$ Zeichen. Synchronisierte Daten lassen sich offline angreifen, kurze Passphrasen sind also erratbar.",
+    "placeholders": {
+      "min": {
+        "example": "12",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_pass_confirm_placeholder": {
+    "message": "Passphrase bestätigen"
+  },
+  "onb_pass_confirm_missing": {
+    "message": "Bestätige deine Passphrase."
+  },
+  "onb_pass_mismatch": {
+    "message": "Die Passphrasen stimmen noch nicht überein."
+  },
+  "onb_save_passphrase_lead": {
+    "message": "Speichere diese Passphrase."
+  },
+  "onb_save_passphrase_rest": {
+    "message": "Sie verlässt dein Gerät nie und kann nicht wiederhergestellt werden, und jedes Gerät muss dieselbe verwenden."
+  },
+  "onb_plaintext_note": {
+    "message": "Deine Daten werden $WORD$ in deinem Speicher abgelegt. In Ordnung bei einem Speicher, dem du voll vertraust; du kannst die Verschlüsselung später in den Einstellungen aktivieren.",
+    "placeholders": {
+      "word": {
+        "example": "unencrypted",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_plaintext_word": {
+    "message": "unverschlüsselt"
+  },
+  "onb_setting_up": {
+    "message": "Wird eingerichtet…"
+  },
+  "onb_finish_sync": {
+    "message": "Fertigstellen & synchronisieren"
+  },
+  "onb_err_bad_webdav_url": {
+    "message": "Diese WebDAV-Adresse sieht nicht wie eine gültige URL aus."
+  },
+  "onb_err_perms_webdav": {
+    "message": "Konode braucht die Berechtigung für deinen WebDAV-Server und die gewählten Datentypen. Bitte erteile sie, um fortzufahren."
+  },
+  "onb_err_perms_types": {
+    "message": "Einige Berechtigungen wurden abgelehnt. Erteile sie oder deaktiviere diese Datentypen, um fortzufahren."
+  },
+  "onb_err_read_settings": {
+    "message": "Die aktuellen Einstellungen konnten nicht gelesen werden. Versuche es erneut."
+  },
+  "onb_err_save": {
+    "message": "Die Einrichtung konnte nicht gespeichert werden: $ERROR$",
+    "placeholders": {
+      "error": {
+        "example": "HTTP 403",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_sync_title": {
+    "message": "Deine Daten werden synchronisiert…"
+  },
+  "onb_sync_subtitle": {
+    "message": "Konode führt die erste Synchronisierung aus. Das läuft auch im Hintergrund, du musst hier nicht warten."
+  },
+  "onb_sync_error_title": {
+    "message": "Die erste Synchronisierung konnte nicht abgeschlossen werden"
+  },
+  "onb_sync_error_subtitle": {
+    "message": "Deine Einstellungen sind gespeichert. Öffne die Einstellungen, um das zu beheben, oder schließe ab und lass Konode es im Hintergrund erneut versuchen."
+  },
+  "onb_sync_timeout": {
+    "message": "Das dauert länger als üblich. Ein großer Verlauf kann das verursachen. Die Synchronisierung läuft im Hintergrund weiter, du kannst jetzt abschließen."
+  },
+  "onb_finish": {
+    "message": "Fertigstellen"
+  },
+  "onb_finish_anyway": {
+    "message": "Trotzdem fertigstellen"
+  },
+  "onb_done_title": {
+    "message": "Alles bereit!"
+  },
+  "onb_done_subtitle": {
+    "message": "Konode synchronisiert deine Browser-Daten jetzt nach $BACKEND$. Die erste Synchronisierung läuft im Hintergrund.",
+    "placeholders": {
+      "backend": {
+        "example": "Google Drive",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_done_backend": {
+    "message": "Speicher verbunden"
+  },
+  "onb_done_autosync": {
+    "message": "Automatische Synchronisierung im Hintergrund"
+  },
+  "onb_done_adjust": {
+    "message": "Alles in den Einstellungen anpassbar"
+  }
 }

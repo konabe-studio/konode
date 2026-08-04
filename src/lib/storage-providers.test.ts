@@ -4,6 +4,22 @@ import {
   webdavUrlForCard, providerFromConfig, providerById, nextcloudUrl, nextcloudBaseFromUrl,
   pcloudRegionOf, sameUrl,
 } from "./storage-providers";
+import { t } from "@/lib/utils/i18n";
+
+/**
+ * The English text a user actually reads for a message key.
+ *
+ * The card copy moved into the locale catalogues, so checking `p.descKey` would only
+ * check a key name — and this test exists because the GitHub card once advertised Gitea
+ * and GitLab, which is a claim in the TEXT. `t()` resolves through the same catalogue the
+ * extension ships (test/setup.ts serves the real en/messages.json), and an unresolved key
+ * comes back as itself, which would make every assertion below vacuously true.
+ */
+function en(key: string): string {
+  const msg = t(key);
+  expect(msg).not.toBe(key);
+  return msg;
+}
 
 const KOOFR = "https://app.koofr.net/dav/Koofr";
 const FASTMAIL = "https://myfiles.fastmail.com";
@@ -127,12 +143,13 @@ describe("provider cards only name hosts the backend can actually reach", () => 
   it("does not advertise Gitea or GitLab on the GitHub card", () => {
     const github = providerById("github");
     expect(github.label).toBe("GitHub");
-    expect(`${github.label} ${github.desc}`).not.toMatch(/gitea|gitlab/i);
+    expect(`${github.label} ${en(github.descKey)}`).not.toMatch(/gitea|gitlab/i);
   });
 
   it("names no Git host other than GitHub anywhere in the card copy", () => {
     for (const p of PROVIDERS) {
-      expect(`${p.label} ${p.desc} ${p.note ?? ""}`).not.toMatch(/gitea|gitlab|bitbucket|codeberg|forgejo/i);
+      expect(`${p.label} ${en(p.descKey)} ${p.noteKey ? en(p.noteKey) : ""}`)
+        .not.toMatch(/gitea|gitlab|bitbucket|codeberg|forgejo/i);
     }
   });
 });

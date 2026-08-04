@@ -22,29 +22,62 @@ function catalogue(lang: string): Catalogue {
 const languages = readdirSync(LOCALES_DIR).sort();
 const en = catalogue("en");
 
-/** Every `.ts`/`.tsx` file under src/, tests excluded. */
+/**
+ * Every `.ts`/`.tsx` file under src/ that could ASK for a message — tests excluded, and
+ * i18n.ts itself excluded because it is the implementation, not a call site: `plural()`
+ * builds its key with `t(`${base}_${count === 1 ? "one" : "other"}`)`, and reading that as
+ * a call site made the scan believe the source wanted messages named "one" and "other".
+ */
 function sourceFiles(dir = SRC_DIR): string[] {
   const out: string[] = [];
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, e.name);
     if (e.isDirectory()) out.push(...sourceFiles(p));
-    else if (/\.tsx?$/.test(e.name) && !e.name.includes(".test.")) out.push(p);
+    else if (/\.tsx?$/.test(e.name) && !e.name.includes(".test.") && e.name !== "i18n.ts") out.push(p);
   }
   return out;
 }
 
-/** Keys asked for with a literal: `t("x")`, and `plural("y", n)` → `y_one` / `y_other`. */
+/**
+ * The argument text of every `fn(` call in one file, up to the first `)`.
+ *
+ * Matching `t("literal")` alone was not enough: a conditional message is written
+ * `t(cond ? "a" : "b")`, and the first version of this scan reported all sixteen of those
+ * keys as dead. Reading the whole argument span finds both branches. A span that stops
+ * early on a nested call — `t(String(n))` — simply contains no key literal, which is the
+ * right answer for it anyway.
+ */
+function callSpans(src: string, fn: string): string[] {
+  const spans: string[] = [];
+  for (const m of src.matchAll(new RegExp(`\\b${fn}\\(`, "g"))) {
+    const from = m.index + m[0].length;
+    const end = src.indexOf(")", from);
+    if (end > from) spans.push(src.slice(from, end));
+  }
+  return spans;
+}
+
+/** Keys the source ASKS FOR: literals inside a `t()` or `plural()` call. */
 function keysUsedInSource(): Map<string, string> {
   const found = new Map<string, string>(); // key → the file that wants it
+  const literal = /"([A-Za-z0-9_@]+)"/g;
   for (const file of sourceFiles()) {
     const src = readFileSync(file, "utf8");
-    for (const m of src.matchAll(/\bt\(\s*"([A-Za-z0-9_@]+)"/g)) found.set(m[1], file);
-    for (const m of src.matchAll(/\bplural\(\s*"([A-Za-z0-9_@]+)"/g)) {
-      found.set(`${m[1]}_one`, file);
-      found.set(`${m[1]}_other`, file);
-    }
+    for (const span of callSpans(src, "t"))
+      for (const m of span.matchAll(literal)) found.set(m[1], file);
+    for (const span of callSpans(src, "plural"))
+      for (const m of span.matchAll(literal)) {
+        found.set(`${m[1]}_one`, file);
+        found.set(`${m[1]}_other`, file);
+      }
   }
   return found;
+}
+
+/** Whether a key appears anywhere in the source as a bare string literal. */
+function appearsInSource(key: string): boolean {
+  const needle = `"${key}"`;
+  return sourceFiles().some((f) => readFileSync(f, "utf8").includes(needle));
 }
 
 describe("the English catalogue is the contract", () => {
@@ -65,10 +98,22 @@ describe("the English catalogue is the contract", () => {
       "status_idle", "status_syncing", "status_success", "status_error", "status_conflict",
       "datatype_bookmarks", "datatype_history", "datatype_sessions", "datatype_extensions",
       "stream_off", "stream_syncing", "stream_pending", "stream_never", "stream_stale", "stream_synced",
+      // `t(p.descKey)` / `t(p.noteKey)` — the key comes from the provider table, so the
+      // scan sees a variable. storage-providers.test.ts is what proves each one resolves.
+      "provider_gdrive_desc", "provider_nextcloud_desc", "provider_nextcloud_note",
+      "provider_pcloud_desc", "provider_pcloud_note", "provider_koofr_desc", "provider_koofr_note",
+      "provider_fastmail_desc", "provider_fastmail_note", "provider_github_desc", "provider_webdav_desc",
+      // `t(`onb_data_${key}_desc`)` in the data-types step.
+      "onb_data_bookmarks_desc", "onb_data_extensions_desc", "onb_data_history_desc", "onb_data_sessions_desc",
+      // Read through tParts(), which takes the key as an argument rather than a literal.
+      "provider_syncing_to", "onb_plaintext_note", "onb_done_subtitle",
     ];
-    const used = new Set([...keysUsedInSource().keys(), ...builtAtRuntime]);
-
-    expect(Object.keys(en).filter((k) => !used.has(k))).toEqual([]);
+    // Looser than the check above on purpose: this one hunts DEAD strings, so a key counts
+    // as alive if it is named in a t()/plural() call (which expands `_one`/`_other`, since
+    // neither ever appears as a whole literal), OR written as a bare literal anywhere at
+    // all, OR listed above. Being strict here would only teach us to pad that list.
+    const known = new Set([...builtAtRuntime, ...keysUsedInSource().keys()]);
+    expect(Object.keys(en).filter((k) => !known.has(k) && !appearsInSource(k))).toEqual([]);
   });
 
   it("declares a placeholder for every $NAME$ it interpolates", () => {

@@ -3,28 +3,74 @@
     "message": "Privacy-first browser sync to your own storage: Google Drive, WebDAV, GitHub.",
     "description": "Shown in the browser's extension list, and used as the store summary when the listing does not override it."
   },
-
-  "datatype_bookmarks": { "message": "Bookmarks", "description": "One of the four data types. Also a section heading in Settings." },
-  "datatype_history":   { "message": "History",   "description": "One of the four data types." },
-  "datatype_sessions":  { "message": "Sessions",  "description": "One of the four data types: the tabs a device has open." },
-  "datatype_extensions":{ "message": "Extensions","description": "One of the four data types: the list of installed extensions." },
-
-  "status_idle":     { "message": "Ready",     "description": "Sync status: nothing is happening and nothing is wrong. Not 'finished' — this is the resting state." },
-  "status_syncing":  { "message": "Syncing…",  "description": "Sync status: a sync is running now." },
-  "status_success":  { "message": "Synced",    "description": "Sync status: the last sync completed." },
-  "status_error":    { "message": "Error",     "description": "Sync status: the last sync failed." },
-  "status_conflict": { "message": "Conflict",  "description": "Sync status: a conflict is waiting for the user to choose a version." },
-
-  "stream_off":      { "message": "off",                "description": "Per-data-type state, shown in a tooltip after the type name: this type is turned off in Settings. Lower case: it follows 'Bookmarks: '." },
-  "stream_syncing":  { "message": "syncing…",           "description": "Per-data-type state: this type is being synced right now." },
-  "stream_pending":  { "message": "waiting",            "description": "Per-data-type state: a sync is running but has not reached this type yet." },
-  "stream_never":    { "message": "not synced yet",     "description": "Per-data-type state: this type has never completed a sync. Must not sound like success." },
-  "stream_stale":    { "message": "last sync failed",   "description": "Per-data-type state: this type has synced before, but the most recent attempt failed." },
-  "stream_synced":   { "message": "synced",             "description": "Per-data-type state: this type synced successfully." },
-
-  "popup_settings_aria": { "message": "Settings", "description": "Accessible name of the gear button in the popup's top-right corner." },
-  "popup_sync_now":      { "message": "Sync now", "description": "The popup's primary button. While a sync runs it shows status_syncing instead." },
-
+  "datatype_bookmarks": {
+    "message": "Bookmarks",
+    "description": "One of the four data types. Also a section heading in Settings."
+  },
+  "datatype_history": {
+    "message": "History",
+    "description": "One of the four data types."
+  },
+  "datatype_sessions": {
+    "message": "Sessions",
+    "description": "One of the four data types: the tabs a device has open."
+  },
+  "datatype_extensions": {
+    "message": "Extensions",
+    "description": "One of the four data types: the list of installed extensions."
+  },
+  "status_idle": {
+    "message": "Ready",
+    "description": "Sync status: nothing is happening and nothing is wrong. Not 'finished' — this is the resting state."
+  },
+  "status_syncing": {
+    "message": "Syncing…",
+    "description": "Sync status: a sync is running now."
+  },
+  "status_success": {
+    "message": "Synced",
+    "description": "Sync status: the last sync completed."
+  },
+  "status_error": {
+    "message": "Error",
+    "description": "Sync status: the last sync failed."
+  },
+  "status_conflict": {
+    "message": "Conflict",
+    "description": "Sync status: a conflict is waiting for the user to choose a version."
+  },
+  "stream_off": {
+    "message": "off",
+    "description": "Per-data-type state, shown in a tooltip after the type name: this type is turned off in Settings. Lower case: it follows 'Bookmarks: '."
+  },
+  "stream_syncing": {
+    "message": "syncing…",
+    "description": "Per-data-type state: this type is being synced right now."
+  },
+  "stream_pending": {
+    "message": "waiting",
+    "description": "Per-data-type state: a sync is running but has not reached this type yet."
+  },
+  "stream_never": {
+    "message": "not synced yet",
+    "description": "Per-data-type state: this type has never completed a sync. Must not sound like success."
+  },
+  "stream_stale": {
+    "message": "last sync failed",
+    "description": "Per-data-type state: this type has synced before, but the most recent attempt failed."
+  },
+  "stream_synced": {
+    "message": "synced",
+    "description": "Per-data-type state: this type synced successfully."
+  },
+  "popup_settings_aria": {
+    "message": "Settings",
+    "description": "Accessible name of the gear button in the popup's top-right corner."
+  },
+  "popup_sync_now": {
+    "message": "Sync now",
+    "description": "The popup's primary button. While a sync runs it shows status_syncing instead."
+  },
   "popup_load_error": {
     "message": "Couldn't reach Konode. Tap to retry.",
     "description": "The popup could not read its own state. The whole banner is a button, hence 'tap to retry'."
@@ -32,49 +78,420 @@
   "popup_recovery_notice": {
     "message": "An unusual deletion ($COUNT$ bookmarks) was blocked and a restore point was saved. Review in Settings → Activity.",
     "description": "The mass-delete guard refused a peer's deletions. Reassuring by design: nothing was lost. 'Settings → Activity' names a tab, so it must match the tab's own translation.",
-    "placeholders": { "count": { "content": "$1", "example": "412" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
   },
-  "popup_no_backend": { "message": "No backend configured", "description": "No storage provider has been set up yet. The banner opens Settings." },
-
+  "popup_no_backend": {
+    "message": "No backend configured",
+    "description": "No storage provider has been set up yet. The banner opens Settings."
+  },
   "popup_conflict_title": {
     "message": "Conflict in $TYPE$: choose a version",
     "description": "A conflict is waiting for a decision. $TYPE$ is a data type name (bookmarks, history, sessions, extensions).",
-    "placeholders": { "type": { "content": "$1", "example": "bookmarks" } }
+    "placeholders": {
+      "type": {
+        "content": "$1",
+        "example": "bookmarks"
+      }
+    }
   },
-  "popup_keep_local":  { "message": "Keep local",  "description": "Conflict resolution: keep what this device has." },
-  "popup_use_remote":  { "message": "Use remote",  "description": "Conflict resolution: take the other device's version." },
-
-  "popup_active_streams": { "message": "Active streams", "description": "Heading above the four data-type dots. Displayed in capitals by the stylesheet — do not capitalise it here." },
-
+  "popup_keep_local": {
+    "message": "Keep local",
+    "description": "Conflict resolution: keep what this device has."
+  },
+  "popup_use_remote": {
+    "message": "Use remote",
+    "description": "Conflict resolution: take the other device's version."
+  },
+  "popup_active_streams": {
+    "message": "Active streams",
+    "description": "Heading above the four data-type dots. Displayed in capitals by the stylesheet — do not capitalise it here."
+  },
   "popup_missing_extensions_one": {
     "message": "$COUNT$ missing extension",
     "description": "Exactly one extension is installed on another device but not on this one.",
-    "placeholders": { "count": { "content": "$1", "example": "1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
   },
   "popup_missing_extensions_other": {
     "message": "$COUNT$ missing extensions",
     "description": "More than one extension is installed on another device but not on this one. In languages that use the singular after a numeral, this is the same wording as the _one form.",
-    "placeholders": { "count": { "content": "$1", "example": "7" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "7"
+      }
+    }
   },
-  "popup_open_all": { "message": "Open all", "description": "Opens a store page for every missing extension, one tab each." },
-
-  "popup_sessions_head":  { "message": "Sessions from other devices", "description": "Heading above the restorable sessions list. Displayed in capitals by the stylesheet — do not capitalise it here." },
-  "popup_unknown_device": { "message": "Unknown device", "description": "Fallback name for a peer device whose session carries no label." },
+  "popup_open_all": {
+    "message": "Open all",
+    "description": "Opens a store page for every missing extension, one tab each."
+  },
+  "popup_sessions_head": {
+    "message": "Sessions from other devices",
+    "description": "Heading above the restorable sessions list. Displayed in capitals by the stylesheet — do not capitalise it here."
+  },
+  "popup_unknown_device": {
+    "message": "Unknown device",
+    "description": "Fallback name for a peer device whose session carries no label."
+  },
   "popup_tabs_one": {
     "message": "$COUNT$ tab",
     "description": "How many tabs a peer's session holds — exactly one.",
-    "placeholders": { "count": { "content": "$1", "example": "1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
   },
   "popup_tabs_other": {
     "message": "$COUNT$ tabs",
     "description": "How many tabs a peer's session holds. In languages that use the singular after a numeral, this is the same wording as the _one form.",
-    "placeholders": { "count": { "content": "$1", "example": "23" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "23"
+      }
+    }
   },
-  "popup_restore": { "message": "Restore", "description": "Opens the tabs of a peer device's session. Adds tabs; removes nothing." },
-
-  "popup_backend_label": { "message": "Backend", "description": "Footer label before the storage provider's name." },
-  "popup_backend_none":  { "message": "None",    "description": "Footer value when no storage provider is set up." },
-  "popup_device_label":  { "message": "Device",  "description": "Footer label before this device's name." },
-  "popup_configure":     { "message": "Configure →", "description": "Footer link to Settings. Keep the arrow." },
-  "popup_activity_log":  { "message": "Activity log →", "description": "Footer link that opens Settings on the Activity tab. Keep the arrow." }
+  "popup_restore": {
+    "message": "Restore",
+    "description": "Opens the tabs of a peer device's session. Adds tabs; removes nothing."
+  },
+  "popup_backend_label": {
+    "message": "Backend",
+    "description": "Footer label before the storage provider's name."
+  },
+  "popup_backend_none": {
+    "message": "None",
+    "description": "Footer value when no storage provider is set up."
+  },
+  "popup_device_label": {
+    "message": "Device",
+    "description": "Footer label before this device's name."
+  },
+  "popup_configure": {
+    "message": "Configure →",
+    "description": "Footer link to Settings. Keep the arrow."
+  },
+  "popup_activity_log": {
+    "message": "Activity log →",
+    "description": "Footer link that opens Settings on the Activity tab. Keep the arrow."
+  },
+  "common_back": {
+    "message": "Back",
+    "description": "Wizard navigation: one step back."
+  },
+  "common_continue": {
+    "message": "Continue",
+    "description": "Wizard navigation: one step forward."
+  },
+  "common_open_settings": {
+    "message": "Open Settings"
+  },
+  "common_close": {
+    "message": "Close",
+    "description": "Closes the setup tab."
+  },
+  "common_show": {
+    "message": "Show",
+    "description": "Tooltip on the eye button that reveals a password."
+  },
+  "common_hide": {
+    "message": "Hide",
+    "description": "Tooltip on the eye button that hides a password again."
+  },
+  "common_e2ee": {
+    "message": "End-to-end encryption"
+  },
+  "common_generate_key": {
+    "message": "Generate a strong key"
+  },
+  "provider_gdrive_desc": {
+    "message": "Sync via your Google Drive. OAuth, with a short-lived access token cached on this device only.",
+    "description": "Storage provider card description."
+  },
+  "provider_nextcloud_desc": {
+    "message": "Your own Nextcloud or ownCloud server."
+  },
+  "provider_nextcloud_note": {
+    "message": "Enter just your server host; use an App Password (Settings → Security).",
+    "description": "Extra hint shown under the card once it is selected."
+  },
+  "provider_pcloud_desc": {
+    "message": "pCloud storage. Needs a paid pCloud plan."
+  },
+  "provider_pcloud_note": {
+    "message": "Pick the region your pCloud account lives in."
+  },
+  "provider_koofr_desc": {
+    "message": "Koofr cloud storage."
+  },
+  "provider_koofr_note": {
+    "message": "Username is your Koofr email; use a Koofr app password."
+  },
+  "provider_fastmail_desc": {
+    "message": "Fastmail file storage."
+  },
+  "provider_fastmail_note": {
+    "message": "Username is your full Fastmail address; use an app password with Files (WebDAV) access."
+  },
+  "provider_github_desc": {
+    "message": "Store sync data in a private repository using a Personal Access Token."
+  },
+  "provider_webdav_desc": {
+    "message": "Synology, kDrive, or any other WebDAV server."
+  },
+  "provider_syncing_to": {
+    "message": "Syncing to $URL$.",
+    "description": "$URL$ is rendered in a monospace <code> element, so the sentence is split at the placeholder rather than interpolated — keep the placeholder as one piece.",
+    "placeholders": {
+      "url": {
+        "example": "https://app.koofr.net/dav/Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_welcome_title": {
+    "message": "Welcome to Konode"
+  },
+  "onb_welcome_subtitle": {
+    "message": "Privacy-first browser sync. Your bookmarks, sessions, and extensions, synced to your own storage. No middlemen."
+  },
+  "onb_feature_storage": {
+    "message": "Your data stays on your storage"
+  },
+  "onb_feature_instant": {
+    "message": "Sync on every change, not just on schedule"
+  },
+  "onb_feature_browsers": {
+    "message": "Works across Chrome, Brave, and more"
+  },
+  "onb_feature_providers": {
+    "message": "Google Drive, WebDAV, GitHub. You choose"
+  },
+  "onb_get_started": {
+    "message": "Get started"
+  },
+  "onb_backend_title": {
+    "message": "Choose your storage"
+  },
+  "onb_backend_subtitle": {
+    "message": "Where should Konode store your data?"
+  },
+  "onb_use_provider": {
+    "message": "Use $PROVIDER$",
+    "description": "Accessible name of a storage-provider card. $PROVIDER$ is a brand name and is never translated.",
+    "placeholders": {
+      "provider": {
+        "example": "Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_drive_unavailable": {
+    "message": "Google sign-in isn't available in this browser. Pick another option."
+  },
+  "onb_connecting": {
+    "message": "Connecting…"
+  },
+  "onb_sign_in_google": {
+    "message": "Sign in with Google"
+  },
+  "onb_signin_failed": {
+    "message": "Sign-in failed.",
+    "description": "Last-resort text when the sign-in threw something with no message of its own."
+  },
+  "onb_webdav_user_placeholder": {
+    "message": "Username"
+  },
+  "onb_webdav_pass_placeholder": {
+    "message": "Password / App token"
+  },
+  "onb_verifying": {
+    "message": "Verifying…"
+  },
+  "onb_github_401": {
+    "message": "GitHub rejected this token. Check it hasn't expired, and that you pasted all of it."
+  },
+  "onb_github_http": {
+    "message": "GitHub couldn't verify the token (HTTP $STATUS$).",
+    "placeholders": {
+      "status": {
+        "example": "500",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_github_unreachable": {
+    "message": "Couldn't reach GitHub. Check your connection and try again."
+  },
+  "onb_github_branch_placeholder": {
+    "message": "Branch (default: main)"
+  },
+  "onb_github_token_link": {
+    "message": "Create a fine-grained token (only this repo) →"
+  },
+  "onb_data_title": {
+    "message": "What to sync?"
+  },
+  "onb_data_subtitle": {
+    "message": "You can change this anytime in Settings."
+  },
+  "onb_data_bookmarks_desc": {
+    "message": "Folders, order, all sites"
+  },
+  "onb_data_extensions_desc": {
+    "message": "Shows missing ones on other devices"
+  },
+  "onb_data_history_desc": {
+    "message": "Last 30 days"
+  },
+  "onb_data_sessions_desc": {
+    "message": "Named tab groups"
+  },
+  "onb_device_name_label": {
+    "message": "Name this device"
+  },
+  "onb_device_name_desc": {
+    "message": "How it appears in the session list on your other devices."
+  },
+  "onb_device_name_placeholder": {
+    "message": "Work laptop",
+    "description": "An example name, not a default — the field arrives pre-filled with the detected one."
+  },
+  "onb_encrypt_title": {
+    "message": "Encrypt your data?"
+  },
+  "onb_encrypt_subtitle": {
+    "message": "Your choice. Konode works either way. Encryption scrambles everything on this device before it's uploaded, so your storage provider can never read it."
+  },
+  "onb_e2ee_desc": {
+    "message": "AES-256-GCM. Recommended."
+  },
+  "onb_pass_placeholder": {
+    "message": "Choose a passphrase, or generate a key →"
+  },
+  "onb_pass_missing": {
+    "message": "Enter a passphrase, or generate a key."
+  },
+  "onb_pass_too_short": {
+    "message": "At least $MIN$ characters. Synced data can be attacked offline, so short passphrases are guessable.",
+    "placeholders": {
+      "min": {
+        "example": "12",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_pass_confirm_placeholder": {
+    "message": "Confirm passphrase"
+  },
+  "onb_pass_confirm_missing": {
+    "message": "Confirm your passphrase."
+  },
+  "onb_pass_mismatch": {
+    "message": "Passphrases don't match yet."
+  },
+  "onb_save_passphrase_lead": {
+    "message": "Save this passphrase.",
+    "description": "Shown in bold, immediately before onb_save_passphrase_rest. One sentence on its own."
+  },
+  "onb_save_passphrase_rest": {
+    "message": "It never leaves your device and can't be recovered if lost, and every device must use the same one."
+  },
+  "onb_plaintext_note": {
+    "message": "Your data will be stored $WORD$ on your backend. Fine for storage you fully trust; you can turn encryption on later in Settings.",
+    "description": "$WORD$ is onb_plaintext_word, shown in bold inside this sentence, so the sentence is split at the placeholder.",
+    "placeholders": {
+      "word": {
+        "example": "unencrypted",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_plaintext_word": {
+    "message": "unencrypted",
+    "description": "The bold word dropped into onb_plaintext_note. Lower case: it sits mid-sentence."
+  },
+  "onb_setting_up": {
+    "message": "Setting up…"
+  },
+  "onb_finish_sync": {
+    "message": "Finish & Sync"
+  },
+  "onb_err_bad_webdav_url": {
+    "message": "That WebDAV address doesn't look like a valid URL."
+  },
+  "onb_err_perms_webdav": {
+    "message": "Konode needs permission to reach your WebDAV server and the data types you chose. Please allow them to continue."
+  },
+  "onb_err_perms_types": {
+    "message": "Some permissions were declined. Grant them, or turn off those data types, to continue."
+  },
+  "onb_err_read_settings": {
+    "message": "Couldn't read your current settings. Try again."
+  },
+  "onb_err_save": {
+    "message": "Couldn't save your setup: $ERROR$",
+    "description": "$ERROR$ is a message from the engine and stays in English — see CLAUDE.md on why the diagnostic layer is not translated.",
+    "placeholders": {
+      "error": {
+        "example": "HTTP 403",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_sync_title": {
+    "message": "Syncing your data…"
+  },
+  "onb_sync_subtitle": {
+    "message": "Konode is running its first sync. This also runs in the background, so you don't have to wait here."
+  },
+  "onb_sync_error_title": {
+    "message": "Couldn't finish the first sync"
+  },
+  "onb_sync_error_subtitle": {
+    "message": "Your settings are saved. Open Settings to fix this, or finish and let Konode retry in the background."
+  },
+  "onb_sync_timeout": {
+    "message": "This is taking longer than usual. A large history can do that. The sync keeps running in the background, so you can finish now."
+  },
+  "onb_finish": {
+    "message": "Finish"
+  },
+  "onb_finish_anyway": {
+    "message": "Finish anyway"
+  },
+  "onb_done_title": {
+    "message": "You're all set!"
+  },
+  "onb_done_subtitle": {
+    "message": "Konode is now syncing your browser data to $BACKEND$. The first sync is running in the background.",
+    "description": "$BACKEND$ is shown in bold and is a brand name, so the sentence is split at the placeholder.",
+    "placeholders": {
+      "backend": {
+        "example": "Google Drive",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_done_backend": {
+    "message": "Backend connected"
+  },
+  "onb_done_autosync": {
+    "message": "Automatic background sync"
+  },
+  "onb_done_adjust": {
+    "message": "Adjust everything in Settings"
+  }
 }

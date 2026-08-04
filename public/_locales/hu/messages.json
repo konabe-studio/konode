@@ -2,69 +2,442 @@
   "extension_description": {
     "message": "Adatvédelem-központú böngésző-szinkronizálás a saját tárhelyedre: Google Drive, WebDAV, GitHub."
   },
-
-  "datatype_bookmarks":  { "message": "Könyvjelzők" },
-  "datatype_history":    { "message": "Előzmények" },
-  "datatype_sessions":   { "message": "Lapok" },
-  "datatype_extensions": { "message": "Kiegészítők" },
-
-  "status_idle":     { "message": "Készenlétben" },
-  "status_syncing":  { "message": "Szinkronizálás…" },
-  "status_success":  { "message": "Szinkronizálva" },
-  "status_error":    { "message": "Hiba" },
-  "status_conflict": { "message": "Ütközés" },
-
-  "stream_off":     { "message": "ki" },
-  "stream_syncing": { "message": "szinkronizálás…" },
-  "stream_pending": { "message": "várakozik" },
-  "stream_never":   { "message": "még nem szinkronizált" },
-  "stream_stale":   { "message": "az utolsó szinkronizálás nem sikerült" },
-  "stream_synced":  { "message": "szinkronizálva" },
-
-  "popup_settings_aria": { "message": "Beállítások" },
-  "popup_sync_now":      { "message": "Szinkronizálás most" },
-
-  "popup_load_error": { "message": "A Konode nem érhető el. Kattints az újrapróbálkozáshoz." },
+  "datatype_bookmarks": {
+    "message": "Könyvjelzők"
+  },
+  "datatype_history": {
+    "message": "Előzmények"
+  },
+  "datatype_sessions": {
+    "message": "Lapok"
+  },
+  "datatype_extensions": {
+    "message": "Kiegészítők"
+  },
+  "status_idle": {
+    "message": "Készenlétben"
+  },
+  "status_syncing": {
+    "message": "Szinkronizálás…"
+  },
+  "status_success": {
+    "message": "Szinkronizálva"
+  },
+  "status_error": {
+    "message": "Hiba"
+  },
+  "status_conflict": {
+    "message": "Ütközés"
+  },
+  "stream_off": {
+    "message": "ki"
+  },
+  "stream_syncing": {
+    "message": "szinkronizálás…"
+  },
+  "stream_pending": {
+    "message": "várakozik"
+  },
+  "stream_never": {
+    "message": "még nem szinkronizált"
+  },
+  "stream_stale": {
+    "message": "az utolsó szinkronizálás nem sikerült"
+  },
+  "stream_synced": {
+    "message": "szinkronizálva"
+  },
+  "popup_settings_aria": {
+    "message": "Beállítások"
+  },
+  "popup_sync_now": {
+    "message": "Szinkronizálás most"
+  },
+  "popup_load_error": {
+    "message": "A Konode nem érhető el. Kattints az újrapróbálkozáshoz."
+  },
   "popup_recovery_notice": {
     "message": "Egy szokatlan törlést ($COUNT$ könyvjelző) letiltottunk, és mentettünk egy visszaállítási pontot. Megtekintés: Beállítások → Tevékenység.",
-    "placeholders": { "count": { "content": "$1", "example": "412" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
   },
-  "popup_no_backend": { "message": "Nincs beállítva tárhely" },
-
+  "popup_no_backend": {
+    "message": "Nincs beállítva tárhely"
+  },
   "popup_conflict_title": {
     "message": "Ütközés itt: $TYPE$. Válassz egy változatot.",
-    "placeholders": { "type": { "content": "$1", "example": "könyvjelzők" } }
+    "placeholders": {
+      "type": {
+        "content": "$1",
+        "example": "könyvjelzők"
+      }
+    }
   },
-  "popup_keep_local": { "message": "Helyi megtartása" },
-  "popup_use_remote": { "message": "Távoli használata" },
-
-  "popup_active_streams": { "message": "Aktív folyamok" },
-
+  "popup_keep_local": {
+    "message": "Helyi megtartása"
+  },
+  "popup_use_remote": {
+    "message": "Távoli használata"
+  },
+  "popup_active_streams": {
+    "message": "Aktív folyamok"
+  },
   "popup_missing_extensions_one": {
     "message": "$COUNT$ hiányzó kiegészítő",
-    "placeholders": { "count": { "content": "$1", "example": "1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
   },
   "popup_missing_extensions_other": {
     "message": "$COUNT$ hiányzó kiegészítő",
-    "placeholders": { "count": { "content": "$1", "example": "7" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "7"
+      }
+    }
   },
-  "popup_open_all": { "message": "Összes megnyitása" },
-
-  "popup_sessions_head":  { "message": "Más eszközök lapjai" },
-  "popup_unknown_device": { "message": "Ismeretlen eszköz" },
+  "popup_open_all": {
+    "message": "Összes megnyitása"
+  },
+  "popup_sessions_head": {
+    "message": "Más eszközök lapjai"
+  },
+  "popup_unknown_device": {
+    "message": "Ismeretlen eszköz"
+  },
   "popup_tabs_one": {
     "message": "$COUNT$ lap",
-    "placeholders": { "count": { "content": "$1", "example": "1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
   },
   "popup_tabs_other": {
     "message": "$COUNT$ lap",
-    "placeholders": { "count": { "content": "$1", "example": "23" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "23"
+      }
+    }
   },
-  "popup_restore": { "message": "Visszaállítás" },
-
-  "popup_backend_label": { "message": "Tárhely" },
-  "popup_backend_none":  { "message": "Nincs" },
-  "popup_device_label":  { "message": "Eszköz" },
-  "popup_configure":     { "message": "Beállítás →" },
-  "popup_activity_log":  { "message": "Tevékenységnapló →" }
+  "popup_restore": {
+    "message": "Visszaállítás"
+  },
+  "popup_backend_label": {
+    "message": "Tárhely"
+  },
+  "popup_backend_none": {
+    "message": "Nincs"
+  },
+  "popup_device_label": {
+    "message": "Eszköz"
+  },
+  "popup_configure": {
+    "message": "Beállítás →"
+  },
+  "popup_activity_log": {
+    "message": "Tevékenységnapló →"
+  },
+  "common_back": {
+    "message": "Vissza"
+  },
+  "common_continue": {
+    "message": "Tovább"
+  },
+  "common_open_settings": {
+    "message": "Beállítások megnyitása"
+  },
+  "common_close": {
+    "message": "Bezárás"
+  },
+  "common_show": {
+    "message": "Megjelenítés"
+  },
+  "common_hide": {
+    "message": "Elrejtés"
+  },
+  "common_e2ee": {
+    "message": "Végpontok közötti titkosítás"
+  },
+  "common_generate_key": {
+    "message": "Erős kulcs generálása"
+  },
+  "provider_gdrive_desc": {
+    "message": "Szinkronizálás a saját Google Drive-odon. OAuth, és a rövid életű hozzáférési token csak ezen az eszközön marad."
+  },
+  "provider_nextcloud_desc": {
+    "message": "A saját Nextcloud vagy ownCloud szervered."
+  },
+  "provider_nextcloud_note": {
+    "message": "Csak a szerver címét add meg, és használj alkalmazásjelszót (Beállítások → Biztonság)."
+  },
+  "provider_pcloud_desc": {
+    "message": "pCloud tárhely. Fizetős pCloud-előfizetés kell hozzá."
+  },
+  "provider_pcloud_note": {
+    "message": "Válaszd ki, melyik régióban van a pCloud-fiókod."
+  },
+  "provider_koofr_desc": {
+    "message": "Koofr felhőtárhely."
+  },
+  "provider_koofr_note": {
+    "message": "A felhasználónév a Koofr e-mail-címed, a jelszó pedig egy Koofr alkalmazásjelszó."
+  },
+  "provider_fastmail_desc": {
+    "message": "Fastmail fájltárhely."
+  },
+  "provider_fastmail_note": {
+    "message": "A felhasználónév a teljes Fastmail-címed, és olyan alkalmazásjelszó kell, aminek van Files (WebDAV) hozzáférése."
+  },
+  "provider_github_desc": {
+    "message": "A szinkronizált adatok egy privát repóban, Personal Access Tokennel."
+  },
+  "provider_webdav_desc": {
+    "message": "Synology, kDrive vagy bármelyik más WebDAV szerver."
+  },
+  "provider_syncing_to": {
+    "message": "Szinkronizálás ide: $URL$.",
+    "placeholders": {
+      "url": {
+        "example": "https://app.koofr.net/dav/Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_welcome_title": {
+    "message": "Üdv a Konode-ban"
+  },
+  "onb_welcome_subtitle": {
+    "message": "Adatvédelem-központú böngésző-szinkronizálás. A könyvjelzőid, lapjaid és kiegészítőid a saját tárhelyedre. Közvetítő nélkül."
+  },
+  "onb_feature_storage": {
+    "message": "Az adataid a saját tárhelyeden maradnak"
+  },
+  "onb_feature_instant": {
+    "message": "Minden változásnál szinkronizál, nem csak időzítve"
+  },
+  "onb_feature_browsers": {
+    "message": "Működik Chrome-mal, Brave-vel és továbbiakkal"
+  },
+  "onb_feature_providers": {
+    "message": "Google Drive, WebDAV, GitHub. Te döntesz"
+  },
+  "onb_get_started": {
+    "message": "Kezdjük"
+  },
+  "onb_backend_title": {
+    "message": "Válaszd ki a tárhelyet"
+  },
+  "onb_backend_subtitle": {
+    "message": "Hol tárolja a Konode az adataidat?"
+  },
+  "onb_use_provider": {
+    "message": "$PROVIDER$ használata",
+    "placeholders": {
+      "provider": {
+        "example": "Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_drive_unavailable": {
+    "message": "A Google-bejelentkezés ebben a böngészőben nem működik. Válassz másik lehetőséget."
+  },
+  "onb_connecting": {
+    "message": "Kapcsolódás…"
+  },
+  "onb_sign_in_google": {
+    "message": "Bejelentkezés Google-fiókkal"
+  },
+  "onb_signin_failed": {
+    "message": "A bejelentkezés nem sikerült."
+  },
+  "onb_webdav_user_placeholder": {
+    "message": "Felhasználónév"
+  },
+  "onb_webdav_pass_placeholder": {
+    "message": "Jelszó / alkalmazás-token"
+  },
+  "onb_verifying": {
+    "message": "Ellenőrzés…"
+  },
+  "onb_github_401": {
+    "message": "A GitHub elutasította ezt a tokent. Ellenőrizd, hogy nem járt-e le, és hogy az egészet beillesztetted-e."
+  },
+  "onb_github_http": {
+    "message": "A GitHub nem tudta ellenőrizni a tokent (HTTP $STATUS$).",
+    "placeholders": {
+      "status": {
+        "example": "500",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_github_unreachable": {
+    "message": "A GitHub nem érhető el. Ellenőrizd a kapcsolatot, és próbáld újra."
+  },
+  "onb_github_branch_placeholder": {
+    "message": "Branch (alapértelmezés: main)"
+  },
+  "onb_github_token_link": {
+    "message": "Fine-grained token létrehozása (csak ehhez a repóhoz) →"
+  },
+  "onb_data_title": {
+    "message": "Mit szinkronizáljunk?"
+  },
+  "onb_data_subtitle": {
+    "message": "Ezt bármikor módosíthatod a Beállításokban."
+  },
+  "onb_data_bookmarks_desc": {
+    "message": "Mappák, sorrend, minden oldal"
+  },
+  "onb_data_extensions_desc": {
+    "message": "Megmutatja, mi hiányzik a többi eszközön"
+  },
+  "onb_data_history_desc": {
+    "message": "Az utolsó 30 nap"
+  },
+  "onb_data_sessions_desc": {
+    "message": "Elnevezett lapcsoportok"
+  },
+  "onb_device_name_label": {
+    "message": "Nevezd el ezt az eszközt"
+  },
+  "onb_device_name_desc": {
+    "message": "Így jelenik meg a többi eszközöd lap-listájában."
+  },
+  "onb_device_name_placeholder": {
+    "message": "Munkahelyi laptop"
+  },
+  "onb_encrypt_title": {
+    "message": "Titkosítsuk az adataidat?"
+  },
+  "onb_encrypt_subtitle": {
+    "message": "A te döntésed. A Konode így is, úgy is működik. A titkosítás még ezen az eszközön összekeveri az adatokat, feltöltés előtt, így a tárhelyszolgáltató soha nem tudja elolvasni őket."
+  },
+  "onb_e2ee_desc": {
+    "message": "AES-256-GCM. Ajánlott."
+  },
+  "onb_pass_placeholder": {
+    "message": "Adj meg egy jelmondatot, vagy generálj kulcsot →"
+  },
+  "onb_pass_missing": {
+    "message": "Adj meg egy jelmondatot, vagy generálj kulcsot."
+  },
+  "onb_pass_too_short": {
+    "message": "Legalább $MIN$ karakter. A szinkronizált adatok offline is támadhatók, ezért a rövid jelmondat kitalálható.",
+    "placeholders": {
+      "min": {
+        "example": "12",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_pass_confirm_placeholder": {
+    "message": "Jelmondat megerősítése"
+  },
+  "onb_pass_confirm_missing": {
+    "message": "Erősítsd meg a jelmondatot."
+  },
+  "onb_pass_mismatch": {
+    "message": "A két jelmondat még nem egyezik."
+  },
+  "onb_save_passphrase_lead": {
+    "message": "Mentsd el ezt a jelmondatot."
+  },
+  "onb_save_passphrase_rest": {
+    "message": "Soha nem hagyja el az eszközt, és ha elveszik, nem állítható vissza. Minden eszközön ugyanaznak kell lennie."
+  },
+  "onb_plaintext_note": {
+    "message": "Az adataid $WORD$ kerülnek a tárhelyedre. Ez rendben van olyan tárhelynél, amiben teljesen megbízol, és a titkosítást később is bekapcsolhatod a Beállításokban.",
+    "placeholders": {
+      "word": {
+        "example": "unencrypted",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_plaintext_word": {
+    "message": "titkosítás nélkül"
+  },
+  "onb_setting_up": {
+    "message": "Beállítás…"
+  },
+  "onb_finish_sync": {
+    "message": "Befejezés és szinkronizálás"
+  },
+  "onb_err_bad_webdav_url": {
+    "message": "Ez a WebDAV-cím nem tűnik érvényes URL-nek."
+  },
+  "onb_err_perms_webdav": {
+    "message": "A Konode-nak engedély kell a WebDAV-szerver eléréséhez és a kiválasztott adattípusokhoz. Engedélyezd őket a folytatáshoz."
+  },
+  "onb_err_perms_types": {
+    "message": "Néhány engedélyt elutasítottál. A folytatáshoz engedélyezd őket, vagy kapcsold ki azokat az adattípusokat."
+  },
+  "onb_err_read_settings": {
+    "message": "Nem sikerült beolvasni a jelenlegi beállításokat. Próbáld újra."
+  },
+  "onb_err_save": {
+    "message": "Nem sikerült elmenteni a beállítást: $ERROR$",
+    "placeholders": {
+      "error": {
+        "example": "HTTP 403",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_sync_title": {
+    "message": "Adatok szinkronizálása…"
+  },
+  "onb_sync_subtitle": {
+    "message": "A Konode most futtatja az első szinkronizálást. Ez a háttérben is fut, szóval nem kell itt várnod."
+  },
+  "onb_sync_error_title": {
+    "message": "Az első szinkronizálás nem fejeződött be"
+  },
+  "onb_sync_error_subtitle": {
+    "message": "A beállításaid el vannak mentve. Nyisd meg a Beállításokat a javításhoz, vagy fejezd be, és a Konode újrapróbálja a háttérben."
+  },
+  "onb_sync_timeout": {
+    "message": "Ez a szokásosnál hosszabb ideig tart. Egy nagy előzménylistánál ez előfordul. A szinkronizálás a háttérben tovább fut, szóval most is befejezheted."
+  },
+  "onb_finish": {
+    "message": "Befejezés"
+  },
+  "onb_finish_anyway": {
+    "message": "Befejezés mindenképp"
+  },
+  "onb_done_title": {
+    "message": "Minden kész!"
+  },
+  "onb_done_subtitle": {
+    "message": "A Konode mostantól ide szinkronizálja a böngésződ adatait: $BACKEND$. Az első szinkronizálás a háttérben fut.",
+    "placeholders": {
+      "backend": {
+        "example": "Google Drive",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_done_backend": {
+    "message": "A tárhely csatlakoztatva"
+  },
+  "onb_done_autosync": {
+    "message": "Automatikus szinkronizálás a háttérben"
+  },
+  "onb_done_adjust": {
+    "message": "Mindent állíthatsz a Beállításokban"
+  }
 }

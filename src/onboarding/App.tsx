@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { sendMessage, request } from "@/lib/utils/messaging";
 import { browser } from "@/lib/utils/ext";
+import { t, tParts } from "@/lib/utils/i18n";
 import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
 
 // Some engines (notably iOS WebKit, e.g. Orion) don't support interactive Google
@@ -34,12 +35,13 @@ type Step = "welcome" | "backend" | "data" | "encrypt" | "syncing" | "done";
 
 const STEPS: Step[] = ["welcome", "backend", "data", "encrypt", "done"];
 
-// Icon + label for the live sync-progress list (#3) — matches the data-types step.
-const TYPE_META: Record<"bookmarks" | "extensions" | "history" | "sessions", { Icon: typeof Bookmark; label: string }> = {
-  bookmarks:  { Icon: Bookmark, label: "Bookmarks" },
-  extensions: { Icon: Puzzle,   label: "Extensions" },
-  history:    { Icon: Clock,    label: "History" },
-  sessions:   { Icon: Globe,    label: "Sessions" },
+// Icon for the live sync-progress list (#3) — matches the data-types step. The label is
+// the shared `datatype_*` message, looked up at render.
+const TYPE_META: Record<"bookmarks" | "extensions" | "history" | "sessions", { Icon: typeof Bookmark }> = {
+  bookmarks:  { Icon: Bookmark },
+  extensions: { Icon: Puzzle   },
+  history:    { Icon: Clock    },
+  sessions:   { Icon: Globe    },
 };
 
 // ─── App ──────────────────────────────────────────────────────────────────
@@ -120,14 +122,24 @@ export default function OnboardingApp() {
 
   const hintStyle = { fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.4 };
 
+  // Sentences whose middle is a separate element: the URL is monospace, the emphasised
+  // word is bold, and the storage provider's name must not be translated. `tParts` splits
+  // the translated string at its placeholder, so word order stays the translator's call.
+  const syncingTo = (url: string) => {
+    const [before, after] = tParts("provider_syncing_to");
+    return <>{before}<code>{url}</code>{after}</>;
+  };
+  const plaintextNote = tParts("onb_plaintext_note");
+  const doneNote = tParts("onb_done_subtitle");
+
   // Shared WebDAV username + password inputs (stacked). Used by every WebDAV card.
   const webdavCreds = () => (
     <>
-      <input style={S.input} placeholder="Username" autoComplete="off"
+      <input style={S.input} placeholder={t("onb_webdav_user_placeholder")} autoComplete="off"
         value={webdavUser} onChange={(e) => setWebdavUser(e.target.value)} />
       <div style={{ position: "relative" }}>
         <input style={{ ...S.input, width: "100%", paddingRight: 32 }}
-          type={showPass ? "text" : "password"} placeholder="Password / App token"
+          type={showPass ? "text" : "password"} placeholder={t("onb_webdav_pass_placeholder")}
           value={webdavPass} onChange={(e) => setWebdavPass(e.target.value)} />
         <button style={S.eyeBtn} onClick={() => setShowPass((v) => !v)}>
           {showPass ? <EyeOff size={12} /> : <Eye size={12} />}
@@ -249,7 +261,7 @@ export default function OnboardingApp() {
       try {
         origins.push(new URL(effectiveWebdavUrl).origin + "/*");
       } catch {
-        setSetupError("That WebDAV address doesn't look like a valid URL.");
+        setSetupError(t("onb_err_bad_webdav_url"));
         return;
       }
     }
@@ -265,11 +277,7 @@ export default function OnboardingApp() {
         granted = false;
       }
       if (!granted) {
-        setSetupError(
-          origins.length
-            ? "Konode needs permission to reach your WebDAV server and the data types you chose. Please allow them to continue."
-            : "Some permissions were declined. Grant them, or turn off those data types, to continue."
-        );
+        setSetupError(t(origins.length ? "onb_err_perms_webdav" : "onb_err_perms_types"));
         return;
       }
     }
@@ -280,7 +288,7 @@ export default function OnboardingApp() {
       // user was given no reason at all.
       const res = await request({ type: "GET_SETTINGS" });
       if (!res.ok || res.res.type !== "SETTINGS") {
-        setSetupError(res.ok ? "Couldn't read your current settings. Try again." : res.error);
+        setSetupError(res.ok ? t("onb_err_read_settings") : res.error);
         return;
       }
       const current: SyncSettings = res.res.payload;
@@ -317,7 +325,7 @@ export default function OnboardingApp() {
         },
       });
       if (!saved.ok) {
-        setSetupError(`Couldn't save your setup: ${saved.error}`);
+        setSetupError(t("onb_err_save", saved.error));
         return;
       }
 
@@ -348,7 +356,7 @@ export default function OnboardingApp() {
         const s = await interactiveSignIn();
         setGdriveUser({ email: s.email, displayName: s.displayName });
       } catch (err) {
-        setGdriveError(err instanceof Error ? err.message : "Failed");
+        setGdriveError(err instanceof Error ? err.message : t("onb_signin_failed"));
       } finally {
         setGdriveConnecting(false);
       }
@@ -395,14 +403,14 @@ export default function OnboardingApp() {
         setGithubUser(null);
         setGithubError(
           res.status === 401
-            ? "GitHub rejected this token. Check it hasn't expired, and that you pasted all of it."
-            : `GitHub couldn't verify the token (HTTP ${res.status}).`
+            ? t("onb_github_401")
+            : t("onb_github_http", String(res.status))
         );
       }
     } catch {
       if (stale()) return;
       setGithubUser(null);
-      setGithubError("Couldn't reach GitHub. Check your connection and try again.");
+      setGithubError(t("onb_github_unreachable"));
     } finally {
       if (!stale()) setGithubChecking(false);
     }
@@ -435,25 +443,23 @@ export default function OnboardingApp() {
           <div style={S.logoWrap}>
             <BrandMark size={32} color="white" />
           </div>
-          <h1 style={S.h1}>Welcome to Konode</h1>
-          <p style={S.subtitle}>
-            Privacy-first browser sync. Your bookmarks, sessions, and extensions, synced to your own storage. No middlemen.
-          </p>
+          <h1 style={S.h1}>{t("onb_welcome_title")}</h1>
+          <p style={S.subtitle}>{t("onb_welcome_subtitle")}</p>
           <div style={S.featureList}>
             {[
-              ["🔒", "Your data stays on your storage"],
-              ["⚡", "Sync on every change, not just on schedule"],
-              ["🌐", "Works across Chrome, Brave, and more"],
-              ["📦", "Google Drive, WebDAV, GitHub. You choose"],
-            ].map(([icon, text]) => (
-              <div key={text} style={S.featureRow}>
+              ["🔒", "onb_feature_storage"],
+              ["⚡", "onb_feature_instant"],
+              ["🌐", "onb_feature_browsers"],
+              ["📦", "onb_feature_providers"],
+            ].map(([icon, key]) => (
+              <div key={key} style={S.featureRow}>
                 <span>{icon}</span>
-                <span style={{ color: "var(--text-secondary)", fontSize: 14 }}>{text}</span>
+                <span style={{ color: "var(--text-secondary)", fontSize: 14 }}>{t(key)}</span>
               </div>
             ))}
           </div>
           <button style={S.btnPrimary} onClick={next}>
-            Get started <ArrowRight size={16} />
+            {t("onb_get_started")} <ArrowRight size={16} />
           </button>
         </div>
       )}
@@ -461,8 +467,8 @@ export default function OnboardingApp() {
       {/* ── Backend ── */}
       {step === "backend" && (
         <div style={S.card}>
-          <h1 style={S.h1}>Choose your storage</h1>
-          <p style={S.subtitle}>Where should Konode store your data?</p>
+          <h1 style={S.h1}>{t("onb_backend_title")}</h1>
+          <p style={S.subtitle}>{t("onb_backend_subtitle")}</p>
 
           <div style={S.backendList}>
             {PROVIDERS.map((p) => {
@@ -471,7 +477,7 @@ export default function OnboardingApp() {
                 <div
                   key={p.id}
                   style={{ ...S.backendCard, ...(on ? S.backendSelected : {}) }}
-                  role="button" tabIndex={0} aria-pressed={on} aria-label={`Use ${p.label}`}
+                  role="button" tabIndex={0} aria-pressed={on} aria-label={t("onb_use_provider", p.label)}
                   onClick={() => pickProvider(p.id)}
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickProvider(p.id); } }}
                 >
@@ -479,7 +485,7 @@ export default function OnboardingApp() {
                     <ProviderLogo id={p.id} size={18} color={on ? "var(--text-primary)" : "var(--text-secondary)"} />
                     <div>
                       <div style={S.backendName}>{p.label}</div>
-                      <div style={S.backendDesc}>{p.desc}</div>
+                      <div style={S.backendDesc}>{t(p.descKey)}</div>
                     </div>
                     <div style={{ ...S.radio, ...(on ? S.radioChecked : {}) }} />
                   </div>
@@ -496,7 +502,7 @@ export default function OnboardingApp() {
                         </div>
                       ) : !DRIVE_AVAILABLE ? (
                         <div style={S.errorRow}>
-                          <XCircle size={12} /> Google sign-in isn't available in this browser. Pick another option.
+                          <XCircle size={12} /> {t("onb_drive_unavailable")}
                         </div>
                       ) : (
                         <>
@@ -509,7 +515,7 @@ export default function OnboardingApp() {
                                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                               </svg>
                             )}
-                            {gdriveConnecting ? "Connecting…" : "Sign in with Google"}
+                            {gdriveConnecting ? t("onb_connecting") : t("onb_sign_in_google")}
                           </button>
                           {gdriveError && <div style={S.errorRow}><XCircle size={12} /> {gdriveError}</div>}
                         </>
@@ -520,7 +526,7 @@ export default function OnboardingApp() {
                   {/* Koofr / Fastmail (fixed endpoint) */}
                   {on && (p.id === "koofr" || p.id === "fastmail") && (
                     <div style={S.authPanel} onClick={(e) => e.stopPropagation()}>
-                      <div style={hintStyle}>Syncing to <code>{p.fixedUrl}</code>.{p.note ? ` ${p.note}` : null}</div>
+                      <div style={hintStyle}>{syncingTo(p.fixedUrl!)}{p.noteKey ? ` ${t(p.noteKey)}` : null}</div>
                       {webdavCreds()}
                     </div>
                   )}
@@ -543,7 +549,7 @@ export default function OnboardingApp() {
                           );
                         })}
                       </div>
-                      <div style={hintStyle}>Syncing to <code>{webdavUrl}</code>.{p.note ? ` ${p.note}` : null}</div>
+                      <div style={hintStyle}>{syncingTo(webdavUrl)}{p.noteKey ? ` ${t(p.noteKey)}` : null}</div>
                       {webdavCreds()}
                     </div>
                   )}
@@ -551,11 +557,13 @@ export default function OnboardingApp() {
                   {/* Nextcloud / ownCloud (per-user host) */}
                   {on && p.id === "nextcloud" && (
                     <div style={S.authPanel} onClick={(e) => e.stopPropagation()}>
-                      <input style={S.input} placeholder="cloud.example.com"
+                      <input style={S.input} placeholder="cloud.example.com" /* an example host, the same in every language */
                         value={ncHost} onChange={(e) => setNcHost(e.target.value)} />
                       {webdavCreds()}
                       <div style={hintStyle}>
-                        {effectiveWebdavUrl ? <>Syncing to <code>{effectiveWebdavUrl}</code>. {p.note}</> : p.note}
+                        {effectiveWebdavUrl
+                          ? <>{syncingTo(effectiveWebdavUrl)} {p.noteKey ? t(p.noteKey) : null}</>
+                          : p.noteKey ? t(p.noteKey) : null}
                       </div>
                     </div>
                   )}
@@ -585,7 +593,7 @@ export default function OnboardingApp() {
                         </button>
                       </div>
                       {githubChecking && (
-                        <div style={S.verifyRow}><Loader2 size={12} className="spin" /> Verifying…</div>
+                        <div style={S.verifyRow}><Loader2 size={12} className="spin" /> {t("onb_verifying")}</div>
                       )}
                       {githubUser && !githubChecking && (
                         <div style={{ ...S.verifyRow, color: "var(--success)" }}>
@@ -601,14 +609,14 @@ export default function OnboardingApp() {
                         placeholder="username/konode-sync"
                         value={githubRepo} onChange={(e) => setGithubRepo(e.target.value)} />
                       <input style={{ ...S.input, fontFamily: "monospace" }}
-                        placeholder="Branch (default: main)"
+                        placeholder={t("onb_github_branch_placeholder")}
                         value={githubBranch} onChange={(e) => setGithubBranch(e.target.value)} />
                       <a
                         href="https://github.com/settings/personal-access-tokens/new"
                         target="_blank" rel="noreferrer"
                         style={{ fontSize: 12, color: "var(--text-link)", textDecoration: "none", marginTop: 4, display: "inline-block" }}
                       >
-                        Create a fine-grained token (only this repo) →
+                        {t("onb_github_token_link")}
                       </a>
                     </div>
                   )}
@@ -618,13 +626,13 @@ export default function OnboardingApp() {
           </div>
 
           <div style={S.navRow}>
-            <button style={S.btnSecondary} onClick={() => setStep("welcome")}>Back</button>
+            <button style={S.btnSecondary} onClick={() => setStep("welcome")}>{t("common_back")}</button>
             <button
               style={{ ...S.btnPrimary, flex: 1, opacity: canProceedBackend() ? 1 : 0.45, cursor: canProceedBackend() ? "pointer" : "not-allowed" }}
               onClick={next}
               disabled={!canProceedBackend()}
             >
-              Continue <ArrowRight size={16} />
+              {t("common_continue")} <ArrowRight size={16} />
             </button>
           </div>
         </div>
@@ -633,16 +641,19 @@ export default function OnboardingApp() {
       {/* ── Data Types ── */}
       {step === "data" && (
         <div style={S.card}>
-          <h1 style={S.h1}>What to sync?</h1>
-          <p style={S.subtitle}>You can change this anytime in Settings.</p>
+          <h1 style={S.h1}>{t("onb_data_title")}</h1>
+          <p style={S.subtitle}>{t("onb_data_subtitle")}</p>
 
           <div style={S.dataList}>
             {([
-              { key: "bookmarks",  Icon: Bookmark, label: "Bookmarks",  desc: "Folders, order, all sites" },
-              { key: "extensions", Icon: Puzzle,   label: "Extensions", desc: "Shows missing ones on other devices" },
-              { key: "history",    Icon: Clock,    label: "History",    desc: "Last 30 days" },
-              { key: "sessions",   Icon: Globe,    label: "Sessions",   desc: "Named tab groups" },
-            ] as const).map(({ key, Icon, label, desc }) => (
+              { key: "bookmarks",  Icon: Bookmark },
+              { key: "extensions", Icon: Puzzle   },
+              { key: "history",    Icon: Clock    },
+              { key: "sessions",   Icon: Globe    },
+            ] as const).map(({ key, Icon }) => {
+              const label = t(`datatype_${key}`);
+              const desc = t(`onb_data_${key}_desc`);
+              return (
               <label
                 key={key}
                 style={S.dataRow}
@@ -670,7 +681,8 @@ export default function OnboardingApp() {
                   }} />
                 </div>
               </label>
-            ))}
+              );
+            })}
           </div>
 
           {/* Here rather than on a step of its own. Which types this device syncs and what
@@ -679,16 +691,14 @@ export default function OnboardingApp() {
               Brave are both "Windows 10/11 · Brave", and then the popup's session list and
               any future device management can't tell them apart. */}
           <div style={{ marginTop: 20 }}>
-            <div style={S.backendName}>Name this device</div>
-            <div style={{ ...S.backendDesc, marginBottom: 8 }}>
-              How it appears in the session list on your other devices.
-            </div>
+            <div style={S.backendName}>{t("onb_device_name_label")}</div>
+            <div style={{ ...S.backendDesc, marginBottom: 8 }}>{t("onb_device_name_desc")}</div>
             <input
               style={S.input}
               value={deviceLabel}
               onChange={(e) => setDeviceLabel(e.target.value)}
-              placeholder="Work laptop"
-              aria-label="Name this device"
+              placeholder={t("onb_device_name_placeholder")}
+              aria-label={t("onb_device_name_label")}
             />
           </div>
 
@@ -696,9 +706,9 @@ export default function OnboardingApp() {
             <div style={{ ...S.errorRow, marginTop: 12, marginBottom: 12 }}><XCircle size={12} /> {setupError}</div>
           )}
           <div style={S.navRow}>
-            <button style={S.btnSecondary} onClick={() => setStep("backend")}>Back</button>
+            <button style={S.btnSecondary} onClick={() => setStep("backend")}>{t("common_back")}</button>
             <button style={{ ...S.btnPrimary, flex: 1 }} onClick={() => setStep("encrypt")}>
-              Continue <ArrowRight size={14} />
+              {t("common_continue")} <ArrowRight size={14} />
             </button>
           </div>
         </div>
@@ -706,17 +716,14 @@ export default function OnboardingApp() {
 
       {step === "encrypt" && (
         <div style={S.card}>
-          <h1 style={S.h1}>Encrypt your data?</h1>
-          <p style={S.subtitle}>
-            Your choice. Konode works either way. Encryption scrambles everything on this device
-            before it's uploaded, so your storage provider can never read it.
-          </p>
+          <h1 style={S.h1}>{t("onb_encrypt_title")}</h1>
+          <p style={S.subtitle}>{t("onb_encrypt_subtitle")}</p>
 
           <label
             style={{ ...S.dataRow, marginBottom: 12 }}
             role="switch"
             aria-checked={encEnabled}
-            aria-label="End-to-end encryption"
+            aria-label={t("common_e2ee")}
             tabIndex={0}
             onClick={() => setEncEnabled((v) => !v)}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEncEnabled((v) => !v); } }}
@@ -724,8 +731,8 @@ export default function OnboardingApp() {
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <Lock size={16} color={encEnabled ? "var(--accent)" : "var(--text-secondary)"} />
               <div>
-                <div style={{ fontSize: 14, color: "var(--text-primary)" }}>End-to-end encryption</div>
-                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>AES-256-GCM. Recommended.</div>
+                <div style={{ fontSize: 14, color: "var(--text-primary)" }}>{t("common_e2ee")}</div>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{t("onb_e2ee_desc")}</div>
               </div>
             </div>
             <div style={{ ...S.toggleTrack, background: encEnabled ? "var(--accent)" : "var(--toggle-off)" }}>
@@ -739,25 +746,25 @@ export default function OnboardingApp() {
                 <input
                   style={{ ...S.input, width: "100%", paddingRight: 34, ...(encTouched && passMissing ? { borderColor: "var(--danger)" } : {}) }}
                   type={showEncPass ? "text" : "password"}
-                  placeholder="Choose a passphrase, or generate a key →"
+                  placeholder={t("onb_pass_placeholder")}
                   value={encPass}
                   onChange={(e) => setEncPass(e.target.value)}
                   aria-invalid={encTouched && passMissing}
                 />
                 <div style={S.inputBtnGroup}>
-                  <button type="button" style={S.iconBtn} onClick={() => setShowEncPass(v => !v)} title={showEncPass ? "Hide" : "Show"}>
+                  <button type="button" style={S.iconBtn} onClick={() => setShowEncPass(v => !v)} title={t(showEncPass ? "common_hide" : "common_show")}>
                     {showEncPass ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
               </div>
               {encTouched && passMissing && (
                 <div style={{ fontSize: 12, color: "var(--danger)", marginTop: 4 }}>
-                  Enter a passphrase, or generate a key.
+                  {t("onb_pass_missing")}
                 </div>
               )}
               {passTooShort && (
                 <div style={{ fontSize: 12, color: "var(--danger)", marginTop: 4 }}>
-                  At least {MIN_PASSPHRASE_LENGTH} characters. Synced data can be attacked offline, so short passphrases are guessable.
+                  {t("onb_pass_too_short", String(MIN_PASSPHRASE_LENGTH))}
                 </div>
               )}
               {confirmNeeded && (
@@ -765,14 +772,14 @@ export default function OnboardingApp() {
                   <input
                     style={{ ...S.input, marginTop: 8, ...((encTouched || encConfirm.length > 0) && confirmMismatch ? { borderColor: "var(--danger)" } : {}) }}
                     type="password"
-                    placeholder="Confirm passphrase"
+                    placeholder={t("onb_pass_confirm_placeholder")}
                     value={encConfirm}
                     onChange={(e) => setEncConfirm(e.target.value)}
                     aria-invalid={(encTouched || encConfirm.length > 0) && confirmMismatch}
                   />
                   {(encTouched || encConfirm.length > 0) && confirmMismatch && (
                     <div style={{ fontSize: 12, color: "var(--danger)", marginTop: 4 }}>
-                      {encConfirm.length === 0 ? "Confirm your passphrase." : "Passphrases don't match yet."}
+                      {t(encConfirm.length === 0 ? "onb_pass_confirm_missing" : "onb_pass_mismatch")}
                     </div>
                   )}
                 </>
@@ -781,17 +788,15 @@ export default function OnboardingApp() {
                 type="button"
                 onClick={() => { const k = generateRecoveryKey(); setEncPass(k); setEncGenerated(k); setEncConfirm(""); setShowEncPass(true); }}
                 style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                <Key size={12} /> Generate a strong key
+                <Key size={12} /> {t("common_generate_key")}
               </button>
               <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 10, lineHeight: 1.5 }}>
-                <b>Save this passphrase.</b> It never leaves your device and can't be recovered if lost,
-                and every device must use the same one.
+                <b>{t("onb_save_passphrase_lead")}</b> {t("onb_save_passphrase_rest")}
               </div>
             </div>
           ) : (
             <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 12, lineHeight: 1.5 }}>
-              Your data will be stored <b>unencrypted</b> on your backend. Fine for storage you fully trust;
-              you can turn encryption on later in Settings.
+              {plaintextNote[0]}<b>{t("onb_plaintext_word")}</b>{plaintextNote[1]}
             </div>
           )}
 
@@ -799,10 +804,10 @@ export default function OnboardingApp() {
             <div style={{ ...S.errorRow, marginBottom: 12 }}><XCircle size={12} /> {setupError}</div>
           )}
           <div style={S.navRow}>
-            <button style={S.btnSecondary} onClick={() => setStep("data")}>Back</button>
+            <button style={S.btnSecondary} onClick={() => setStep("data")}>{t("common_back")}</button>
             <button style={{ ...S.btnPrimary, flex: 1 }} onClick={finish} disabled={saving}>
               {saving ? <Loader2 size={14} className="spin" /> : <CheckCircle2 size={14} />}
-              {saving ? "Setting up…" : "Finish & Sync"}
+              {saving ? t("onb_setting_up") : t("onb_finish_sync")}
             </button>
           </div>
         </div>
@@ -811,22 +816,18 @@ export default function OnboardingApp() {
       {/* ── Syncing (live progress) ── */}
       {step === "syncing" && (
         <div style={S.card}>
-          <h1 style={S.h1}>{syncError ? "Couldn't finish the first sync" : "Syncing your data…"}</h1>
-          <p style={S.subtitle}>
-            {syncError
-              ? "Your settings are saved. Open Settings to fix this, or finish and let Konode retry in the background."
-              : "Konode is running its first sync. This also runs in the background, so you don't have to wait here."}
-          </p>
+          <h1 style={S.h1}>{t(syncError ? "onb_sync_error_title" : "onb_sync_title")}</h1>
+          <p style={S.subtitle}>{t(syncError ? "onb_sync_error_subtitle" : "onb_sync_subtitle")}</p>
 
           <div style={S.dataList}>
             {enabledTypes.map((key) => {
               const done = (syncCounts[key] ?? 0) > (baselineRef.current[key] ?? 0);
-              const { Icon, label } = TYPE_META[key];
+              const { Icon } = TYPE_META[key];
               return (
                 <div key={key} style={{ ...S.dataRow, cursor: "default" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <Icon size={16} color={done ? "var(--accent)" : "var(--text-secondary)"} />
-                    <div style={{ fontSize: 14, color: "var(--text-primary)" }}>{label}</div>
+                    <div style={{ fontSize: 14, color: "var(--text-primary)" }}>{t(`datatype_${key}`)}</div>
                   </div>
                   {done ? (
                     <CheckCircle2 size={16} color="var(--accent)" />
@@ -845,7 +846,7 @@ export default function OnboardingApp() {
           )}
           {syncTimedOut && !syncError && (
             <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 12, lineHeight: 1.5 }}>
-              This is taking longer than usual. A large history can do that. The sync keeps running in the background, so you can finish now.
+              {t("onb_sync_timeout")}
             </div>
           )}
 
@@ -853,14 +854,14 @@ export default function OnboardingApp() {
             <div style={S.navRow}>
               {syncError && (
                 <button style={{ ...S.btnPrimary, flex: 1 }} onClick={() => browser.runtime.openOptionsPage()}>
-                  Open Settings
+                  {t("common_open_settings")}
                 </button>
               )}
               <button
                 style={syncError ? S.btnSecondary : { ...S.btnPrimary, flex: 1 }}
                 onClick={() => setStep("done")}
               >
-                {syncError ? "Finish anyway" : "Finish"} <ArrowRight size={14} />
+                {t(syncError ? "onb_finish_anyway" : "onb_finish")} <ArrowRight size={14} />
               </button>
             </div>
           )}
@@ -871,25 +872,25 @@ export default function OnboardingApp() {
       {step === "done" && (
         <div style={{ ...S.card, textAlign: "center" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
-          <h1 style={S.h1}>You're all set!</h1>
+          <h1 style={S.h1}>{t("onb_done_title")}</h1>
           <p style={S.subtitle}>
-            Konode is now syncing your browser data to{" "}
-            <strong>{backend === "gdrive" ? "Google Drive" : backend === "github" ? "GitHub" : "WebDAV"}</strong>.
-            The first sync is running in the background.
+            {doneNote[0]}
+            <strong>{backend === "gdrive" ? "Google Drive" : backend === "github" ? "GitHub" : "WebDAV"}</strong>
+            {doneNote[1]}
           </p>
           <div style={{ ...S.featureList, marginBottom: 24 }}>
-            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 14, color: "var(--text-secondary)" }}>Backend connected</span></div>
-            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 14, color: "var(--text-secondary)" }}>Automatic background sync</span></div>
-            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 14, color: "var(--text-secondary)" }}>Adjust everything in Settings</span></div>
+            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 14, color: "var(--text-secondary)" }}>{t("onb_done_backend")}</span></div>
+            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 14, color: "var(--text-secondary)" }}>{t("onb_done_autosync")}</span></div>
+            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 14, color: "var(--text-secondary)" }}>{t("onb_done_adjust")}</span></div>
           </div>
           <button style={S.btnPrimary} onClick={() => window.close()}>
-            Close <ArrowRight size={16} />
+            {t("common_close")} <ArrowRight size={16} />
           </button>
           <button
             style={{ ...S.btnSecondary, marginTop: 8, width: "100%", justifyContent: "center" }}
             onClick={() => browser.runtime.openOptionsPage()}
           >
-            Open Settings
+            {t("common_open_settings")}
           </button>
         </div>
       )}
