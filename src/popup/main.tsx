@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { ErrorBoundary } from "@/lib/ui/error-boundary";
 import PopupApp from "./App";
 import "../index.css";
 
@@ -9,6 +10,8 @@ document.body.classList.add("sk-body");
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <PopupApp />
+    <ErrorBoundary surface="popup">
+      <PopupApp />
+    </ErrorBoundary>
   </React.StrictMode>
 );
