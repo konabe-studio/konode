@@ -401,7 +401,7 @@
     "description": "Shown in bold, immediately before onb_save_passphrase_rest. One sentence on its own."
   },
   "onb_save_passphrase_rest": {
-    "message": "It never leaves this device and cannot be recovered if you lose it. You have to enter the same passphrase on every device."
+    "message": "It never leaves this device and cannot be recovered if you lose it. You have to enter the same passphrase on every device. You can copy it later in Settings."
   },
   "onb_plaintext_note": {
     "message": "Without encryption, your data goes to your own storage $WORD$. That can be the right choice if you fully trust your storage provider. You can turn encryption on later in Settings at any time.",

@@ -351,7 +351,7 @@
     "message": "Speichere diese Passphrase."
   },
   "onb_save_passphrase_rest": {
-    "message": "Sie verlässt dieses Gerät nie und kann nicht wiederhergestellt werden, wenn sie verloren geht. Auf jedem Gerät musst du dieselbe Passphrase eingeben."
+    "message": "Sie verlässt dieses Gerät nie und kann nicht wiederhergestellt werden, wenn sie verloren geht. Auf jedem Gerät musst du dieselbe Passphrase eingeben. Später kannst du sie in den Einstellungen kopieren."
   },
   "onb_plaintext_note": {
     "message": "Ohne Verschlüsselung landen deine Daten $WORD$ in deinem eigenen Speicher. Das kann die richtige Wahl sein, wenn du deinem Speicheranbieter voll vertraust. Du kannst die Verschlüsselung später jederzeit in den Einstellungen aktivieren.",

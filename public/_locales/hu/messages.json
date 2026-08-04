@@ -351,7 +351,7 @@
     "message": "Mentsd el ezt a jelmondatot."
   },
   "onb_save_passphrase_rest": {
-    "message": "Nem hagyja el ezt az eszközt, és elvesztése esetén nem állítható vissza. Minden eszközön ugyanazt a jelmondatot kell megadnod."
+    "message": "Nem hagyja el ezt az eszközt, és elvesztése esetén nem állítható vissza. Minden eszközön ugyanazt a jelmondatot kell megadnod. Később a Beállításokban is kimásolhatod."
   },
   "onb_plaintext_note": {
     "message": "Ha nem használod a titkosítást, az adatok $WORD$ kerülnek a saját tárhelyedre. Ez megfelelő választás lehet, ha teljes mértékben megbízol a tárhelyszolgáltatóban. A titkosítást bármikor bekapcsolhatod később a Beállítások menüben.",
