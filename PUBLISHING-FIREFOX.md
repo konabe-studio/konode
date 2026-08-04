@@ -57,33 +57,68 @@ unaffected):
 
 ```bash
 npm ci
-npm run lint:firefox      # web-ext lint, expect 0 errors / 0 notices; fix anything it flags
+npm run lint:firefox      # web-ext lint
 npm run package:firefox   # → web-ext-artifacts/konode-<version>.zip
 ```
 
 `package:firefox` runs both Vite builds into `dist-firefox/`, rewrites the copied
 Chrome manifest into the Firefox variant, then `web-ext build` zips it.
 
+**`lint:firefox` expects 0 errors and 0 notices. Two warnings are normal** and are not
+ours: `UNSAFE_VAR_ASSIGNMENT` for `innerHTML` in the vendor chunk that carries react-dom
+(React sets `innerHTML` internally). `src/` contains no `innerHTML` and no
+`dangerouslySetInnerHTML`. Warnings are not a rejection reason.
+
+**Write down the exact Node and npm you built with** — step 4 needs them. Measured
+2026-08-04: the build is **byte-for-byte deterministic** on the same machine and
+toolchain (two consecutive `build:firefox` runs, all 24 files identical), which is what
+makes the reviewer's diff pass at all. What has NOT been verified is whether a *different
+Node major* emits identical bytes, so declare the version rather than a range.
+
 ## 2. Submit (listed) on AMO
 1. Developer Hub → **Submit a New Add-on**.
 2. Distribution channel: **On this site** (listed / public). (Pick *On your own*
    only if you want a self-distributed signed `.xpi` instead of a public listing.)
 3. Upload `web-ext-artifacts/konode-<version>.zip`. AMO auto-validates it.
-4. **Source code (required).** Konode is bundled/minified by Vite, so AMO reviewers
-   need the sources + build steps:
-   - Upload a **source archive**: a `git archive` of the repo **without**
-     `node_modules/` and **without `.env`**.
-   - Reviewer / build notes:
+4. **Source code (required).** Konode is bundled and minified by Vite, and Mozilla
+   requires sources whenever a module bundler or minifier is used. The reviewer
+   **rebuilds and diffs it against the uploaded package: "there must be no
+   differences."** So the notes have to reproduce the bytes, not merely explain them.
+   - Upload a **source archive** straight from the tag (the repo is public, so this
+     needs no cleanup, and it cannot accidentally carry `node_modules/` or `.env`):
+     ```bash
+     git archive --format=zip -o web-ext-artifacts/konode-src-1.2.0.zip v1.2.0
      ```
-     Node 20+.  npm ci  →  npm run build:firefox
-     Output in dist-firefox/. Two Vite builds (UI + service worker) then
-     scripts/make-firefox-manifest.mjs rewrites the manifest for Firefox.
+   - ⚠️ **The Google client secret has to go in the reviewer notes.** `.env` is not in
+     the repo, and `VITE_GOOGLE_CLIENT_SECRET` **is compiled into the output** —
+     verified 2026-08-04, it appears in `background.js` and in `chunks/theme-*.js`. A
+     secret-less rebuild therefore differs in two files and **fails the diff**. Saying
+     "Drive is optional, a secret-less build just disables it" does not satisfy the
+     requirement; it explains a difference that is not allowed to exist.
+     Handing it over costs nothing that isn't already spent: the source submission is
+     private to Mozilla, and the value is readable in the published `.xpi` by anyone who
+     unzips it. (A distributed client secret is not a secret. Google's *Web application*
+     client type is what forces one into the PKCE exchange; a client type that permits a
+     genuinely public client would remove it. Out of scope here, worth its own decision.)
+     **Never commit it.**
+   - Reviewer / build notes — paste this, with the version numbers you actually used:
      ```
-   - ⚠️ **Google client secret.** The released build injects
-     `VITE_GOOGLE_CLIENT_SECRET` at build time; it is **not** in the repo. In the
-     reviewer notes either (a) state that Drive is optional and a secret-less build
-     simply disables it (GitHub/WebDAV still work), or (b) hand the reviewer the
-     secret privately via the notes. **Never commit it.**
+     Build: Node 20.20.2, npm 10.8.2 (Windows 11). Deterministic: repeat runs
+     produce identical bytes.
+
+       1. unzip the source archive
+       2. create a file `.env` at the repo root containing exactly:
+          VITE_GOOGLE_CLIENT_SECRET=<paste the value here>
+       3. npm ci
+       4. npm run build:firefox
+
+     Output is dist-firefox/, which is what the uploaded zip contains. The build
+     runs two Vite passes (UI entry points, then the background script) and then
+     scripts/make-firefox-manifest.mjs rewrites the copied Chrome manifest into the
+     Firefox variant (event-page background, gecko id, no Chrome `key`).
+     ```
+     Mozilla's reviewers default to Ubuntu 24.04.4 / Node 24.14.0 / npm 11.9.0 and ask
+     that you document any difference from that — hence naming the exact versions above.
 5. **Listing metadata:** name (Konode), summary, full description, screenshots,
    category, support email, homepage (optional), license (match the repo), and the
    **privacy-policy URL** (the live `PRIVACY.md`). Reuse the Chrome `STORE_LISTING.md`
