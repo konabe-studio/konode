@@ -26,12 +26,20 @@ jobs:
       - name: Check
         run: npm run check
 
-      # Source build: no VITE_GOOGLE_CLIENT_SECRET in CI, so the released zip is the
+      # Source builds: no VITE_GOOGLE_CLIENT_SECRET in CI, so both released zips are the
       # "bring your own OAuth client" variant — Drive sign-in needs the user's own
-      # OAuth client. The official Web Store zip is built locally with the secret
-      # and uploaded by hand.
+      # OAuth client. The zips uploaded to the Chrome Web Store and to AMO are built
+      # locally WITH the secret, by hand. Keep it that way: the release page is a public
+      # download, and these two must not become the same file by accident.
       - name: Package (Chrome)
         run: npm run package:chrome
+
+      # Runtime-verified on Firefox desktop as of 1.2.0, which is what the note here used
+      # to be waiting for. `package:firefox` passes --filename, so this lands as
+      # konode-firefox-<version>.zip; web-ext's default name (konode-<version>.zip) sat
+      # beside the Chrome zip with nothing to tell a downloader which was which.
+      - name: Package (Firefox)
+        run: npm run package:firefox
 
       - name: Create release
         env:
@@ -39,8 +47,16 @@ jobs:
         run: >
           gh release create "$GITHUB_REF_NAME"
           web-ext-artifacts/konode-chrome-*.zip
+          web-ext-artifacts/konode-firefox-*.zip
           --title "$GITHUB_REF_NAME"
           --generate-notes
 
-# Firefox: once the build is runtime-verified, add `npm run package:firefox` above
-# and include web-ext-artifacts/konode-<version>.zip in the assets list.
+# `--generate-notes` only produces a "Full Changelog" compare link, which is not enough on
+# its own: a visitor cannot tell the two zips apart, and cannot know that Drive needs their
+# own OAuth client in these builds. Replace the body by hand after the run — see the v1.2.0
+# release for the shape (which download for which browser, the Drive caveat, upgrade note).
+#
+# Not done, worth doing: `npm run checksum` fingerprints dist/ and its whole point is to be
+# published per release, but the number is only trustworthy if the thing that BUILT the
+# asset computes it. That means composing the notes here instead of --generate-notes, so it
+# waits for a release where the notes step can actually be tried.

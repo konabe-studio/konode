@@ -58,7 +58,7 @@ unaffected):
 ```bash
 npm ci
 npm run lint:firefox      # web-ext lint
-npm run package:firefox   # → web-ext-artifacts/konode-<version>.zip
+npm run package:firefox   # → web-ext-artifacts/konode-firefox-<version>.zip
 ```
 
 `package:firefox` runs both Vite builds into `dist-firefox/`, rewrites the copied
@@ -79,7 +79,7 @@ Node major* emits identical bytes, so declare the version rather than a range.
 1. Developer Hub → **Submit a New Add-on**.
 2. Distribution channel: **On this site** (listed / public). (Pick *On your own*
    only if you want a self-distributed signed `.xpi` instead of a public listing.)
-3. Upload `web-ext-artifacts/konode-<version>.zip`. AMO auto-validates it.
+3. Upload `web-ext-artifacts/konode-firefox-<version>.zip`. AMO auto-validates it.
 4. **Source code (required).** Konode is bundled and minified by Vite, and Mozilla
    requires sources whenever a module bundler or minifier is used. The reviewer
    **rebuilds and diffs it against the uploaded package: "there must be no
@@ -129,11 +129,28 @@ Node major* emits identical bytes, so declare the version rather than a range.
      innerHTML and no dangerouslySetInnerHTML — grep the source archive for
      either to confirm.
      ```
-5. **Listing metadata:** name (Konode), summary, full description, screenshots,
-   category, support email, homepage (optional), license (match the repo), and the
-   **privacy-policy URL** (the live `PRIVACY.md`). Reuse the Chrome `STORE_LISTING.md`
-   copy where it fits.
+5. **Listing metadata.** Reuse the Chrome `STORE_LISTING.md` copy where it fits. The
+   answers settled at the 1.2.0 submission, so they don't need re-deriving:
+   - **Categories** (max 3): *Bookmarks*, *Privacy & Security*, *Tabs*. AMO has no
+     Productivity category, which is what the CWS listing uses.
+   - **Support email:** `konabe@proton.me` — the same address as the Google consent screen
+     and the gecko id. It becomes **public** on the listing.
+   - **Support website:** <https://github.com/konabe-studio/konode/issues>.
+   - **License:** *Mozilla Public License 2.0*, matching `LICENSE`.
+   - **This add-on is experimental:** leave unchecked.
+   - **Requires payment / non-free services / hardware:** leave unchecked. A free Google
+     Drive or GitHub account is enough; the paid providers on the storage cards are
+     options, not requirements.
+   - **Privacy policy:** tick the box and paste `PRIVACY.md` — AMO takes the policy
+     **text** (Markdown supported), unlike CWS which takes a URL.
 6. **Data collection:** answer *No data collected* (the manifest already says so).
+   ⚠️ **A reviewer cannot test Konode without third-party storage** — there are no Konode
+   accounts, it writes to storage the user already owns, and AMO's own checklist asks for
+   test credentials in that case. Least exposure: a throwaway GitHub repo plus a
+   fine-grained PAT scoped to **only that repo** (contents read/write), handed over in the
+   reviewer notes and **revoked when the review closes**. Drive would mean handing over a
+   Google account and needs an interactive consent flow; WebDAV would mean standing up a
+   server.
 7. **Firefox for Android: leave it UNCHECKED** until Konode has actually run there.
    Compatibility is set per version, so this is not a one-time decision — tick it in a
    later upload once tested. As of 1.2.0 it has never run on Android Firefox, and there

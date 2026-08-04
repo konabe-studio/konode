@@ -14,7 +14,7 @@
     "build:firefox:ui": "vite build --outDir dist-firefox",
     "build:firefox:sw": "vite build --config vite.sw.config.ts --outDir dist-firefox",
     "lint:firefox": "web-ext lint --source-dir dist-firefox",
-    "package:firefox": "npm run build:firefox && web-ext build --source-dir dist-firefox --artifacts-dir web-ext-artifacts --overwrite-dest",
+    "package:firefox": "npm run build:firefox && web-ext build --source-dir dist-firefox --artifacts-dir web-ext-artifacts --overwrite-dest --filename \"konode-firefox-{version}.zip\"",
     "dev": "vite build --watch",
     "icons": "node scripts/make-icons.mjs",
     "type-check": "tsc --noEmit",
