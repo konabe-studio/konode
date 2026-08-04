@@ -185,8 +185,14 @@ describe("a device notices when its own file has gone missing", () => {
   // never re-uploaded. The installed-extension list is exactly that. Three ways this
   // happens for real: another device used Forget on us, the user tidied the folder by hand
   // at their provider (which we have actively suggested), or the provider lost a file.
+  //
+  // This pass only MARKS the type — `uploadIfChanged` does the re-upload and the logging,
+  // because an empty payload is never uploaded at all and must therefore never be
+  // announced (see sync-engine.test.ts). So these tests read the mark, and check that the
+  // checksum record is left exactly as it was.
   type EnginePrivate = {
-    restoreOwnMissingFiles: (b: unknown, types: string[]) => Promise<void>;
+    findOwnMissingFiles: (b: unknown, types: string[]) => Promise<void>;
+    ownFilesMissing: Set<string>;
   };
   const priv = (e: unknown): EnginePrivate => e as EnginePrivate;
 
@@ -206,29 +212,37 @@ describe("a device notices when its own file has gone missing", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
-  it("clears the checksum so the next sync uploads it again", async () => {
+  it("marks the type so the next upload goes out regardless of the checksum", async () => {
     await chrome.storage.local.set({ [KEYS.UPLOAD_CHECKSUMS]: { extensions: "plain:abc" } });
     // The folder has our bookmarks but NOT our extensions.
     h.files.set("konode_bookmarks_me.json", packet("me", "bookmarks", "My Laptop", "2026-08-03T10:00:00.000Z"));
 
-    await priv(new SyncEngine(settings(), () => {})).restoreOwnMissingFiles(backend(), ["extensions"]);
+    const engine = new SyncEngine(settings(), () => {});
+    await priv(engine).findOwnMissingFiles(backend(), ["extensions"]);
 
-    expect((await checksums()).extensions).toBe("");
+    expect([...priv(engine).ownFilesMissing]).toEqual(["extensions"]);
+    // The record itself is untouched: uploadIfChanged decides, and it is the only thing
+    // that knows whether an upload happens at all.
+    expect((await checksums()).extensions).toBe("plain:abc");
   });
 
-  it("leaves the checksum alone when the file is right where it should be", async () => {
+  it("marks nothing when the file is right where it should be", async () => {
     await chrome.storage.local.set({ [KEYS.UPLOAD_CHECKSUMS]: { extensions: "plain:abc" } });
     h.files.set("konode_extensions_me.json", packet("me", "extensions", "My Laptop", "2026-08-03T10:00:00.000Z"));
 
-    await priv(new SyncEngine(settings(), () => {})).restoreOwnMissingFiles(backend(), ["extensions"]);
+    const engine = new SyncEngine(settings(), () => {});
+    await priv(engine).findOwnMissingFiles(backend(), ["extensions"]);
 
+    expect([...priv(engine).ownFilesMissing]).toEqual([]);
     expect((await checksums()).extensions).toBe("plain:abc");
   });
 
   it("does nothing for a type this device has never uploaded", async () => {
     // No record means nothing has gone missing; the ordinary first-upload path handles it.
-    await priv(new SyncEngine(settings(), () => {})).restoreOwnMissingFiles(backend(), ["history"]);
+    const engine = new SyncEngine(settings(), () => {});
+    await priv(engine).findOwnMissingFiles(backend(), ["history"]);
 
+    expect([...priv(engine).ownFilesMissing]).toEqual([]);
     expect(await checksums()).toEqual({});
   });
 
@@ -237,9 +251,26 @@ describe("a device notices when its own file has gone missing", () => {
     // know" rather than "missing".
     await chrome.storage.local.set({ [KEYS.UPLOAD_CHECKSUMS]: { extensions: "plain:abc" } });
 
+    const engine = new SyncEngine(settings(), () => {});
     await expect(
-      priv(new SyncEngine(settings(), () => {})).restoreOwnMissingFiles(backend({ fail: true }), ["extensions"])
+      priv(engine).findOwnMissingFiles(backend({ fail: true }), ["extensions"])
     ).resolves.toBeUndefined();
+    expect([...priv(engine).ownFilesMissing]).toEqual([]);
     expect((await checksums()).extensions).toBe("plain:abc");
+  });
+
+  it("forgets last sync's marks, so a file that came back is not re-announced", async () => {
+    // The set is engine state and `sync()` is called once a minute for the lifetime of the
+    // service worker. A stale mark would force a pointless upload, or announce a file that
+    // is sitting right there.
+    await chrome.storage.local.set({ [KEYS.UPLOAD_CHECKSUMS]: { extensions: "plain:abc" } });
+    const engine = new SyncEngine(settings(), () => {});
+    await priv(engine).findOwnMissingFiles(backend(), ["extensions"]);
+    expect([...priv(engine).ownFilesMissing]).toEqual(["extensions"]);
+
+    h.files.set("konode_extensions_me.json", packet("me", "extensions", "My Laptop", "2026-08-03T10:00:00.000Z"));
+    await priv(engine).findOwnMissingFiles(backend(), ["extensions"]);
+
+    expect([...priv(engine).ownFilesMissing]).toEqual([]);
   });
 });

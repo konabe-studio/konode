@@ -26,6 +26,9 @@ class FakeBackend implements IBackend {
   disconnect(): Promise<void> { return Promise.resolve(); }
   upload(packet: SyncPacket): Promise<void> {
     this.files.set(`${packet.data_type}_${packet.device_id}`, packet);
+    // Under the name a real backend writes, so a `listFiles` sees what an upload actually
+    // produced — which is what the missing-own-file check reads.
+    this.blobs.set(`konode_${packet.data_type}_${packet.device_id}.json`, JSON.stringify(packet));
     this.uploads.push(packet);
     return Promise.resolve();
   }
@@ -1185,5 +1188,64 @@ describe("SyncEngine.syncType — an envelope change forces one re-upload", () =
     await priv(engine()).syncType("bookmarks", backend, DEFAULT_STATE);
 
     expect(backend.uploads[0].device_label).toBe("Brave WINX");
+  });
+});
+
+describe("SyncEngine — putting back our own file after it has gone from the folder", () => {
+  function engine(): SyncEngine {
+    return new SyncEngine(
+      {
+        ...DEFAULT_SETTINGS,
+        device_id: "me",
+        device_label: "Helium WINX",
+        conflict_strategy: "lww",
+        active_backend: "github",
+        backends: [{ type: "github", label: "GitHub", enabled: true, github: { token: "t", repo: "owner/repo" } }],
+      },
+      () => {}
+    );
+  }
+
+  /** How many times the log has announced a missing own file. */
+  async function announcements(): Promise<number> {
+    const r = await chrome.storage.local.get(KEYS.AUDIT_LOG);
+    const log = (r[KEYS.AUDIT_LOG] ?? []) as Array<{ detail?: string }>;
+    return log.filter((e) => /no longer on the backend/.test(e.detail ?? "")).length;
+  }
+
+  it("uploads it again, and says so once", async () => {
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    const backend = new FakeBackend();
+    await priv(engine()).syncAllTypes(["bookmarks"], backend, DEFAULT_STATE);
+    expect(backend.uploads).toHaveLength(1);
+    expect(await announcements()).toBe(0);
+
+    // Another device used Forget on us (or the user tidied the folder by hand).
+    backend.blobs.delete("konode_bookmarks_me.json");
+    backend.files.clear();
+    await priv(engine()).syncAllTypes(["bookmarks"], backend, DEFAULT_STATE);
+    expect(backend.uploads).toHaveLength(2); // even though the payload is unchanged
+    expect(await announcements()).toBe(1);
+
+    // And now that it is back, it stops both uploading and talking about it.
+    await priv(engine()).syncAllTypes(["bookmarks"], backend, DEFAULT_STATE);
+    expect(backend.uploads).toHaveLength(2);
+    expect(await announcements()).toBe(1);
+  });
+
+  it("stays silent about a type whose payload is empty, however many syncs run", async () => {
+    // The report: this line repeated once a minute, forever, for `sessions` only. A browser
+    // whose one open tab is the extension page has no syncable session, so isPayloadEmpty
+    // skips the upload — the file can never come back, so a check that clears the checksum
+    // and announces the re-upload up front announces it again on every single cycle. The
+    // audit log is the one place we cannot afford noise, so nothing may be said about an
+    // upload that is not going to happen.
+    await chrome.storage.local.set({ [KEYS.UPLOAD_CHECKSUMS]: { sessions: "env2|github:owner/repo@main/konode|plain:old" } });
+    const backend = new FakeBackend(); // no konode_sessions_me.json in it, and no open tabs
+
+    for (let i = 0; i < 3; i++) await priv(engine()).syncAllTypes(["sessions"], backend, DEFAULT_STATE);
+
+    expect(backend.uploads).toHaveLength(0);
+    expect(await announcements()).toBe(0);
   });
 });

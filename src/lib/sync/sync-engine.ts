@@ -119,6 +119,10 @@ export class SyncEngine {
   // accumulated across data types and folded into the cumulative `bytes_transferred`
   // stat at the end. Reset per sync so it's a per-run tally, not a running double-count.
   private bytesThisSync = 0;
+  // Types whose own file is missing from the folder this sync, so the upload must go out
+  // even though the local checksum record says this content already went. Rebuilt every
+  // sync by `findOwnMissingFiles` and consumed by `uploadIfChanged`.
+  private ownFilesMissing = new Set<DataType>();
   // Local bookmarks the mass-delete guard refused to remove this sync (recovery
   // signal). >0 → an unusual deletion was blocked; sync() saves an auto-snapshot and
   // flags state.recovery_notice so the popup can surface it.
@@ -323,7 +327,7 @@ export class SyncEngine {
     state: SyncState
   ): Promise<string[]> {
     const errors: string[] = [];
-    await this.restoreOwnMissingFiles(backend, types);
+    await this.findOwnMissingFiles(backend, types);
     for (const dataType of types) {
       try {
         await this.syncType(dataType, backend, state);
@@ -352,15 +356,25 @@ export class SyncEngine {
    *
    * In every case the device carries on syncing and quietly stops publishing, which is the
    * same silent shape as the device_id bug fixed earlier: present, working, invisible.
-   * Clearing the checksum makes the next upload write it again.
+   *
+   * This only MARKS the type; `uploadIfChanged` does the re-upload and logs it. That split
+   * matters, because it is not this pass's business whether an upload happens at all: an
+   * EMPTY payload is deliberately never uploaded (`isPayloadEmpty`), so clearing its
+   * checksum here produced a file that stayed missing, was noticed missing again on the
+   * next cycle, and warned once a minute forever. Real case: a browser whose only open tab
+   * is the extension page has no syncable session, so its sessions file could never come
+   * back after another device used Forget on it. Marking instead means a type that is never
+   * uploaded is never announced — and the type that this feature exists for (the
+   * installed-extension list, unchanged for months) still goes out on the same cycle.
    *
    * One listing per sync, not per type. Never fatal: if the listing fails we simply do not
    * know, and a sync that works is worth more than this check.
    */
-  private async restoreOwnMissingFiles(
+  private async findOwnMissingFiles(
     backend: ReturnType<typeof createBackend>,
     types: DataType[]
   ): Promise<void> {
+    this.ownFilesMissing = new Set();
     let names: string[];
     try {
       names = await backend.listFiles("konode_");
@@ -373,11 +387,7 @@ export class SyncEngine {
       // Nothing recorded means we have never uploaded this type, so there is nothing that
       // has gone missing — leave the normal first-upload path to handle it.
       if ((await getLastUploadChecksum(dataType)) === null) continue;
-      await setLastUploadChecksum(dataType, "");
-      logger.warn(
-        "SyncEngine",
-        `This device's ${dataType} file is no longer on the backend, so it will be uploaded again`
-      );
+      this.ownFilesMissing.add(dataType);
     }
   }
 
@@ -903,7 +913,18 @@ export class SyncEngine {
     // on every idle interval — only when there's actually something to upload.
     // `uploadTag` folds in the encryption form + destination (see above).
     const tag = this.uploadTag(await sha256(JSON.stringify(payload)), this.e2eeActive);
-    if ((await getLastUploadChecksum(dataType)) === tag) {
+    // Our file has gone from the folder (see findOwnMissingFiles), so "unchanged since our
+    // last upload" is no reason to skip — there is nothing out there to be unchanged from.
+    // Announced here rather than in the pre-pass so it is only ever said about an upload
+    // that actually happens. Taken off the set so one sync cannot say it twice.
+    const missing = this.ownFilesMissing.delete(dataType);
+    if (missing) {
+      logger.warn(
+        "SyncEngine",
+        `This device's ${dataType} file is no longer on the backend, so it will be uploaded again`
+      );
+    }
+    if (!missing && (await getLastUploadChecksum(dataType)) === tag) {
       logger.info("SyncEngine", `${dataType}: unchanged since last upload, skipping`);
       return;
     }
