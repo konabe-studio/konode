@@ -23,6 +23,22 @@ const languages = readdirSync(LOCALES_DIR).sort();
 const en = catalogue("en");
 
 /**
+ * Languages Konode SHIPS as finished, as opposed to languages that merely exist.
+ *
+ * Completeness is a promise about the release, not about the folder. Translations are open
+ * to volunteers through Weblate, which puts a language in the repository the moment
+ * somebody starts it — so a half-finished `fr` is the normal, healthy state of work in
+ * progress, and failing the build over it would only teach us to reject the contribution.
+ *
+ * Every OTHER rule below still applies to every language: no invented keys, no dropped
+ * placeholders. Those are correctness. Only the "finish it" rule is a policy, and it binds
+ * the languages the maintainer can actually read and vouch for.
+ *
+ * Adding a language here is the last step of shipping it, after review.
+ */
+const SHIPPED = ["hu", "de"];
+
+/**
  * Every `.ts`/`.tsx` file under src/ that could ASK for a message — tests excluded, and
  * i18n.ts itself excluded because it is the implementation, not a call site: `plural()`
  * builds its key with `t(`${base}_${count === 1 ? "one" : "other"}`)`, and reading that as
@@ -130,10 +146,11 @@ describe("the English catalogue is the contract", () => {
 describe.each(languages.filter((l) => l !== "en"))("the %s catalogue", (lang) => {
   const other = catalogue(lang);
 
-  it("translates every English key", () => {
-    // chrome.i18n falls back to English per message, so a gap is not a crash — this is a
-    // policy, and the policy is: a language Konode ships is a language it finishes. It is
-    // also the only way a translator learns a release added strings.
+  it.runIf(SHIPPED.includes(lang))("translates every English key", () => {
+    // chrome.i18n falls back to English per message, so a gap is not a crash. This is the
+    // one rule that only binds SHIPPED languages: for those it is how a translator learns
+    // that a release added strings, and how the maintainer knows the screen is not half
+    // English. For a language still being worked on, a gap is just work in progress.
     expect(Object.keys(en).filter((k) => !other[k])).toEqual([]);
   });
 
