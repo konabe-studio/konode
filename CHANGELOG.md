@@ -3,13 +3,26 @@
 All notable changes to Konode. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
-## [1.2.0] - 2026-07-28
+## [1.2.0] - 2026-08-04
 
-A full code-review pass over the sync engine, the storage backends and the interface.
-Almost all of it is correctness: several ways your data could quietly fail to reach your
-other devices, and several places Konode reported success it had never actually checked.
-The sync file format is unchanged, so existing setups keep working — but every device
-re-uploads each of its files once on the first sync after updating. See Upgrade notes.
+A full code-review pass over the sync engine, the storage backends and the interface,
+plus a Firefox build you can install. Almost all of the rest is correctness: several ways
+your data could quietly fail to reach your other devices, and several places Konode
+reported success it had never actually checked. The sync file format is unchanged, so
+existing setups keep working — but every device re-uploads each of its files once on the
+first sync after updating. See Upgrade notes.
+
+### Added
+
+- **A Firefox build, in the release.** Konode has been built for Firefox since 1.0.0, but
+  this is the first release you can actually download it from. It syncs against the same
+  folder as your Chromium browsers, with the same providers and the same files, so a
+  Firefox install joins a group that is already running. Tested here across Firefox,
+  Brave and Helium on one sync folder: each device names itself to the others, bookmarks
+  and renames travel in both directions, and history arrives with its original dates,
+  which is something only Firefox lets an extension do. It is **not on Firefox Add-ons
+  yet** — see the release page for how to install it, and note that a temporary add-on has
+  to be re-added when the browser restarts.
 
 ### Fixed — data not reaching your other devices
 
@@ -191,7 +204,10 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
   deleted at the other end. So if you tidied your sync folder by hand, or your provider lost
   a file, anything that does not change on its own was never uploaded again. The installed
   extension list is exactly that: it can sit unchanged for months. The device carried on
-  syncing and silently stopped publishing.
+  syncing and silently stopped publishing. It only says so when it is actually putting the
+  file back: there is one case where it cannot (a browser whose only open tab is Konode's
+  own page has no session worth sending), and saying it anyway meant the same line once a
+  minute in the log this release is trying to make readable.
 - **You can see your devices, and forget the ones you no longer use.** Activity now lists
   every device with files in your sync folder, by name, with what it last uploaded and
   when. A device you have retired can be removed from there, which deletes its files from
@@ -256,7 +272,7 @@ re-uploads each of its files once on the first sync after updating. See Upgrade 
 
 ### Tooling
 
-- The test suite went from 180 to 324 tests. Every fix was checked by putting the old
+- The test suite went from 180 to 407 tests. Every fix was checked by putting the old
   behaviour back and confirming the new tests fail — including four places where the test
   doubles were hiding the bug and had to be made to behave like a real browser
   (bookmark position validation, alarm scheduling, history normalization and visit counts).
