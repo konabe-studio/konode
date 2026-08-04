@@ -21,7 +21,7 @@
   },
   "status_idle": {
     "message": "Ready",
-    "description": "Sync status: nothing is happening and nothing is wrong. Not 'finished' — this is the resting state."
+    "description": "Sync status: nothing is happening and nothing is wrong. Not 'finished'. This is the resting state."
   },
   "status_syncing": {
     "message": "Syncing…",
@@ -109,7 +109,7 @@
   },
   "popup_active_streams": {
     "message": "Active streams",
-    "description": "Heading above the four data-type dots. Displayed in capitals by the stylesheet — do not capitalise it here."
+    "description": "Heading above the four data-type dots. The stylesheet displays it in capitals, so do not capitalise it here."
   },
   "popup_missing_extensions_one": {
     "message": "$COUNT$ missing extension",
@@ -137,7 +137,7 @@
   },
   "popup_sessions_head": {
     "message": "Sessions from other devices",
-    "description": "Heading above the restorable sessions list. Displayed in capitals by the stylesheet — do not capitalise it here."
+    "description": "Heading above the restorable sessions list. The stylesheet displays it in capitals, so do not capitalise it here."
   },
   "popup_unknown_device": {
     "message": "Unknown device",
@@ -145,7 +145,7 @@
   },
   "popup_tabs_one": {
     "message": "$COUNT$ tab",
-    "description": "How many tabs a peer's session holds — exactly one.",
+    "description": "How many tabs a peer's session holds, in the case of exactly one.",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -259,7 +259,7 @@
   },
   "provider_syncing_to": {
     "message": "Syncing to $URL$.",
-    "description": "$URL$ is rendered in a monospace <code> element, so the sentence is split at the placeholder rather than interpolated — keep the placeholder as one piece.",
+    "description": "$URL$ is rendered in a monospace <code> element, so the sentence is split at the placeholder rather than interpolated. Keep the placeholder as one piece.",
     "placeholders": {
       "url": {
         "example": "https://app.koofr.net/dav/Koofr",
@@ -361,7 +361,7 @@
   },
   "onb_device_name_placeholder": {
     "message": "Work laptop",
-    "description": "An example name, not a default — the field arrives pre-filled with the detected one."
+    "description": "An example name, not a default. The field arrives pre-filled with the detected one."
   },
   "onb_encrypt_title": {
     "message": "Encrypt your data?"
@@ -437,7 +437,7 @@
   },
   "onb_err_save": {
     "message": "Couldn't save your setup: $ERROR$",
-    "description": "$ERROR$ is a message from the engine and stays in English — see CLAUDE.md on why the diagnostic layer is not translated.",
+    "description": "$ERROR$ is a message from the engine and stays in English. See CLAUDE.md on why the diagnostic layer is not translated.",
     "placeholders": {
       "error": {
         "example": "HTTP 403",
