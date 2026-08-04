@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, Fragment } from "react";
 import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, SyncExtension, SnapshotMeta, DeviceInfo } from "@/lib/types";
 import { sendMessage, request } from "@/lib/utils/messaging";
 import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
@@ -347,6 +347,8 @@ export default function OptionsApp() {
   const [devicesError, setDevicesError] = useState<string | null>(null);
   const [forgetting, setForgetting] = useState<string | null>(null);
   const [confirmForget, setConfirmForget] = useState<string | null>(null);
+  // Survives the forgotten device disappearing from the list, so it can't hang off its row.
+  const [forgetResult, setForgetResult] = useState<{ label: string; removed: number } | null>(null);
 
   const settingsFingerprint = (s: SyncSettings | null): string => {
     if (!s) return "";
@@ -430,11 +432,20 @@ export default function OptionsApp() {
     void loadDevices();
   }, [activeNav, loadDevices]);
 
-  const forgetDevice = async (id: string) => {
+  // The outcome has to be SAID. The row simply vanished, and then a device that is still
+  // running reappeared a minute later on its own — which reads either as "the forget didn't
+  // work" or as "something put it back". Both are wrong, and neither is the user's fault:
+  // an action that deletes files from your storage owes you an account of itself.
+  const forgetDevice = async (id: string, label: string) => {
     setForgetting(id);
     setConfirmForget(null);
+    setForgetResult(null);
     const r = await request({ type: "FORGET_DEVICE", payload: { device_id: id } });
-    if (!r.ok) setDevicesError(r.error);
+    if (r.ok && r.res.type === "DEVICE_FORGOTTEN") {
+      setForgetResult({ label, removed: r.res.payload.removed });
+    } else if (!r.ok) {
+      setDevicesError(r.error);
+    }
     await loadDevices();
     setForgetting(null);
   };
@@ -1669,11 +1680,25 @@ export default function OptionsApp() {
                   <div className="settings-card-head">
                     Devices
                     <span className="head-sub">
-                      Every device with files in your sync folder. Forgetting one deletes its
-                      files from your storage. It removes no bookmarks from any browser, and a
-                      device that is still running will upload itself again on its next sync.
+                      Every device with files in your sync folder, and what each one last
+                      uploaded. Forgetting a device deletes its files from your storage. It
+                      removes no bookmarks from any browser.
                     </span>
                   </div>
+                  {forgetResult && (
+                    <div className="settings-row">
+                      <div className="settings-row-left">
+                        <div className="row-desc">
+                          Deleted {forgetResult.removed} {forgetResult.removed === 1 ? "file" : "files"} belonging
+                          to {forgetResult.label}. If that browser is still running, it will upload
+                          itself again within a minute and reappear here. That is not a fault: to
+                          keep a device out, turn Konode off there first, then forget it here.
+                        </div>
+                      </div>
+                      <button className="btn-secondary" style={{ flexShrink: 0 }}
+                        onClick={() => setForgetResult(null)}>Dismiss</button>
+                    </div>
+                  )}
                   {devicesError && (
                     <div className="settings-row">
                       <div className="settings-row-left">
@@ -1699,36 +1724,53 @@ export default function OptionsApp() {
                     </div>
                   )}
                   {devices?.map((d) => (
-                    <div key={d.device_id} className="settings-row">
-                      <div className="settings-row-left">
-                        <div>
-                          <div className="row-label">
-                            {d.label ?? `Unnamed device (${d.device_id.slice(0, 8)})`}
-                            {d.isSelf && <span className="badge-active" style={{ marginLeft: 8 }}>THIS DEVICE</span>}
-                          </div>
-                          <div className="row-desc">
-                            {d.types.join(", ")}
-                            {d.lastSeen && ` · last upload ${new Date(d.lastSeen).toLocaleString()}`}
+                    <Fragment key={d.device_id}>
+                      <div className="settings-row">
+                        <div className="settings-row-left">
+                          <div>
+                            <div className="row-label">
+                              {d.label ?? `Unnamed device (${d.device_id.slice(0, 8)})`}
+                              {d.isSelf && <span className="badge-active" style={{ marginLeft: 8 }}>THIS DEVICE</span>}
+                            </div>
+                            <div className="row-desc">
+                              {d.types.join(", ")}
+                              {d.lastSeen && ` · last upload ${new Date(d.lastSeen).toLocaleString()}`}
+                            </div>
                           </div>
                         </div>
+                        {/* No trash can. The icon did more of the work than the word did: a bin
+                            next to "Forget" reads as "your bookmarks are about to go", when what
+                            goes is a few files in your own storage folder. */}
+                        {!d.isSelf && confirmForget !== d.device_id && (
+                          <button className="btn-secondary" disabled={forgetting !== null}
+                            onClick={() => setConfirmForget(d.device_id)}>
+                            {forgetting === d.device_id && <Loader2 size={12} className="spin" />} Forget
+                          </button>
+                        )}
                       </div>
-                      {!d.isSelf && (
-                        confirmForget === d.device_id ? (
+                      {/* The confirm carries the facts, because this is where the decision is
+                          made — a line in the section header above is read once, if at all. */}
+                      {confirmForget === d.device_id && (
+                        <div className="settings-row">
+                          <div className="settings-row-left">
+                            <div className="row-desc">
+                              Deletes {d.types.length === 1 ? "the one file" : `the ${d.types.length} files`} this
+                              device has in your storage ({d.types.join(", ")}). No bookmarks are removed
+                              from any browser, here or there. If that browser is still running it will
+                              upload itself again and reappear; to keep it out, turn Konode off there
+                              first.
+                            </div>
+                          </div>
                           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                             <button className="btn-secondary" onClick={() => setConfirmForget(null)}>Cancel</button>
                             <button className="btn-secondary" style={{ color: "var(--danger)" }}
-                              onClick={() => void forgetDevice(d.device_id)}>
+                              onClick={() => void forgetDevice(d.device_id, d.label ?? "that device")}>
                               Forget it
                             </button>
                           </div>
-                        ) : (
-                          <button className="btn-secondary" disabled={forgetting !== null}
-                            onClick={() => setConfirmForget(d.device_id)}>
-                            {forgetting === d.device_id ? <Loader2 size={12} className="spin" /> : <Trash2 size={12} />} Forget
-                          </button>
-                        )
+                        </div>
                       )}
-                    </div>
+                    </Fragment>
                   ))}
                 </div>
 
