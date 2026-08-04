@@ -69,14 +69,13 @@ export function streamColor(s: StreamState): string {
   }
 }
 
-/** Tooltip / aria wording. */
-export function streamLabel(s: StreamState): string {
-  switch (s) {
-    case "off":     return "off";
-    case "syncing": return "syncing…";
-    case "pending": return "waiting";
-    case "never":   return "not synced yet";
-    case "stale":   return "last sync failed";
-    case "synced":  return "synced";
-  }
+/**
+ * The message key for the tooltip / aria wording — not the wording itself.
+ *
+ * This returned English before. Keeping the lookup out of here leaves the module free of
+ * `browser.*`, so it stays a pure function the tests can call directly; the popup wraps
+ * the result in `t()`. The keys live in each locale's `messages.json` as `stream_<state>`.
+ */
+export function streamLabelKey(s: StreamState): string {
+  return `stream_${s}`;
 }

@@ -3,6 +3,11 @@
 // Vitest's Node environment. storage.local is a real in-memory store, cleared
 // between tests. This file lives outside src/ so tsc/eslint don't check it.
 import { vi, beforeEach } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const store = new Map();
 
@@ -253,8 +258,31 @@ function makeChrome() {
       clearAll: () => { alarmStore.clear(); return Promise.resolve(true); },
     },
     action: { setBadgeText: vi.fn(), setBadgeBackgroundColor: vi.fn() },
+    // Serves the REAL English messages, not a stub that echoes the key back. A fake that
+    // always answers means a missing key still looks fine under test, which is the whole
+    // failure mode i18n.test.ts exists to catch — so this behaves like the browser:
+    // unknown key → empty string, and substitutions actually get substituted.
+    i18n: {
+      getMessage: (key, subs) => {
+        const entry = enMessages[key];
+        if (!entry) return "";
+        const list = subs === undefined ? [] : Array.isArray(subs) ? subs : [subs];
+        let out = entry.message;
+        for (const [name, ph] of Object.entries(entry.placeholders ?? {})) {
+          const idx = Number(String(ph.content).replace("$", "")) - 1;
+          out = out.replace(new RegExp("\\$" + name + "\\$", "gi"), list[idx] ?? "");
+        }
+        return out.replace(/\$(\d)/g, (_m, d) => list[Number(d) - 1] ?? "");
+      },
+      getUILanguage: () => "en",
+    },
   };
 }
+
+// Read once at setup: the same file the extension ships.
+const enMessages = JSON.parse(
+  readFileSync(resolve(__dirname, "../public/_locales/en/messages.json"), "utf8")
+);
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 (globalThis as any).chrome = makeChrome();

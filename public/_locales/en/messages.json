@@ -1,0 +1,80 @@
+{
+  "extension_description": {
+    "message": "Privacy-first browser sync to your own storage: Google Drive, WebDAV, GitHub.",
+    "description": "Shown in the browser's extension list, and used as the store summary when the listing does not override it."
+  },
+
+  "datatype_bookmarks": { "message": "Bookmarks", "description": "One of the four data types. Also a section heading in Settings." },
+  "datatype_history":   { "message": "History",   "description": "One of the four data types." },
+  "datatype_sessions":  { "message": "Sessions",  "description": "One of the four data types: the tabs a device has open." },
+  "datatype_extensions":{ "message": "Extensions","description": "One of the four data types: the list of installed extensions." },
+
+  "status_idle":     { "message": "Ready",     "description": "Sync status: nothing is happening and nothing is wrong. Not 'finished' — this is the resting state." },
+  "status_syncing":  { "message": "Syncing…",  "description": "Sync status: a sync is running now." },
+  "status_success":  { "message": "Synced",    "description": "Sync status: the last sync completed." },
+  "status_error":    { "message": "Error",     "description": "Sync status: the last sync failed." },
+  "status_conflict": { "message": "Conflict",  "description": "Sync status: a conflict is waiting for the user to choose a version." },
+
+  "stream_off":      { "message": "off",                "description": "Per-data-type state, shown in a tooltip after the type name: this type is turned off in Settings. Lower case: it follows 'Bookmarks: '." },
+  "stream_syncing":  { "message": "syncing…",           "description": "Per-data-type state: this type is being synced right now." },
+  "stream_pending":  { "message": "waiting",            "description": "Per-data-type state: a sync is running but has not reached this type yet." },
+  "stream_never":    { "message": "not synced yet",     "description": "Per-data-type state: this type has never completed a sync. Must not sound like success." },
+  "stream_stale":    { "message": "last sync failed",   "description": "Per-data-type state: this type has synced before, but the most recent attempt failed." },
+  "stream_synced":   { "message": "synced",             "description": "Per-data-type state: this type synced successfully." },
+
+  "popup_settings_aria": { "message": "Settings", "description": "Accessible name of the gear button in the popup's top-right corner." },
+  "popup_sync_now":      { "message": "Sync now", "description": "The popup's primary button. While a sync runs it shows status_syncing instead." },
+
+  "popup_load_error": {
+    "message": "Couldn't reach Konode. Tap to retry.",
+    "description": "The popup could not read its own state. The whole banner is a button, hence 'tap to retry'."
+  },
+  "popup_recovery_notice": {
+    "message": "An unusual deletion ($COUNT$ bookmarks) was blocked and a restore point was saved. Review in Settings → Activity.",
+    "description": "The mass-delete guard refused a peer's deletions. Reassuring by design: nothing was lost. 'Settings → Activity' names a tab, so it must match the tab's own translation.",
+    "placeholders": { "count": { "content": "$1", "example": "412" } }
+  },
+  "popup_no_backend": { "message": "No backend configured", "description": "No storage provider has been set up yet. The banner opens Settings." },
+
+  "popup_conflict_title": {
+    "message": "Conflict in $TYPE$: choose a version",
+    "description": "A conflict is waiting for a decision. $TYPE$ is a data type name (bookmarks, history, sessions, extensions).",
+    "placeholders": { "type": { "content": "$1", "example": "bookmarks" } }
+  },
+  "popup_keep_local":  { "message": "Keep local",  "description": "Conflict resolution: keep what this device has." },
+  "popup_use_remote":  { "message": "Use remote",  "description": "Conflict resolution: take the other device's version." },
+
+  "popup_active_streams": { "message": "Active streams", "description": "Heading above the four data-type dots. Displayed in capitals by the stylesheet — do not capitalise it here." },
+
+  "popup_missing_extensions_one": {
+    "message": "$COUNT$ missing extension",
+    "description": "Exactly one extension is installed on another device but not on this one.",
+    "placeholders": { "count": { "content": "$1", "example": "1" } }
+  },
+  "popup_missing_extensions_other": {
+    "message": "$COUNT$ missing extensions",
+    "description": "More than one extension is installed on another device but not on this one. In languages that use the singular after a numeral, this is the same wording as the _one form.",
+    "placeholders": { "count": { "content": "$1", "example": "7" } }
+  },
+  "popup_open_all": { "message": "Open all", "description": "Opens a store page for every missing extension, one tab each." },
+
+  "popup_sessions_head":  { "message": "Sessions from other devices", "description": "Heading above the restorable sessions list. Displayed in capitals by the stylesheet — do not capitalise it here." },
+  "popup_unknown_device": { "message": "Unknown device", "description": "Fallback name for a peer device whose session carries no label." },
+  "popup_tabs_one": {
+    "message": "$COUNT$ tab",
+    "description": "How many tabs a peer's session holds — exactly one.",
+    "placeholders": { "count": { "content": "$1", "example": "1" } }
+  },
+  "popup_tabs_other": {
+    "message": "$COUNT$ tabs",
+    "description": "How many tabs a peer's session holds. In languages that use the singular after a numeral, this is the same wording as the _one form.",
+    "placeholders": { "count": { "content": "$1", "example": "23" } }
+  },
+  "popup_restore": { "message": "Restore", "description": "Opens the tabs of a peer device's session. Adds tabs; removes nothing." },
+
+  "popup_backend_label": { "message": "Backend", "description": "Footer label before the storage provider's name." },
+  "popup_backend_none":  { "message": "None",    "description": "Footer value when no storage provider is set up." },
+  "popup_device_label":  { "message": "Device",  "description": "Footer label before this device's name." },
+  "popup_configure":     { "message": "Configure →", "description": "Footer link to Settings. Keep the arrow." },
+  "popup_activity_log":  { "message": "Activity log →", "description": "Footer link that opens Settings on the Activity tab. Keep the arrow." }
+}

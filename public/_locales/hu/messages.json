@@ -1,0 +1,70 @@
+{
+  "extension_description": {
+    "message": "Adatvédelem-központú böngésző-szinkronizálás a saját tárhelyedre: Google Drive, WebDAV, GitHub."
+  },
+
+  "datatype_bookmarks":  { "message": "Könyvjelzők" },
+  "datatype_history":    { "message": "Előzmények" },
+  "datatype_sessions":   { "message": "Lapok" },
+  "datatype_extensions": { "message": "Kiegészítők" },
+
+  "status_idle":     { "message": "Készenlétben" },
+  "status_syncing":  { "message": "Szinkronizálás…" },
+  "status_success":  { "message": "Szinkronizálva" },
+  "status_error":    { "message": "Hiba" },
+  "status_conflict": { "message": "Ütközés" },
+
+  "stream_off":     { "message": "ki" },
+  "stream_syncing": { "message": "szinkronizálás…" },
+  "stream_pending": { "message": "várakozik" },
+  "stream_never":   { "message": "még nem szinkronizált" },
+  "stream_stale":   { "message": "az utolsó szinkronizálás nem sikerült" },
+  "stream_synced":  { "message": "szinkronizálva" },
+
+  "popup_settings_aria": { "message": "Beállítások" },
+  "popup_sync_now":      { "message": "Szinkronizálás most" },
+
+  "popup_load_error": { "message": "A Konode nem érhető el. Kattints az újrapróbálkozáshoz." },
+  "popup_recovery_notice": {
+    "message": "Egy szokatlan törlést ($COUNT$ könyvjelző) letiltottunk, és mentettünk egy visszaállítási pontot. Megtekintés: Beállítások → Tevékenység.",
+    "placeholders": { "count": { "content": "$1", "example": "412" } }
+  },
+  "popup_no_backend": { "message": "Nincs beállítva tárhely" },
+
+  "popup_conflict_title": {
+    "message": "Ütközés itt: $TYPE$. Válassz egy változatot.",
+    "placeholders": { "type": { "content": "$1", "example": "könyvjelzők" } }
+  },
+  "popup_keep_local": { "message": "Helyi megtartása" },
+  "popup_use_remote": { "message": "Távoli használata" },
+
+  "popup_active_streams": { "message": "Aktív folyamok" },
+
+  "popup_missing_extensions_one": {
+    "message": "$COUNT$ hiányzó kiegészítő",
+    "placeholders": { "count": { "content": "$1", "example": "1" } }
+  },
+  "popup_missing_extensions_other": {
+    "message": "$COUNT$ hiányzó kiegészítő",
+    "placeholders": { "count": { "content": "$1", "example": "7" } }
+  },
+  "popup_open_all": { "message": "Összes megnyitása" },
+
+  "popup_sessions_head":  { "message": "Más eszközök lapjai" },
+  "popup_unknown_device": { "message": "Ismeretlen eszköz" },
+  "popup_tabs_one": {
+    "message": "$COUNT$ lap",
+    "placeholders": { "count": { "content": "$1", "example": "1" } }
+  },
+  "popup_tabs_other": {
+    "message": "$COUNT$ lap",
+    "placeholders": { "count": { "content": "$1", "example": "23" } }
+  },
+  "popup_restore": { "message": "Visszaállítás" },
+
+  "popup_backend_label": { "message": "Tárhely" },
+  "popup_backend_none":  { "message": "Nincs" },
+  "popup_device_label":  { "message": "Eszköz" },
+  "popup_configure":     { "message": "Beállítás →" },
+  "popup_activity_log":  { "message": "Tevékenységnapló →" }
+}

@@ -6,7 +6,8 @@ import { browser, currentStore } from "@/lib/utils/ext";
 import { isInstalledLocally, installOrSearchUrl } from "@/lib/utils/extensions-match";
 import { KEYS, getSettings, getState, normalizeRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/storage";
 import { STATE_UPDATE } from "@/lib/constants";
-import { streamState, streamInputFor, streamColor, streamLabel } from "@/popup/stream-state";
+import { streamState, streamInputFor, streamColor, streamLabelKey } from "@/popup/stream-state";
+import { t, plural } from "@/lib/utils/i18n";
 import {
   RefreshCw, Settings, Bookmark, Clock, Globe,
   AlertCircle, Loader2, ChevronRight,
@@ -15,19 +16,22 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
-const DATA_TYPE_META: Record<DataType, { label: string; icon: typeof Bookmark }> = {
-  bookmarks:  { label: "Bookmarks",  icon: Bookmark },
-  history:    { label: "History",    icon: Clock    },
-  sessions:   { label: "Sessions",   icon: Globe    },
-  extensions: { label: "Extensions", icon: Puzzle   },
+// Icons are static; the labels are looked up per render so they follow the browser's
+// language. Same for STATUS_CONFIG below: the colour classes stay in the table, the
+// wording moves out of it.
+const DATA_TYPE_META: Record<DataType, { icon: typeof Bookmark }> = {
+  bookmarks:  { icon: Bookmark },
+  history:    { icon: Clock    },
+  sessions:   { icon: Globe    },
+  extensions: { icon: Puzzle   },
 };
 
 const STATUS_CONFIG = {
-  idle:     { color: "text-sk-muted",  dot: "bg-sk-subtle", ring: "border-sk-subtle", label: "Ready"    },
-  syncing:  { color: "text-sk-warn",   dot: "bg-sk-warn",   ring: "border-sk-warn",   label: "Syncing…" },
-  success:  { color: "text-sk-text",   dot: "bg-sk-signal", ring: "border-sk-signal", label: "Synced"   },
-  error:    { color: "text-sk-danger", dot: "bg-sk-danger", ring: "border-sk-danger", label: "Error"    },
-  conflict: { color: "text-sk-warn",   dot: "bg-sk-warn",   ring: "border-sk-warn",   label: "Conflict" },
+  idle:     { color: "text-sk-muted",  dot: "bg-sk-subtle", ring: "border-sk-subtle" },
+  syncing:  { color: "text-sk-warn",   dot: "bg-sk-warn",   ring: "border-sk-warn"   },
+  success:  { color: "text-sk-text",   dot: "bg-sk-signal", ring: "border-sk-signal" },
+  error:    { color: "text-sk-danger", dot: "bg-sk-danger", ring: "border-sk-danger" },
+  conflict: { color: "text-sk-warn",   dot: "bg-sk-warn",   ring: "border-sk-warn"   },
 };
 
 const SYNC_ORDER: DataType[] = ["bookmarks", "history", "sessions", "extensions"];
@@ -228,7 +232,7 @@ export default function PopupApp() {
   // Show the chosen provider's name (e.g. "Koofr"), not the raw backend type
   // ("webdav") — several providers map to the WebDAV backend.
   const backendLabel = (() => {
-    if (!settings?.active_backend) return "None";
+    if (!settings?.active_backend) return t("popup_backend_none");
     const url = settings.backends.find((b) => b.type === "webdav")?.webdav?.url;
     const pid = providerFromConfig(settings.active_backend, url);
     return pid ? providerById(pid).label : settings.active_backend;
@@ -252,13 +256,13 @@ export default function PopupApp() {
             )}
             <span className={`h-2 w-2 rounded-full ${statusCfg.dot}`} />
           </span>
-          <span className={`text-sm font-medium ${statusCfg.color}`}>{statusCfg.label}</span>
+          <span className={`text-sm font-medium ${statusCfg.color}`}>{t(`status_${status}`)}</span>
         </div>
         <div className="flex items-center gap-2">
           {lastSync && <span className="font-mono text-[14px] tabular-nums text-sk-muted">{lastSync}</span>}
           <button
             onClick={openOptions}
-            aria-label="Settings"
+            aria-label={t("popup_settings_aria")}
             className="flex h-8 w-8 items-center justify-center rounded-icon text-sk-muted transition-colors hover:bg-sk-raised"
           >
             <Settings size={18} strokeWidth={1.75} />
@@ -282,7 +286,7 @@ export default function PopupApp() {
             >
               <AlertCircle size={12} className="mt-0.5 shrink-0 text-sk-warn" />
               <span className="text-[12px] text-sk-warn">
-                An unusual deletion ({state.recovery_notice.blocked} bookmarks) was blocked and a restore point was saved. Review in Settings → Activity.
+                {t("popup_recovery_notice", String(state.recovery_notice.blocked))}
               </span>
             </button>
           )}
@@ -292,7 +296,7 @@ export default function PopupApp() {
               onClick={load}
               className="flex w-full items-center justify-center gap-2 rounded-box border border-sk-hairline bg-sk-raised px-3 py-2 text-[12px] text-sk-danger transition-colors hover:bg-sk-tint"
             >
-              <AlertCircle size={12} /> Couldn't reach Konode. Tap to retry.
+              <AlertCircle size={12} /> {t("popup_load_error")}
             </button>
           )}
 
@@ -308,20 +312,20 @@ export default function PopupApp() {
               <div key={c.id} className="rounded-box border border-sk-hairline bg-sk-raised px-3 py-2">
                 <div className="mb-1.5 flex items-center gap-2">
                   <GitMerge size={12} className="shrink-0 text-sk-warn" />
-                  <span className="text-[12px] text-sk-warn">Conflict in {c.data_type}: choose a version</span>
+                  <span className="text-[12px] text-sk-warn">{t("popup_conflict_title", t(`datatype_${c.data_type}`))}</span>
                 </div>
                 <div className="flex gap-1.5">
                   <button
                     onClick={() => resolveConflict(c.id, "local")}
                     className="flex-1 rounded-box border border-sk-hairline bg-sk-surface py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text"
                   >
-                    Keep local
+                    {t("popup_keep_local")}
                   </button>
                   <button
                     onClick={() => resolveConflict(c.id, "remote")}
                     className="flex-1 rounded-box border border-sk-hairline bg-sk-surface py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text"
                   >
-                    Use remote
+                    {t("popup_use_remote")}
                   </button>
                 </div>
               </div>
@@ -334,7 +338,7 @@ export default function PopupApp() {
             >
               <span className="flex items-center gap-2 text-sk-warn">
                 <Wifi size={12} />
-                <span className="text-[12px]">No backend configured</span>
+                <span className="text-[12px]">{t("popup_no_backend")}</span>
               </span>
               <ChevronRight size={12} className="text-sk-warn" />
             </button>
@@ -353,7 +357,7 @@ export default function PopupApp() {
         } disabled:opacity-60`}
       >
         {isSyncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} strokeWidth={2} />}
-        {isSyncing ? "Syncing…" : "Sync now"}
+        {isSyncing ? t("status_syncing") : t("popup_sync_now")}
       </button>
       </div>
 
@@ -363,12 +367,12 @@ export default function PopupApp() {
       {/* ── Active streams (live per-type status) ── */}
       <section className="mt-4">
         <h2 className="mb-2 pl-0.5 font-mono text-[12px] font-medium tracking-[0.08em] text-sk-subtle">
-          ACTIVE STREAMS
+          {t("popup_active_streams")}
         </h2>
         <div className="grid grid-cols-4 gap-2.5">
           {SYNC_ORDER.map((type) => {
-            const meta = DATA_TYPE_META[type];
-            const Icon = meta.icon;
+            const Icon = DATA_TYPE_META[type].icon;
+            const typeLabel = t(`datatype_${type}`);
             // Derived in one tested place — see popup/stream-state.ts. Inline, this
             // collapsed to green/"synced" for every enabled type whenever a sync wasn't
             // running, including before the first one and right after a failure.
@@ -385,8 +389,8 @@ export default function PopupApp() {
             return (
               <div
                 key={type}
-                title={`${meta.label}: ${streamLabel(ss)}`}
-                aria-label={`${meta.label}: ${streamLabel(ss)}`}
+                title={`${typeLabel}: ${t(streamLabelKey(ss))}`}
+                aria-label={`${typeLabel}: ${t(streamLabelKey(ss))}`}
                 className={`flex aspect-square items-center justify-center rounded-full border border-sk-hairline bg-sk-tint ${ss === "off" ? "opacity-40" : ""}`}
               >
                 {ss === "syncing" ? (
@@ -403,14 +407,14 @@ export default function PopupApp() {
       {/* ── Missing extensions ── */}
       {missingExtensions.length > 0 && (
         <div className="flex items-center justify-between px-0.5 pb-0.5 pt-[12px]">
-          <span className="text-[14px]">
-            <span className="font-medium text-sk-warn">{missingExtensions.length}</span> missing extensions
+          <span className="text-[14px] font-medium text-sk-warn">
+            {plural("popup_missing_extensions", missingExtensions.length)}
           </span>
           <button
             onClick={openAllMissing}
             className="inline-flex items-center gap-1.5 text-[14px] font-medium text-sk-text hover:underline hover:underline-offset-2"
           >
-            Open all
+            {t("popup_open_all")}
             <ExternalLink size={14} strokeWidth={2} />
           </button>
         </div>
@@ -420,15 +424,15 @@ export default function PopupApp() {
       {remoteSessions.length > 0 && (
         <section className="mt-4">
           <h2 className="mb-2 pl-0.5 font-mono text-[12px] font-medium tracking-[0.08em] text-sk-subtle">
-            SESSIONS FROM OTHER DEVICES
+            {t("popup_sessions_head")}
           </h2>
           <div className="space-y-1.5">
             {remoteSessions.map((entry) => (
               <div key={entry.session.id} className="flex items-center gap-2 px-0.5 py-0.5">
                 <div className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px]">{entry.session.label || "Unknown device"}</span>
+                  <span className="block truncate text-[14px]">{entry.session.label || t("popup_unknown_device")}</span>
                   <span className="font-mono text-[12px] text-sk-subtle">
-                    {entry.session.tabs.length} tab{entry.session.tabs.length === 1 ? "" : "s"}
+                    {plural("popup_tabs", entry.session.tabs.length)}
                     {entry.timestamp &&
                       ` · ${new Date(entry.timestamp).toLocaleString([], {
                         month: "short",
@@ -442,7 +446,7 @@ export default function PopupApp() {
                   onClick={() => restoreSession(entry.session.id)}
                   className="flex shrink-0 items-center gap-1.5 rounded-box border border-sk-hairline bg-sk-raised px-2.5 py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text"
                 >
-                  <RotateCcw size={12} /> Restore
+                  <RotateCcw size={12} /> {t("popup_restore")}
                 </button>
               </div>
             ))}
@@ -454,12 +458,12 @@ export default function PopupApp() {
       <footer className="mt-3.5 flex items-end justify-between border-t border-sk-hairline pt-3.5">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-sk-muted">Backend</span>
+            <span className="text-xs text-sk-muted">{t("popup_backend_label")}</span>
             <span className="text-xs">{backendLabel}</span>
           </div>
           {settings?.device_label && (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-sk-muted">Device</span>
+              <span className="text-xs text-sk-muted">{t("popup_device_label")}</span>
               <span className="font-mono text-xs">{settings.device_label}</span>
             </div>
           )}
@@ -469,13 +473,13 @@ export default function PopupApp() {
             onClick={openOptions}
             className="text-[14px] font-medium text-sk-text hover:underline hover:underline-offset-2"
           >
-            Configure →
+            {t("popup_configure")}
           </button>
           <button
             onClick={openActivityLog}
             className="text-[12px] text-sk-muted hover:text-sk-text hover:underline hover:underline-offset-2"
           >
-            Activity log →
+            {t("popup_activity_log")}
           </button>
         </div>
       </footer>

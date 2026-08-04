@@ -1,0 +1,70 @@
+{
+  "extension_description": {
+    "message": "Datenschutzfreundliche Browser-Synchronisierung in deinen eigenen Speicher: Google Drive, WebDAV, GitHub."
+  },
+
+  "datatype_bookmarks":  { "message": "Lesezeichen" },
+  "datatype_history":    { "message": "Verlauf" },
+  "datatype_sessions":   { "message": "Tabs" },
+  "datatype_extensions": { "message": "Erweiterungen" },
+
+  "status_idle":     { "message": "Bereit" },
+  "status_syncing":  { "message": "Synchronisiere…" },
+  "status_success":  { "message": "Synchronisiert" },
+  "status_error":    { "message": "Fehler" },
+  "status_conflict": { "message": "Konflikt" },
+
+  "stream_off":     { "message": "aus" },
+  "stream_syncing": { "message": "synchronisiert…" },
+  "stream_pending": { "message": "wartet" },
+  "stream_never":   { "message": "noch nicht synchronisiert" },
+  "stream_stale":   { "message": "letzte Synchronisierung fehlgeschlagen" },
+  "stream_synced":  { "message": "synchronisiert" },
+
+  "popup_settings_aria": { "message": "Einstellungen" },
+  "popup_sync_now":      { "message": "Jetzt synchronisieren" },
+
+  "popup_load_error": { "message": "Konode war nicht erreichbar. Zum erneuten Versuch klicken." },
+  "popup_recovery_notice": {
+    "message": "Ein ungewöhnlicher Löschvorgang ($COUNT$ Lesezeichen) wurde verhindert und ein Wiederherstellungspunkt gespeichert. Nachzulesen unter Einstellungen → Aktivität.",
+    "placeholders": { "count": { "content": "$1", "example": "412" } }
+  },
+  "popup_no_backend": { "message": "Kein Speicher eingerichtet" },
+
+  "popup_conflict_title": {
+    "message": "Konflikt bei $TYPE$: Version wählen",
+    "placeholders": { "type": { "content": "$1", "example": "Lesezeichen" } }
+  },
+  "popup_keep_local": { "message": "Lokale behalten" },
+  "popup_use_remote": { "message": "Entfernte übernehmen" },
+
+  "popup_active_streams": { "message": "Aktive Datenströme" },
+
+  "popup_missing_extensions_one": {
+    "message": "$COUNT$ fehlende Erweiterung",
+    "placeholders": { "count": { "content": "$1", "example": "1" } }
+  },
+  "popup_missing_extensions_other": {
+    "message": "$COUNT$ fehlende Erweiterungen",
+    "placeholders": { "count": { "content": "$1", "example": "7" } }
+  },
+  "popup_open_all": { "message": "Alle öffnen" },
+
+  "popup_sessions_head":  { "message": "Tabs anderer Geräte" },
+  "popup_unknown_device": { "message": "Unbekanntes Gerät" },
+  "popup_tabs_one": {
+    "message": "$COUNT$ Tab",
+    "placeholders": { "count": { "content": "$1", "example": "1" } }
+  },
+  "popup_tabs_other": {
+    "message": "$COUNT$ Tabs",
+    "placeholders": { "count": { "content": "$1", "example": "23" } }
+  },
+  "popup_restore": { "message": "Wiederherstellen" },
+
+  "popup_backend_label": { "message": "Speicher" },
+  "popup_backend_none":  { "message": "Keiner" },
+  "popup_device_label":  { "message": "Gerät" },
+  "popup_configure":     { "message": "Einrichten →" },
+  "popup_activity_log":  { "message": "Aktivitätsprotokoll →" }
+}
