@@ -1,1 +1,56 @@
-{}
+{
+  "datatype_bookmarks": {
+    "message": "Järjehoidjad"
+  },
+  "datatype_history": {
+    "message": "Ajalugu"
+  },
+  "datatype_sessions": {
+    "message": "Sessioonid"
+  },
+  "status_idle": {
+    "message": "Valmis"
+  },
+  "status_syncing": {
+    "message": "Sünkroonin…"
+  },
+  "status_success": {
+    "message": "Sünkroonitud"
+  },
+  "status_error": {
+    "message": "Viga"
+  },
+  "popup_settings_aria": {
+    "message": "Seadistused"
+  },
+  "popup_sync_now": {
+    "message": "Sünkrooni kohe"
+  },
+  "popup_open_all": {
+    "message": "Ava kõik"
+  },
+  "popup_sessions_head": {
+    "message": "Sessioonid muudest seadmetest"
+  },
+  "popup_unknown_device": {
+    "message": "Tundmatu seade"
+  },
+  "onb_get_started": {
+    "message": "Alustame siis"
+  },
+  "onb_backend_title": {
+    "message": "Vali oma andmeruum"
+  },
+  "onb_connecting": {
+    "message": "Ühendan…"
+  },
+  "onb_sign_in_google": {
+    "message": "Logi sisse Google'i kasutajakontoga"
+  },
+  "onb_signin_failed": {
+    "message": "Sisselogimine ei õnnestunud"
+  },
+  "onb_webdav_user_placeholder": {
+    "message": "Kasutajanimi"
+  }
+}
