@@ -119,15 +119,53 @@ Node major* emits identical bytes, so declare the version rather than a range.
      ```
      Mozilla's reviewers default to Ubuntu 24.04.4 / Node 24.14.0 / npm 11.9.0 and ask
      that you document any difference from that — hence naming the exact versions above.
+   - **Also explain the innerHTML warnings**, because AMO's own upload checklist lists
+     them under "issues that can lead to rejections" and a reviewer meets them as
+     minified code:
+     ```
+     The two UNSAFE_VAR_ASSIGNMENT warnings for innerHTML are in
+     chunks/puzzle-<hash>.js, the bundled vendor chunk containing react-dom.
+     React sets innerHTML internally. The extension's own source contains no
+     innerHTML and no dangerouslySetInnerHTML — grep the source archive for
+     either to confirm.
+     ```
 5. **Listing metadata:** name (Konode), summary, full description, screenshots,
    category, support email, homepage (optional), license (match the repo), and the
    **privacy-policy URL** (the live `PRIVACY.md`). Reuse the Chrome `STORE_LISTING.md`
    copy where it fits.
 6. **Data collection:** answer *No data collected* (the manifest already says so).
-7. **Firefox for Android:** in the listing, mark the add-on **compatible with
-   Firefox for Android**. This is the whole Android story: no separate app; a listed,
-   Android-compatible add-on installs straight from AMO on Android Firefox.
-8. Submit for review. (Review latency varies, often days.)
+7. **Firefox for Android: leave it UNCHECKED** until Konode has actually run there.
+   Compatibility is set per version, so this is not a one-time decision — tick it in a
+   later upload once tested. As of 1.2.0 it has never run on Android Firefox, and there
+   are specific reasons to expect trouble rather than a pleasant surprise:
+   - Mozilla documents that on Android the Add-ons Manager **does not let the user edit
+     host permissions and does not indicate a pending host-permission request**. The
+     WebDAV backend stands on exactly that grant (`optional_host_permissions:
+     https://*/*`), so WebDAV setup may be broken there, or unexplainably broken.
+   - Drive sign-in (`identity.launchWebAuthFlow`) is untested on Android.
+   - Mozilla recommends MV2 for Android-targeted extensions because of parity gaps.
+     Konode is MV3.
+   - Android availability wants `browser_specific_settings.gecko_android` (even as `{}`)
+     and the manifest has no such key. MDN says without it an extension is desktop-only;
+     Extension Workshop says it is installable without it but recommended. **The two docs
+     disagree**, so settle it by testing, not by reading.
+   - Test path: `web-ext run -t firefox-android` with adb and "Remote debugging via USB"
+     enabled on the phone.
+8. **Version notes / release notes:** paste the release's CHANGELOG section.
+9. Submit for review. (Review latency varies, often days.)
+
+### Validator warnings that are expected (1.2.0)
+
+AMO's upload validation returns **0 errors, 4 warnings** — it passes. All four are known:
+- **2× innerHTML** in the react-dom vendor chunk (see step 4).
+- **2× "Manifest key not supported by the specified minimum Firefox version"** —
+  `data_collection_permissions` arrived in Firefox 140 (Android 142) while
+  `strict_min_version` is 128. Harmless: 128–139 simply ignore the key, and those
+  versions have no data-consent prompt for it to affect. Worth raising the floor in a
+  later release: the 128 baseline is attributed to module background scripts, but MDN's
+  compat data puts `background.type: "module"` at Firefox **112**, so 128 is more
+  conservative than it needs to be. Check the current ESR before picking the new floor,
+  and note Android would need `gecko_android.strict_min_version: "142"` to go quiet too.
 
 ## 3. After approval
 - Publicly listed on AMO; Mozilla serves auto-updates when you upload a new version.
