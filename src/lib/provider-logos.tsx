@@ -21,7 +21,12 @@ export function ProviderLogo({ id, size = 16, color = "currentColor" }: { id: Pr
   const mark = MARKS[id];
   if (!mark) return null;
   return (
-    <svg width={size} height={size} viewBox={mark.viewBox} fill={color} aria-hidden="true">
+    // flexShrink lives here rather than at the call sites: this always renders into a flex
+    // row beside a long description, and the default `flex-shrink: 1` squashed the logo
+    // narrower than its own viewBox — visible on the setup wizard's provider cards, where
+    // the mark sits directly in the row with no wrapper of its own to hold its width.
+    <svg width={size} height={size} viewBox={mark.viewBox} fill={color} aria-hidden="true"
+      style={{ flexShrink: 0 }}>
       {mark.paths.map((p, i) => (
         <path key={i} d={p.d} fillRule={p.evenodd ? "evenodd" : undefined} clipRule={p.evenodd ? "evenodd" : undefined} />
       ))}

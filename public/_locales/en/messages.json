@@ -277,13 +277,13 @@
     "message": "Your data always stays on storage you own."
   },
   "onb_feature_instant": {
-    "message": "Syncs every change as it happens, not only on a timer."
+    "message": "Syncs every change as it happens."
   },
   "onb_feature_browsers": {
     "message": "Works in Chromium and Firefox based browsers."
   },
   "onb_feature_providers": {
-    "message": "Google Drive, Nextcloud, ownCloud, pCloud, Koofr, Fastmail, GitHub or any WebDAV storage. You decide where your data lives."
+    "message": "You decide where your data lives."
   },
   "onb_get_started": {
     "message": "Get started"

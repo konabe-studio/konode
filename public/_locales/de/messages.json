@@ -231,13 +231,13 @@
     "message": "Deine Daten bleiben immer in deinem eigenen Speicher."
   },
   "onb_feature_instant": {
-    "message": "Synchronisiert jede Änderung sofort, nicht nur nach einem Zeitplan."
+    "message": "Synchronisiert jede Änderung sofort."
   },
   "onb_feature_browsers": {
     "message": "Funktioniert in Chromium- und Firefox-basierten Browsern."
   },
   "onb_feature_providers": {
-    "message": "Google Drive, Nextcloud, ownCloud, pCloud, Koofr, Fastmail, GitHub oder ein beliebiger WebDAV-Speicher. Du entscheidest, wo deine Daten liegen."
+    "message": "Du entscheidest, wo deine Daten liegen."
   },
   "onb_get_started": {
     "message": "Los geht's"

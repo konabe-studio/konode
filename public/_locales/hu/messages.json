@@ -231,13 +231,13 @@
     "message": "Az adataid mindig a saját tárhelyeden maradnak."
   },
   "onb_feature_instant": {
-    "message": "Minden módosítást azonnal szinkronizál, nem csak időközönként."
+    "message": "Minden módosítást azonnal szinkronizál."
   },
   "onb_feature_browsers": {
     "message": "Működik Chromium- és Firefox-alapú böngészőkben."
   },
   "onb_feature_providers": {
-    "message": "Google Drive, Nextcloud, ownCloud, pCloud, Koofr, Fastmail, GitHub vagy bármely WebDAV-tárhely. Te döntöd el, hol tárolod az adataidat."
+    "message": "Te döntöd el, hol tárolod az adataidat."
   },
   "onb_get_started": {
     "message": "Kezdjük"
@@ -438,7 +438,7 @@
     "message": "A teljes könyvjelzőfa, mappákkal és sorrenddel."
   },
   "datatype_sessions_desc": {
-    "message": "A nyitott lapjaid, bárhol visszaállíthatod."
+    "message": "A nyitott lapjaid, amiket bárhol visszaállíthatsz."
   },
   "datatype_history_desc": {
     "message": "Böngészési előzmények, a napok beállítása szerint korlátozva."
