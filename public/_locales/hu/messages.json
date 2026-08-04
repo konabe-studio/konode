@@ -174,7 +174,7 @@
     "message": "Erős kulcs generálása"
   },
   "provider_gdrive_desc": {
-    "message": "Szinkronizálás a saját Google Drive-odon. OAuth, és a rövid életű hozzáférési token csak ezen az eszközön marad."
+    "message": "Közvetlen szinkronizálás a saját Google Drive-odra. Az OAuth-hitelesítésnek köszönhetően a hozzáférési token csak ezen az eszközön tárolódik."
   },
   "provider_nextcloud_desc": {
     "message": "A saját Nextcloud vagy ownCloud szervered."
@@ -186,22 +186,28 @@
     "message": "pCloud tárhely. Fizetős pCloud-előfizetés kell hozzá."
   },
   "provider_pcloud_note": {
-    "message": "Válaszd ki, melyik régióban van a pCloud-fiókod."
+    "message": "Válaszd ki az $REGION$ régiót, ha ott található a pCloud-fiókod.",
+    "placeholders": {
+      "region": {
+        "content": "$1",
+        "example": "EU"
+      }
+    }
   },
   "provider_koofr_desc": {
     "message": "Koofr felhőtárhely."
   },
   "provider_koofr_note": {
-    "message": "A felhasználónév a Koofr e-mail-címed, a jelszó pedig egy Koofr alkalmazásjelszó."
+    "message": "Felhasználónévként a Koofr e-mail-címedet, jelszóként pedig egy Koofr alkalmazásjelszót használj."
   },
   "provider_fastmail_desc": {
     "message": "Fastmail fájltárhely."
   },
   "provider_fastmail_note": {
-    "message": "A felhasználónév a teljes Fastmail-címed, és olyan alkalmazásjelszó kell, aminek van Files (WebDAV) hozzáférése."
+    "message": "Felhasználónévként a teljes Fastmail e-mail-címedet add meg, jelszóként pedig egy olyan alkalmazásjelszót, amely rendelkezik Files (WebDAV) jogosultsággal."
   },
   "provider_github_desc": {
-    "message": "A szinkronizált adatok egy privát repóban, Personal Access Tokennel."
+    "message": "A szinkronizált adatok egy privát GitHub-repóban tárolódnak, amelyhez Personal Access Tokennel fér hozzá a Konode."
   },
   "provider_webdav_desc": {
     "message": "Synology, kDrive vagy bármelyik más WebDAV szerver."
@@ -219,19 +225,19 @@
     "message": "Üdv a Konode-ban"
   },
   "onb_welcome_subtitle": {
-    "message": "Adatvédelem-központú böngésző-szinkronizálás. A könyvjelzőid, lapjaid és kiegészítőid a saját tárhelyedre. Közvetítő nélkül."
+    "message": "Biztonságos böngészőszinkronizálás, ahol az adataid valóban a tieid maradnak. Könyvjelzőid, lapjaid és bővítményeid közvetlenül a saját tárhelyedre kerülnek. Nincs köztes szerver."
   },
   "onb_feature_storage": {
-    "message": "Az adataid a saját tárhelyeden maradnak"
+    "message": "Az adataid mindig a saját tárhelyeden maradnak."
   },
   "onb_feature_instant": {
-    "message": "Minden változásnál szinkronizál, nem csak időzítve"
+    "message": "Minden módosítást azonnal szinkronizál, nem csak időközönként."
   },
   "onb_feature_browsers": {
-    "message": "Működik Chrome-mal, Brave-vel és továbbiakkal"
+    "message": "Működik Chromium- és Firefox-alapú böngészőkben, valamint Orionon (iOS)."
   },
   "onb_feature_providers": {
-    "message": "Google Drive, WebDAV, GitHub. Te döntesz"
+    "message": "Google Drive, Nextcloud, ownCloud, pCloud, Koofr, Fastmail, GitHub vagy bármely WebDAV-tárhely. Te döntöd el, hol tárolod az adataidat."
   },
   "onb_get_started": {
     "message": "Kezdjük"
@@ -298,18 +304,6 @@
   },
   "onb_data_subtitle": {
     "message": "Ezt bármikor módosíthatod a Beállításokban."
-  },
-  "onb_data_bookmarks_desc": {
-    "message": "Mappák, sorrend, minden oldal"
-  },
-  "onb_data_extensions_desc": {
-    "message": "Megmutatja, mi hiányzik a többi eszközön"
-  },
-  "onb_data_history_desc": {
-    "message": "Az utolsó 30 nap"
-  },
-  "onb_data_sessions_desc": {
-    "message": "Elnevezett lapcsoportok"
   },
   "onb_device_name_label": {
     "message": "Nevezd el ezt az eszközt"
@@ -439,5 +433,17 @@
   },
   "onb_done_adjust": {
     "message": "Mindent állíthatsz a Beállításokban"
+  },
+  "datatype_bookmarks_desc": {
+    "message": "A teljes könyvjelzőfa, mappákkal és sorrenddel."
+  },
+  "datatype_sessions_desc": {
+    "message": "Elnevezett lap-munkamenetek, amelyeket bárhol visszaállíthatsz."
+  },
+  "datatype_history_desc": {
+    "message": "Böngészési előzmények, a napok beállítása szerint korlátozva."
+  },
+  "datatype_extensions_desc": {
+    "message": "A bővítmények listája, a hiányzókhoz telepítési linkkel."
   }
 }

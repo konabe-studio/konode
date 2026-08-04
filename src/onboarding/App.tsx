@@ -129,6 +129,13 @@ export default function OnboardingApp() {
     const [before, after] = tParts("provider_syncing_to");
     return <>{before}<code>{url}</code>{after}</>;
   };
+  // The pCloud hint names the region that is actually selected ("Pick the EU region if
+  // that is where your account lives"), so it needs the label of the chosen one rather
+  // than a generic sentence. A card is always picked with a region already set —
+  // `webdavUrlForCard` seeds the first one — so the fallback is only a belt.
+  const pcloudRegionLabel = (p: { regions?: { id: string; label: string }[] }, url: string) =>
+    p.regions?.find((r) => pcloudRegionOf(url) === r.id)?.label ?? p.regions?.[0]?.label ?? "";
+
   const plaintextNote = tParts("onb_plaintext_note");
   const doneNote = tParts("onb_done_subtitle");
 
@@ -549,7 +556,10 @@ export default function OnboardingApp() {
                           );
                         })}
                       </div>
-                      <div style={hintStyle}>{syncingTo(webdavUrl)}{p.noteKey ? ` ${t(p.noteKey)}` : null}</div>
+                      <div style={hintStyle}>
+                        {syncingTo(webdavUrl)}{" "}
+                        {p.noteKey ? t(p.noteKey, pcloudRegionLabel(p, webdavUrl)) : null}
+                      </div>
                       {webdavCreds()}
                     </div>
                   )}
@@ -652,7 +662,11 @@ export default function OnboardingApp() {
               { key: "sessions",   Icon: Globe    },
             ] as const).map(({ key, Icon }) => {
               const label = t(`datatype_${key}`);
-              const desc = t(`onb_data_${key}_desc`);
+              // The same description Settings shows. The wizard used to have its own,
+              // terser copy, and it drifted: it promised "Last 30 days" when the limit is
+              // a setting, and called sessions "tab groups", which is a Chrome feature
+              // Konode does not sync.
+              const desc = t(`datatype_${key}_desc`);
               return (
               <label
                 key={key}

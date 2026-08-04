@@ -103,8 +103,8 @@ describe("the English catalogue is the contract", () => {
       "provider_gdrive_desc", "provider_nextcloud_desc", "provider_nextcloud_note",
       "provider_pcloud_desc", "provider_pcloud_note", "provider_koofr_desc", "provider_koofr_note",
       "provider_fastmail_desc", "provider_fastmail_note", "provider_github_desc", "provider_webdav_desc",
-      // `t(`onb_data_${key}_desc`)` in the data-types step.
-      "onb_data_bookmarks_desc", "onb_data_extensions_desc", "onb_data_history_desc", "onb_data_sessions_desc",
+      // `t(`datatype_${key}_desc`)` — the setup wizard and Settings share these.
+      "datatype_bookmarks_desc", "datatype_sessions_desc", "datatype_history_desc", "datatype_extensions_desc",
       // Read through tParts(), which takes the key as an argument rather than a literal.
       "provider_syncing_to", "onb_plaintext_note", "onb_done_subtitle",
     ];

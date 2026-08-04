@@ -243,12 +243,9 @@ const BACKEND_LABEL: Record<BackendType, string> = {
   github: "GitHub", // GitHub only — see the provider card note in storage-providers.ts
 };
 
-const DATA_TYPE_META: { type: DataType; label: string; desc: string }[] = [
-  { type: "bookmarks",  label: "Bookmarks",  desc: "Full bookmark tree with folders and ordering." },
-  { type: "sessions",   label: "Sessions",   desc: "Named tab sessions you can restore anywhere." },
-  { type: "history",    label: "History",    desc: "Browsing history, limited by days setting." },
-  { type: "extensions", label: "Extensions", desc: "Extension list, showing missing ones with install links." },
-];
+// Label and description are `datatype_<type>` and `datatype_<type>_desc`, shared with the
+// setup wizard so the two screens cannot describe the same toggle differently again.
+const DATA_TYPES: DataType[] = ["bookmarks", "sessions", "history", "extensions"];
 
 // ─── App ──────────────────────────────────────────────────────────────────
 
@@ -1142,7 +1139,10 @@ export default function OptionsApp() {
                             </div>
                           </div>
                           <InfoHint>
-                            {syncingTo(getBackend("webdav")?.webdav?.url ?? "")}{p.noteKey ? ` ${t(p.noteKey)}` : null}
+                            {syncingTo(getBackend("webdav")?.webdav?.url ?? "")}{" "}
+                            {p.noteKey
+                              ? t(p.noteKey, p.regions?.find((r) => pcloudRegionOf(getBackend("webdav")?.webdav?.url) === r.id)?.label ?? p.regions?.[0]?.label ?? "")
+                              : null}
                           </InfoHint>
                           {webdavCreds()}
                           {webdavHttpWarn()}
@@ -1440,12 +1440,12 @@ export default function OptionsApp() {
 
               <div className="settings-section">
                 <div className="settings-card-head">Data to sync</div>
-                {DATA_TYPE_META.map(({ type, label, desc }) => (
+                {DATA_TYPES.map((type) => (
                   <div key={type} className="settings-row">
                     <div className="settings-row-left">
                       <div>
-                        <div className="row-label">{label}</div>
-                        <div className="row-desc">{desc}</div>
+                        <div className="row-label">{t(`datatype_${type}`)}</div>
+                        <div className="row-desc">{t(`datatype_${type}_desc`)}</div>
                       </div>
                     </div>
                     <label className="toggle-wrap">

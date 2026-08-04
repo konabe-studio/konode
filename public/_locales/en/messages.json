@@ -217,7 +217,7 @@
     "message": "Generate a strong key"
   },
   "provider_gdrive_desc": {
-    "message": "Sync via your Google Drive. OAuth, with a short-lived access token cached on this device only.",
+    "message": "Syncs straight to your own Google Drive. Thanks to OAuth, the access token is kept on this device only.",
     "description": "Storage provider card description."
   },
   "provider_nextcloud_desc": {
@@ -231,22 +231,28 @@
     "message": "pCloud storage. Needs a paid pCloud plan."
   },
   "provider_pcloud_note": {
-    "message": "Pick the region your pCloud account lives in."
+    "message": "Pick the $REGION$ region if that is where your pCloud account lives.",
+    "placeholders": {
+      "region": {
+        "content": "$1",
+        "example": "EU"
+      }
+    }
   },
   "provider_koofr_desc": {
     "message": "Koofr cloud storage."
   },
   "provider_koofr_note": {
-    "message": "Username is your Koofr email; use a Koofr app password."
+    "message": "Use your Koofr email as the username, and a Koofr app password as the password."
   },
   "provider_fastmail_desc": {
     "message": "Fastmail file storage."
   },
   "provider_fastmail_note": {
-    "message": "Username is your full Fastmail address; use an app password with Files (WebDAV) access."
+    "message": "Use your full Fastmail address as the username, and an app password that has Files (WebDAV) access."
   },
   "provider_github_desc": {
-    "message": "Store sync data in a private repository using a Personal Access Token."
+    "message": "Your synced data lives in a private GitHub repository, which Konode reaches with a Personal Access Token."
   },
   "provider_webdav_desc": {
     "message": "Synology, kDrive, or any other WebDAV server."
@@ -265,19 +271,19 @@
     "message": "Welcome to Konode"
   },
   "onb_welcome_subtitle": {
-    "message": "Privacy-first browser sync. Your bookmarks, sessions, and extensions, synced to your own storage. No middlemen."
+    "message": "Browser sync where your data stays genuinely yours. Your bookmarks, sessions and extensions go straight to storage you own. No server in between."
   },
   "onb_feature_storage": {
-    "message": "Your data stays on your storage"
+    "message": "Your data always stays on storage you own."
   },
   "onb_feature_instant": {
-    "message": "Sync on every change, not just on schedule"
+    "message": "Syncs every change as it happens, not only on a timer."
   },
   "onb_feature_browsers": {
-    "message": "Works across Chrome, Brave, and more"
+    "message": "Works in Chromium and Firefox based browsers, and in Orion on iOS."
   },
   "onb_feature_providers": {
-    "message": "Google Drive, WebDAV, GitHub. You choose"
+    "message": "Google Drive, Nextcloud, ownCloud, pCloud, Koofr, Fastmail, GitHub or any WebDAV storage. You decide where your data lives."
   },
   "onb_get_started": {
     "message": "Get started"
@@ -346,18 +352,6 @@
   },
   "onb_data_subtitle": {
     "message": "You can change this anytime in Settings."
-  },
-  "onb_data_bookmarks_desc": {
-    "message": "Folders, order, all sites"
-  },
-  "onb_data_extensions_desc": {
-    "message": "Shows missing ones on other devices"
-  },
-  "onb_data_history_desc": {
-    "message": "Last 30 days"
-  },
-  "onb_data_sessions_desc": {
-    "message": "Named tab groups"
   },
   "onb_device_name_label": {
     "message": "Name this device"
@@ -493,5 +487,20 @@
   },
   "onb_done_adjust": {
     "message": "Adjust everything in Settings"
+  },
+  "datatype_bookmarks_desc": {
+    "message": "Full bookmark tree with folders and ordering.",
+    "description": "Shown under the data type on BOTH the setup wizard and Settings. The two screens used to carry different wording and drifted apart."
+  },
+  "datatype_sessions_desc": {
+    "message": "Named tab sessions you can restore anywhere.",
+    "description": "Deliberately not 'tab groups': that names a Chrome feature Konode does not sync, which the setup wizard used to claim."
+  },
+  "datatype_history_desc": {
+    "message": "Browsing history, limited by the days setting.",
+    "description": "Not a fixed number of days: the setup wizard used to promise 'Last 30 days' while the limit is adjustable in Settings."
+  },
+  "datatype_extensions_desc": {
+    "message": "Extension list, showing missing ones with install links."
   }
 }

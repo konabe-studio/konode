@@ -174,7 +174,7 @@
     "message": "Starken Schlüssel erzeugen"
   },
   "provider_gdrive_desc": {
-    "message": "Synchronisierung über dein Google Drive. OAuth, das kurzlebige Zugriffstoken bleibt nur auf diesem Gerät."
+    "message": "Synchronisiert direkt in dein eigenes Google Drive. Dank OAuth wird das Zugriffstoken nur auf diesem Gerät gespeichert."
   },
   "provider_nextcloud_desc": {
     "message": "Dein eigener Nextcloud- oder ownCloud-Server."
@@ -186,22 +186,28 @@
     "message": "pCloud-Speicher. Erfordert einen kostenpflichtigen pCloud-Tarif."
   },
   "provider_pcloud_note": {
-    "message": "Wähle die Region, in der dein pCloud-Konto liegt."
+    "message": "Wähle die Region $REGION$, wenn dort dein pCloud-Konto liegt.",
+    "placeholders": {
+      "region": {
+        "content": "$1",
+        "example": "EU"
+      }
+    }
   },
   "provider_koofr_desc": {
     "message": "Koofr-Cloud-Speicher."
   },
   "provider_koofr_note": {
-    "message": "Benutzername ist deine Koofr-E-Mail-Adresse; verwende ein Koofr-App-Passwort."
+    "message": "Verwende deine Koofr-E-Mail-Adresse als Benutzernamen und ein Koofr-App-Passwort als Passwort."
   },
   "provider_fastmail_desc": {
     "message": "Fastmail-Dateispeicher."
   },
   "provider_fastmail_note": {
-    "message": "Benutzername ist deine vollständige Fastmail-Adresse; verwende ein App-Passwort mit Files-(WebDAV-)Zugriff."
+    "message": "Verwende deine vollständige Fastmail-Adresse als Benutzernamen und ein App-Passwort mit Files-(WebDAV-)Zugriff."
   },
   "provider_github_desc": {
-    "message": "Speichert die Sync-Daten in einem privaten Repository mit einem Personal Access Token."
+    "message": "Deine Sync-Daten liegen in einem privaten GitHub-Repository, auf das Konode mit einem Personal Access Token zugreift."
   },
   "provider_webdav_desc": {
     "message": "Synology, kDrive oder ein beliebiger anderer WebDAV-Server."
@@ -219,19 +225,19 @@
     "message": "Willkommen bei Konode"
   },
   "onb_welcome_subtitle": {
-    "message": "Datenschutzfreundliche Browser-Synchronisierung. Deine Lesezeichen, Tabs und Erweiterungen in deinem eigenen Speicher. Ohne Zwischenstation."
+    "message": "Browser-Synchronisierung, bei der deine Daten wirklich dir gehören. Deine Lesezeichen, Tabs und Erweiterungen gehen direkt in deinen eigenen Speicher. Kein Server dazwischen."
   },
   "onb_feature_storage": {
-    "message": "Deine Daten bleiben in deinem Speicher"
+    "message": "Deine Daten bleiben immer in deinem eigenen Speicher."
   },
   "onb_feature_instant": {
-    "message": "Synchronisiert bei jeder Änderung, nicht nur nach Zeitplan"
+    "message": "Synchronisiert jede Änderung sofort, nicht nur nach einem Zeitplan."
   },
   "onb_feature_browsers": {
-    "message": "Funktioniert mit Chrome, Brave und weiteren"
+    "message": "Funktioniert in Chromium- und Firefox-basierten Browsern sowie in Orion unter iOS."
   },
   "onb_feature_providers": {
-    "message": "Google Drive, WebDAV, GitHub. Du entscheidest"
+    "message": "Google Drive, Nextcloud, ownCloud, pCloud, Koofr, Fastmail, GitHub oder ein beliebiger WebDAV-Speicher. Du entscheidest, wo deine Daten liegen."
   },
   "onb_get_started": {
     "message": "Los geht's"
@@ -298,18 +304,6 @@
   },
   "onb_data_subtitle": {
     "message": "Du kannst das jederzeit in den Einstellungen ändern."
-  },
-  "onb_data_bookmarks_desc": {
-    "message": "Ordner, Reihenfolge, alle Seiten"
-  },
-  "onb_data_extensions_desc": {
-    "message": "Zeigt, welche auf anderen Geräten fehlen"
-  },
-  "onb_data_history_desc": {
-    "message": "Die letzten 30 Tage"
-  },
-  "onb_data_sessions_desc": {
-    "message": "Benannte Tab-Gruppen"
   },
   "onb_device_name_label": {
     "message": "Diesem Gerät einen Namen geben"
@@ -439,5 +433,17 @@
   },
   "onb_done_adjust": {
     "message": "Alles in den Einstellungen anpassbar"
+  },
+  "datatype_bookmarks_desc": {
+    "message": "Der vollständige Lesezeichen-Baum mit Ordnern und Reihenfolge."
+  },
+  "datatype_sessions_desc": {
+    "message": "Benannte Tab-Sitzungen, die du überall wiederherstellen kannst."
+  },
+  "datatype_history_desc": {
+    "message": "Browser-Verlauf, begrenzt durch die Tage-Einstellung."
+  },
+  "datatype_extensions_desc": {
+    "message": "Liste der Erweiterungen, fehlende mit Installationslinks."
   }
 }
