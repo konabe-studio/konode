@@ -470,7 +470,7 @@
     "message": "You're all set!"
   },
   "onb_done_subtitle": {
-    "message": "Konode is now syncing your browser data to $BACKEND$. The first sync is running in the background.",
+    "message": "Konode is now syncing your browser data to $BACKEND$. The first sync is already running in the background.",
     "description": "$BACKEND$ is shown in bold and is a brand name, so the sentence is split at the placeholder.",
     "placeholders": {
       "backend": {
@@ -480,13 +480,13 @@
     }
   },
   "onb_done_backend": {
-    "message": "Backend connected"
+    "message": "Storage connected successfully"
   },
   "onb_done_autosync": {
-    "message": "Automatic background sync"
+    "message": "Syncing runs automatically in the background"
   },
   "onb_done_adjust": {
-    "message": "Adjust everything in Settings"
+    "message": "You can change the settings at any time"
   },
   "datatype_bookmarks_desc": {
     "message": "Full bookmark tree with folders and ordering.",

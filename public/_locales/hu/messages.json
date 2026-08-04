@@ -414,10 +414,10 @@
     "message": "Befejezés mindenképp"
   },
   "onb_done_title": {
-    "message": "Minden kész!"
+    "message": "Készen is vagy!"
   },
   "onb_done_subtitle": {
-    "message": "A Konode mostantól ide szinkronizálja a böngésződ adatait: $BACKEND$. Az első szinkronizálás a háttérben fut.",
+    "message": "A Konode mostantól a $BACKEND$ tárhelyedre szinkronizálja a böngésződ adatait. Az első szinkronizálás már a háttérben fut.",
     "placeholders": {
       "backend": {
         "example": "Google Drive",
@@ -426,13 +426,13 @@
     }
   },
   "onb_done_backend": {
-    "message": "A tárhely csatlakoztatva"
+    "message": "A tárhely sikeresen csatlakoztatva"
   },
   "onb_done_autosync": {
-    "message": "Automatikus szinkronizálás a háttérben"
+    "message": "A szinkronizálás automatikusan fut a háttérben"
   },
   "onb_done_adjust": {
-    "message": "Mindent állíthatsz a Beállításokban"
+    "message": "A beállításokat bármikor módosíthatod"
   },
   "datatype_bookmarks_desc": {
     "message": "A teljes könyvjelzőfa, mappákkal és sorrenddel."

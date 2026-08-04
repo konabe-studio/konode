@@ -417,7 +417,7 @@
     "message": "Alles bereit!"
   },
   "onb_done_subtitle": {
-    "message": "Konode synchronisiert deine Browser-Daten jetzt nach $BACKEND$. Die erste Synchronisierung läuft im Hintergrund.",
+    "message": "Konode synchronisiert deine Browser-Daten jetzt nach $BACKEND$. Die erste Synchronisierung läuft bereits im Hintergrund.",
     "placeholders": {
       "backend": {
         "example": "Google Drive",
@@ -426,13 +426,13 @@
     }
   },
   "onb_done_backend": {
-    "message": "Speicher verbunden"
+    "message": "Speicher erfolgreich verbunden"
   },
   "onb_done_autosync": {
-    "message": "Automatische Synchronisierung im Hintergrund"
+    "message": "Die Synchronisierung läuft automatisch im Hintergrund"
   },
   "onb_done_adjust": {
-    "message": "Alles in den Einstellungen anpassbar"
+    "message": "Du kannst die Einstellungen jederzeit ändern"
   },
   "datatype_bookmarks_desc": {
     "message": "Der vollständige Lesezeichen-Baum mit Ordnern und Reihenfolge."
