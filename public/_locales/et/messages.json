@@ -55,5 +55,14 @@
   },
   "status_conflict": {
     "message": "Konflikt"
+  },
+  "stream_never": {
+    "message": "pole veel sünkroonitud"
+  },
+  "stream_stale": {
+    "message": "viimane sünkroonimine ei õnnestunud"
+  },
+  "stream_synced": {
+    "message": "sünkroonis"
   }
 }
