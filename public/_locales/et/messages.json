@@ -48,9 +48,12 @@
     "message": "Logi sisse Google'i kasutajakontoga"
   },
   "onb_signin_failed": {
-    "message": "Sisselogimine ei õnnestunud"
+    "message": "Sisselogimine ei õnnestunud."
   },
   "onb_webdav_user_placeholder": {
     "message": "Kasutajanimi"
+  },
+  "status_conflict": {
+    "message": "Konflikt"
   }
 }
