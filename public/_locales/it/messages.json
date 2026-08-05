@@ -1,1 +1,209 @@
-{}
+{
+  "extension_description": {
+    "message": "Sincronizzazione del browser sul tuo spazio di archiviazione orientata alla privacy: Google Drive, WebDAV, GitHub."
+  },
+  "datatype_bookmarks": {
+    "message": "Segnalibri"
+  },
+  "datatype_history": {
+    "message": "Cronologia"
+  },
+  "datatype_sessions": {
+    "message": "Sessioni"
+  },
+  "datatype_extensions": {
+    "message": "Estensioni"
+  },
+  "status_idle": {
+    "message": "Pronto"
+  },
+  "status_syncing": {
+    "message": "Sincronizzazione…"
+  },
+  "status_success": {
+    "message": "Sincronizzato"
+  },
+  "status_error": {
+    "message": "Errore"
+  },
+  "status_conflict": {
+    "message": "Conflitto"
+  },
+  "stream_off": {
+    "message": "disattivato"
+  },
+  "stream_syncing": {
+    "message": "sincronizzazione…"
+  },
+  "stream_pending": {
+    "message": "in attesa"
+  },
+  "stream_never": {
+    "message": "non ancora sincronizzato"
+  },
+  "stream_stale": {
+    "message": "ultima sincronizzazione non riuscita"
+  },
+  "stream_synced": {
+    "message": "sincronizzato"
+  },
+  "popup_settings_aria": {
+    "message": "Impostazioni"
+  },
+  "popup_sync_now": {
+    "message": "Sincronizza ora"
+  },
+  "popup_load_error": {
+    "message": "Impossibile raggiungere Konode. Tocca per riprovare."
+  },
+  "popup_recovery_notice": {
+    "message": "È stata bloccata un'eliminazione insolita ($COUNT$ segnalibri) ed è stato salvato un punto di ripristino. Controlla in Impostazioni → Attività.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "popup_no_backend": {
+    "message": "Nessun backend configurato"
+  },
+  "popup_conflict_title": {
+    "message": "Conflitto in $TYPE$: scegli una versione",
+    "placeholders": {
+      "type": {
+        "content": "$1",
+        "example": "bookmarks"
+      }
+    }
+  },
+  "popup_keep_local": {
+    "message": "Mantieni locale"
+  },
+  "popup_use_remote": {
+    "message": "Usa remoto"
+  },
+  "popup_active_streams": {
+    "message": "Flussi attivi"
+  },
+  "popup_missing_extensions_one": {
+    "message": "$COUNT$ estensione mancante",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_missing_extensions_other": {
+    "message": "$COUNT$ estensioni mancanti",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "7"
+      }
+    }
+  },
+  "popup_open_all": {
+    "message": "Apri tutte"
+  },
+  "popup_sessions_head": {
+    "message": "Sessioni su altri dispositivi"
+  },
+  "popup_unknown_device": {
+    "message": "Dispositivo sconosciuto"
+  },
+  "popup_tabs_one": {
+    "message": "$COUNT$ scheda",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_tabs_other": {
+    "message": "$COUNT$ schede",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "23"
+      }
+    }
+  },
+  "popup_restore": {
+    "message": "Ripristina"
+  },
+  "popup_backend_label": {
+    "message": "Backend"
+  },
+  "popup_backend_none": {
+    "message": "Nessuno"
+  },
+  "popup_device_label": {
+    "message": "Dispositivo"
+  },
+  "popup_configure": {
+    "message": "Configura →"
+  },
+  "popup_activity_log": {
+    "message": "Registro attività →"
+  },
+  "common_back": {
+    "message": "Indietro"
+  },
+  "common_continue": {
+    "message": "Continua"
+  },
+  "common_open_settings": {
+    "message": "Apri Impostazioni"
+  },
+  "common_close": {
+    "message": "Chiudi"
+  },
+  "common_show": {
+    "message": "Mostra"
+  },
+  "common_hide": {
+    "message": "Nascondi"
+  },
+  "common_e2ee": {
+    "message": "Crittografia end-to-end"
+  },
+  "common_generate_key": {
+    "message": "Genera una chiave sicura"
+  },
+  "provider_gdrive_desc": {
+    "message": "Sincronizzazione diretta sul tuo Google Drive. Grazie a OAuth, il token di accesso viene conservato esclusivamente su questo dispositivo."
+  },
+  "provider_nextcloud_desc": {
+    "message": "Il tuo server Nextcloud o ownCloud personale."
+  },
+  "provider_nextcloud_note": {
+    "message": "Inserisci solo l'host del server; usa una password per l'app (Impostazioni → Sicurezza)."
+  },
+  "provider_pcloud_desc": {
+    "message": "Spazio di archiviazione pCloud. Richiede un piano pCloud a pagamento."
+  },
+  "provider_pcloud_note": {
+    "message": "Seleziona la regione $REGION$ se è lì che si trova il tuo account pCloud.",
+    "placeholders": {
+      "region": {
+        "content": "$1",
+        "example": "EU"
+      }
+    }
+  },
+  "provider_koofr_desc": {
+    "message": "Spazio di archiviazione cloud Koofr."
+  },
+  "provider_koofr_note": {
+    "message": "Usa la tua email di Koofr come nome utente e una password per l'app Koofr come password."
+  },
+  "provider_fastmail_desc": {
+    "message": "Spazio di archiviazione file Fastmail."
+  },
+  "provider_fastmail_note": {
+    "message": "Usa il tuo indirizzo Fastmail completo come nome utente e una password per l'app che abbia l'accesso a File (WebDAV)."
+  }
+}
