@@ -307,5 +307,143 @@
   },
   "onb_device_name_label": {
     "message": "为此设备命名"
+  },
+  "onb_device_name_desc": {
+    "message": "它在其他设备的会话列表中显示的方式。"
+  },
+  "onb_device_name_placeholder": {
+    "message": "工作笔记本电脑"
+  },
+  "onb_encrypt_title": {
+    "message": "加密你的数据吗？"
+  },
+  "onb_encrypt_subtitle": {
+    "message": "如果开启加密，您的数据会在上传前先在此设备上加密。连您的存储提供商都无法读取其中的内容。"
+  },
+  "onb_e2ee_desc": {
+    "message": "AES-256-GCM。推荐。"
+  },
+  "onb_pass_placeholder": {
+    "message": "请选择一个密码短语，或生成加密密钥"
+  },
+  "onb_pass_missing": {
+    "message": "输入密码短语，或生成密钥。"
+  },
+  "onb_pass_too_short": {
+    "message": "至少 $MIN$ 个字符。同步的数据可能被离线攻击，简短的密码短语易于被猜到。",
+    "placeholders": {
+      "min": {
+        "example": "12",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_pass_confirm_placeholder": {
+    "message": "确认密码短语"
+  },
+  "onb_pass_confirm_missing": {
+    "message": "确认您的密码短语。"
+  },
+  "onb_pass_mismatch": {
+    "message": "密码短语尚未匹配。"
+  },
+  "onb_save_passphrase_lead": {
+    "message": "保存此密码短语。"
+  },
+  "onb_save_passphrase_rest": {
+    "message": "它永远不会离开此设备，丢失后也无法恢复。您需要在每台设备上输入相同的密码短语。您可以稍后在设置中复制它。"
+  },
+  "onb_plaintext_note": {
+    "message": "如果不加密，您的数据会直接存储到您自己的存储 $WORD$ 中。若您完全信任存储提供商，这可能是合适的选择。您可以随时在设置里开启加密。",
+    "placeholders": {
+      "word": {
+        "example": "unencrypted",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_plaintext_word": {
+    "message": "可读形式"
+  },
+  "onb_setting_up": {
+    "message": "正在设置…"
+  },
+  "onb_finish_sync": {
+    "message": "完成并同步"
+  },
+  "onb_err_bad_webdav_url": {
+    "message": "那个 WebDAV 地址看起来不像是有效的 URL。"
+  },
+  "onb_err_perms_webdav": {
+    "message": "Konode 需要获得访问您的 WebDAV 服务器以及您所选择的数据类型的权限。请允许它继续。"
+  },
+  "onb_err_perms_types": {
+    "message": "某些权限被拒绝。请授予这些权限，或关闭相应的数据类型，以继续。"
+  },
+  "onb_err_read_settings": {
+    "message": "无法读取您当前的设置，请再试一次。"
+  },
+  "onb_err_save": {
+    "message": "无法保存您的设置：$ERROR$",
+    "placeholders": {
+      "error": {
+        "example": "HTTP 403",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_sync_title": {
+    "message": "正在同步您的数据…"
+  },
+  "onb_sync_subtitle": {
+    "message": "Konode 正在进行首次同步。此过程会在后台运行，因此您无需在此等待。"
+  },
+  "onb_sync_error_title": {
+    "message": "无法完成首次同步"
+  },
+  "onb_sync_error_subtitle": {
+    "message": "您的设置已保存。打开设置进行修复，或直接完成，让 Konode 在后台重试。"
+  },
+  "onb_sync_timeout": {
+    "message": "耗时比平时更长。历史记录较多可能会导致这种情况。同步将在后台继续运行，您现在可以完成操作。"
+  },
+  "onb_finish": {
+    "message": "完成"
+  },
+  "onb_finish_anyway": {
+    "message": "仍要完成"
+  },
+  "onb_done_title": {
+    "message": "一切就绪!"
+  },
+  "onb_done_subtitle": {
+    "message": "Konode 正在将您的浏览器数据同步至 $BACKEND$。首次同步已在后台运行。",
+    "placeholders": {
+      "backend": {
+        "example": "Google Drive",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_done_backend": {
+    "message": "存储已成功连接"
+  },
+  "onb_done_autosync": {
+    "message": "同步在后台自动运行"
+  },
+  "onb_done_adjust": {
+    "message": "您可以随时更改设置"
+  },
+  "datatype_bookmarks_desc": {
+    "message": "完整的书签树，包含文件夹和排序。"
+  },
+  "datatype_sessions_desc": {
+    "message": "可在任何地方恢复的已命名标签会话。"
+  },
+  "datatype_history_desc": {
+    "message": "浏览历史，受天数设置限制。"
+  },
+  "datatype_extensions_desc": {
+    "message": "扩展列表，显示缺失的扩展及其安装链接。"
   }
 }
