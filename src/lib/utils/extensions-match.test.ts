@@ -43,6 +43,30 @@ describe("isInstalledLocally", () => {
     // Same id string but the local store differs — id match is gated on same store.
     expect(isInstalledLocally(ext({ id: FF_ID, name: "A", store: "firefox" }), [{ id: FF_ID, name: "B" }], "chrome")).toBe(false);
   });
+
+  // A homepage host identifies a DEVELOPER, not an extension. Within one store the id is
+  // exact, so the host rule can only ever produce a false "already installed" there.
+  it("does NOT host-match within one store — a shared repo host is not an identity", () => {
+    const local = [{ id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", name: "KeePassXC-Browser", homepageUrl: "https://github.com/keepassxreboot/keepassxc-browser" }];
+    expect(isInstalledLocally(remote, local, "chrome")).toBe(false);
+  });
+  it("suppresses a whole github.com-homepaged set from ONE local extension — the field report", () => {
+    // 20 extensions on the peer, one extension installed here. Before the cross-store gate
+    // every peer entry sharing that host vanished from the missing list.
+    const peer = [
+      ext({ id: CHROME_ID, name: "uBlock Origin", homepageUrl: "https://github.com/gorhill/uBlock" }),
+      ext({ id: "bjpalhdlnbpafiamejdnhcphjbkeiagm", name: "Dark Reader", homepageUrl: "https://github.com/darkreader/darkreader" }),
+      ext({ id: "cjpalhdlnbpafiamejdnhcphjbkeiagn", name: "Stylus", homepageUrl: "https://github.com/openstyles/stylus" }),
+      ext({ id: "djpalhdlnbpafiamejdnhcphjbkeiago", name: "Grammarly", homepageUrl: "https://www.grammarly.com" }),
+    ];
+    const local = [{ id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", name: "SponsorBlock", homepageUrl: "https://github.com/ajayyy/SponsorBlock" }];
+    const missing = peer.filter((e) => !isInstalledLocally(e, local, "chrome"));
+    expect(missing.map((e) => e.name)).toEqual(["uBlock Origin", "Dark Reader", "Stylus", "Grammarly"]);
+  });
+  it("still host-matches ACROSS stores, which is what the rule is for", () => {
+    const local = [{ id: FF_ID, name: "uBlock", homepageUrl: "https://www.github.com/gorhill/uBlock/wiki" }];
+    expect(isInstalledLocally(remote, local, "firefox")).toBe(true);
+  });
 });
 
 describe("storeUrlFor / installOrSearchUrl", () => {

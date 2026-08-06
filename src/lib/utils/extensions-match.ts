@@ -84,10 +84,22 @@ export function inferStore(ext: Pick<SyncExtension, "id" | "store">): Store {
  *      sideloaded or dev-loaded copy whose id differs per profile within one store;
  *   3. a shared DEVELOPER homepage host — never a store-listing host (see STORE_HOSTS),
  *      which is what made this function answer "installed" for essentially everything.
+ *      CROSS-STORE ONLY, see below.
  *
  * A rare false match only suppresses an informational "missing" hint, so leaning towards
  * suppression is an acceptable trade for a read-only feature — but it has to be a real
  * signal doing the suppressing.
+ *
+ * Why the host signal is gated on cross-store: a homepage host identifies a DEVELOPER,
+ * not an extension, and one developer ships many extensions. Worse, a huge share of
+ * extensions point `homepage_url` at their source repository, so github.com alone is
+ * shared by a large slice of any open-source-leaning collection. Within one store the id
+ * signal already answers the question exactly, so the host rule could only ever be wrong
+ * there — and it was, in bulk: a single local extension homepaged on github.com suppressed
+ * every peer extension sharing that host, silently and with no way to see why. Reported
+ * from the field: 20 extensions on one laptop, half of them never listed as missing on the
+ * other. Cross-store the id is useless and the host is the signal this rule exists for, so
+ * it still runs there.
  */
 export function isInstalledLocally(
   remote: SyncExtension,
@@ -95,10 +107,11 @@ export function isInstalledLocally(
   localStore: Store,
 ): boolean {
   const remoteStore = inferStore(remote);
+  const crossStore = remoteStore !== localStore;
   const rName = normalizeExtName(remote.name);
-  const rHost = developerHost(remote.homepageUrl);
+  const rHost = crossStore ? developerHost(remote.homepageUrl) : "";
   return locals.some((l) => {
-    if (remoteStore === localStore && l.id === remote.id) return true;
+    if (!crossStore && l.id === remote.id) return true;
     if (rName && normalizeExtName(l.name) === rName) return true;
     if (rHost && developerHost(l.homepageUrl) === rHost) return true;
     return false;
