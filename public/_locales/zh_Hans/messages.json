@@ -1,1 +1,311 @@
-{}
+{
+  "extension_description": {
+    "message": "隐私优先的浏览器同步，支持同步至个人存储空间：Google Drive、WebDAV、GitHub。"
+  },
+  "datatype_bookmarks": {
+    "message": "书签"
+  },
+  "datatype_history": {
+    "message": "历史记录"
+  },
+  "datatype_sessions": {
+    "message": "会话"
+  },
+  "datatype_extensions": {
+    "message": "扩展"
+  },
+  "status_idle": {
+    "message": "完成"
+  },
+  "status_syncing": {
+    "message": "同步中…"
+  },
+  "status_success": {
+    "message": "同步完成"
+  },
+  "status_error": {
+    "message": "错误"
+  },
+  "status_conflict": {
+    "message": "冲突"
+  },
+  "stream_off": {
+    "message": "关闭"
+  },
+  "stream_syncing": {
+    "message": "同步中…"
+  },
+  "stream_pending": {
+    "message": "等待"
+  },
+  "stream_never": {
+    "message": "未同步"
+  },
+  "stream_stale": {
+    "message": "上次同步失败"
+  },
+  "stream_synced": {
+    "message": "已同步"
+  },
+  "popup_settings_aria": {
+    "message": "设置"
+  },
+  "popup_sync_now": {
+    "message": "立即同步"
+  },
+  "popup_load_error": {
+    "message": "无法连接 Konode。点击重试。"
+  },
+  "popup_recovery_notice": {
+    "message": "一次异常删除（$COUNT$ 条书签）被阻止，已保存恢复点。请在设置 → 活动中查看。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "popup_no_backend": {
+    "message": "未配置后端"
+  },
+  "popup_conflict_title": {
+    "message": "在 $TYPE$ 中出现冲突：请选择一个版本",
+    "placeholders": {
+      "type": {
+        "content": "$1",
+        "example": "bookmarks"
+      }
+    }
+  },
+  "popup_keep_local": {
+    "message": "本地保留"
+  },
+  "popup_use_remote": {
+    "message": "使用远程"
+  },
+  "popup_active_streams": {
+    "message": "活跃数据流"
+  },
+  "popup_missing_extensions_one": {
+    "message": "$COUNT$ 缺失的扩展",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_missing_extensions_other": {
+    "message": "$COUNT$ 缺失的扩展",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "7"
+      }
+    }
+  },
+  "popup_open_all": {
+    "message": "打开全部"
+  },
+  "popup_sessions_head": {
+    "message": "其他设备的会话"
+  },
+  "popup_unknown_device": {
+    "message": "未知设备"
+  },
+  "popup_tabs_one": {
+    "message": "$COUNT$ 标签页",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_tabs_other": {
+    "message": "$COUNT$ 标签页",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "23"
+      }
+    }
+  },
+  "popup_restore": {
+    "message": "还原"
+  },
+  "popup_backend_label": {
+    "message": "后端"
+  },
+  "popup_backend_none": {
+    "message": "无"
+  },
+  "popup_device_label": {
+    "message": "设备"
+  },
+  "popup_configure": {
+    "message": "配置 →"
+  },
+  "popup_activity_log": {
+    "message": "活动日志 →"
+  },
+  "common_back": {
+    "message": "后退"
+  },
+  "common_continue": {
+    "message": "继续"
+  },
+  "common_open_settings": {
+    "message": "打开设置"
+  },
+  "common_close": {
+    "message": "关闭"
+  },
+  "common_show": {
+    "message": "显示"
+  },
+  "common_hide": {
+    "message": "隐藏"
+  },
+  "common_e2ee": {
+    "message": "端对端加密"
+  },
+  "common_generate_key": {
+    "message": "生成强密钥"
+  },
+  "provider_gdrive_desc": {
+    "message": "直接同步至您的个人 Google Drive。得益于 OAuth，访问令牌仅保存在此设备上。"
+  },
+  "provider_nextcloud_desc": {
+    "message": "您自己的 Nextcloud 或 ownCloud 服务器。"
+  },
+  "provider_nextcloud_note": {
+    "message": "输入您的服务器主机地址；请使用应用专用密码（设置 → 安全）。"
+  },
+  "provider_pcloud_desc": {
+    "message": "pCloud 存储。需要付费的 pCloud 计划。"
+  },
+  "provider_pcloud_note": {
+    "message": "如果你的 pCloud 账户位于 $REGION$ 区域，请选择 $REGION$ 区域。",
+    "placeholders": {
+      "region": {
+        "content": "$1",
+        "example": "EU"
+      }
+    }
+  },
+  "provider_koofr_desc": {
+    "message": "Koofr 云端存储。"
+  },
+  "provider_koofr_note": {
+    "message": "使用您的 Koofr 邮箱作为用户名，使用 Koofr 应用专用密码作为密码。"
+  },
+  "provider_fastmail_desc": {
+    "message": "Fastmail 文件存储。"
+  },
+  "provider_fastmail_note": {
+    "message": "使用您的 Fastmail 完整邮箱地址作为用户名，并使用具备文件（WebDAV）访问权限的应用专用密码。"
+  },
+  "provider_github_desc": {
+    "message": "你的同步数据存放在一个私有的 GitHub 仓库中，Konode 通过个人访问令牌进行访问。"
+  },
+  "provider_webdav_desc": {
+    "message": "Synology、kDrive，或任何其他 WebDAV 服务器。"
+  },
+  "provider_syncing_to": {
+    "message": "正在同步至 $URL$。",
+    "placeholders": {
+      "url": {
+        "example": "https://app.koofr.net/dav/Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_welcome_title": {
+    "message": "欢迎使用Konode"
+  },
+  "onb_welcome_subtitle": {
+    "message": "浏览器同步，让你的数据真正属于你。你的书签、会话和扩展直接保存到你自己的存储空间。没有中间服务器。"
+  },
+  "onb_feature_storage": {
+    "message": "您的数据始终保存在您自己的存储空间中。"
+  },
+  "onb_feature_instant": {
+    "message": "实时同步每一次更改。"
+  },
+  "onb_feature_browsers": {
+    "message": "适用于基于 Chromium 和 Firefox 的浏览器。"
+  },
+  "onb_feature_providers": {
+    "message": "由您决定数据存放在哪里。"
+  },
+  "onb_get_started": {
+    "message": "开始使用"
+  },
+  "onb_backend_title": {
+    "message": "选择你的存储"
+  },
+  "onb_backend_subtitle": {
+    "message": "Konode 应该把你的数据存放在哪里？"
+  },
+  "onb_use_provider": {
+    "message": "使用 $PROVIDER$",
+    "placeholders": {
+      "provider": {
+        "example": "Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_drive_unavailable": {
+    "message": "此浏览器不支持 Google 登录。请选择其他选项。"
+  },
+  "onb_connecting": {
+    "message": "连接中…"
+  },
+  "onb_sign_in_google": {
+    "message": "通过 Google 登录"
+  },
+  "onb_signin_failed": {
+    "message": "登录失败。"
+  },
+  "onb_webdav_user_placeholder": {
+    "message": "用户名"
+  },
+  "onb_webdav_pass_placeholder": {
+    "message": "密码 / 应用令牌"
+  },
+  "onb_verifying": {
+    "message": "验证中…"
+  },
+  "onb_github_401": {
+    "message": "GitHub 拒绝了此令牌。请检查它是否已过期，以及是否已完整粘贴所有内容。"
+  },
+  "onb_github_http": {
+    "message": "GitHub 无法验证令牌（HTTP $STATUS$）。",
+    "placeholders": {
+      "status": {
+        "example": "500",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_github_unreachable": {
+    "message": "无法连接到 GitHub。请检查网络连接后重试。"
+  },
+  "onb_github_branch_placeholder": {
+    "message": "分支（默认：main）"
+  },
+  "onb_github_token_link": {
+    "message": "创建细粒度令牌（仅限此仓库） →"
+  },
+  "onb_data_title": {
+    "message": "要同步哪些内容？"
+  },
+  "onb_data_subtitle": {
+    "message": "您可以随时在设置中更改此项。"
+  },
+  "onb_device_name_label": {
+    "message": "为此设备命名"
+  }
+}
