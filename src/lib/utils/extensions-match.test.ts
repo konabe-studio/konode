@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  normalizeExtName, inferStore, isInstalledLocally, storeUrlFor, installOrSearchUrl,
+  normalizeExtName, inferStore, isInstalledLocally, missingLocally, storeUrlFor, installOrSearchUrl,
 } from "@/lib/utils/extensions-match";
 import type { SyncExtension } from "@/lib/types";
 
@@ -66,6 +66,27 @@ describe("isInstalledLocally", () => {
   it("still host-matches ACROSS stores, which is what the rule is for", () => {
     const local = [{ id: FF_ID, name: "uBlock", homepageUrl: "https://www.github.com/gorhill/uBlock/wiki" }];
     expect(isInstalledLocally(remote, local, "firefox")).toBe(true);
+  });
+});
+
+describe("missingLocally", () => {
+  // The old spelling was `e.type === "extension"`, an allow-list against a field that
+  // carries the browser's own ExtensionType. Chrome never emits "app".
+  it("keeps an app-typed entry, which the browser really does report", () => {
+    const remote = [ext({ id: CHROME_ID, name: "Some Web App", type: "hosted_app" })];
+    expect(missingLocally(remote, [], "chrome").map((e) => e.name)).toEqual(["Some Web App"]);
+  });
+  it("keeps an entry with no type at all rather than swallowing it", () => {
+    const remote = [{ ...ext({ id: CHROME_ID, name: "Typeless" }), type: undefined as unknown as string }];
+    expect(missingLocally(remote, [], "chrome")).toHaveLength(1);
+  });
+  it("still drops a theme", () => {
+    const remote = [ext({ id: CHROME_ID, name: "Midnight", type: "theme" })];
+    expect(missingLocally(remote, [], "chrome")).toEqual([]);
+  });
+  it("still drops what is installed here", () => {
+    const remote = [ext({ id: CHROME_ID, name: "uBlock Origin" })];
+    expect(missingLocally(remote, [{ id: CHROME_ID }], "chrome")).toEqual([]);
   });
 });
 

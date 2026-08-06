@@ -162,7 +162,13 @@ export interface SyncExtension {
   homepageUrl?: string;
   storeUrl: string; // a host-pinned store link: CWS listing (chrome) or AMO search (firefox)
   description?: string;
-  type: "extension" | "theme" | "app";
+  // The browser's own ExtensionType string, carried verbatim. Chrome emits
+  // "extension" | "hosted_app" | "packaged_app" | "legacy_packaged_app" | "theme" |
+  // "login_screen_extension" and Firefox adds more; it never emits "app". This was
+  // declared as "extension" | "theme" | "app" and CAST to, which made every app-typed
+  // entry fail an === "extension" test at the display end after surviving the whole
+  // sync. Consumers ask what this is NOT (see missingLocally), never what it is.
+  type: string;
   // Source browser/store. Extension ids don't cross stores, so this + the name/
   // homepage drive cross-browser matching. Optional for legacy packets (inferred).
   store?: "chrome" | "firefox";

@@ -81,7 +81,7 @@ import { KEYS, normalizeRemoteExtensions, type AuditEntry } from "@/lib/utils/st
 import { isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
 import { browser, currentStore } from "@/lib/utils/ext";
-import { isInstalledLocally, installOrSearchUrl, storeUrlFor, inferStore, type LocalExtLike } from "@/lib/utils/extensions-match";
+import { missingLocally, installOrSearchUrl, storeUrlFor, inferStore, type LocalExtLike } from "@/lib/utils/extensions-match";
 import {
   PROVIDERS, providerById, providerFromConfig, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf,
   webdavUrlForCard,
@@ -919,9 +919,9 @@ export default function OptionsApp() {
     );
   }
 
-  const missingExtensions = remoteExtensions?.filter(
-    (e) => e.type === "extension" && !isInstalledLocally(e, localExts, currentStore())
-  ) ?? [];
+  const missingExtensions = remoteExtensions
+    ? missingLocally(remoteExtensions, localExts, currentStore())
+    : [];
 
   // First-run guidance. The onboarding wizard opens via a programmatic tabs.create
   // on install, which silently no-ops on WebKit/Orion — so the user only ever reaches

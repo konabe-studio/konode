@@ -119,6 +119,25 @@ export function isInstalledLocally(
 }
 
 /**
+ * Which of a peer's extensions are not installed here.
+ *
+ * Both surfaces that show "missing on this device" (the popup list and the Settings
+ * statistics) need the identical rule, and they used to spell it out separately as
+ * `e.type === "extension" && !isInstalledLocally(...)`. That allow-list was the bug:
+ * `type` carries the browser's own ExtensionType, so a hosted or packaged app was
+ * exported, uploaded, downloaded and stored, then dropped here without a trace. Ask
+ * what it is NOT: the export already excludes themes, so excluding them again is
+ * belt-and-braces, and an entry with no type at all is shown rather than swallowed.
+ */
+export function missingLocally(
+  remote: SyncExtension[],
+  locals: LocalExtLike[],
+  localStore: Store,
+): SyncExtension[] {
+  return remote.filter((e) => e.type !== "theme" && !isInstalledLocally(e, locals, localStore));
+}
+
+/**
  * A host-pinned store link this browser's store from a peer's `id`/`name`. Chrome
  * gets the CWS item page (id-based, exact); Firefox has no id→listing mapping, so
  * it gets an AMO name search. Rebuild-from-fields (never trust a peer-supplied URL

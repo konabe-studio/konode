@@ -37,7 +37,7 @@ export async function exportExtensions(): Promise<SyncExtension[]> {
       store,
       storeUrl: storeUrlFor({ id: ext.id, name: ext.name, store }),
       description: ext.description,
-      type: ext.type as "extension" | "theme" | "app",
+      type: ext.type,
     }));
 
   logger.info("extensions.export", `Exported ${filtered.length} extensions`);

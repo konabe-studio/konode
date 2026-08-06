@@ -3,7 +3,7 @@ import type { SyncState, SyncSettings, DataType, SyncExtension, RemoteSessionEnt
 import { providerFromConfig, providerById } from "@/lib/storage-providers";
 import { sendMessage, request } from "@/lib/utils/messaging";
 import { browser, currentStore } from "@/lib/utils/ext";
-import { isInstalledLocally, installOrSearchUrl } from "@/lib/utils/extensions-match";
+import { missingLocally, installOrSearchUrl } from "@/lib/utils/extensions-match";
 import { KEYS, getSettings, getState, normalizeRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/storage";
 import { STATE_UPDATE } from "@/lib/constants";
 import { streamState, streamInputFor, streamColor, streamLabelKey } from "@/popup/stream-state";
@@ -124,9 +124,7 @@ export default function PopupApp() {
       // Cross-store the same extension has different ids, so match on id (same
       // store) OR normalized name / homepage host — otherwise every extension on a
       // different-browser peer would show as "missing" here.
-      setMissingExtensions(
-        remote.filter((e) => e.type === "extension" && !isInstalledLocally(e, local, here))
-      );
+      setMissingExtensions(missingLocally(remote, local, here));
     })();
 
     void browser.storage.local.get(KEYS.REMOTE_SESSIONS).then((r) => {
