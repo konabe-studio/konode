@@ -1,4 +1,8 @@
 {
+  "extension_name": {
+    "message": "Konode | Private Bookmark & Tab Sync",
+    "description": "The extension's name. This IS the Chrome Web Store listing title, so it carries the search terms people actually type: bookmark, tab, sync. Keep 'Konode' first and keep the whole thing under 45 characters. Translate the part after the bar into what someone would search for in your language; leave 'Konode' alone, it is the product name."
+  },
   "extension_description": {
     "message": "Privacy-first browser sync to your own storage: Google Drive, WebDAV, GitHub.",
     "description": "Shown in the browser's extension list, and used as the store summary when the listing does not override it."

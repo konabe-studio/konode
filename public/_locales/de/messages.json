@@ -1,4 +1,7 @@
 {
+  "extension_name": {
+    "message": "Konode | Privater Lesezeichen- und Tab-Sync"
+  },
   "extension_description": {
     "message": "Datenschutzfreundliche Browser-Synchronisierung in deinen eigenen Speicher: Google Drive, WebDAV, GitHub."
   },

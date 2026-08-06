@@ -1,4 +1,7 @@
 {
+  "extension_name": {
+    "message": "Konode | Privát könyvjelző- és lapszinkron"
+  },
   "extension_description": {
     "message": "Adatvédelem-központú böngésző-szinkronizálás a saját tárhelyedre: Google Drive, WebDAV, GitHub."
   },

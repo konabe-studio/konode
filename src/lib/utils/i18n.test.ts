@@ -110,6 +110,7 @@ describe("the English catalogue is the contract", () => {
     // scan above, so they are listed here on purpose: naming them is what makes a genuinely
     // dead string stand out instead of hiding behind a template literal.
     const builtAtRuntime = [
+      "extension_name",        // used by the manifest (and IS the store listing title)
       "extension_description", // used by the manifest, not by any .ts file
       "status_idle", "status_syncing", "status_success", "status_error", "status_conflict",
       "datatype_bookmarks", "datatype_history", "datatype_sessions", "datatype_extensions",
