@@ -433,6 +433,36 @@ describe("SyncEngine — one data type's failure must not abort the others", () 
     expect(await priv(engine).syncAllTypes(["bookmarks"], backend, DEFAULT_STATE)).toEqual([]);
   });
 
+  it("REPORTS a type whose optional permission is gone, rather than skipping it quietly", async () => {
+    // The other half of the check above, and the opposite answer. Here the browser can do
+    // it and the permission is simply missing, which is the user's to fix. Reported on
+    // 1.2.0 as a raw "undefined is not an object (evaluating 'u.history.search')" once a
+    // cycle; silence would be no better, because the type sits there enabled and syncs
+    // nothing. `history` is undefined AND not granted, which is exactly that state.
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    // An empty bookmark payload is deliberately never uploaded, so seed one: this test
+    // is about bookmarks still going out, and it has to have something to send.
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    const history = chrome.history;
+    const permissions = chrome.permissions;
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    delete (chrome as any).history;
+    (chrome as any).permissions = { contains: () => Promise.resolve(false), request: () => Promise.resolve(false) };
+    try {
+      const problems = await priv(engine).syncAllTypes(["history", "bookmarks"], backend, DEFAULT_STATE);
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toContain("history");
+      expect(problems[0]).toContain("permission");
+      // The point of reporting rather than throwing: bookmarks still goes out.
+      expect(backend.uploads.map((u) => u.data_type)).toEqual(["bookmarks"]);
+    } finally {
+      (chrome as any).history = history;
+      (chrome as any).permissions = permissions;
+      /* eslint-enable @typescript-eslint/no-explicit-any */
+    }
+  });
+
   it("skips a type this browser has no API for, and does NOT call it an error", async () => {
     // Firefox for Android has no bookmarks API, so `bookmarks` can never produce a byte
     // there. Reporting that once a minute would pin the extension to a red error state

@@ -14,6 +14,13 @@ All notable changes to Konode. Format loosely follows
   that with an error thrown on the spot rather than a failed promise, which took the whole
   page down with it. Konode now checks that the call is really available before making it.
   Settings opens normally whether or not extension sync is switched on.
+- **A data type could stay switched on after losing its permission, and sync nothing.**
+  History and the extension list need a permission you grant separately, and browsers let
+  you take it back from their own extension settings without telling the extension. When
+  that happened, the type still looked enabled, synced nothing, and left an unreadable
+  error in the log once a cycle. Konode now says which permission is missing and how to
+  restore it, both in Settings and in the sync status, and the rest of your data keeps
+  syncing meanwhile.
 
 ### Fixed: Firefox for Android
 

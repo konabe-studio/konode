@@ -1517,6 +1517,19 @@ export default function OptionsApp() {
                           <div className="row-desc">
                             {off ? unsupportedReason(type) : t(`datatype_${type}_desc`)}
                           </div>
+                          {/* Switched on, browser can do it, permission gone. Browsers let
+                              you revoke an optional permission from their own extension
+                              settings and tell the extension nothing, so this type would
+                              otherwise sit here looking enabled and sync nothing at all. */}
+                          {settings.enabled_types.includes(type)
+                            && availability[type]?.state === "needs-permission"
+                            && typeError?.type !== type && (
+                            <div className="error-row" role="alert">
+                              <AlertTriangle size={12} /> Konode doesn't have the permission
+                              this needs any more, so it isn't syncing. Switch it off and on
+                              again to restore it.
+                            </div>
+                          )}
                           {typeError?.type === type && (
                             <div className="error-row" role="alert">
                               <AlertTriangle size={12} /> {typeError.message}
