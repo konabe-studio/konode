@@ -445,5 +445,8 @@
   },
   "datatype_extensions_desc": {
     "message": "扩展列表，显示缺失的扩展及其安装链接。"
+  },
+  "extension_name": {
+    "message": "Konode | 私人书签与标签页同步"
   }
 }
