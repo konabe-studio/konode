@@ -7,6 +7,7 @@ import {
   clearRejectedHistoryUrls, getVisitTimeSupport, setVisitTimeSupport,
 } from "@/lib/utils/storage";
 import { browser } from "@/lib/utils/ext";
+import { assertDataTypeApi } from "@/lib/utils/capabilities";
 
 const EXPORT_MAX_RESULTS = 5000;
 
@@ -55,6 +56,7 @@ const IMPORT_CONCURRENCY = 16;
 // ─── Export ──────────────────────────────────────────────────────────────
 
 export async function exportHistory(daysLimit = 30): Promise<SyncHistoryItem[]> {
+  assertDataTypeApi("history");
   const startTime = Date.now() - daysLimit * 24 * 60 * 60 * 1000;
 
   const items = await browser.history.search({
@@ -118,6 +120,7 @@ export async function exportHistory(daysLimit = 30): Promise<SyncHistoryItem[]> 
 // ─── Import (merge remote history) ───────────────────────────────────────
 
 export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
+  assertDataTypeApi("history");
   // NOTE: on Chrome, history.addUrl records a visit only at the *current* time
   // (its API takes no visitTime), so the original lastVisitTime is lost and
   // visitCount can't be restored at all — history restore is lossy there

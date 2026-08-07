@@ -432,6 +432,26 @@ describe("SyncEngine — one data type's failure must not abort the others", () 
 
     expect(await priv(engine).syncAllTypes(["bookmarks"], backend, DEFAULT_STATE)).toEqual([]);
   });
+
+  it("skips a type this browser has no API for, and does NOT call it an error", async () => {
+    // Firefox for Android has no bookmarks API, so `bookmarks` can never produce a byte
+    // there. Reporting that once a minute would pin the extension to a red error state
+    // forever over something the user cannot fix — and bury the real failures under it.
+    // Settings is where this is explained, next to the toggle itself.
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    const bookmarks = chrome.bookmarks;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (chrome as any).bookmarks;
+    try {
+      const problems = await priv(engine).syncAllTypes(["bookmarks", "sessions"], backend, DEFAULT_STATE);
+      expect(problems).toEqual([]);
+      expect(backend.uploads.map((u) => u.data_type)).not.toContain("bookmarks");
+    } finally {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (chrome as any).bookmarks = bookmarks;
+    }
+  });
 });
 
 describe("SyncEngine.syncType — a tab-less session is not published", () => {

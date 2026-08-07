@@ -8,6 +8,7 @@ import { KEYS, getSettings, getState, normalizeRemoteSessions, normalizeRemoteEx
 import { STATE_UPDATE } from "@/lib/constants";
 import { streamState, streamInputFor, streamColor, streamLabelKey } from "@/popup/stream-state";
 import { t, plural } from "@/lib/utils/i18n";
+import { dataTypeApiPresent, hasPermission } from "@/lib/utils/capabilities";
 import {
   RefreshCw, Settings, Bookmark, Clock, Globe,
   AlertCircle, Loader2, ChevronRight,
@@ -116,8 +117,12 @@ export default function PopupApp() {
       // Union of every peer device's extension list (deduped by id).
       const remote = normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]);
       if (!remote.length) return;
-      // "management" is an optional permission now — only query if it was granted.
-      const hasMgmt = await browser.permissions.contains({ permissions: ["management"] });
+      // "management" is an optional permission now — only query if it was granted, and
+      // only if this browser has the API behind it at all. Those are two different
+      // questions: a permission can be held on a browser that never implemented the API,
+      // and then the call below is a TypeError inside a popup, where nobody sees it.
+      if (!dataTypeApiPresent("extensions")) return;
+      const hasMgmt = await hasPermission({ permissions: ["management"] });
       if (!hasMgmt) return;
       const local = await browser.management.getAll();
       const here = currentStore();

@@ -2,6 +2,7 @@ import type { SyncExtension } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { storeUrlFor } from "@/lib/utils/extensions-match";
+import { assertDataTypeApi } from "@/lib/utils/capabilities";
 
 // Legacy webstore URL: Chrome redirects /detail/<id> to the correct listing.
 // The new chromewebstore.google.com/detail/<id> form needs a slug we don't have.
@@ -13,6 +14,7 @@ import { storeUrlFor } from "@/lib/utils/extensions-match";
  * Filters out: themes, built-in Chrome extensions, and Konode itself.
  */
 export async function exportExtensions(): Promise<SyncExtension[]> {
+  assertDataTypeApi("extensions");
   const extensions = await browser.management.getAll();
   const selfId = browser.runtime.id;
   const store = currentStore();

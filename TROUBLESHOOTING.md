@@ -101,6 +101,28 @@ on the extension's name and on the developer's homepage host instead. That catch
 common cases, but an extension published under different names in the two stores still
 shows up as "missing on this device". The list is most exact between same-browser peers.
 
+## Firefox for Android
+
+Firefox for Android runs extensions on GeckoView, which implements a smaller slice of the
+extension APIs than desktop Firefox. Two of those gaps affect Konode directly, and neither
+is something Konode can work around — so it tells you about them instead of failing.
+
+**Bookmarks and History can't be synced there.** Firefox for Android ships no bookmarks
+API and no history API, so an extension has nothing to read or write
+([bookmarks](https://github.com/mozilla-mobile/fenix/issues/21830)). Konode marks both as
+unavailable in Settings → Data Types and skips them, rather than reporting an error every
+sync for something you can't fix. Open tabs still sync, and your desktop devices carry on
+syncing everything among themselves. Bookmarks you have on Android are not touched.
+
+**"This browser can't show permission prompts."** Firefox for Android doesn't implement
+runtime permission requests
+([bug 1601420](https://bugzilla.mozilla.org/show_bug.cgi?id=1601420)), so when Konode asks
+for access to your WebDAV server, no prompt appears and the request comes back refused. To
+grant it by hand: open Firefox's **Settings → Extensions → Konode → Permissions**, allow
+the permissions there, then return to Konode and try again. Konode checks what you've
+already granted before asking, so once it's allowed there, setup and Test connection go
+through.
+
 ## Starting over
 
 Google Drive has a **Disconnect** button in **Settings → Storage**. GitHub and WebDAV

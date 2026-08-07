@@ -84,10 +84,18 @@ function ensureInit(): Promise<void> {
 
 // ─── Badge ────────────────────────────────────────────────────────────────
 
+/** The toolbar badge is decoration, and not every browser has one to draw on — mobile
+ *  builds in particular. A throw here used to travel up through `broadcastState`, which
+ *  is called from the sync path, so a missing badge could take a working sync down with
+ *  it. Nothing about the sync depends on this succeeding. */
 function updateBadge(status: string): void {
   const key = status as keyof typeof BADGE_COLORS;
-  browser.action.setBadgeBackgroundColor({ color: BADGE_COLORS[key] ?? BADGE_COLORS.idle });
-  browser.action.setBadgeText({ text: BADGE_TEXT[key] ?? "" });
+  try {
+    browser.action.setBadgeBackgroundColor({ color: BADGE_COLORS[key] ?? BADGE_COLORS.idle });
+    browser.action.setBadgeText({ text: BADGE_TEXT[key] ?? "" });
+  } catch (e) {
+    logger.debug("updateBadge", `This browser wouldn't take a toolbar badge: ${e instanceof Error ? e.message : e}`);
+  }
 }
 
 /** Update the toolbar and push the state to any open popup/options view.

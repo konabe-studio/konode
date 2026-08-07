@@ -8,6 +8,7 @@ import { exportBookmarkPayload, importBookmarks } from "@/lib/handlers/bookmarks
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
 import { exportHistory, importHistory } from "@/lib/handlers/history-handler";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
+import { dataTypeApiPresent, unsupportedReason } from "@/lib/utils/capabilities";
 import {
   getState,
   setState,
@@ -327,8 +328,23 @@ export class SyncEngine {
     state: SyncState
   ): Promise<string[]> {
     const errors: string[] = [];
-    await this.findOwnMissingFiles(backend, types);
-    for (const dataType of types) {
+
+    // Drop types this browser has no API for BEFORE anything else touches them.
+    //
+    // Not an error, and deliberately not reported as one: "Firefox for Android has no
+    // bookmarks API" is a standing fact about the device, not something that went wrong
+    // this cycle. Recording it in `last_error` would pin the extension to a red error
+    // state forever, every minute, for a condition the user cannot fix — while burying
+    // the real failures underneath it. The Settings screen is where this belongs, and it
+    // says so next to the toggle itself.
+    const runnable: DataType[] = [];
+    for (const t of types) {
+      if (dataTypeApiPresent(t)) runnable.push(t);
+      else logger.info("SyncEngine", `Skipping ${t}: ${unsupportedReason(t)}`);
+    }
+
+    await this.findOwnMissingFiles(backend, runnable);
+    for (const dataType of runnable) {
       try {
         await this.syncType(dataType, backend, state);
       } catch (err) {

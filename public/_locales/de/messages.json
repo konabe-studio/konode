@@ -380,6 +380,9 @@
   "onb_err_perms_webdav": {
     "message": "Konode braucht die Berechtigung für deinen WebDAV-Server und die gewählten Datentypen. Bitte erteile sie, um fortzufahren."
   },
+  "onb_err_perms_no_prompt": {
+    "message": "Dieser Browser kann keine Berechtigungsdialoge anzeigen, deshalb konnte Konode den benötigten Zugriff nicht anfragen. Erteile ihn auf der Berechtigungsseite von Konode in den Erweiterungseinstellungen deines Browsers und drücke dann erneut auf Fertigstellen."
+  },
   "onb_err_perms_types": {
     "message": "Einige Berechtigungen wurden abgelehnt. Erteile sie oder deaktiviere diese Datentypen, um fortzufahren."
   },

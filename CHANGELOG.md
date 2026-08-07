@@ -3,6 +3,35 @@
 All notable changes to Konode. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Fixed: Firefox for Android
+
+All four of these come from one detailed field report, and they share one cause: Konode
+assumed that a permission its manifest asks for is a feature the browser actually has.
+On Firefox for Android that isn't true, and every symptom below is what happens when the
+two disagree. Konode now checks what the browser can really do, and says so plainly where
+it can't.
+
+- **Setup blamed your WebDAV server for a permission it was never asked about.** Firefox
+  for Android doesn't implement runtime permission prompts, so the request came back
+  refused with no prompt ever shown — and the wizard reported that as "Konode needs
+  permission to reach your WebDAV server". Konode now checks the permissions you already
+  hold *before* asking, so a permission granted by hand in Firefox's add-on settings is
+  simply accepted. If it still can't ask, it says so, and tells you where to grant it,
+  instead of telling you that you refused.
+- **The History toggle silently refused to move.** Turning a data type on asks for its
+  optional permission first, and if that came back refused the switch just sprang back
+  with no explanation anywhere. It now says why, on the row you clicked.
+- **Bookmarks failed with a "getTree" error.** Firefox for Android provides no bookmarks
+  API at all. Bookmarks and History are now shown as unavailable there, with the reason,
+  and are skipped by the sync rather than failing it every cycle. Open tabs still sync,
+  and nothing changes for your desktop devices.
+- **The extension could load half-built.** Konode registers its bookmark-change listeners
+  when the background script starts. On a browser with no bookmarks API that line threw
+  and took the rest of the script down with it, leaving an extension that had started but
+  wasn't finished — which looks like it's working.
+
 ## [1.2.0] - 2026-08-04
 
 A full code-review pass over the sync engine, the storage backends and the interface,

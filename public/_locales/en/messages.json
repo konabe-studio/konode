@@ -433,6 +433,9 @@
   "onb_err_perms_webdav": {
     "message": "Konode needs permission to reach your WebDAV server and the data types you chose. Please allow them to continue."
   },
+  "onb_err_perms_no_prompt": {
+    "message": "This browser can't show permission prompts, so Konode couldn't ask for the access it needs. Grant it on Konode's permissions screen in your browser's extension settings, then press Finish again."
+  },
   "onb_err_perms_types": {
     "message": "Some permissions were declined. Grant them, or turn off those data types, to continue."
   },
