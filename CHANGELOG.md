@@ -3,7 +3,7 @@
 All notable changes to Konode. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [1.2.1] - 2026-08-07
 
 ### Fixed
 
