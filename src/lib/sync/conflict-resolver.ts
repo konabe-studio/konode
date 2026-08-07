@@ -6,6 +6,7 @@ import type {
 } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import { browser } from "@/lib/utils/ext";
+import { apiPresent } from "@/lib/utils/capabilities";
 
 // ─── Conflict Resolver ────────────────────────────────────────────────────
 
@@ -102,6 +103,13 @@ export function orderPeersByTime(packets: SyncPacket[]): SyncPacket[] {
 // ─── Notify helper ───────────────────────────────────────────────────────
 
 export function notifyConflict(dataType: DataType): void {
+  // A conflict is still recorded and still resolvable in the UI without this. Losing the
+  // desktop notification is a small thing; losing the SYNC because the browser doesn't
+  // implement notifications would not be, and this is called from inside the sync.
+  if (!apiPresent("notifications", "create")) {
+    logger.info("notifyConflict", `This browser has no notifications API, so the ${dataType} conflict is only shown in Konode`);
+    return;
+  }
   browser.notifications.create(`conflict-${Date.now()}`, {
     type: "basic",
     iconUrl: "icons/icon48.png",

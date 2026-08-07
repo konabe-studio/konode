@@ -4,6 +4,7 @@ import {
   assertDataTypeApi, ensurePermission, hasPermission, isAndroid, resetCapabilityCache,
 } from "@/lib/utils/capabilities";
 import { registerBookmarkListeners, exportBookmarks } from "@/lib/handlers/bookmarks-handler";
+import { notifyConflict } from "@/lib/sync/conflict-resolver";
 
 /**
  * These tests exist because of one field report, and every case below is a line from it.
@@ -147,12 +148,21 @@ describe("what a handler throws when the API isn't there", () => {
   });
 });
 
-describe("registering bookmark listeners", () => {
-  it("does not throw on a browser with no bookmarks API", () => {
+describe("carrying on without an API", () => {
+  it("registers no bookmark listeners on a browser with no bookmarks API", () => {
     // The background script calls this at the top level, so a throw here took out the
     // rest of the module and left the extension half-built — working enough to look fine.
     replace("bookmarks", undefined);
     expect(() => registerBookmarkListeners(() => {})).not.toThrow();
+  });
+
+  it("skips the conflict notification rather than failing the sync", () => {
+    // notifyConflict is called from inside a sync. The conflict is recorded and
+    // resolvable in the UI either way, so a browser without notifications should lose
+    // the toast and nothing else. Orion implements roughly 70% of the extension APIs,
+    // which makes "this engine hasn't got that one" ordinary rather than exotic.
+    replace("notifications", undefined);
+    expect(() => notifyConflict("bookmarks")).not.toThrow();
   });
 });
 

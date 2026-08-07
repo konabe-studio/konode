@@ -21,6 +21,13 @@ All notable changes to Konode. Format loosely follows
   error in the log once a cycle. Konode now says which permission is missing and how to
   restore it, both in Settings and in the sync status, and the rest of your data keeps
   syncing meanwhile.
+- **One unsupported browser feature no longer takes the rest of Konode with it.** Konode
+  attaches its background listeners the moment it starts, one after another, so a browser
+  that didn't implement one of them stopped the whole sequence there. Everything after it
+  was never set up, on a Konode that had started and looked fine. Each one is now attached
+  on its own, and a browser missing a feature loses only what depends on it. Conflict
+  notifications work the same way: a browser that can't show one still records the conflict
+  and still lets you resolve it in Konode.
 
 ### Fixed: Firefox for Android
 
