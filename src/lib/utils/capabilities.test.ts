@@ -67,6 +67,17 @@ describe("reading the API surface", () => {
     expect(dataTypeApiPresent("history")).toBe(false);
   });
 
+  it("says no to Chrome's restricted management namespace", () => {
+    // The exact shape behind a reported blank Settings page. Chrome does NOT hide
+    // `chrome.management` when the optional permission isn't granted: it hands back an
+    // object carrying only getSelf/uninstallSelf. So `management.getAll` is not a
+    // function, and calling it throws synchronously, before there is any promise for a
+    // `.catch()` to catch. Inside a React effect that unmounts the tree and the page
+    // renders blank. A namespace-level check would have answered "present" here.
+    replace("management", { getSelf: () => Promise.resolve({}), uninstallSelf: () => Promise.resolve() });
+    expect(dataTypeApiPresent("extensions")).toBe(false);
+  });
+
   it("says yes when the method is really there", () => {
     expect(dataTypeApiPresent("bookmarks")).toBe(true);
     expect(dataTypeApiPresent("sessions")).toBe(true);

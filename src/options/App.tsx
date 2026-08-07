@@ -392,10 +392,21 @@ export default function OptionsApp() {
       // options "missing on this device" list stayed empty (the popup was correct).
       setRemoteExtensions(normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]));
     });
-    // "management" is optional — this may reject if not granted; ignore then.
-    void browser.management.getAll()
-      .then((exts) => setLocalExts(exts.map((e) => ({ id: e.id, name: e.name, homepageUrl: e.homepageUrl }))))
-      .catch(() => {});
+    // "management" is optional, and the `.catch()` below was built on a wrong idea of what
+    // happens without it. Chrome does not hide the namespace: `chrome.management` is always
+    // there, carrying only `getSelf`/`uninstallSelf` until the permission is granted. So
+    // `getAll` is not a function, and the call throws SYNCHRONOUSLY, before any promise
+    // exists for `.catch()` to catch. Thrown from inside an effect, that unmounts the tree,
+    // and the whole Settings page renders blank.
+    //
+    // That is the default state of a fresh install: 1.2.0 made `management` optional, and
+    // the wizard only asks for it if you switch extension sync on. Reported twice (#5, and
+    // again with the exact "g.management.getAll is not a function" stack).
+    if (dataTypeApiPresent("extensions")) {
+      void browser.management.getAll()
+        .then((exts) => setLocalExts(exts.map((e) => ({ id: e.id, name: e.name, homepageUrl: e.homepageUrl }))))
+        .catch(() => {});
+    }
   }, [load]);
 
   // Load Statistics data once on mount: sync state (last sync, counts, bytes), a live
@@ -888,8 +899,10 @@ export default function OptionsApp() {
 
       let imported = 0;
 
-      // Import bookmarks
-      if (data.bookmarks) {
+      // Import bookmarks. The API check is not paranoia: a backup file can be opened on a
+      // browser that has no bookmarks API, and without this the import dies on a TypeError
+      // and reports a generic failure for a file that is perfectly fine.
+      if (data.bookmarks && dataTypeApiPresent("bookmarks")) {
         const roots = (await browser.bookmarks.getTree())[0]?.children ?? [];
         const otherId = defaultOtherRootId(roots); // browser-agnostic "Other bookmarks"
 
@@ -921,8 +934,11 @@ export default function OptionsApp() {
         }
       }
 
-      // Import history
-      if (Array.isArray(data.history)) {
+      // Import history. Same reasoning as the bookmarks guard above, plus one of its own:
+      // `history` is an optional permission, so on a browser that gates the namespace this
+      // is undefined until it is granted, and every single item would throw into its own
+      // catch and be silently dropped.
+      if (Array.isArray(data.history) && dataTypeApiPresent("history")) {
         for (const item of data.history) {
           if (item.url && isSafeContentUrl(item.url)) try { await browser.history.addUrl({ url: item.url }); } catch { /* skip */ }
         }

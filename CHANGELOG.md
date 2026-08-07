@@ -5,6 +5,16 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Settings page could open blank.** On a fresh 1.2.0 install, opening Settings showed
+  nothing at all, with `management.getAll is not a function` in the console. 1.2.0 made the
+  extension-list permission optional so the install prompt stays small, and Konode then
+  asked the browser for your extension list before that permission existed. Chrome answers
+  that with an error thrown on the spot rather than a failed promise, which took the whole
+  page down with it. Konode now checks that the call is really available before making it.
+  Settings opens normally whether or not extension sync is switched on.
+
 ### Fixed: Firefox for Android
 
 All four of these come from one detailed field report, and they share one cause: Konode
