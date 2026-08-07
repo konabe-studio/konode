@@ -1,3 +1,4 @@
-# Shows a "Sponsor" button on the repo. Plain links only — no third-party JS is
-# loaded into the extension (that would break the no-external-request stance).
+# Shows a "Sponsor" button on the repo page. This file never reaches the extension, so it
+# is not what keeps third-party scripts out (the manifest CSP does that). Keep it a plain
+# link anyway, matching the one in README.md.
 buy_me_a_coffee: konabe.studio
