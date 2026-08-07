@@ -1,13 +1,12 @@
 # ROADMAP.md: direction
 
-High-level direction. Granular tasks live in `TODO.md`; shipped history is in
-`CHANGELOG.md`.
+High-level direction. Shipped history is in `CHANGELOG.md`.
 
 ## Vision
 A privacy-first browser sync that puts the user's data on storage **they own**
 (Google Drive / GitHub / WebDAV), with **no Konode server** and **no telemetry**.
 Native-sync parity (add + delete propagate both ways) with optional E2EE, working
-on any Chromium browser.
+on any Chromium browser and on Firefox.
 
 ## Now (done / hardened)
 - Two-way bookmark sync with deletion propagation (tombstones), folders preserved.
@@ -16,7 +15,8 @@ on any Chromium browser.
 - Three backends: Google Drive, GitHub (fine-grained PAT), WebDAV.
 - History / sessions / extensions data types; conflict-resolution UI.
 - **Drive OAuth refresh token (PKCE)**: survives past the ~1h token, no re-consent.
-- **Tests + lint + CI**: Vitest + ESLint + GitHub Actions (verify green after `npm install`).
+- **Tests + lint + CI**: Vitest + ESLint + GitHub Actions, on every push and again on a
+  version tag.
 - **True multi-device merge (3+ devices)**: `downloadAll()` + fold every peer per sync.
 - **Session-manager UI**: the popup lists each peer device's session with a
   per-device Restore button; `konode_remote_sessions` is a device-keyed map so
@@ -38,46 +38,68 @@ on any Chromium browser.
 - **Store packaging + releases**: `npm run package:chrome` builds a Web Store zip
   with the manifest `key` stripped (the CWS rejects `key` on a first upload) while
   `dist/` keeps it for unpacked dev; pushing a `v*` tag runs a GitHub Actions release
-  that attaches the packaged zip (source build, no client secret). v1.0.0 released.
+  that attaches both packaged zips, Chrome and Firefox (source builds, no client secret).
+  Released through v1.2.0.
 - **Pre-submission hardening**: a peer's extension `storeUrl` is rebuilt locally
   from the id (a forged URL was a phishing vector); onboarding requests all optional
   permissions in one call (a second request lost the user gesture); the dead
   `SET_EXTENSION_ENABLED` handler is gone, so `management` is strictly read-only.
+- **Bookmark restore points** (1.1.0): timestamped copies of the bookmark tree on your own
+  storage, the newest 10 kept, saved by hand or automatically when Konode refuses an
+  unusual mass deletion. A restore only ever adds bookmarks back.
+- **A card per storage provider** (1.1.0): Google Drive, Nextcloud / ownCloud, pCloud
+  (EU or US), Koofr, Fastmail, GitHub, and WebDAV for everything else.
+- **Activity + Statistics in Settings** (1.1.0), joined into one tab in 1.2.0, which also
+  added the device list and letting you forget a device you no longer use.
+- **Firefox shipped** (1.2.0): the build is in the release and the add-on is live on
+  Firefox Add-ons. Verified across Firefox, Brave and Helium on one sync folder, with
+  history arriving on the original visit dates, which only Firefox permits.
+- **A full review pass** (1.2.0): correctness fixes across the sync engine, the storage
+  backends and the interface, including bookmark renames, moves and folder reorders now
+  propagating. See `CHANGELOG.md`.
+
+## Now live
+Konode **1.2.0 is live on both stores**: the Chrome Web Store (first published 2026-07-20,
+item ID `mmlfiiimnpnjcjhhbldenpcmnibedkfa`) and
+[Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/) (2026-08-04). Nothing
+is waiting on a submission.
 
 ## Next
-Konode **1.0.0 is live on the Chrome Web Store** (published 2026-07-20, item ID
-`mmlfiiimnpnjcjhhbldenpcmnibedkfa`). The Chromium-first launch is out. Fast-follow is
-the Firefox/AMO submission (below): the build is runtime-verified on Waterfox 140, but
-the AMO upload is still a maintainer action.
+- **Backend expansion**, cheapest sign-in first. See *Platform priority* item 3 below.
+- **History sync performance**: the full-history dedup scan every import runs.
 
-**Not supported: iOS / WebKit (e.g. Orion on iOS).** First install there shows no
+## Not supported: iOS / WebKit
+
+**e.g. Orion on iOS.** First install there shows no
 onboarding (the `onInstalled` → `tabs.create(onboarding.html)` open is a no-op on
 WebKit) and Google Drive sign-in fails inside the browser's own API bridge
 (`identity.launchWebAuthFlow` is not reliably implemented on iOS WebKit web
 extensions). The Drive option is now feature-gated + fails with a friendly message
-there; GitHub/WebDAV *might* work but are untested. A real iOS/WebKit target is its own
-scoped effort, not a quick fix.
+there. Sync itself has run on Orion, and 1.0.2 fixed three WebKit-specific bugs found that
+way, so this is not untested ground. It is still not a supported target: a real iOS/WebKit
+target is its own scoped effort, not a quick fix.
 
-## Platform priority (2026-07-10)
+## Platform priority (set 2026-07-10; items 1 and 2 have since shipped)
 Sequenced by where our value prop is strongest, not by raw browser size:
 
-1. **Chromium-first launch.** The "own your storage" pitch is *strongest here*:
-   Chromium's only native sync is Google's cloud (no self-host), and the biggest
-   privacy audience is Chromium-based: Brave alone is 100M+ MAU (growing ~2.5M/mo),
-   plus ungoogled-chromium / Helium, all of which we already support (the PKCE Drive
-   flow exists specifically because `getAuthToken` fails on Brave). Ship a strong
-   Chrome Web Store listing first.
-2. **Firefox as a fast-follow (v1.1), ~1-2 wk.** Not a volume play (Firefox desktop
-   is ~4% and shrinking, and its native Sync is self-hostable, so our edge is weaker
-   there), but it's exactly our ICP, it's floccus/xBrowserSync's home turf, AMO +
-   r/firefox is a high-fit channel, and only then is the "every browser" claim true.
-   Key work: browser-agnostic bookmark-root resolution (Chrome ids "1/2/3" vs
-   Firefox `toolbar_____`/`menu________`), a Firefox manifest (`background.scripts`
-   event page + `browser_specific_settings`), per-browser OAuth redirect
-   registration, `management`-API graceful degradation, and AMO packaging/review.
+1. **Chromium-first launch. Done 2026-07-20.** The "own your storage" pitch is
+   *strongest here*: Chromium's only native sync is Google's cloud (no self-host), and the
+   privacy-minded audience is Chromium-based: Brave, ungoogled-chromium and Helium, all of
+   which we already support (the PKCE Drive flow exists specifically because
+   `getAuthToken` fails on Brave). The Chrome Web Store listing went out first.
+2. **Firefox. Done 2026-08-04.** Never a volume play (Firefox is a small share of desktop
+   and its native Sync is self-hostable, so our edge is weaker there), but it is a close
+   fit for the people who want this most, it's floccus/xBrowserSync's home turf, and only
+   with it is the "every browser" claim true. All of the key work shipped:
+   browser-agnostic bookmark-root resolution (Chrome ids "1/2/3" vs Firefox
+   `toolbar_____`/`menu________`), the Firefox manifest variant (`background.scripts`
+   event page + `browser_specific_settings`, via `scripts/make-firefox-manifest.mjs`),
+   per-browser OAuth redirect registration, `management`-API graceful degradation, and
+   AMO packaging plus review.
 3. **Backend expansion, tiered by auth cost.** Cheapest first:
-   - *Presets over the existing WebDAV backend* (Nextcloud / Synology / pCloud /
-     kDrive / ownCloud): near-zero code, mostly docs. Already functional.
+   - *Presets over the existing WebDAV backend*: **done in 1.1.0.** Nextcloud / ownCloud
+     (host field), pCloud (EU or US), Koofr and Fastmail (fixed endpoints) each have a
+     card; Synology, kDrive and anything else go through the generic WebDAV card.
    - *Token / basic-auth backends* (Dropbox token, S3-compatible, Backblaze B2):
      WebDAV/GitHub-class, ~0.5-1.5 d each, and they port to Firefox trivially.
    - *OAuth (PKCE) backends* (Dropbox OAuth, OneDrive/Graph): ~2-4 d each (provider
@@ -140,7 +162,7 @@ Implement `MEGABackend implements IBackend` (`src/lib/backends/mega-backend.ts`)
   WebDAV backend has for partial writes).
 - `testConnection()`: attempt login + list the folder; map bad-credential / 2FA
   errors to friendly messages.
-- `listVersions()`: return `[]` (we don't use it; WebDAV/GitHub stub it too).
+- `listVersions()`: return `[]` (we don't use it; all three existing backends stub it).
 
 ### Wiring (mirrors the other backends)
 - `types.ts`: add `"mega"` to `BackendType`; add a `mega?: { email; session?;
@@ -165,18 +187,29 @@ pitch.
 - **Rate limits / API etiquette**: MEGA throttles aggressively; confirm our ~30s
   alarm floor + debounced writes don't trip EAGAIN, and that `withRetry` maps MEGA's
   error codes to backoff.
-- **Firefox parity**: should port for free (browser-agnostic `fetch`), but re-verify
-  once the Firefox build is runtime-tested.
+- **Firefox parity**: should port for free (browser-agnostic `fetch`), but re-verify once a
+  MEGA backend exists. The Firefox build itself is runtime-verified as of 1.2.0, so the open
+  question is the new backend, not the build.
 
 ## Later / nice-to-have
-- Incremental diff for >10k bookmarks; history sync performance (the full-history
-  dedup scan is the current bottleneck on the ~5s sync tail).
+- Incremental diff for >10k bookmarks; history sync performance (the full-history dedup
+  scan every import runs is what's left, after 1.2.0 overlapped the per-page writes that
+  were the bigger part of a slow first sync).
 - Optional OAuth proxy (serverless) to avoid shipping the Google client secret.
 
-## Publishing (Chrome Web Store)
-Submitted for review on **2026-07-19**, **published 2026-07-20**
-(<https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa>).
-Done: keyless store package (`npm run package:chrome`), $5 developer registration,
+## Publishing
+
+**Chrome Web Store.** 1.0.0 submitted for review on **2026-07-19**, **published
+2026-07-20** (<https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa>).
+1.2.0 is what the listing serves today.
+
+**Firefox Add-ons.** Live at <https://addons.mozilla.org/firefox/addon/konode/> since
+**2026-08-04**, shipped with 1.2.0. Packaged with `npm run package:firefox` and checked
+with `npm run lint:firefox`. AMO requires a source submission, since the build is bundled
+and minified, and the reviewer rebuilds and diffs it.
+
+Done for the Chrome Web Store: keyless store package (`npm run package:chrome`), $5
+developer registration,
 listing copy + screenshots, per-permission justifications, data-usage disclosures, and
 the live privacy policy
 (<https://github.com/konabe-studio/konode/blob/main/PRIVACY.md>). OAuth uses the

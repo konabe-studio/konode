@@ -18,18 +18,25 @@ adding a second device.
 
 ## Install
 
-Store listings (Chrome Web Store and Firefox Add-ons) are on the way. Until then you
-can build and load Konode yourself; see **Build from source** in the
-[README](README.md).
+- **Chrome / Brave / Helium / other Chromium browsers**: install from the
+  [Chrome Web Store](https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa).
+- **Firefox / Waterfox**: install from
+  [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/).
 
-After loading, click the Konode icon to open the popup, or open the options page to
-configure everything.
+You can also build and load Konode yourself; see **Build from source** in the
+[README](README.md). Those builds need your own Google OAuth client for Drive sync,
+while GitHub and WebDAV work as they do in the store builds.
+
+Konode opens its setup wizard in a new tab as soon as it's installed, so there's nothing to
+go looking for. Afterwards, click the Konode icon for the popup, or open the options page to
+change anything.
 
 ## First run (onboarding)
 
-On first launch Konode opens a short setup wizard:
+On install Konode opens a short setup wizard:
 
-1. **Choose a storage backend**: Google Drive, GitHub, or WebDAV (details below).
+1. **Choose where your data goes**: a card each for Google Drive, Nextcloud / ownCloud,
+   pCloud, Koofr, Fastmail, GitHub, and WebDAV (other), details below.
 2. **Sign in / enter your credentials** for that backend.
 3. **Choose what to sync**: bookmarks are on by default; history, open tabs, and the
    extension list are opt-in.
@@ -62,17 +69,26 @@ if you enable encryption, the **same passphrase**) to sync together.
    [github.com/settings/tokens](https://github.com/settings/tokens?type=beta) → **Generate new token**.
 2. Scope it to **a single private repository** (create an empty private repo for this,
    e.g. `konode-sync`), and grant **Repository permissions → Contents: Read and write**.
-3. In Konode, select **GitHub / Gitea / GitLab**, paste the token and the repository
-   (`owner/repo`, or paste the full repo URL; Konode normalizes it).
+3. In Konode, select **GitHub**, paste the token and the repository (`owner/repo`, or
+   paste the full repo URL; Konode normalizes it). GitHub itself only: Gitea and GitLab
+   aren't supported, so don't point it at a self-hosted instance.
 4. Konode refuses a **public** repository: your sync data should live in a private one.
 
 ### WebDAV
 
-1. Select **WebDAV** and enter your server **URL** (must be `https://`), **username**,
-   and **password** (use an app password if your provider offers one).
-2. Works with Nextcloud, ownCloud, Synology, pCloud, kDrive, and any standard WebDAV
-   server. Konode creates a `konode/` folder for its files.
-3. Plain `http://` is rejected for security (except `http://localhost`).
+1. Pick your provider: **Nextcloud / ownCloud**, **pCloud**, **Koofr**, **Fastmail**, or
+   **WebDAV (other)** for anything else (Synology, kDrive, and so on).
+2. The presets know the address, so you type less. Nextcloud and ownCloud ask for your
+   server's host and Konode builds the rest of the path from it and your username; pCloud
+   asks whether your account lives in the EU or the US (and needs a paid plan); Koofr and
+   Fastmail need no address at all. **WebDAV (other)** takes the full URL, which must be
+   `https://`.
+3. Enter your **username** and **password**. Use an app password where your provider
+   offers one: Nextcloud under Settings → Security, a Koofr app password with your Koofr
+   email, or a Fastmail app password with Files (WebDAV) access and your full Fastmail
+   address.
+4. Plain `http://` is rejected for security (except `http://localhost`). Konode creates a
+   `konode/` folder for its files.
 
 ## Choosing what to sync
 
@@ -86,8 +102,9 @@ if you enable encryption, the **same passphrase**) to sync together.
 
 Optional, and a conscious choice. It's **off by default**.
 
-- Turn it on in onboarding or **Settings → Advanced**. Type a passphrase (you'll
-  confirm it by re-typing) or **generate a strong key**.
+- Turn it on in onboarding, or later in **Settings → Storage**, in the **Encryption** card
+  next to the provider it protects you from. Type a passphrase of at least 12 characters
+  (you'll confirm it by re-typing) or **generate a strong key**, which is the safer choice.
 - With encryption on, your data is encrypted on your device (AES-256-GCM) **before**
   upload, so your storage provider can't read it.
 - **Every device must use the same passphrase.** Konode warns you loudly on a mismatch
@@ -108,11 +125,14 @@ Optional, and a conscious choice. It's **off by default**.
 - Each device writes one file per data type to your backend
   (`konode_<type>_<device_id>.json`). Every sync pulls in each other device's file,
   merges it, and pushes the result back.
-- **The editing device syncs in about a second.** Other devices pick up changes on
-  their next periodic pull (up to ~30 seconds, the browser's minimum alarm interval).
-- History restore is best-effort: browsers can't set original visit times, so imported
-  history shows the sync moment. Treat history as a synced list/backup, not a faithful
-  timeline.
+- **Edit a bookmark and this device uploads in about a second.** Other devices pick it up
+  on their next scheduled pull, every 60 seconds by default (adjustable from 30 to 600
+  under Settings → Device; 30s is the browser's minimum for a background check). History,
+  open tabs and the extension list have no instant path, so they travel on that interval.
+- History restore depends on the browser. **Firefox** keeps each page's original visit
+  date. **Chromium** browsers give an extension no way to set it, so on Chrome, Brave and
+  the rest an arriving page is stamped with the moment it reached you. Visit counts can't
+  be restored on either. Treat history as a synced list, not a faithful timeline.
 
 Stuck on something? See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) or
 [open an issue](https://github.com/konabe-studio/konode/issues).

@@ -1,6 +1,6 @@
 # Konode Privacy Policy
 
-_Last updated: July 19, 2026_
+_Last updated: August 7, 2026_
 
 ## The short version
 
@@ -25,13 +25,18 @@ unless you enable it and grant the matching browser permission. Depending on you
 choices, Konode may read:
 
 - **Bookmarks**: your bookmark tree (folders, titles, URLs), so it can be synced.
-- **Browsing history**: visited URLs and titles, if you enable history sync.
+- **Browsing history**: visited URLs and titles, plus each page's last-visit time and
+  visit count, if you enable history sync. Konode reads a recent window rather than your
+  whole history: 30 days by default, adjustable in Settings, and at most 5,000 pages per
+  sync. Local files (`file://`) and browser-internal pages are never included, and neither
+  are addresses that carry a sign-in token.
 - **Open tabs / sessions**: the URLs and titles of your open tabs, if you enable
   session sync.
-- **Installed-extension list**: the names, IDs, versions, and store links of your
-  installed extensions, if you enable extension-list sync (this surfaces which
-  extensions are "missing on this device"). Konode reads this list only; it
-  **cannot install, remove, enable, or disable** any extension.
+- **Installed-extension list**: the names, IDs, versions, descriptions, homepage links,
+  store links, whether each one is a theme, and whether it is currently enabled, if you
+  enable extension-list sync (this surfaces which extensions are "missing on this
+  device"). Konode reads this list only; it **cannot install, remove, enable, or disable**
+  any extension.
 
 Konode reads this data **only to sync it to the storage backend you selected.** It
 is not used for any other purpose.
@@ -62,8 +67,8 @@ policy and terms. Konode is not affiliated with these providers.
 ## Your credentials
 
 The credentials you enter (a Google OAuth token, a GitHub personal access token, or
-a WebDAV username and password) are stored **only on your device**, in the browser's
-local extension storage (`chrome.storage.local`). They are used solely to
+a WebDAV username and password) are stored **only on your device**, in the browser's own
+local extension storage (`storage.local`). They are used solely to
 authenticate to the backend you chose. They are **never transmitted to us** (we have
 no server to transmit them to) and are not shared with anyone else.
 
@@ -98,8 +103,10 @@ readable form. Choose encryption if your storage might be seen by anyone but you
 
 Even with encryption on, a small amount of **metadata** in each sync file is not
 encrypted: the storage provider can see that Konode sync files exist, roughly how
-many devices you sync (each has a random identifier), which data type each file
-holds, and when it was last written, but **not its contents**. Each file also
+many devices you sync (each has a random identifier), the **name each device goes by**
+(by default your browser and operating system, for example "Brave on Windows 10/11",
+which you can change in Settings), which data type each file holds, and when it was
+last written, but **not its contents**. Each file also
 carries a checksum of the (unencrypted) content so your devices can tell identical
 data apart from changed data; it cannot be reversed into your data, but someone who
 already had an exact copy of your entire data set could use it to confirm the match.
@@ -140,6 +147,11 @@ Because Konode stores nothing on its own infrastructure, **you control retention
   your stored credentials and settings. Konode also keeps a short **activity log**
   (recent sync events) **on your device only**. It is never uploaded and is cleared
   when you uninstall.
+- **Access you granted:** uninstalling deletes Konode's copy of a credential but cannot
+  withdraw the permission at the other end, because that lives in your provider's account.
+  To finish the job, remove Konode's Drive access under
+  [Google account permissions](https://myaccount.google.com/permissions), delete the
+  GitHub token you created, or revoke the WebDAV app password.
 - **On your backend:** you can delete the files Konode created (in the `Konode` /
   `konode` folder of your Drive, repository, or WebDAV server) at any time, directly
   through that provider.
@@ -160,8 +172,8 @@ the details below.
 ## Changes to this policy
 
 If we update this policy, we will revise the "Last updated" date above and post the
-new version at its published location. Material changes will be reflected in the
-extension's listing.
+new version at its published location. Material changes will be reflected in both store
+listings.
 
 ## Contact
 

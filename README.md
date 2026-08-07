@@ -12,6 +12,7 @@
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa"><img src="https://img.shields.io/chrome-web-store/v/mmlfiiimnpnjcjhhbldenpcmnibedkfa?label=Chrome%20Web%20Store" alt="Chrome Web Store"></a>
+  <a href="https://addons.mozilla.org/firefox/addon/konode/"><img src="https://img.shields.io/amo/v/konode?label=Firefox%20Add-ons" alt="Firefox Add-ons"></a>
   <a href="https://github.com/konabe-studio/konode/actions/workflows/ci.yml"><img src="https://github.com/konabe-studio/konode/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MPL--2.0-brightgreen" alt="License: MPL-2.0"></a>
 </p>
@@ -48,7 +49,7 @@ provider can't read it.
 
 | Data | What it does |
 |------|--------------|
-| **Bookmarks** | Two-way sync that preserves your folder structure. Deletions propagate too, so no old bookmarks quietly come back. |
+| **Bookmarks** | Two-way sync that preserves your folder structure. Renames, moves and folder reorders travel too, and so do deletions, so no old bookmarks quietly come back. |
 | **Open tabs / sessions** | Save the current tab set and restore another device's session whenever you want. |
 | **History** | Keep a synced, de-duplicated history list. *(On Firefox the original visit time is preserved; on Chrome the API can't set visit times, so restored entries show the sync moment.)* |
 | **Installed extensions** | Sync the list and see at a glance which extensions are missing on the device you're on. |
@@ -62,8 +63,28 @@ prefer this device, always prefer the other, or resolve it yourself from the pop
 |---------|------|-------|
 | **Google Drive** | One-time sign-in | Scoped to `drive.file`, so Konode only ever touches the files it creates. |
 | **GitHub** | Fine-grained token | Point it at a single private repository. |
-| **WebDAV** | Username + password | Nextcloud, ownCloud, Synology, pCloud, kDrive, or any WebDAV server. |
+| **WebDAV** | Username + password | Presets fill in the address for Nextcloud / ownCloud, pCloud, Koofr, and Fastmail. **WebDAV (other)** takes Synology, kDrive, or any standard WebDAV server. |
 | **Mega** | n/a | Planned. |
+
+## How Konode compares
+
+Every tool below is good at what it does. They just make different choices about where
+your data ends up, which is the one thing this table is about. Checked 2026-08-07.
+
+| | **Konode** | floccus | Raindrop.io | xBrowserSync | Built-in sync |
+|---|---|---|---|---|---|
+| **What syncs** | **Bookmarks, tabs, history, extension list** | Bookmarks, or open tabs | Its own library, not your browser's bookmarks | Bookmarks | Bookmarks, tabs, history, passwords, and more |
+| **Where it writes** | **Your Drive, GitHub, or WebDAV** | Nextcloud, WebDAV, Git, Drive, Dropbox, Linkwarden, KaraKeep | Raindrop's servers | Its own service: official, community-run, or self-hosted | Google's or Mozilla's servers |
+| **Account needed** | **No Konode account** | No floccus account | Yes, and cloud only | No account, just a sync ID and password | Yes, a Google or Mozilla account |
+| **End-to-end encryption** | **Optional, on every backend** | Optional, on WebDAV, Drive and Dropbox | No | Always on | Firefox by default, Chrome behind a passphrase |
+| **Open source** | **Yes, MPL-2.0** | Yes, MPL-2.0 | Client apps, not the server | Yes, GPL-3.0 | Clients open, sync servers not |
+
+A few details the cells are too small for. floccus syncs open tabs as an alternative to
+bookmarks inside one sync profile, so doing both means setting up a second profile.
+Raindrop is a bookmark manager with a library of its own: it imports an exported bookmarks
+file rather than keeping your browser's bookmark tree in sync. Chrome's built-in sync
+encrypts passwords by default and the rest once you set a sync passphrase, with some
+categories left out; Firefox Sync is end-to-end encrypted by default.
 
 ## Privacy & security
 
@@ -76,7 +97,8 @@ prefer this device, always prefer the other, or resolve it yourself from the pop
   *offline*. The 600k-round derivation makes each guess slow, a new passphrase must
   be 12+ characters, and the generated key (recommended) is effectively unguessable.
 - **Credentials stay local.** Access tokens, GitHub tokens, WebDAV passwords, and your
-  encryption passphrase live only in `chrome.storage.local` on your device and are
+  encryption passphrase live only in the browser's own extension storage
+  (`storage.local`) on your device and are
   never uploaded. (That store isn't encrypted at rest, so a fine-grained GitHub token
   and a dedicated WebDAV app password are good habits.)
 - **Integrity checks.** Every payload carries a SHA-256 checksum that's verified on
@@ -89,8 +111,9 @@ prefer this device, always prefer the other, or resolve it yourself from the pop
 
 - **Chromium**: Chrome, Brave, Helium, ungoogled-chromium, and other Chromium
   browsers. Fully supported, and on the Chrome Web Store.
-- **Firefox**: works on Firefox and Firefox-based browsers (e.g. Waterfox) through a
-  dedicated build; a Firefox Add-ons listing is on the way.
+- **Firefox**: Firefox and Firefox-based browsers (e.g. Waterfox), from a dedicated
+  build that ships on Firefox Add-ons. Same sync folder and same files as your
+  Chromium browsers, so a Firefox install joins a group that is already running.
 
 > On non-Chrome Chromium browsers, Google Drive sign-in uses the OAuth PKCE flow
 > (`launchWebAuthFlow`), so Drive sync works even where `chrome.identity.getAuthToken`
@@ -114,10 +137,10 @@ untranslated string falls back to English, which is safe.
 
 ## Install
 
-- **Chrome / Brave / other Chromium browsers**: install from the
+- **Chrome / Brave / Helium / other Chromium browsers**: install from the
   **[Chrome Web Store](https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa)**.
-- **Firefox**: a Firefox Add-ons listing is on the way; until then, build and load it
-  yourself (see below).
+- **Firefox / Waterfox**: install from
+  **[Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/)**.
 
 New to Konode? The **[Getting Started guide](GETTING_STARTED.md)** walks through setup
 and connecting each backend.
@@ -143,16 +166,20 @@ pick `dist-firefox/manifest.json`.
 
 ## Verifying a build
 
-Each release publishes a **build fingerprint**, a deterministic SHA-256 over the
-built `dist/`. To confirm a published build matches this source, check out the release
-tag and run:
+`npm run checksum` prints a **build fingerprint**, a deterministic SHA-256 over the built
+`dist/`. Check out a release tag and run:
 
 ```bash
 npm ci && npm run build && npm run checksum
 ```
 
-Compare the printed `COMBINED` hash with the one in the release notes. (Best-effort: it
-assumes a comparable toolchain; the pinned lockfile keeps dependencies identical.)
+Two honest caveats. The release notes don't carry the fingerprint yet, so today this shows
+you that the build reproduces, not that a particular download came from this tag. (GitHub
+does publish its own SHA-256 digest next to each release asset, which covers the download
+itself.) And the store builds can't match your hash: the Chrome Web Store and Firefox
+Add-ons zips are built with Konode's own Google OAuth client compiled in, while the release
+zips and your own builds are not. It also assumes a comparable toolchain; the pinned
+lockfile keeps dependencies identical.
 
 ## How it works
 
@@ -177,12 +204,12 @@ use a dedicated manager like [Bitwarden](https://bitwarden.com),
 ## Roadmap
 
 - **Shipped**: bookmarks / sessions / history / extension-list sync · Google Drive +
-  GitHub + WebDAV · multi-device merge · per-item conflict resolution · opt-in E2EE ·
-  Drive OAuth refresh (PKCE) · Firefox build · cross-browser extension matching ·
-  **Chrome Web Store listing**.
-- **Next**: Firefox Add-ons listing · WebDAV provider presets.
-- **Later**: more backends (Dropbox, OneDrive, Mega) · incremental diff for very
-  large bookmark trees.
+  GitHub + WebDAV · WebDAV provider presets · multi-device merge · per-item conflict
+  resolution · opt-in E2EE · Drive OAuth refresh (PKCE) · cross-browser extension
+  matching · **Chrome Web Store listing** · **Firefox Add-ons listing**.
+- **Next**: more backends, cheapest sign-in first (Dropbox, S3-compatible, OneDrive).
+- **Later**: MEGA · incremental diff for very large bookmark trees · faster history
+  sync.
 
 ## Support & feedback
 
