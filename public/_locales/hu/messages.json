@@ -72,7 +72,7 @@
     "message": "Nincs beállítva tárhely"
   },
   "popup_conflict_title": {
-    "message": "Ütközés itt: $TYPE$. Válassz egy változatot.",
+    "message": "Ütközés itt: $TYPE$. Válassz egy verziót.",
     "placeholders": {
       "type": {
         "content": "$1",
@@ -87,7 +87,7 @@
     "message": "Távoli használata"
   },
   "popup_active_streams": {
-    "message": "Aktív folyamok"
+    "message": "Aktív adatfolyamok"
   },
   "popup_missing_extensions_one": {
     "message": "$COUNT$ hiányzó bővítmény",
@@ -207,7 +207,7 @@
     "message": "Fastmail fájltárhely."
   },
   "provider_fastmail_note": {
-    "message": "Felhasználónévként a teljes Fastmail e-mail-címedet add meg, jelszóként pedig egy olyan alkalmazásjelszót, amely rendelkezik Files (WebDAV) jogosultsággal."
+    "message": "Felhasználónévként a teljes Fastmail e-mail címedet add meg, jelszóként pedig egy olyan alkalmazásjelszót, amely rendelkezik Files (WebDAV) jogosultsággal."
   },
   "provider_github_desc": {
     "message": "A szinkronizált adatok egy privát GitHub-repóban tárolódnak, amelyhez Personal Access Tokennel fér hozzá a Konode."
@@ -225,7 +225,7 @@
     }
   },
   "onb_welcome_title": {
-    "message": "Üdv a Konode-ban"
+    "message": "Üdv a Konodeban"
   },
   "onb_welcome_subtitle": {
     "message": "Biztonságos böngészőszinkronizálás, ahol az adataid valóban a tieid maradnak. Könyvjelzőid, lapjaid és bővítményeid közvetlenül a saját tárhelyedre kerülnek. Nincs köztes szerver."
@@ -330,7 +330,7 @@
     "message": "Adj meg egy jelmondatot, vagy generálj egy titkosítási kulcsot."
   },
   "onb_pass_missing": {
-    "message": "Adj meg egy jelmondatot, vagy generálj kulcsot."
+    "message": "Adj meg egy jelmondatot vagy generálj kulcsot."
   },
   "onb_pass_too_short": {
     "message": "Legalább $MIN$ karakter. A szinkronizált adatok offline is támadhatók, ezért a rövid jelmondat kitalálható.",
@@ -354,7 +354,7 @@
     "message": "Mentsd el ezt a jelmondatot."
   },
   "onb_save_passphrase_rest": {
-    "message": "Nem hagyja el ezt az eszközt, és elvesztése esetén nem állítható vissza. Minden eszközön ugyanazt a jelmondatot kell megadnod. Később a Beállításokban is kimásolhatod."
+    "message": "Nem hagyja el ezt az eszközt és elvesztése esetén nem állítható vissza. Minden eszközön ugyanazt a jelmondatot kell megadnod. Később a Beállításokban is kimásolhatod."
   },
   "onb_plaintext_note": {
     "message": "Ha nem használod a titkosítást, az adatok $WORD$ kerülnek a saját tárhelyedre. Ez megfelelő választás lehet, ha teljes mértékben megbízol a tárhelyszolgáltatóban. A titkosítást bármikor bekapcsolhatod később a Beállítások menüben.",
@@ -378,13 +378,13 @@
     "message": "Ez a WebDAV-cím nem tűnik érvényes URL-nek."
   },
   "onb_err_perms_webdav": {
-    "message": "A Konode-nak engedély kell a WebDAV-szerver eléréséhez és a kiválasztott adattípusokhoz. Engedélyezd őket a folytatáshoz."
+    "message": "A Konodenak engedély kell a WebDAV-szerver eléréséhez és a kiválasztott adattípusokhoz. Engedélyezd őket a folytatáshoz."
   },
   "onb_err_perms_no_prompt": {
     "message": "Ez a böngésző nem tud engedélykérő ablakot megjeleníteni, ezért a Konode nem tudta bekérni a szükséges hozzáférést. Engedélyezd a Konode engedélyek képernyőjén, a böngésző kiegészítőbeállításai között, majd nyomd meg újra a Befejezés gombot."
   },
   "onb_err_perms_types": {
-    "message": "Néhány engedélyt elutasítottál. A folytatáshoz engedélyezd őket, vagy kapcsold ki azokat az adattípusokat."
+    "message": "Néhány engedélyt elutasítottál. A folytatáshoz engedélyezd őket vagy kapcsold ki azokat az adattípusokat."
   },
   "onb_err_read_settings": {
     "message": "Nem sikerült beolvasni a jelenlegi beállításokat. Próbáld újra."
@@ -408,7 +408,7 @@
     "message": "Az első szinkronizálás nem fejeződött be"
   },
   "onb_sync_error_subtitle": {
-    "message": "A beállításaid el vannak mentve. Nyisd meg a Beállításokat a javításhoz, vagy fejezd be, és a Konode újrapróbálja a háttérben."
+    "message": "A beállításaid el vannak mentve. Nyisd meg a Beállításokat a javításhoz vagy fejezd be, és a Konode újrapróbálja a háttérben."
   },
   "onb_sync_timeout": {
     "message": "Ez a szokásosnál hosszabb ideig tart. Egy nagy előzménylistánál ez előfordul. A szinkronizálás a háttérben tovább fut, szóval most is befejezheted."
