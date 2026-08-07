@@ -5,8 +5,32 @@ All notable changes to Konode. Format loosely follows
 
 ## [1.2.1] - 2026-08-07
 
+### Changed
+
+- **The store listing is easier to find.** The Web Store takes its title from the
+  extension's name, and ours was the bare word "Konode", which matches nothing anyone
+  types. It is now "Konode | Private Bookmark & Tab Sync": the name first, then what it
+  actually does. The title goes through the translation files, so it appears in your own
+  language wherever Konode has been translated.
+
 ### Fixed
 
+- **A crash no longer leaves you with a blank page.** If any screen fails to draw, you now
+  get a short explanation, the error text to quote in a report, and a reload button,
+  instead of an empty window with nothing to go on. Your synced data was never involved in
+  those failures, and the new screen says so, because that is the first thing anyone wants
+  to know.
+- **The "missing on this device" list could quietly hide extensions you really don't have.**
+  Matching a neighbour's extension against your own used the developer's homepage address
+  as one of its signals, and a large share of extensions point that at their source
+  repository. So a single extension of yours homepaged on github.com marked every
+  extension sharing that host as already installed. On a real list of ten genuinely absent
+  extensions, six vanished this way.
+- **The same list dropped anything the browser doesn't call an extension.** Chrome reports
+  apps under their own type names, and the list only ever showed the exact word
+  "extension", so those entries were synced all the way across and then discarded at the
+  last step, with nothing to distinguish them from something never published.
+- **The provider logos in the setup wizard were squashed narrower than they should be.**
 - **The Settings page could open blank.** On a fresh 1.2.0 install, opening Settings showed
   nothing at all, with `management.getAll is not a function` in the console. 1.2.0 made the
   extension-list permission optional so the install prompt stays small, and Konode then
