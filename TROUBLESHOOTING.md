@@ -105,7 +105,7 @@ shows up as "missing on this device". The list is most exact between same-browse
 
 Firefox for Android runs extensions on GeckoView, which implements a smaller slice of the
 extension APIs than desktop Firefox. Two of those gaps affect Konode directly, and neither
-is something Konode can work around — so it tells you about them instead of failing.
+is something Konode can work around, so it tells you about them instead of failing.
 
 **Bookmarks and History can't be synced there.** Firefox for Android ships no bookmarks
 API and no history API, so an extension has nothing to read or write

@@ -15,7 +15,7 @@ it can't.
 
 - **Setup blamed your WebDAV server for a permission it was never asked about.** Firefox
   for Android doesn't implement runtime permission prompts, so the request came back
-  refused with no prompt ever shown — and the wizard reported that as "Konode needs
+  refused with no prompt ever shown, and the wizard reported that as "Konode needs
   permission to reach your WebDAV server". Konode now checks the permissions you already
   hold *before* asking, so a permission granted by hand in Firefox's add-on settings is
   simply accepted. If it still can't ask, it says so, and tells you where to grant it,
@@ -30,7 +30,7 @@ it can't.
 - **The extension could load half-built.** Konode registers its bookmark-change listeners
   when the background script starts. On a browser with no bookmarks API that line threw
   and took the rest of the script down with it, leaving an extension that had started but
-  wasn't finished — which looks like it's working.
+  wasn't finished, which looks like it's working.
 
 ## [1.2.0] - 2026-08-04
 
