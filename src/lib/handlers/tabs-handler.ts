@@ -4,6 +4,7 @@ type TabInfo = { url: string; title?: string; pinned: boolean; favIconUrl?: stri
 import { logger } from "@/lib/utils/logger";
 import { isSafeContentUrl, isSensitiveUrl } from "@/lib/utils/url";
 import { browser } from "@/lib/utils/ext";
+import { assertDataTypeApi } from "@/lib/utils/capabilities";
 
 // ─── Export Current Tabs ──────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ import { browser } from "@/lib/utils/ext";
  * so this was the most sensitive data we handled, uploaded for no benefit at all.
  */
 export async function exportCurrentTabs(): Promise<TabInfo[]> {
+  assertDataTypeApi("sessions");
   const tabs = await browser.tabs.query({});
   const publishable = tabs.filter((t) => isSafeContentUrl(t.url) && !isSensitiveUrl(t.url));
   // Debug-only (never the audit log): a count, never the URLs themselves.
@@ -49,6 +51,7 @@ export async function exportSession(label?: string): Promise<SyncSession> {
 // ─── Import (open tabs from a session) ────────────────────────────────────
 
 export async function importSession(session: SyncSession): Promise<void> {
+  assertDataTypeApi("sessions");
   // Never open a non-web URL from a remote packet (javascript:/data:/file: are
   // an injection/exfiltration vector); only http(s) tabs are restored.
   const openable = session.tabs.filter((t) => {

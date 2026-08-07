@@ -210,7 +210,27 @@ function makeBookmarks() {
 
 function makeChrome() {
   return {
-    runtime: { id: "test-extension-id", lastError: undefined },
+    runtime: {
+      id: "test-extension-id",
+      lastError: undefined,
+      // Desktop by default. lib/utils/capabilities asks this to work out whether the
+      // browser can show a permission prompt at all (Firefox for Android can't), so the
+      // fake has to answer — a test that wants the mobile answer overrides it.
+      getPlatformInfo: () => Promise.resolve({ os: "win", arch: "x86-64" }),
+    },
+    // A browser where every permission is already held. That is what the manifest's
+    // required permissions look like at runtime, and the optional ones are granted by
+    // the same code path in every test that exercises a type needing one.
+    permissions: {
+      contains: () => Promise.resolve(true),
+      request: () => Promise.resolve(true),
+      getAll: () => Promise.resolve({ permissions: [], origins: [] }),
+      remove: () => Promise.resolve(true),
+    },
+    // Present but empty. It exists at all because the capability checks read the API
+    // surface to decide what this browser can sync, and a fake missing `management`
+    // models a browser that cannot sync extensions — which is not what these tests mean.
+    management: { getAll: () => Promise.resolve([]) },
     storage: {
       local: {
         get: (keys) => {

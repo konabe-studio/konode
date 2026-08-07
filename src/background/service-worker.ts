@@ -10,6 +10,7 @@ import { logger, setLoggerDebug } from "@/lib/utils/logger";
 import { BADGE_COLORS, BADGE_TEXT, STATE_UPDATE } from "@/lib/constants";
 import { browser } from "@/lib/utils/ext";
 import { ensureSyncAlarm, SYNC_ALARM, BOOKMARK_ALARM } from "@/lib/utils/alarms";
+import { eventPresent } from "@/lib/utils/capabilities";
 
 // ─── State ────────────────────────────────────────────────────────────────
 
@@ -84,10 +85,18 @@ function ensureInit(): Promise<void> {
 
 // ─── Badge ────────────────────────────────────────────────────────────────
 
+/** The toolbar badge is decoration, and not every browser has one to draw on — mobile
+ *  builds in particular. A throw here used to travel up through `broadcastState`, which
+ *  is called from the sync path, so a missing badge could take a working sync down with
+ *  it. Nothing about the sync depends on this succeeding. */
 function updateBadge(status: string): void {
   const key = status as keyof typeof BADGE_COLORS;
-  browser.action.setBadgeBackgroundColor({ color: BADGE_COLORS[key] ?? BADGE_COLORS.idle });
-  browser.action.setBadgeText({ text: BADGE_TEXT[key] ?? "" });
+  try {
+    browser.action.setBadgeBackgroundColor({ color: BADGE_COLORS[key] ?? BADGE_COLORS.idle });
+    browser.action.setBadgeText({ text: BADGE_TEXT[key] ?? "" });
+  } catch (e) {
+    logger.debug("updateBadge", `This browser wouldn't take a toolbar badge: ${e instanceof Error ? e.message : e}`);
+  }
 }
 
 /** Update the toolbar and push the state to any open popup/options view.
@@ -262,7 +271,33 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
 
 // ─── Alarm Handler ────────────────────────────────────────────────────────
 
-browser.alarms.onAlarm.addListener(async (alarm) => {
+/**
+ * Attach one top-level listener, and survive a browser that hasn't got the event.
+ *
+ * Every registration in this file runs at module scope, because MV3 requires listeners to
+ * be attached on every worker load. That makes the file one long fuse: the FIRST missing
+ * event throws, and everything below it never runs, including `ensureInit()` at the very
+ * bottom. The result is an extension that started, registered some of its listeners, and
+ * looks alive. Konode has already been bitten by exactly this once, through the bookmark
+ * listeners on a browser with no bookmarks API.
+ *
+ * Not hypothetical beyond that either: Orion implements roughly 70% of the extension APIs,
+ * so "this engine is missing an event we assumed" is a normal Tuesday, not an edge case.
+ * A missing event costs the feature that needs it. It must not cost the ones that don't.
+ */
+function on(ns: string, event: string, register: () => void): void {
+  if (!eventPresent(ns, event)) {
+    logger.info("ServiceWorker", `This browser has no ${ns}.${event} — that listener is not registered`);
+    return;
+  }
+  try {
+    register();
+  } catch (e) {
+    logger.warn("ServiceWorker", `Registering ${ns}.${event} failed: ${e instanceof Error ? e.message : e}`);
+  }
+}
+
+on("alarms", "onAlarm", () => browser.alarms.onAlarm.addListener(async (alarm) => {
   await ensureInit();
   if (!syncEngine) return;
   if (alarm.name === SYNC_ALARM) {
@@ -279,21 +314,21 @@ browser.alarms.onAlarm.addListener(async (alarm) => {
       await syncEngine.sync(["bookmarks"]);
     }
   }
-});
+}));
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────
 
-browser.runtime.onInstalled.addListener(async (details) => {
+on("runtime", "onInstalled", () => browser.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === "install") {
     logger.event("Install", "First install, opening onboarding");
     browser.tabs.create({ url: browser.runtime.getURL("onboarding.html") });
   }
   await ensureInit();
-});
+}));
 
-browser.runtime.onStartup.addListener(async () => {
+on("runtime", "onStartup", () => browser.runtime.onStartup.addListener(async () => {
   await ensureInit();
-});
+}));
 
 // Register bookmark-change listeners once, synchronously, at the top level —
 // MV3 requires event listeners to be attached on every worker load, and doing

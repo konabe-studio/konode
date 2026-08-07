@@ -3,6 +3,83 @@
 All notable changes to Konode. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.1] - 2026-08-07
+
+### Changed
+
+- **The store listing is easier to find.** The Web Store takes its title from the
+  extension's name, and ours was the bare word "Konode", which matches nothing anyone
+  types. It is now "Konode | Private Bookmark & Tab Sync": the name first, then what it
+  actually does. The title goes through the translation files, so it appears in your own
+  language wherever Konode has been translated.
+
+### Fixed
+
+- **A crash no longer leaves you with a blank page.** If any screen fails to draw, you now
+  get a short explanation, the error text to quote in a report, and a reload button,
+  instead of an empty window with nothing to go on. Your synced data was never involved in
+  those failures, and the new screen says so, because that is the first thing anyone wants
+  to know.
+- **The "missing on this device" list could quietly hide extensions you really don't have.**
+  Matching a neighbour's extension against your own used the developer's homepage address
+  as one of its signals, and a large share of extensions point that at their source
+  repository. So a single extension of yours homepaged on github.com marked every
+  extension sharing that host as already installed. On a real list of ten genuinely absent
+  extensions, six vanished this way.
+- **The same list dropped anything the browser doesn't call an extension.** Chrome reports
+  apps under their own type names, and the list only ever showed the exact word
+  "extension", so those entries were synced all the way across and then discarded at the
+  last step, with nothing to distinguish them from something never published.
+- **The provider logos in the setup wizard were squashed narrower than they should be.**
+- **The Settings page could open blank.** On a fresh 1.2.0 install, opening Settings showed
+  nothing at all, with `management.getAll is not a function` in the console. 1.2.0 made the
+  extension-list permission optional so the install prompt stays small, and Konode then
+  asked the browser for your extension list before that permission existed. Chrome answers
+  that with an error thrown on the spot rather than a failed promise, which took the whole
+  page down with it. Konode now checks that the call is really available before making it.
+  Settings opens normally whether or not extension sync is switched on.
+- **A data type could stay switched on after losing its permission, and sync nothing.**
+  History and the extension list need a permission you grant separately, and browsers let
+  you take it back from their own extension settings without telling the extension. When
+  that happened, the type still looked enabled, synced nothing, and left an unreadable
+  error in the log once a cycle. Konode now says which permission is missing and how to
+  restore it, both in Settings and in the sync status, and the rest of your data keeps
+  syncing meanwhile.
+- **One unsupported browser feature no longer takes the rest of Konode with it.** Konode
+  attaches its background listeners the moment it starts, one after another, so a browser
+  that didn't implement one of them stopped the whole sequence there. Everything after it
+  was never set up, on a Konode that had started and looked fine. Each one is now attached
+  on its own, and a browser missing a feature loses only what depends on it. Conflict
+  notifications work the same way: a browser that can't show one still records the conflict
+  and still lets you resolve it in Konode.
+
+### Fixed: Firefox for Android
+
+All four of these come from one detailed field report, and they share one cause: Konode
+assumed that a permission its manifest asks for is a feature the browser actually has.
+On Firefox for Android that isn't true, and every symptom below is what happens when the
+two disagree. Konode now checks what the browser can really do, and says so plainly where
+it can't.
+
+- **Setup blamed your WebDAV server for a permission it was never asked about.** Firefox
+  for Android doesn't implement runtime permission prompts, so the request came back
+  refused with no prompt ever shown, and the wizard reported that as "Konode needs
+  permission to reach your WebDAV server". Konode now checks the permissions you already
+  hold *before* asking, so a permission granted by hand in Firefox's add-on settings is
+  simply accepted. If it still can't ask, it says so, and tells you where to grant it,
+  instead of telling you that you refused.
+- **The History toggle silently refused to move.** Turning a data type on asks for its
+  optional permission first, and if that came back refused the switch just sprang back
+  with no explanation anywhere. It now says why, on the row you clicked.
+- **Bookmarks failed with a "getTree" error.** Firefox for Android provides no bookmarks
+  API at all. Bookmarks and History are now shown as unavailable there, with the reason,
+  and are skipped by the sync rather than failing it every cycle. Open tabs still sync,
+  and nothing changes for your desktop devices.
+- **The extension could load half-built.** Konode registers its bookmark-change listeners
+  when the background script starts. On a browser with no bookmarks API that line threw
+  and took the rest of the script down with it, leaving an extension that had started but
+  wasn't finished, which looks like it's working.
+
 ## [1.2.0] - 2026-08-04
 
 A full code-review pass over the sync engine, the storage backends and the interface,

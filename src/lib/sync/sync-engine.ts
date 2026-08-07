@@ -8,6 +8,7 @@ import { exportBookmarkPayload, importBookmarks } from "@/lib/handlers/bookmarks
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
 import { exportHistory, importHistory } from "@/lib/handlers/history-handler";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
+import { dataTypeAvailability, unsupportedReason } from "@/lib/utils/capabilities";
 import {
   getState,
   setState,
@@ -327,8 +328,39 @@ export class SyncEngine {
     state: SyncState
   ): Promise<string[]> {
     const errors: string[] = [];
-    await this.findOwnMissingFiles(backend, types);
-    for (const dataType of types) {
+
+    // Sort out the types whose API isn't there BEFORE anything else touches them — and
+    // note that "isn't there" has two very different meanings that need opposite handling.
+    //
+    // The browser DOESN'T IMPLEMENT IT. "Firefox for Android has no bookmarks API" is a
+    // standing fact about the device, not something that went wrong this cycle. Recording
+    // it in `last_error` would pin the extension to a red error state forever, every
+    // minute, for a condition the user cannot fix, while burying the real failures
+    // underneath it. Skipped quietly; Settings is where it's explained, next to the toggle.
+    //
+    // The PERMISSION IS GONE. The type is switched on, the browser can do it, and the
+    // optional permission has simply not been granted (or was revoked in the browser's own
+    // extension settings, which no extension is told about). That IS the user's to fix, and
+    // staying quiet about it would be worse than the raw crash it replaces: the type would
+    // sit there enabled and never sync a thing. So it's reported, and it says how to fix it.
+    //
+    // Getting these two backwards is exactly the bug a user hit on 1.2.0: history and
+    // extensions were enabled with their permissions missing, so every cycle logged a raw
+    // "undefined is not an object (evaluating 'u.history.search')" and nothing said why.
+    const runnable: DataType[] = [];
+    for (const t of types) {
+      const state = await dataTypeAvailability(t);
+      if (state.state === "ready") runnable.push(t);
+      else if (state.state === "unsupported") logger.info("SyncEngine", `Skipping ${t}: ${unsupportedReason(t)}`);
+      else {
+        const msg = `${t}: Konode doesn't have the "${state.permission}" permission any more, so this can't sync. Open Settings, Data Types, and switch it off and on again to restore it.`;
+        logger.warn("SyncEngine", msg);
+        errors.push(msg);
+      }
+    }
+
+    await this.findOwnMissingFiles(backend, runnable);
+    for (const dataType of runnable) {
       try {
         await this.syncType(dataType, backend, state);
       } catch (err) {

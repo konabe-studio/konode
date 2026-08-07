@@ -14,12 +14,14 @@ import {
 import { defaultOtherRootId, matchLocalRoot, matchLocalRootEx, rootKind } from "@/lib/utils/bookmark-roots";
 import { canonicalUrlKey } from "@/lib/utils/url";
 import { browser } from "@/lib/utils/ext";
+import { assertDataTypeApi, eventPresent } from "@/lib/utils/capabilities";
 
 type BookmarkNode = chrome.bookmarks.BookmarkTreeNode;
 
 // ─── Read ─────────────────────────────────────────────────────────────────
 
 export async function exportBookmarks(): Promise<SyncBookmark[]> {
+  assertDataTypeApi("bookmarks");
   const tree = await browser.bookmarks.getTree();
   return tree.map(mapNode);
 }
@@ -388,6 +390,7 @@ export async function importBookmarks(
   // `blocked` is how many local bookmarks the guard refused to remove this merge.
   onBulkBlocked?: (blocked: number) => void
 ): Promise<void> {
+  assertDataTypeApi("bookmarks");
   const {
     tree, tombstones: remoteTombstones, moves: remoteMoves = [],
     folderMoves: remoteFolderMoves = [], titles: remoteTitles = [],
@@ -990,6 +993,7 @@ function pruneEmptyFolders(tree: SyncBookmark[]): SyncBookmark[] {
  *  Folders are materialized lazily (only when a restored bookmark lands under them),
  *  so an empty folder from the snapshot isn't recreated. Returns the count added. */
 export async function restoreBookmarks(tree: SyncBookmark[]): Promise<number> {
+  assertDataTypeApi("bookmarks");
   importing = true;
   try {
     const snapUrls = new Set(
@@ -1050,6 +1054,15 @@ export async function restoreBookmarks(tree: SyncBookmark[]): Promise<number> {
 export type BookmarkChangeCallback = () => void;
 
 export function registerBookmarkListeners(onChange: BookmarkChangeCallback): void {
+  // The background script calls this at the TOP LEVEL, because MV3 requires listeners to
+  // be attached on every worker load. So on a browser with no bookmarks API this line
+  // threw during module evaluation and took the rest of the file down with it — the
+  // extension came up half-built, with whatever had already registered still working.
+  // That is the worst possible failure shape: it looks like the extension works.
+  if (!eventPresent("bookmarks", "onCreated")) {
+    logger.info("BookmarkListeners", "This browser has no bookmarks API — bookmark-change listeners not registered");
+    return;
+  }
   browser.bookmarks.onCreated.addListener(onChange);
   browser.bookmarks.onChanged.addListener((id, changeInfo) => {
     // A URL edit is a delete(old)+add(new) in the URL-keyed sync model — record a

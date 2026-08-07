@@ -7,7 +7,11 @@ import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-o
 // Some engines (notably iOS WebKit, e.g. Orion) don't support interactive Google
 // sign-in; gate the Drive option so users aren't sent into a dead end.
 const DRIVE_AVAILABLE = isDriveAuthAvailable();
-import type { BackendType, SyncSettings } from "@/lib/types";
+import type { BackendType, DataType, SyncSettings } from "@/lib/types";
+import {
+  allDataTypeAvailability, ensurePermission, unsupportedReason,
+  PERMISSION_FOR_TYPE, type Availability,
+} from "@/lib/utils/capabilities";
 import {
   Bookmark,
   Clock, Puzzle, Globe, CheckCircle2, ArrowRight,
@@ -89,8 +93,37 @@ export default function OnboardingApp() {
     sessions: false,
   });
 
-  const toggleData = (key: keyof typeof dataTypes) =>
+  /**
+   * What this browser can actually sync — see lib/utils/capabilities.
+   *
+   * Empty until the check resolves, and `unsupported` is the only state the wizard acts
+   * on, so the brief unknown window can only ever leave a row enabled a moment longer
+   * than it should. Nothing is switched OFF on a guess.
+   */
+  const [availability, setAvailability] = useState<Partial<Record<DataType, Availability>>>({});
+  const unavailable = (key: DataType): boolean => availability[key]?.state === "unsupported";
+
+  useEffect(() => {
+    void (async () => {
+      const found = await allDataTypeAvailability();
+      setAvailability(found);
+      // Bookmarks ships on by default, so on a browser with no bookmarks API the wizard
+      // would otherwise finish with a data type that cannot produce a single byte — and
+      // the progress step would sit there waiting for a count that never moves.
+      setDataTypes((p) => {
+        const next = { ...p };
+        for (const key of Object.keys(next) as DataType[]) {
+          if (found[key]?.state === "unsupported") next[key] = false;
+        }
+        return next;
+      });
+    })();
+  }, []);
+
+  const toggleData = (key: keyof typeof dataTypes) => {
+    if (unavailable(key)) return;
     setDataTypes((p) => ({ ...p, [key]: !p[key] }));
+  };
 
   // Derived from the selected provider card.
   const backend: BackendType | null = provider ? providerById(provider).backend : null;
@@ -258,10 +291,16 @@ export default function OnboardingApp() {
     // who also enabled an optional data type (origin request, then perms request).
     // The chosen data types (history/tabs/management) and — for WebDAV — the server
     // origin (an arbitrary host not in host_permissions) go in the same request.
+    //
+    // Types this browser doesn't implement are left out: asking for `history` on a
+    // browser with no history API can only fail, and one unobtainable permission drags
+    // the whole combined request down with it — which is how a Fennec user ended up
+    // being told their WEBDAV permission was refused.
     const optPerms: string[] = [];
-    if (dataTypes.history) optPerms.push("history");
-    if (dataTypes.sessions) optPerms.push("tabs");
-    if (dataTypes.extensions) optPerms.push("management");
+    for (const type of ["history", "sessions", "extensions"] as const) {
+      const perm = PERMISSION_FOR_TYPE[type];
+      if (dataTypes[type] && perm && availability[type]?.state !== "unsupported") optPerms.push(perm);
+    }
 
     const origins: string[] = [];
     if (backend === "webdav") {
@@ -274,17 +313,20 @@ export default function OnboardingApp() {
     }
 
     if (optPerms.length || origins.length) {
-      let granted = false;
-      try {
-        granted = await browser.permissions.request({
-          ...(optPerms.length ? { permissions: optPerms } : {}),
-          ...(origins.length ? { origins } : {}),
-        });
-      } catch {
-        granted = false;
-      }
-      if (!granted) {
-        setSetupError(t(origins.length ? "onb_err_perms_webdav" : "onb_err_perms_types"));
+      const outcome = await ensurePermission({
+        ...(optPerms.length ? { permissions: optPerms } : {}),
+        ...(origins.length ? { origins } : {}),
+      });
+      if (outcome !== "granted") {
+        // Two different situations, and telling them apart is the whole point. On a
+        // browser that can't show the prompt at all (Firefox for Android), "please
+        // allow it" is advice for a dialog that will never appear — the permission has
+        // to be granted from the browser's own add-on settings instead.
+        setSetupError(
+          outcome === "cannot-prompt"
+            ? t("onb_err_perms_no_prompt")
+            : t(origins.length ? "onb_err_perms_webdav" : "onb_err_perms_types")
+        );
         return;
       }
     }
@@ -667,14 +709,19 @@ export default function OnboardingApp() {
               // a setting, and called sessions "tab groups", which is a Chrome feature
               // Konode does not sync.
               const desc = t(`datatype_${key}_desc`);
+              // A type this browser has no API for. Shown rather than hidden, with the
+              // reason: a row that quietly disappears reads as a missing feature, and the
+              // one thing this user needs to know is that it's the browser, not Konode.
+              const off = unavailable(key);
               return (
               <label
                 key={key}
-                style={S.dataRow}
+                style={{ ...S.dataRow, ...(off ? { opacity: 0.55, cursor: "not-allowed" } : null) }}
                 role="switch"
                 aria-checked={dataTypes[key]}
+                aria-disabled={off}
                 aria-label={label}
-                tabIndex={0}
+                tabIndex={off ? -1 : 0}
                 onClick={() => toggleData(key)}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleData(key); } }}
               >
@@ -682,18 +729,22 @@ export default function OnboardingApp() {
                   <Icon size={16} color={dataTypes[key] ? "var(--accent)" : "var(--text-secondary)"} />
                   <div>
                     <div style={{ fontSize: 14, color: "var(--text-primary)" }}>{label}</div>
-                    <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{desc}</div>
+                    <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                      {off ? unsupportedReason(key) : desc}
+                    </div>
                   </div>
                 </div>
-                <div style={{
-                  ...S.toggleTrack,
-                  background: dataTypes[key] ? "var(--accent)" : "var(--toggle-off)",
-                }}>
+                {!off && (
                   <div style={{
-                    ...S.toggleThumb,
-                    transform: dataTypes[key] ? "translateX(16px)" : "translateX(0)",
-                  }} />
-                </div>
+                    ...S.toggleTrack,
+                    background: dataTypes[key] ? "var(--accent)" : "var(--toggle-off)",
+                  }}>
+                    <div style={{
+                      ...S.toggleThumb,
+                      transform: dataTypes[key] ? "translateX(16px)" : "translateX(0)",
+                    }} />
+                  </div>
+                )}
               </label>
               );
             })}

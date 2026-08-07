@@ -3,6 +3,11 @@ import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, Syn
 import { sendMessage, request } from "@/lib/utils/messaging";
 import { t, tParts } from "@/lib/utils/i18n";
 import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
+import {
+  allDataTypeAvailability, dataTypeAvailability, dataTypeApiPresent, ensurePermission,
+  hasPermission, unsupportedReason,
+  PERMISSION_FOR_TYPE, type Availability, type PermissionOutcome,
+} from "@/lib/utils/capabilities";
 
 /**
  * Which edges of a scroller still have content past them.
@@ -266,6 +271,13 @@ export default function OptionsApp() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [testing, setTesting]     = useState(false);
 
+  // What this browser can actually sync, and why a toggle refused to move. Both live
+  // next to the row they belong to — see toggleDataType and the Data Types tab.
+  const [availability, setAvailability] = useState<Partial<Record<DataType, Availability>>>({});
+  const [typeError, setTypeError] = useState<{ type: DataType; message: string } | null>(null);
+
+  useEffect(() => { void allDataTypeAvailability().then(setAvailability); }, []);
+
   // Google Drive
   const [gdriveUser, setGdriveUser]           = useState<{ email: string; displayName: string } | null>(null);
   const [gdriveConnecting, setGdriveConnecting] = useState(false);
@@ -380,10 +392,21 @@ export default function OptionsApp() {
       // options "missing on this device" list stayed empty (the popup was correct).
       setRemoteExtensions(normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]));
     });
-    // "management" is optional — this may reject if not granted; ignore then.
-    void browser.management.getAll()
-      .then((exts) => setLocalExts(exts.map((e) => ({ id: e.id, name: e.name, homepageUrl: e.homepageUrl }))))
-      .catch(() => {});
+    // "management" is optional, and the `.catch()` below was built on a wrong idea of what
+    // happens without it. Chrome does not hide the namespace: `chrome.management` is always
+    // there, carrying only `getSelf`/`uninstallSelf` until the permission is granted. So
+    // `getAll` is not a function, and the call throws SYNCHRONOUSLY, before any promise
+    // exists for `.catch()` to catch. Thrown from inside an effect, that unmounts the tree,
+    // and the whole Settings page renders blank.
+    //
+    // That is the default state of a fresh install: 1.2.0 made `management` optional, and
+    // the wizard only asks for it if you switch extension sync on. Reported twice (#5, and
+    // again with the exact "g.management.getAll is not a function" stack).
+    if (dataTypeApiPresent("extensions")) {
+      void browser.management.getAll()
+        .then((exts) => setLocalExts(exts.map((e) => ({ id: e.id, name: e.name, homepageUrl: e.homepageUrl }))))
+        .catch(() => {});
+    }
   }, [load]);
 
   // Load Statistics data once on mount: sync state (last sync, counts, bytes), a live
@@ -621,16 +644,28 @@ export default function OptionsApp() {
   // WebDAV hits an arbitrary user host that isn't in host_permissions, so we
   // request it at runtime (optional_host_permissions). Must run inside a user
   // gesture, so call it first — before any await — in the click handlers below.
-  const requestWebdavHostPermission = async (): Promise<boolean> => {
+  const requestWebdavHostPermission = async (): Promise<PermissionOutcome | "bad-url"> => {
     const url = getBackend("webdav")?.webdav?.url;
-    if (!url) return false;
+    if (!url) return "bad-url";
     try {
       const origin = new URL(url).origin + "/*";
-      return await browser.permissions.request({ origins: [origin] });
+      return await ensurePermission({ origins: [origin] });
     } catch {
-      return false;
+      return "bad-url";
     }
   };
+
+  /** What to say when the WebDAV host permission didn't come through.
+   *
+   *  "Permission was not granted" was the only answer this had, and on Firefox for
+   *  Android it was actively misleading: there is no prompt to decline there, so the
+   *  user is told they refused something they were never asked. */
+  const webdavPermissionError = (outcome: PermissionOutcome | "bad-url"): string =>
+    outcome === "cannot-prompt"
+      ? "This browser can't show permission prompts, so Konode couldn't ask for access to your WebDAV server. Grant it on Konode's permissions screen in your browser's extension settings, then try again."
+      : outcome === "bad-url"
+        ? "Konode has no usable WebDAV address to ask for access to. Check the server URL above."
+        : "Permission to access the WebDAV server was not granted.";
 
   const save = async () => {
     if (!settings) return;
@@ -644,9 +679,9 @@ export default function OptionsApp() {
       return;
     }
     if (settings.active_backend === "webdav") {
-      const granted = await requestWebdavHostPermission();
-      if (!granted) {
-        setSaveError("Permission to access the WebDAV server was not granted.");
+      const outcome = await requestWebdavHostPermission();
+      if (outcome !== "granted") {
+        setSaveError(webdavPermissionError(outcome));
         return;
       }
     }
@@ -716,9 +751,9 @@ export default function OptionsApp() {
   const testBackend = async () => {
     if (!settings?.active_backend) return;
     if (settings.active_backend === "webdav") {
-      const granted = await requestWebdavHostPermission();
-      if (!granted) {
-        setTestStatus({ ok: false, message: "Permission to access the WebDAV server was not granted." });
+      const outcome = await requestWebdavHostPermission();
+      if (outcome !== "granted") {
+        setTestStatus({ ok: false, message: webdavPermissionError(outcome) });
         return;
       }
     }
@@ -730,20 +765,38 @@ export default function OptionsApp() {
 
   // history/tabs/management are optional permissions now — request them on enable
   // so the install-time prompt stays minimal (and the CWS review stays clean).
-  const PERM_FOR_TYPE: Partial<Record<DataType, string>> = {
-    history: "history",
-    sessions: "tabs",
-    extensions: "management",
-  };
-
+  //
+  // Turning one ON used to be all-or-nothing and completely silent about it: if the
+  // permission request came back false the function simply returned, the switch sprang
+  // back, and nothing anywhere said why. On Firefox for Android — where the request can
+  // never succeed — that is a toggle that just refuses to move, which is exactly what a
+  // user reported about History. Now the reason is on screen either way.
   const toggleDataType = async (type: DataType) => {
     if (!settings) return;
     const enabling = !settings.enabled_types.includes(type);
     if (enabling) {
-      const perm = PERM_FOR_TYPE[type];
+      setTypeError(null);
+      const perm = PERMISSION_FOR_TYPE[type];
       if (perm) {
-        const granted = await browser.permissions.request({ permissions: [perm] });
-        if (!granted) return; // leave it off if the user declined the permission
+        const outcome = await ensurePermission({ permissions: [perm] });
+        if (outcome !== "granted") {
+          setTypeError({
+            type,
+            message: outcome === "cannot-prompt"
+              ? `This browser can't show permission prompts, so Konode couldn't ask for the "${perm}" permission. Grant it on Konode's permissions screen in your browser's extension settings, then try again.`
+              : `Konode needs the "${perm}" permission to sync this. It stays off until that's allowed.`,
+          });
+          return;
+        }
+      }
+      // Permission in hand and STILL no API — the browser doesn't implement it. Re-check
+      // rather than trust the value we loaded on mount: granting the permission is what
+      // makes an optional-permission API appear, so this is the first honest answer.
+      const state = await dataTypeAvailability(type);
+      setAvailability((prev) => ({ ...prev, [type]: state }));
+      if (state.state === "unsupported") {
+        setTypeError({ type, message: unsupportedReason(type) });
+        return;
       }
     }
     const next = enabling
@@ -783,12 +836,18 @@ export default function OptionsApp() {
       // Collect all syncable data. history/management are optional permissions —
       // only query them when granted, so a user who never enabled those types still
       // gets a working bookmarks export instead of the whole thing throwing.
+      // Permission AND API, because they can disagree: a browser can hold the permission
+      // and never have implemented what sits behind it. Checking only the permission is
+      // how one missing API turned the whole export — bookmarks included — into a
+      // silent failure.
       const [hasHistory, hasMgmt] = await Promise.all([
-        browser.permissions.contains({ permissions: ["history"] }),
-        browser.permissions.contains({ permissions: ["management"] }),
+        dataTypeApiPresent("history") ? hasPermission({ permissions: ["history"] }) : Promise.resolve(false),
+        dataTypeApiPresent("extensions") ? hasPermission({ permissions: ["management"] }) : Promise.resolve(false),
       ]);
       const [bookmarkTree, extensions, historyItems] = await Promise.all([
-        browser.bookmarks.getTree(),
+        dataTypeApiPresent("bookmarks")
+          ? browser.bookmarks.getTree()
+          : Promise.resolve([] as chrome.bookmarks.BookmarkTreeNode[]),
         hasMgmt
           ? browser.management.getAll()
           : Promise.resolve([] as chrome.management.ExtensionInfo[]),
@@ -840,8 +899,10 @@ export default function OptionsApp() {
 
       let imported = 0;
 
-      // Import bookmarks
-      if (data.bookmarks) {
+      // Import bookmarks. The API check is not paranoia: a backup file can be opened on a
+      // browser that has no bookmarks API, and without this the import dies on a TypeError
+      // and reports a generic failure for a file that is perfectly fine.
+      if (data.bookmarks && dataTypeApiPresent("bookmarks")) {
         const roots = (await browser.bookmarks.getTree())[0]?.children ?? [];
         const otherId = defaultOtherRootId(roots); // browser-agnostic "Other bookmarks"
 
@@ -873,8 +934,11 @@ export default function OptionsApp() {
         }
       }
 
-      // Import history
-      if (Array.isArray(data.history)) {
+      // Import history. Same reasoning as the bookmarks guard above, plus one of its own:
+      // `history` is an optional permission, so on a browser that gates the namespace this
+      // is undefined until it is granted, and every single item would throw into its own
+      // catch and be silently dropped.
+      if (Array.isArray(data.history) && dataTypeApiPresent("history")) {
         for (const item of data.history) {
           if (item.url && isSafeContentUrl(item.url)) try { await browser.history.addUrl({ url: item.url }); } catch { /* skip */ }
         }
@@ -1440,24 +1504,56 @@ export default function OptionsApp() {
 
               <div className="settings-section">
                 <div className="settings-card-head">Data to sync</div>
-                {DATA_TYPES.map((type) => (
-                  <div key={type} className="settings-row">
-                    <div className="settings-row-left">
-                      <div>
-                        <div className="row-label">{t(`datatype_${type}`)}</div>
-                        <div className="row-desc">{t(`datatype_${type}_desc`)}</div>
+                {DATA_TYPES.map((type) => {
+                  // Not implemented by this browser: keep the row, drop the switch, and
+                  // put the reason where the description was. A dead toggle that springs
+                  // back is the one outcome this must never produce again.
+                  const off = availability[type]?.state === "unsupported";
+                  return (
+                    <div key={type} className={`settings-row${off ? " is-unavailable" : ""}`}>
+                      <div className="settings-row-left">
+                        <div>
+                          <div className="row-label">{t(`datatype_${type}`)}</div>
+                          <div className="row-desc">
+                            {off ? unsupportedReason(type) : t(`datatype_${type}_desc`)}
+                          </div>
+                          {/* Switched on, browser can do it, permission gone. Browsers let
+                              you revoke an optional permission from their own extension
+                              settings and tell the extension nothing, so this type would
+                              otherwise sit here looking enabled and sync nothing at all. */}
+                          {settings.enabled_types.includes(type)
+                            && availability[type]?.state === "needs-permission"
+                            && typeError?.type !== type && (
+                            <div className="error-row" role="alert">
+                              <AlertTriangle size={12} /> Konode doesn't have the permission
+                              this needs any more, so it isn't syncing. Switch it off and on
+                              again to restore it.
+                            </div>
+                          )}
+                          {typeError?.type === type && (
+                            <div className="error-row" role="alert">
+                              <AlertTriangle size={12} /> {typeError.message}
+                            </div>
+                          )}
+                        </div>
                       </div>
+                      {!off && (
+                        <label className="toggle-wrap">
+                          <input type="checkbox" className="toggle-input"
+                            checked={settings.enabled_types.includes(type)}
+                            onChange={() => toggleDataType(type)} />
+                          <span className="toggle-track"><span className="toggle-thumb" /></span>
+                        </label>
+                      )}
                     </div>
-                    <label className="toggle-wrap">
-                      <input type="checkbox" className="toggle-input"
-                        checked={settings.enabled_types.includes(type)}
-                        onChange={() => toggleDataType(type)} />
-                      <span className="toggle-track"><span className="toggle-thumb" /></span>
-                    </label>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
+              {/* Nothing to configure when the browser has no history API — the row above
+                  already explains why, and a live "days to sync" slider under it would
+                  only suggest the feature is one setting away. */}
+              {availability.history?.state !== "unsupported" && (
               <div className="settings-section">
                 <div className="settings-card-head">History</div>
                 <div className="settings-row">
@@ -1486,6 +1582,7 @@ export default function OptionsApp() {
                   today rather than the day you were browsing. Firefox keeps the original date.
                 </InfoHint>
               </div>
+              )}
 
               {missingExtensions.length > 0 && (
                 <>
@@ -2130,6 +2227,10 @@ const STYLES = `
   .settings-row:hover:not(.row-disabled) { background: var(--bg-hover); }
   .settings-row.radio-row { cursor: pointer; }
   .settings-row.row-disabled { opacity: .45; pointer-events: none; }
+  /* Not "disabled": there is nothing left to disable, the switch itself is gone. Only the
+     LABEL dims — the sentence explaining why is the entire content of the row and has to
+     stay properly readable, which is exactly what a blanket opacity would ruin. */
+  .settings-row.is-unavailable .row-label { color: var(--text-secondary); }
   .settings-row-left { display: flex; align-items: flex-start; gap: var(--sp-md); flex: 1; min-width: 0; }
   .row-icon { color: var(--text-secondary); margin-top: 1px; flex-shrink: 0; }
   .row-label { font-size: var(--fs-sm); color: var(--text-primary); }

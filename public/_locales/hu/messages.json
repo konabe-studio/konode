@@ -380,6 +380,9 @@
   "onb_err_perms_webdav": {
     "message": "A Konode-nak engedély kell a WebDAV-szerver eléréséhez és a kiválasztott adattípusokhoz. Engedélyezd őket a folytatáshoz."
   },
+  "onb_err_perms_no_prompt": {
+    "message": "Ez a böngésző nem tud engedélykérő ablakot megjeleníteni, ezért a Konode nem tudta bekérni a szükséges hozzáférést. Engedélyezd a Konode engedélyek képernyőjén, a böngésző kiegészítőbeállításai között, majd nyomd meg újra a Befejezés gombot."
+  },
   "onb_err_perms_types": {
     "message": "Néhány engedélyt elutasítottál. A folytatáshoz engedélyezd őket, vagy kapcsold ki azokat az adattípusokat."
   },
