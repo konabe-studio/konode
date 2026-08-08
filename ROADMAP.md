@@ -106,6 +106,8 @@ Sequenced by where our value prop is strongest, not by raw browser size:
      app registration + redirect + refresh + QA, per browser).
    - *MEGA*: heavier (~3-5 d; own crypto SDK to bundle). See
      *MEGA integration (design notes)* below for the how.
+   - *Proton Drive*: blocked on Proton's side, not on ours. See
+     *Proton Drive integration (research notes)* below.
 
 ## MEGA integration (design notes)
 Added 2026-07-13. MEGA (mega.io) as a fourth `IBackend`, alongside Drive / GitHub /
@@ -190,6 +192,88 @@ pitch.
 - **Firefox parity**: should port for free (browser-agnostic `fetch`), but re-verify once a
   MEGA backend exists. The Firefox build itself is runtime-verified as of 1.2.0, so the open
   question is the new backend, not the build.
+
+## Proton Drive integration (research notes)
+Added 2026-08-08. Short answer: **not yet, and not on the terms Proton offers today.**
+Proton Drive is the most obvious name missing from our provider list (zero-knowledge, EU,
+privacy-first, exactly our audience), and the blocker is not our architecture. It is that
+there is no third-party door into Drive right now. This section records what we checked so
+the next person doesn't re-check it, and what would have to change for the answer to flip.
+
+### What exists today
+- **No public API.** Proton has never published one for Drive, and as of mid-2026 still
+  hasn't. The standing community request for one lives on Proton's UserVoice forum.
+- **[`ProtonDriveApps/sdk`](https://github.com/ProtonDriveApps/sdk)** (MIT, npm
+  `@protontech/drive-sdk`) is the only real door: one shared C# + TypeScript engine that
+  Proton is migrating its own clients onto, and what the official Proton Drive CLI
+  (released June 2026) is built on.
+- **The SDK's own README rules our use out.** It allows *personal, non-commercial
+  projects* and states that it is "not yet ready for third-party production use", with
+  commercial or production third-party apps called out as not allowed. A free MPL-2.0
+  extension on the Chrome Web Store and AMO is still production distribution, not a
+  personal project. The MIT license also covers only the code in that repo; access to
+  Proton's hosted service stays governed by Proton's own terms.
+- **They are not hostile to third parties, though.** Proton reserves an app-identification
+  header for exactly this case: `x-pm-appversion: external-drive-<name>@<semver>` (rclone
+  ships `external-drive-rclone@...`). Third-party clients are tolerated when they identify
+  themselves honestly, rate-limit, and sync off events instead of polling.
+
+### Why it is not "just another backend"
+- **Auth is out of scope for the SDK.** The README is explicit: no authentication, no
+  login flow, no session management. That is the entire hard part, and it is the part we
+  would have to write against a private endpoint: Proton's `/auth/v4` SRP handshake, plus
+  2FA, plus two-password mode, plus human verification. What little session helper the SDK
+  does carry was username + password SRP with no 2FA path as of late 2025 (issue #6), so
+  every Proton account with 2FA turned on, which is much of the audience that picks Proton
+  in the first place, would be locked out unless we build that ourselves.
+- **CAPTCHA on non-browser sign-in.** rclone's Proton backend hits `Code=9001` CAPTCHA on
+  `/auth/v4` routinely; the API treats browser and non-browser auth differently, and a
+  background service worker has nowhere to present that challenge. rclone's backend has
+  also broken outright before (September 2024) and users report silent rate limiting.
+- **We would be asking for the wrong credential.** WebDAV takes a server password, Drive
+  and GitHub take scoped tokens. SRP would have us put the *Proton account password*, the
+  master credential for that person's Mail, Pass and Drive, into a settings field. That is
+  the opposite of the posture the rest of Konode has, and "it stays device-local" does not
+  make the blast radius acceptable. Note that Proton's own CLI refuses this trade too: it
+  signs in through the browser and keeps only a session.
+- **MV3 runtime risk, worse than megajs.** The TypeScript SDK's crypto module
+  (`OpenPGPCryptoWithCryptoProxy` over `@proton/crypto`) expects a worker pool, and
+  `new Worker` does not exist inside an MV3 service worker (the spec forbids nested
+  workers). We would need a worker-free crypto path in the SW, eval-free bundling under
+  MV3 CSP, and OpenPGP plus Proton's crypto is a bigger bundle than anything we ship now.
+  Firefox's event page has no such worker limit, so this would land as a Chromium-only
+  problem on a backend that has to work on both.
+- **Moving target.** The SDK is pre-release ("the architecture and public interface may
+  still change"), and Proton is migrating Drive to a new cryptographic model at the end of
+  2026 / early 2027, after which older SDK versions stop interoperating with the service.
+  Building against it now means rebuilding it then.
+
+### What already works, with no code from us
+`rclone serve webdav` over rclone's Proton Drive backend, or one of the community
+Proton-Drive-to-WebDAV bridges, exposes Drive over plain WebDAV on localhost, and our
+generic **WebDAV (other)** card points at it as-is. That is the same shape as MEGAcmd, and
+the MEGA notes above reject it for the same reason: a desktop daemon the user has to keep
+running is not something a zero-dependency extension can call a supported backend. It is a
+fine answer to a support question, not a card in the UI, and it inherits every CAPTCHA and
+breakage risk listed above.
+
+### If we shipped it anyway
+Rough cost is ~2-3 weeks, not the 3-5 days MEGA is rated at, and nearly all of it is auth
+and MV3 crypto rather than the `IBackend` mapping (that part is ordinary: a `Konode`
+folder, `konode_<type>_<device_id>.json` per device, same as everywhere else). On top sits
+a maintenance tail we do not control: any Proton auth change or client force-upgrade can
+take the backend down between our releases, and users would blame Konode for it. Not worth
+it while the terms say no.
+
+### Revisit triggers
+- Proton ships the auth / session module and opens the SDK to third-party production use.
+  That is their stated plan, after the crypto migration completes (end 2026 / early 2027).
+- Any browser-delegated sign-in we could drive from `launchWebAuthFlow`, the way the
+  official CLI signs in through the browser, instead of SRP in a form field.
+- An official WebDAV or S3 surface for Drive (long requested, no sign of it).
+
+Until one of those, the honest public answer stays: Proton Drive is not supported, and
+here is the local-bridge workaround if you want it today.
 
 ## Later / nice-to-have
 - Incremental diff for >10k bookmarks; history sync performance (the full-history dedup
