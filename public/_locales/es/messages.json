@@ -445,5 +445,11 @@
   },
   "datatype_extensions_desc": {
     "message": "Lista de extensiones, en la que se muestran las faltantes con enlaces de instalación."
+  },
+  "extension_name": {
+    "message": "Konode | Sincronización privada de marcadores y pestañas"
+  },
+  "onb_err_perms_no_prompt": {
+    "message": "Este navegador no puede mostrar mensajes de solicitud de permisos, por lo que Konode no pudo solicitar el acceso que este necesita. Concédelo en la pantalla de permisos de Konode, en la configuración de extensiones de tu navegador, y luego vuelve a presionar Finalizar."
   }
 }
