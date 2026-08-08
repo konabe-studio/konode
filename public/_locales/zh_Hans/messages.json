@@ -448,5 +448,8 @@
   },
   "extension_name": {
     "message": "Konode | 私人书签与标签页同步"
+  },
+  "onb_err_perms_no_prompt": {
+    "message": "此浏览器无法显示权限提示，因此 Konode 无法请求所需的访问权限。请在浏览器扩展设置的 Konode 权限页面上授予权限，然后再次点击完成。"
   }
 }
