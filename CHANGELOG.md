@@ -80,6 +80,17 @@ it can't.
   and took the rest of the script down with it, leaving an extension that had started but
   wasn't finished, which looks like it's working.
 
+### Where you can get it
+
+1.2.1 is live on **[Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/)**,
+so Firefox and Waterfox update to it on their own. On the Chrome Web Store it is in review,
+and the listing serves 1.2.0 until that clears; Chrome updates itself once it does. If you
+would rather not wait, the Chrome zip is on the
+[v1.2.1 release](https://github.com/konabe-studio/konode/releases/tag/v1.2.1) page. Note
+that the release zips are built without Konode's own Google OAuth client, so Google Drive
+sign-in in those needs an OAuth client of your own. GitHub and WebDAV work with no extra
+setup.
+
 ## [1.2.0] - 2026-08-04
 
 A full code-review pass over the sync engine, the storage backends and the interface,
