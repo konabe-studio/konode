@@ -411,7 +411,7 @@
     "message": "A beállításaid el vannak mentve. Nyisd meg a Beállításokat a javításhoz vagy fejezd be, és a Konode újrapróbálja a háttérben."
   },
   "onb_sync_timeout": {
-    "message": "Ez a szokásosnál hosszabb ideig tart. Egy nagy előzménylistánál ez előfordul. A szinkronizálás a háttérben tovább fut, szóval most is befejezheted."
+    "message": "Ez a szokásosnál tovább tart. Egy nagy előzménylistánál ez előfordul. A szinkronizálás a háttérben tovább fut, szóval most is befejezheted."
   },
   "onb_finish": {
     "message": "Befejezés"
@@ -450,7 +450,7 @@
     "message": "Böngészési előzmények, a napok beállítása szerint korlátozva."
   },
   "datatype_extensions_desc": {
-    "message": "A bővítmények listája, a hiányzókhoz telepítési linkkel."
+    "message": "A bővítmények listája, mutatja a hiányzó bővítményeket telepítési linkkel."
   },
   "opt_secret_copy": {
     "message": "Másolás"
