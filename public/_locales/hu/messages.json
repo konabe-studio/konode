@@ -451,5 +451,741 @@
   },
   "datatype_extensions_desc": {
     "message": "A bővítmények listája, a hiányzókhoz telepítési linkkel."
+  },
+  "opt_secret_copy": {
+    "message": "Másolás"
+  },
+  "opt_secret_copied": {
+    "message": "Másolva"
+  },
+  "opt_secret_replace": {
+    "message": "Csere"
+  },
+  "opt_webdav_user_label": {
+    "message": "Felhasználónév"
+  },
+  "opt_webdav_user_placeholder": {
+    "message": "felhasználónév"
+  },
+  "opt_webdav_pass_label": {
+    "message": "Jelszó / app-token"
+  },
+  "opt_webdav_http_warn": {
+    "message": "Ez egy $SCHEME$ cím, így a jelszavad titkosítatlanul utazna.",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "http://"
+      }
+    }
+  },
+  "opt_webdav_http_use": {
+    "message": "Használj $SCHEME$ címet.",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "https://"
+      }
+    }
+  },
+  "opt_snap_saved": {
+    "message": "Visszaállítási pont elmentve."
+  },
+  "opt_snap_restored_one": {
+    "message": "$COUNT$ könyvjelző visszaállítva. Szinkronizálás a többi eszközödre…",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_snap_restored_other": {
+    "message": "$COUNT$ könyvjelző visszaállítva. Szinkronizálás a többi eszközödre…",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "opt_snap_deleted": {
+    "message": "Visszaállítási pont törölve."
+  },
+  "opt_err_perms_no_prompt": {
+    "message": "Ez a böngésző nem tud engedélykérő ablakot megjeleníteni, ezért a Konode nem tudott hozzáférést kérni a WebDAV-szerveredhez. Add meg a Konode engedélyeinél a böngésző bővítménybeállításaiban, majd próbáld újra."
+  },
+  "opt_err_perms_bad_url": {
+    "message": "A Konode-nak nincs használható WebDAV-címe, amihez hozzáférést kérhetne. Ellenőrizd a fenti szerver-címet."
+  },
+  "opt_err_perms_denied": {
+    "message": "A WebDAV-szerver eléréséhez szükséges engedély nem lett megadva."
+  },
+  "opt_err_pass_too_short": {
+    "message": "Használj legalább $MIN$ karaktert. A szinkronizált adatok offline is támadhatók, ezért a rövid jelmondat kitalálható. A hosszabb jobb, vagy generálj kulcsot.",
+    "placeholders": {
+      "min": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "opt_err_pass_mismatch": {
+    "message": "A két jelmondat nem egyezik. Írd be újra a megerősítéshez, mielőtt mentesz."
+  },
+  "opt_saving": {
+    "message": "Mentés…"
+  },
+  "opt_saved": {
+    "message": "Mentve"
+  },
+  "opt_save_changes": {
+    "message": "Változások mentése"
+  },
+  "opt_nav_backend": {
+    "message": "Tárhely"
+  },
+  "opt_nav_data": {
+    "message": "Adattípusok"
+  },
+  "opt_nav_device": {
+    "message": "Eszköz"
+  },
+  "opt_nav_activity": {
+    "message": "Aktivitás"
+  },
+  "opt_nav_advanced": {
+    "message": "Speciális"
+  },
+  "opt_setup_title": {
+    "message": "Fejezd be a Konode beállítását"
+  },
+  "opt_setup_step_storage": {
+    "message": "Válaszd ki, hol tároljuk az adataidat"
+  },
+  "opt_setup_step_types": {
+    "message": "Válaszd ki, mi szinkronizálódjon"
+  },
+  "opt_backend_head": {
+    "message": "Tárhely"
+  },
+  "opt_backend_head_sub": {
+    "message": "Válaszd ki, hol tároljuk a szinkronizált adataidat. Az adataid soha nem érintik a szervereinket."
+  },
+  "opt_gdrive_connect_failed": {
+    "message": "A kapcsolódás nem sikerült"
+  },
+  "opt_gdrive_scope_hint": {
+    "message": "Csak a $SCOPE$ engedélykör, így a Konode kizárólag az általa létrehozott fájlokhoz fér hozzá.",
+    "placeholders": {
+      "scope": {
+        "content": "$1",
+        "example": "drive.file"
+      }
+    }
+  },
+  "opt_drive_folder_label": {
+    "message": "Drive mappa-azonosító"
+  },
+  "opt_optional": {
+    "message": "(nem kötelező)"
+  },
+  "opt_drive_folder_placeholder": {
+    "message": "Hagyd üresen, és a Konode létrehoz egy „Konode” mappát"
+  },
+  "opt_region_label": {
+    "message": "Régió"
+  },
+  "opt_webdav_host_label": {
+    "message": "Szerver címe"
+  },
+  "opt_webdav_url_label": {
+    "message": "Szerver URL"
+  },
+  "opt_github_token_label": {
+    "message": "Személyes hozzáférési token"
+  },
+  "opt_github_repo_label": {
+    "message": "Tároló"
+  },
+  "opt_github_branch_label": {
+    "message": "Branch"
+  },
+  "opt_stat_never": {
+    "message": "Soha"
+  },
+  "opt_setup_sub": {
+    "message": "A Konode a böngésződet a saját tárhelyedre szinkronizálja. Nincs Konode-szerver. Két gyors lépés, és készen vagy. (Ha a beállítás-varázsló nem nyílt meg a böngésződben, itt is el tudsz mindent végezni.)"
+  },
+  "opt_data_head": {
+    "message": "Adattípusok"
+  },
+  "opt_data_head_sub": {
+    "message": "Válaszd ki, mi szinkronizálódjon az eszközeid között."
+  },
+  "opt_data_section": {
+    "message": "Szinkronizált adatok"
+  },
+  "opt_data_permission_lost": {
+    "message": "A Konode-nak már nincs meg az ehhez szükséges engedélye, ezért ez nem szinkronizál. Kapcsold ki, majd újra be, hogy visszaálljon."
+  },
+  "opt_history_days_label": {
+    "message": "Szinkronizált napok"
+  },
+  "opt_history_days_desc": {
+    "message": "Javasolt: 30 nap."
+  },
+  "opt_history_days_value": {
+    "message": "$COUNT$ nap",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
+  "opt_history_hint": {
+    "message": "A többi eszközödről érkező oldalak a megérkezésük idejével kerülnek be, nem az első látogatás idejével, ezért Chromium-alapú böngészőkben a mai nap alatt jelennek meg, nem azon a napon, amikor böngésztél. A Firefox megtartja az eredeti dátumot."
+  },
+  "opt_missing_ext_head": {
+    "message": "Hiányzó bővítmények ($COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "6"
+      }
+    }
+  },
+  "opt_ext_from": {
+    "message": "· innen: $STORE$",
+    "placeholders": {
+      "store": {
+        "content": "$1",
+        "example": "Firefox"
+      }
+    }
+  },
+  "opt_ext_install": {
+    "message": "Telepítés"
+  },
+  "opt_ext_find": {
+    "message": "Keresés"
+  },
+  "opt_no_password_title": {
+    "message": "A jelszó-szinkronizálás nem elérhető."
+  },
+  "opt_no_password_body": {
+    "message": "A böngészőbővítmények nem érik el a böngésző saját jelszótárolóját."
+  },
+  "opt_no_password_use": {
+    "message": "Önállóan üzemeltetett jelszó-szinkronizáláshoz használd ezeket: $MANAGERS$.",
+    "placeholders": {
+      "managers": {
+        "content": "$1",
+        "example": "Bitwarden or Proton Pass"
+      }
+    }
+  },
+  "opt_or": {
+    "message": "vagy"
+  },
+  "opt_device_head": {
+    "message": "Eszköz"
+  },
+  "opt_device_head_sub": {
+    "message": "Így azonosítod ezt az eszközt a szinkronizálásban."
+  },
+  "opt_identity_section": {
+    "message": "Azonosítás"
+  },
+  "opt_device_name_label": {
+    "message": "Eszköz neve"
+  },
+  "opt_device_name_desc": {
+    "message": "Így jelenik meg ez az eszköz a szinkronizálási naplókban."
+  },
+  "opt_device_name_placeholder": {
+    "message": "A laptopom"
+  },
+  "opt_device_id_label": {
+    "message": "Eszköz-azonosító"
+  },
+  "opt_device_id_desc": {
+    "message": "Automatikusan generált. Ne módosítsd."
+  },
+  "opt_behavior_section": {
+    "message": "Szinkronizálás működése"
+  },
+  "opt_sync_on_change_label": {
+    "message": "Szinkronizálás változáskor"
+  },
+  "opt_sync_on_change_desc": {
+    "message": "Azonnal szinkronizálja a könyvjelzőket és lapokat, amikor megváltoznak. Javasolt."
+  },
+  "opt_auto_sync_label": {
+    "message": "Automatikus szinkronizálás"
+  },
+  "opt_auto_sync_desc": {
+    "message": "Rendszeres időzítés szerint is szinkronizál."
+  },
+  "opt_notifications_label": {
+    "message": "Értesítések"
+  },
+  "opt_notifications_desc": {
+    "message": "Szinkronizálási állapot és ütközési figyelmeztetések."
+  },
+  "opt_interval_label": {
+    "message": "Szinkronizálási időköz"
+  },
+  "opt_interval_desc": {
+    "message": "Milyen gyakran töltse le ez az eszköz a távoli változásokat. A 30 másodperc a böngésző minimuma a háttérben futó ellenőrzésekhez. A saját változásaid szinte azonnal feltöltődnek."
+  },
+  "opt_interval_value": {
+    "message": "$COUNT$ mp",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
+  "opt_conflict_section": {
+    "message": "Ütközések feloldása"
+  },
+  "opt_conflict_lww": {
+    "message": "Az utolsó írás győz"
+  },
+  "opt_conflict_lww_desc": {
+    "message": "Mindig a legutóbbi változás győz."
+  },
+  "opt_conflict_local": {
+    "message": "A helyi elsőbbsége"
+  },
+  "opt_conflict_local_desc": {
+    "message": "A helyi változások felülírják a távoliakat."
+  },
+  "opt_conflict_remote": {
+    "message": "A távoli elsőbbsége"
+  },
+  "opt_conflict_remote_desc": {
+    "message": "A távoli változások felülírják a helyieket."
+  },
+  "opt_conflict_manual": {
+    "message": "Kézi"
+  },
+  "opt_conflict_manual_desc": {
+    "message": "Kérdezzen rá minden ütközésre a felugró ablakban."
+  },
+  "opt_safety_section": {
+    "message": "Biztonság"
+  },
+  "opt_bulk_delete_label": {
+    "message": "Másik eszköztől elfogadott törlés felső határa"
+  },
+  "opt_bulk_delete_desc": {
+    "message": "Védőháló: ha egy másik eszköz törlései a helyi könyvjelzőidnek ennél nagyobb részét vinnék el, az összefésülés kihagyja őket (ez védi a könyvjelzőfádat egy hibás szinkronizálástól). Növeld, ha rendszeresen törölsz nagy tételben."
+  },
+  "opt_activity_head": {
+    "message": "Aktivitás"
+  },
+  "opt_activity_head_sub": {
+    "message": "Mit tett a Konode ezen az eszközön, és mivel dolgozik. Minden itt készül: a számok, a visszaállítási pontok és a legutóbbi 200 naplóbejegyzés helyi, és erről az oldalról semmi nem kerül feltöltésre."
+  },
+  "opt_sync_activity_section": {
+    "message": "Szinkronizálási aktivitás"
+  },
+  "opt_stat_transferred": {
+    "message": "Átvitt adat"
+  },
+  "opt_stat_runs": {
+    "message": "Szinkronizálások"
+  },
+  "opt_stat_last_sync": {
+    "message": "Utolsó szinkronizálás"
+  },
+  "opt_devices_section": {
+    "message": "Eszközök"
+  },
+  "opt_devices_section_sub": {
+    "message": "Minden eszköz, aminek fájljai vannak a szinkronizálási mappádban, és hogy melyik mit töltött fel utoljára. Egy eszköz elfelejtése törli a fájljait a tárhelyedről. Egyetlen böngészőből sem távolít el könyvjelzőt."
+  },
+  "opt_forget_result_one": {
+    "message": "Egy fájl törölve, ami ehhez tartozott: $LABEL$. Ha az a böngésző még fut, egy percen belül újra feltölti magát, és ismét megjelenik itt. Ez nem hiba: ha ki akarod tartani, először kapcsold ki ott a Konode-ot, és csak utána felejtsd el itt.",
+    "placeholders": {
+      "label": {
+        "content": "$2",
+        "example": "Work laptop"
+      }
+    }
+  },
+  "opt_forget_result_other": {
+    "message": "$COUNT$ fájl törölve, ami ehhez tartozott: $LABEL$. Ha az a böngésző még fut, egy percen belül újra feltölti magát, és ismét megjelenik itt. Ez nem hiba: ha ki akarod tartani, először kapcsold ki ott a Konode-ot, és csak utána felejtsd el itt.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      },
+      "label": {
+        "content": "$2",
+        "example": "Work laptop"
+      }
+    }
+  },
+  "opt_dismiss": {
+    "message": "Elvetés"
+  },
+  "opt_devices_error": {
+    "message": "Nem sikerült beolvasni az eszközeidet: $ERROR$. Ez nem azt jelenti, hogy nincs egy sem. Ellenőrizd a kapcsolatot a Tárhely fülön, és nyisd meg újra ezt a fület.",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "404 Not Found"
+      }
+    }
+  },
+  "opt_devices_loading": {
+    "message": "Szinkronizálási mappa beolvasása…"
+  },
+  "opt_devices_empty": {
+    "message": "A mappa még üres. Futtass egy szinkronizálást, és ez az eszköz megjelenik."
+  },
+  "opt_device_unnamed": {
+    "message": "Névtelen eszköz ($ID$)",
+    "placeholders": {
+      "id": {
+        "content": "$1",
+        "example": "a1b2c3d4"
+      }
+    }
+  },
+  "opt_this_device": {
+    "message": "EZ AZ ESZKÖZ"
+  },
+  "opt_last_upload": {
+    "message": "· utolsó feltöltés: $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "8/9/2026, 10:20:45 AM"
+      }
+    }
+  },
+  "opt_forget": {
+    "message": "Elfelejtés"
+  },
+  "opt_forget_it": {
+    "message": "Elfelejtem"
+  },
+  "opt_forget_confirm_one": {
+    "message": "Törli azt az egy fájlt, amit ez az eszköz a tárhelyeden tart ($TYPES$). Egyetlen böngészőből sem törlődik könyvjelző, sem itt, sem ott. Ha az a böngésző még fut, újra feltölti magát és megjelenik; ha ki akarod tartani, először kapcsold ki ott a Konode-ot.",
+    "placeholders": {
+      "types": {
+        "content": "$2",
+        "example": "Bookmarks, Sessions"
+      }
+    }
+  },
+  "opt_forget_confirm_other": {
+    "message": "Törli azt a $COUNT$ fájlt, amit ez az eszköz a tárhelyeden tart ($TYPES$). Egyetlen böngészőből sem törlődik könyvjelző, sem itt, sem ott. Ha az a böngésző még fut, újra feltölti magát és megjelenik; ha ki akarod tartani, először kapcsold ki ott a Konode-ot.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      },
+      "types": {
+        "content": "$2",
+        "example": "Bookmarks, Sessions"
+      }
+    }
+  },
+  "opt_that_device": {
+    "message": "az az eszköz"
+  },
+  "opt_cancel": {
+    "message": "Mégse"
+  },
+  "opt_snapshots_section": {
+    "message": "Visszaállítási pontok"
+  },
+  "opt_snapshots_section_sub": {
+    "message": "Időbélyeggel ellátott másolatok a könyvjelzőidről a tárhelyeden, az összes eszközöd között megosztva. A visszaállítás visszateszi az ezen az eszközön hiányzó könyvjelzőket (soha nem töröl). A legújabb 10 marad meg, a régebbiek automatikusan törlődnek, és bármelyiket törölheted itt."
+  },
+  "opt_snap_now_label": {
+    "message": "Visszaállítási pont mentése most"
+  },
+  "opt_snap_now_desc": {
+    "message": "Visszaállítási pont a jelenlegi könyvjelzőfádról."
+  },
+  "opt_snap_create": {
+    "message": "Létrehozás"
+  },
+  "opt_snap_loading": {
+    "message": "Visszaállítási pontok betöltése…"
+  },
+  "opt_snap_error": {
+    "message": "Nem sikerült beolvasni a visszaállítási pontjaidat: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "404 Not Found"
+      }
+    }
+  },
+  "opt_snap_error_desc": {
+    "message": "Ez nem azt jelenti, hogy nincs egy sem. A tárhelyeden vannak, csak most nem sikerült listázni őket. Ellenőrizd a kapcsolatot a Tárhely fülön, és nyisd meg újra ezt a fület."
+  },
+  "opt_snap_empty": {
+    "message": "Még nincs visszaállítási pont. Készíts egyet fent, vagy automatikusan mentődik, ha a Konode egyszer blokkol egy szokatlan törlést."
+  },
+  "opt_snap_count_one": {
+    "message": "$COUNT$ könyvjelző",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_snap_count_other": {
+    "message": "$COUNT$ könyvjelző",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "opt_snap_unknown": {
+    "message": "Könyvjelző-visszaállítási pont"
+  },
+  "opt_snap_confirm_restore": {
+    "message": "Visszaállítás megerősítése"
+  },
+  "opt_snap_confirm_delete": {
+    "message": "Törlés megerősítése"
+  },
+  "opt_snap_delete_aria": {
+    "message": "Visszaállítási pont törlése"
+  },
+  "opt_log_section": {
+    "message": "Napló"
+  },
+  "opt_log_empty_sub": {
+    "message": "Még nincs bejegyzés."
+  },
+  "opt_log_count_one": {
+    "message": "$COUNT$ bejegyzés",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_log_count_other": {
+    "message": "$COUNT$ bejegyzés",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "opt_log_errors": {
+    "message": " · $COUNT$ hibás",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_log_skipped": {
+    "message": " · $COUNT$ kihagyva",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "opt_log_errors_only_label": {
+    "message": "Csak a hibák"
+  },
+  "opt_log_errors_only_desc": {
+    "message": "A sikeres bejegyzések elrejtése."
+  },
+  "opt_log_clear": {
+    "message": "Napló törlése"
+  },
+  "opt_log_nothing": {
+    "message": "Még nincs naplózva semmi. Futtass egy szinkronizálást, és itt megjelenik."
+  },
+  "opt_log_no_errors": {
+    "message": "Nincs naplózott hiba. Szép."
+  },
+  "opt_encryption_section": {
+    "message": "Titkosítás"
+  },
+  "opt_e2ee_desc": {
+    "message": "AES-256-GCM. Az adatok a jelmondatoddal titkosítva hagyják el ezt az eszközt, így a tárhelyszolgáltató soha nem tudja elolvasni őket. Őrizd meg a jelmondatot: nélküle a titkosított adatok nem visszanyerhetők, és minden eszközön ugyanazt kell használni."
+  },
+  "opt_e2ee_disable_confirm": {
+    "message": "Kikapcsolod a titkosítást? A szinkronizált adataid a következő szinkronizálástól $UNENCRYPTED$ lesznek a tárhelyeden. Ezután minden eszközön ki kell kapcsolni.",
+    "placeholders": {
+      "unencrypted": {
+        "content": "$1",
+        "example": "unencrypted"
+      }
+    }
+  },
+  "opt_unencrypted": {
+    "message": "titkosítás nélkül"
+  },
+  "opt_e2ee_turn_off": {
+    "message": "Kikapcsolás"
+  },
+  "opt_passphrase_label": {
+    "message": "Jelmondat"
+  },
+  "opt_passphrase_desc": {
+    "message": "Ebből származik a titkosítási kulcs. Csak ezen az eszközön tárolódik, soha nem kerül feltöltésre."
+  },
+  "opt_passphrase_placeholder": {
+    "message": "Válassz erős jelmondatot"
+  },
+  "opt_passphrase_confirm_placeholder": {
+    "message": "Jelmondat megerősítése"
+  },
+  "opt_passphrase_match": {
+    "message": "A jelmondatok egyeznek."
+  },
+  "opt_genkey_saved_warning": {
+    "message": "Mentsd el most. Ez az egyetlen módja, hogy visszanyerd az adataidat, ha elfelejtenéd. Ugyanezt a kulcsot add meg a többi eszközödön is."
+  },
+  "opt_e2ee_no_passphrase": {
+    "message": "A titkosítás be van kapcsolva, de nincs beállítva jelmondat, ezért a szinkronizálás titkosítás nélkül tölt fel, amíg nem adsz meg egyet."
+  },
+  "opt_e2ee_off_warning": {
+    "message": "A titkosítás ki van kapcsolva, ezért a szinkronizált adataid (könyvjelzők, előzmények, munkamenetek, bővítmények) $UNENCRYPTED$ vannak a tárhelyeden. Kapcsold be, hogy minden titkosítva hagyja el ezt az eszközt.",
+    "placeholders": {
+      "unencrypted": {
+        "content": "$1",
+        "example": "unencrypted"
+      }
+    }
+  },
+  "opt_advanced_head": {
+    "message": "Speciális"
+  },
+  "opt_advanced_head_sub": {
+    "message": "Biztonsági mentések, visszajelzés és fejlesztői beállítások."
+  },
+  "opt_impexp_section": {
+    "message": "Importálás / exportálás"
+  },
+  "opt_export_label": {
+    "message": "Mentés exportálása"
+  },
+  "opt_export_desc": {
+    "message": "Töltsd le a könyvjelzőket, előzményeket és bővítményeket JSON-fájlként. Nem kell hozzá felhő."
+  },
+  "opt_export": {
+    "message": "Exportálás"
+  },
+  "opt_exported": {
+    "message": "Exportálva"
+  },
+  "opt_export_failed": {
+    "message": "Nem sikerült"
+  },
+  "opt_import_label": {
+    "message": "Mentés importálása"
+  },
+  "opt_import_desc": {
+    "message": "Visszaállítás Konode JSON-mentésből. A könyvjelzők új mappába kerülnek."
+  },
+  "opt_import_bad_file": {
+    "message": "Érvénytelen vagy nem támogatott fájlformátum."
+  },
+  "opt_import_ok_one": {
+    "message": "✓ $COUNT$ könyvjelző importálva a $FOLDER$ mappába.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      },
+      "folder": {
+        "content": "$2",
+        "example": "Konode Import"
+      }
+    }
+  },
+  "opt_import_ok_other": {
+    "message": "✓ $COUNT$ könyvjelző importálva a $FOLDER$ mappába.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      },
+      "folder": {
+        "content": "$2",
+        "example": "Konode Import"
+      }
+    }
+  },
+  "opt_import": {
+    "message": "Importálás"
+  },
+  "opt_import_done": {
+    "message": "Kész"
+  },
+  "opt_import_error": {
+    "message": "Hiba"
+  },
+  "opt_feedback_section": {
+    "message": "Visszajelzés"
+  },
+  "opt_feedback_section_sub": {
+    "message": "Semmi nem kerül elküldésre automatikusan. Ezek csak megnyílnak, ha rákattintasz."
+  },
+  "opt_report_label": {
+    "message": "Hibajelentés vagy funkciókérés"
+  },
+  "opt_report_desc": {
+    "message": "Megnyitja a projekt GitHub-issue-jait (nyilvános, a GitHub-fiókodhoz kötve)."
+  },
+  "opt_open_issues": {
+    "message": "Issue-k megnyitása"
+  },
+  "opt_email_label": {
+    "message": "Írj nekünk"
+  },
+  "opt_email_desc": {
+    "message": "Bármihez, amit inkább nem tennél közzé nyilvánosan."
+  },
+  "opt_developer_section": {
+    "message": "Fejlesztői"
+  },
+  "opt_debug_label": {
+    "message": "Hibakeresési mód"
+  },
+  "opt_debug_desc": {
+    "message": "Részletes naplózás a böngésző konzoljába és az Aktivitás fülre, hogy meg tudd osztani. Kapcsold ki, ha végeztél."
+  },
+  "opt_about_section": {
+    "message": "Névjegy"
+  },
+  "opt_version_label": {
+    "message": "Verzió"
+  },
+  "opt_source_label": {
+    "message": "Forráskód"
+  },
+  "opt_source_desc": {
+    "message": "Nincs telemetria. Nincsenek külső szerverek."
+  },
+  "opt_devices_bad_reply": {
+    "message": "Nem sikerült beolvasni az eszközlistát."
   }
 }

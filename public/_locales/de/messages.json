@@ -451,5 +451,741 @@
   },
   "datatype_extensions_desc": {
     "message": "Liste der Erweiterungen, fehlende mit Installationslinks."
+  },
+  "opt_secret_copy": {
+    "message": "Kopieren"
+  },
+  "opt_secret_copied": {
+    "message": "Kopiert"
+  },
+  "opt_secret_replace": {
+    "message": "Ersetzen"
+  },
+  "opt_webdav_user_label": {
+    "message": "Benutzername"
+  },
+  "opt_webdav_user_placeholder": {
+    "message": "benutzername"
+  },
+  "opt_webdav_pass_label": {
+    "message": "Passwort / App-Token"
+  },
+  "opt_webdav_http_warn": {
+    "message": "Das ist eine $SCHEME$-Adresse, dein Passwort würde also unverschlüsselt übertragen.",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "http://"
+      }
+    }
+  },
+  "opt_webdav_http_use": {
+    "message": "Verwende $SCHEME$.",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "https://"
+      }
+    }
+  },
+  "opt_snap_saved": {
+    "message": "Wiederherstellungspunkt gespeichert."
+  },
+  "opt_snap_restored_one": {
+    "message": "$COUNT$ Lesezeichen wiederhergestellt. Wird mit deinen anderen Geräten synchronisiert…",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_snap_restored_other": {
+    "message": "$COUNT$ Lesezeichen wiederhergestellt. Wird mit deinen anderen Geräten synchronisiert…",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "opt_snap_deleted": {
+    "message": "Wiederherstellungspunkt gelöscht."
+  },
+  "opt_err_perms_no_prompt": {
+    "message": "Dieser Browser kann keine Berechtigungsdialoge anzeigen, daher konnte Konode nicht um Zugriff auf deinen WebDAV-Server bitten. Erteile ihn auf der Berechtigungsseite von Konode in den Erweiterungseinstellungen deines Browsers und versuche es dann erneut."
+  },
+  "opt_err_perms_bad_url": {
+    "message": "Konode hat keine verwendbare WebDAV-Adresse, für die es Zugriff anfragen könnte. Prüfe die Server-URL oben."
+  },
+  "opt_err_perms_denied": {
+    "message": "Die Berechtigung für den Zugriff auf den WebDAV-Server wurde nicht erteilt."
+  },
+  "opt_err_pass_too_short": {
+    "message": "Verwende mindestens $MIN$ Zeichen. Synchronisierte Daten lassen sich offline angreifen, eine kurze Passphrase ist also erratbar. Länger ist besser, oder generiere einen Schlüssel.",
+    "placeholders": {
+      "min": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "opt_err_pass_mismatch": {
+    "message": "Die beiden Passphrasen stimmen nicht überein. Gib sie zur Bestätigung erneut ein, bevor du speicherst."
+  },
+  "opt_saving": {
+    "message": "Wird gespeichert…"
+  },
+  "opt_saved": {
+    "message": "Gespeichert"
+  },
+  "opt_save_changes": {
+    "message": "Änderungen speichern"
+  },
+  "opt_nav_backend": {
+    "message": "Speicher"
+  },
+  "opt_nav_data": {
+    "message": "Datentypen"
+  },
+  "opt_nav_device": {
+    "message": "Gerät"
+  },
+  "opt_nav_activity": {
+    "message": "Aktivität"
+  },
+  "opt_nav_advanced": {
+    "message": "Erweitert"
+  },
+  "opt_setup_title": {
+    "message": "Konode-Einrichtung abschließen"
+  },
+  "opt_setup_step_storage": {
+    "message": "Wähle, wo deine Daten gespeichert werden"
+  },
+  "opt_setup_step_types": {
+    "message": "Wähle aus, was synchronisiert wird"
+  },
+  "opt_backend_head": {
+    "message": "Speicher"
+  },
+  "opt_backend_head_sub": {
+    "message": "Wähle, wo deine Synchronisierungsdaten gespeichert werden. Deine Daten berühren unsere Server nie."
+  },
+  "opt_gdrive_connect_failed": {
+    "message": "Verbindung fehlgeschlagen"
+  },
+  "opt_gdrive_scope_hint": {
+    "message": "Nur der Bereich $SCOPE$, Konode kann also ausschließlich auf selbst erstellte Dateien zugreifen.",
+    "placeholders": {
+      "scope": {
+        "content": "$1",
+        "example": "drive.file"
+      }
+    }
+  },
+  "opt_drive_folder_label": {
+    "message": "Drive-Ordner-ID"
+  },
+  "opt_optional": {
+    "message": "(optional)"
+  },
+  "opt_drive_folder_placeholder": {
+    "message": "Leer lassen, dann wird automatisch ein Ordner „Konode“ erstellt"
+  },
+  "opt_region_label": {
+    "message": "Region"
+  },
+  "opt_webdav_host_label": {
+    "message": "Server-Host"
+  },
+  "opt_webdav_url_label": {
+    "message": "Server-URL"
+  },
+  "opt_github_token_label": {
+    "message": "Persönlicher Zugriffstoken"
+  },
+  "opt_github_repo_label": {
+    "message": "Repository"
+  },
+  "opt_github_branch_label": {
+    "message": "Branch"
+  },
+  "opt_stat_never": {
+    "message": "Nie"
+  },
+  "opt_setup_sub": {
+    "message": "Konode synchronisiert deinen Browser mit einem Speicher, der dir gehört. Es gibt keinen Konode-Server. Zwei kurze Schritte und du bist fertig. (Falls der Einrichtungsassistent in deinem Browser nie geöffnet wurde, kannst du alles direkt hier erledigen.)"
+  },
+  "opt_data_head": {
+    "message": "Datentypen"
+  },
+  "opt_data_head_sub": {
+    "message": "Wähle aus, was zwischen deinen Geräten synchronisiert wird."
+  },
+  "opt_data_section": {
+    "message": "Zu synchronisierende Daten"
+  },
+  "opt_data_permission_lost": {
+    "message": "Konode hat die dafür nötige Berechtigung nicht mehr, deshalb wird nicht synchronisiert. Schalte es aus und wieder ein, um sie neu zu erteilen."
+  },
+  "opt_history_days_label": {
+    "message": "Zu synchronisierende Tage"
+  },
+  "opt_history_days_desc": {
+    "message": "Empfohlen: 30 Tage."
+  },
+  "opt_history_days_value": {
+    "message": "$COUNT$ T",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
+  "opt_history_hint": {
+    "message": "Seiten von deinen anderen Geräten werden mit dem Zeitpunkt ihrer Ankunft eingetragen, nicht mit dem Zeitpunkt deines ersten Besuchs. In Chromium-Browsern erscheinen sie deshalb unter heute und nicht an dem Tag, an dem du gesurft hast. Firefox behält das ursprüngliche Datum."
+  },
+  "opt_missing_ext_head": {
+    "message": "Fehlende Erweiterungen ($COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "6"
+      }
+    }
+  },
+  "opt_ext_from": {
+    "message": "· von $STORE$",
+    "placeholders": {
+      "store": {
+        "content": "$1",
+        "example": "Firefox"
+      }
+    }
+  },
+  "opt_ext_install": {
+    "message": "Installieren"
+  },
+  "opt_ext_find": {
+    "message": "Suchen"
+  },
+  "opt_no_password_title": {
+    "message": "Passwort-Synchronisierung ist nicht verfügbar."
+  },
+  "opt_no_password_body": {
+    "message": "Browser-Erweiterungen können nicht auf den nativen Passwortspeicher zugreifen."
+  },
+  "opt_no_password_use": {
+    "message": "Verwende für selbst gehostete Passwort-Synchronisierung $MANAGERS$.",
+    "placeholders": {
+      "managers": {
+        "content": "$1",
+        "example": "Bitwarden or Proton Pass"
+      }
+    }
+  },
+  "opt_or": {
+    "message": "oder"
+  },
+  "opt_device_head": {
+    "message": "Gerät"
+  },
+  "opt_device_head_sub": {
+    "message": "So identifizierst du dieses Gerät in der Synchronisierung."
+  },
+  "opt_identity_section": {
+    "message": "Identität"
+  },
+  "opt_device_name_label": {
+    "message": "Gerätename"
+  },
+  "opt_device_name_desc": {
+    "message": "So erscheint dieses Gerät in den Synchronisierungsprotokollen."
+  },
+  "opt_device_name_placeholder": {
+    "message": "Mein Laptop"
+  },
+  "opt_device_id_label": {
+    "message": "Geräte-ID"
+  },
+  "opt_device_id_desc": {
+    "message": "Automatisch erzeugt. Nicht ändern."
+  },
+  "opt_behavior_section": {
+    "message": "Synchronisierungsverhalten"
+  },
+  "opt_sync_on_change_label": {
+    "message": "Bei Änderung synchronisieren"
+  },
+  "opt_sync_on_change_desc": {
+    "message": "Synchronisiert Lesezeichen und Tabs sofort, wenn sie sich ändern. Empfohlen."
+  },
+  "opt_auto_sync_label": {
+    "message": "Automatische Synchronisierung"
+  },
+  "opt_auto_sync_desc": {
+    "message": "Synchronisiert außerdem regelmäßig nach Zeitplan."
+  },
+  "opt_notifications_label": {
+    "message": "Benachrichtigungen"
+  },
+  "opt_notifications_desc": {
+    "message": "Synchronisierungsstatus und Konflikthinweise."
+  },
+  "opt_interval_label": {
+    "message": "Synchronisierungsintervall"
+  },
+  "opt_interval_desc": {
+    "message": "Wie oft dieses Gerät entfernte Änderungen abruft. 30 Sekunden sind das Minimum des Browsers für Hintergrundprüfungen. Deine eigenen Änderungen werden fast sofort hochgeladen."
+  },
+  "opt_interval_value": {
+    "message": "$COUNT$ s",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
+  "opt_conflict_section": {
+    "message": "Konfliktlösung"
+  },
+  "opt_conflict_lww": {
+    "message": "Letzte Änderung gewinnt"
+  },
+  "opt_conflict_lww_desc": {
+    "message": "Die neueste Änderung gewinnt immer."
+  },
+  "opt_conflict_local": {
+    "message": "Lokal bevorzugen"
+  },
+  "opt_conflict_local_desc": {
+    "message": "Lokale Änderungen überschreiben entfernte."
+  },
+  "opt_conflict_remote": {
+    "message": "Entfernt bevorzugen"
+  },
+  "opt_conflict_remote_desc": {
+    "message": "Entfernte Änderungen überschreiben lokale."
+  },
+  "opt_conflict_manual": {
+    "message": "Manuell"
+  },
+  "opt_conflict_manual_desc": {
+    "message": "Frag mich bei jedem Konflikt im Popup."
+  },
+  "opt_safety_section": {
+    "message": "Sicherheit"
+  },
+  "opt_bulk_delete_label": {
+    "message": "Maximale Massenlöschung von einem Gerät"
+  },
+  "opt_bulk_delete_desc": {
+    "message": "Ein Sicherheitsnetz: Würden die Löschungen eines anderen Geräts mehr als diesen Anteil deiner lokalen Lesezeichen entfernen, überspringt die Zusammenführung sie (das schützt deinen Baum vor einer fehlerhaften Synchronisierung). Erhöhe den Wert, wenn du regelmäßig in großen Mengen löschst."
+  },
+  "opt_activity_head": {
+    "message": "Aktivität"
+  },
+  "opt_activity_head_sub": {
+    "message": "Was Konode auf diesem Gerät getan hat und womit es arbeitet. Alles wird hier berechnet: die Zahlen, die Wiederherstellungspunkte und die letzten 200 Protokolleinträge sind lokal, und von dieser Seite wird nie etwas hochgeladen."
+  },
+  "opt_sync_activity_section": {
+    "message": "Synchronisierungsaktivität"
+  },
+  "opt_stat_transferred": {
+    "message": "Übertragene Daten"
+  },
+  "opt_stat_runs": {
+    "message": "Synchronisierungen"
+  },
+  "opt_stat_last_sync": {
+    "message": "Letzte Synchronisierung"
+  },
+  "opt_devices_section": {
+    "message": "Geräte"
+  },
+  "opt_devices_section_sub": {
+    "message": "Jedes Gerät mit Dateien in deinem Synchronisierungsordner und was es zuletzt hochgeladen hat. Ein Gerät zu vergessen löscht seine Dateien aus deinem Speicher. Es entfernt in keinem Browser Lesezeichen."
+  },
+  "opt_forget_result_one": {
+    "message": "Eine Datei von $LABEL$ gelöscht. Wenn dieser Browser noch läuft, lädt er sich innerhalb einer Minute erneut hoch und erscheint hier wieder. Das ist kein Fehler: Um ein Gerät draußen zu halten, schalte Konode dort zuerst aus und vergiss es dann hier.",
+    "placeholders": {
+      "label": {
+        "content": "$2",
+        "example": "Work laptop"
+      }
+    }
+  },
+  "opt_forget_result_other": {
+    "message": "$COUNT$ Dateien von $LABEL$ gelöscht. Wenn dieser Browser noch läuft, lädt er sich innerhalb einer Minute erneut hoch und erscheint hier wieder. Das ist kein Fehler: Um ein Gerät draußen zu halten, schalte Konode dort zuerst aus und vergiss es dann hier.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      },
+      "label": {
+        "content": "$2",
+        "example": "Work laptop"
+      }
+    }
+  },
+  "opt_dismiss": {
+    "message": "Ausblenden"
+  },
+  "opt_devices_error": {
+    "message": "Deine Geräte konnten nicht gelesen werden: $ERROR$. Das bedeutet nicht, dass du keine hast. Prüfe die Verbindung unter Speicher und öffne diesen Tab erneut.",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "404 Not Found"
+      }
+    }
+  },
+  "opt_devices_loading": {
+    "message": "Synchronisierungsordner wird gelesen…"
+  },
+  "opt_devices_empty": {
+    "message": "Noch nichts im Ordner. Führe eine Synchronisierung aus, dann erscheint dieses Gerät."
+  },
+  "opt_device_unnamed": {
+    "message": "Unbenanntes Gerät ($ID$)",
+    "placeholders": {
+      "id": {
+        "content": "$1",
+        "example": "a1b2c3d4"
+      }
+    }
+  },
+  "opt_this_device": {
+    "message": "DIESES GERÄT"
+  },
+  "opt_last_upload": {
+    "message": "· letzter Upload $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "8/9/2026, 10:20:45 AM"
+      }
+    }
+  },
+  "opt_forget": {
+    "message": "Vergessen"
+  },
+  "opt_forget_it": {
+    "message": "Vergessen"
+  },
+  "opt_forget_confirm_one": {
+    "message": "Löscht die eine Datei, die dieses Gerät in deinem Speicher hat ($TYPES$). In keinem Browser werden Lesezeichen entfernt, weder hier noch dort. Wenn dieser Browser noch läuft, lädt er sich erneut hoch und erscheint wieder; um ihn draußen zu halten, schalte Konode dort zuerst aus.",
+    "placeholders": {
+      "types": {
+        "content": "$2",
+        "example": "Bookmarks, Sessions"
+      }
+    }
+  },
+  "opt_forget_confirm_other": {
+    "message": "Löscht die $COUNT$ Dateien, die dieses Gerät in deinem Speicher hat ($TYPES$). In keinem Browser werden Lesezeichen entfernt, weder hier noch dort. Wenn dieser Browser noch läuft, lädt er sich erneut hoch und erscheint wieder; um ihn draußen zu halten, schalte Konode dort zuerst aus.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      },
+      "types": {
+        "content": "$2",
+        "example": "Bookmarks, Sessions"
+      }
+    }
+  },
+  "opt_that_device": {
+    "message": "dieses Gerät"
+  },
+  "opt_cancel": {
+    "message": "Abbrechen"
+  },
+  "opt_snapshots_section": {
+    "message": "Wiederherstellungspunkte"
+  },
+  "opt_snapshots_section_sub": {
+    "message": "Mit Zeitstempel versehene Kopien deiner Lesezeichen im Speicher, die alle deine Geräte teilen. Eine Wiederherstellung fügt auf diesem Gerät fehlende Lesezeichen wieder hinzu (sie löscht nie). Die neuesten 10 bleiben erhalten, ältere werden automatisch entfernt, und du kannst hier jeden davon löschen."
+  },
+  "opt_snap_now_label": {
+    "message": "Jetzt einen Wiederherstellungspunkt speichern"
+  },
+  "opt_snap_now_desc": {
+    "message": "Ein Wiederherstellungspunkt deines aktuellen Lesezeichenbaums."
+  },
+  "opt_snap_create": {
+    "message": "Erstellen"
+  },
+  "opt_snap_loading": {
+    "message": "Wiederherstellungspunkte werden geladen…"
+  },
+  "opt_snap_error": {
+    "message": "Deine Wiederherstellungspunkte konnten nicht gelesen werden: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "404 Not Found"
+      }
+    }
+  },
+  "opt_snap_error_desc": {
+    "message": "Das bedeutet nicht, dass du keine hast. Sie liegen in deinem Speicher und konnten gerade nicht aufgelistet werden. Prüfe die Verbindung unter Speicher und öffne diesen Tab erneut."
+  },
+  "opt_snap_empty": {
+    "message": "Noch keine Wiederherstellungspunkte. Erstelle oben einen, oder es wird automatisch einer gespeichert, falls jemals eine ungewöhnliche Löschung blockiert wird."
+  },
+  "opt_snap_count_one": {
+    "message": "$COUNT$ Lesezeichen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_snap_count_other": {
+    "message": "$COUNT$ Lesezeichen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "opt_snap_unknown": {
+    "message": "Lesezeichen-Wiederherstellungspunkt"
+  },
+  "opt_snap_confirm_restore": {
+    "message": "Wiederherstellen bestätigen"
+  },
+  "opt_snap_confirm_delete": {
+    "message": "Löschen bestätigen"
+  },
+  "opt_snap_delete_aria": {
+    "message": "Diesen Wiederherstellungspunkt löschen"
+  },
+  "opt_log_section": {
+    "message": "Protokoll"
+  },
+  "opt_log_empty_sub": {
+    "message": "Noch keine Einträge."
+  },
+  "opt_log_count_one": {
+    "message": "$COUNT$ Eintrag",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_log_count_other": {
+    "message": "$COUNT$ Einträge",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "opt_log_errors": {
+    "message": " · $COUNT$ mit Fehlern",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_log_skipped": {
+    "message": " · $COUNT$ übersprungen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "opt_log_errors_only_label": {
+    "message": "Nur Fehler anzeigen"
+  },
+  "opt_log_errors_only_desc": {
+    "message": "Erfolgreiche Einträge ausblenden."
+  },
+  "opt_log_clear": {
+    "message": "Protokoll löschen"
+  },
+  "opt_log_nothing": {
+    "message": "Noch nichts protokolliert. Führe eine Synchronisierung aus, dann erscheint sie hier."
+  },
+  "opt_log_no_errors": {
+    "message": "Keine Fehler protokolliert. Sehr gut."
+  },
+  "opt_encryption_section": {
+    "message": "Verschlüsselung"
+  },
+  "opt_e2ee_desc": {
+    "message": "AES-256-GCM. Daten werden mit deiner Passphrase verschlüsselt, bevor sie dieses Gerät verlassen, der Speicheranbieter kann sie also nie lesen. Bewahre die Passphrase sicher auf: ohne sie sind verschlüsselte Daten nicht wiederherstellbar, und jedes Gerät muss dieselbe verwenden."
+  },
+  "opt_e2ee_disable_confirm": {
+    "message": "Verschlüsselung ausschalten? Deine synchronisierten Daten werden ab der nächsten Synchronisierung $UNENCRYPTED$ in deinem Speicher abgelegt. Jedes Gerät muss sie dann ebenfalls ausschalten.",
+    "placeholders": {
+      "unencrypted": {
+        "content": "$1",
+        "example": "unencrypted"
+      }
+    }
+  },
+  "opt_unencrypted": {
+    "message": "unverschlüsselt"
+  },
+  "opt_e2ee_turn_off": {
+    "message": "Ausschalten"
+  },
+  "opt_passphrase_label": {
+    "message": "Passphrase"
+  },
+  "opt_passphrase_desc": {
+    "message": "Daraus wird der Verschlüsselungsschlüssel abgeleitet. Wird nur auf diesem Gerät gespeichert und nie hochgeladen."
+  },
+  "opt_passphrase_placeholder": {
+    "message": "Wähle eine starke Passphrase"
+  },
+  "opt_passphrase_confirm_placeholder": {
+    "message": "Passphrase bestätigen"
+  },
+  "opt_passphrase_match": {
+    "message": "Die Passphrasen stimmen überein."
+  },
+  "opt_genkey_saved_warning": {
+    "message": "Speichere das jetzt. Es ist der einzige Weg, deine Daten wiederherzustellen, wenn du sie vergisst. Gib denselben Schlüssel auf deinen anderen Geräten ein."
+  },
+  "opt_e2ee_no_passphrase": {
+    "message": "Die Verschlüsselung ist aktiv, aber es ist keine Passphrase gesetzt, daher lädt die Synchronisierung weiterhin Klartext hoch, bis du eine hinzufügst."
+  },
+  "opt_e2ee_off_warning": {
+    "message": "Die Verschlüsselung ist aus, deine synchronisierten Daten (Lesezeichen, Verlauf, Sitzungen, Erweiterungen) liegen also $UNENCRYPTED$ in deinem Speicher. Schalte sie ein, um alles zu verschlüsseln, bevor es dieses Gerät verlässt.",
+    "placeholders": {
+      "unencrypted": {
+        "content": "$1",
+        "example": "unencrypted"
+      }
+    }
+  },
+  "opt_advanced_head": {
+    "message": "Erweitert"
+  },
+  "opt_advanced_head_sub": {
+    "message": "Backups, Feedback und Entwickleroptionen."
+  },
+  "opt_impexp_section": {
+    "message": "Import / Export"
+  },
+  "opt_export_label": {
+    "message": "Backup exportieren"
+  },
+  "opt_export_desc": {
+    "message": "Lade Lesezeichen, Verlauf und Erweiterungen als JSON-Datei herunter. Ohne Cloud."
+  },
+  "opt_export": {
+    "message": "Exportieren"
+  },
+  "opt_exported": {
+    "message": "Exportiert"
+  },
+  "opt_export_failed": {
+    "message": "Fehlgeschlagen"
+  },
+  "opt_import_label": {
+    "message": "Backup importieren"
+  },
+  "opt_import_desc": {
+    "message": "Aus einem Konode-JSON-Backup wiederherstellen. Lesezeichen landen in einem neuen Ordner."
+  },
+  "opt_import_bad_file": {
+    "message": "Ungültiges oder nicht unterstütztes Dateiformat."
+  },
+  "opt_import_ok_one": {
+    "message": "✓ $COUNT$ Lesezeichen in den Ordner $FOLDER$ importiert.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      },
+      "folder": {
+        "content": "$2",
+        "example": "Konode Import"
+      }
+    }
+  },
+  "opt_import_ok_other": {
+    "message": "✓ $COUNT$ Lesezeichen in den Ordner $FOLDER$ importiert.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      },
+      "folder": {
+        "content": "$2",
+        "example": "Konode Import"
+      }
+    }
+  },
+  "opt_import": {
+    "message": "Importieren"
+  },
+  "opt_import_done": {
+    "message": "Fertig"
+  },
+  "opt_import_error": {
+    "message": "Fehler"
+  },
+  "opt_feedback_section": {
+    "message": "Feedback"
+  },
+  "opt_feedback_section_sub": {
+    "message": "Es wird nichts automatisch gesendet. Diese öffnen sich nur, wenn du sie anklickst."
+  },
+  "opt_report_label": {
+    "message": "Fehler melden oder Funktion vorschlagen"
+  },
+  "opt_report_desc": {
+    "message": "Öffnet die GitHub-Issues des Projekts (öffentlich, mit deinem GitHub-Konto verknüpft)."
+  },
+  "opt_open_issues": {
+    "message": "Issues öffnen"
+  },
+  "opt_email_label": {
+    "message": "Schreib uns"
+  },
+  "opt_email_desc": {
+    "message": "Für alles, was du nicht öffentlich posten möchtest."
+  },
+  "opt_developer_section": {
+    "message": "Entwickler"
+  },
+  "opt_debug_label": {
+    "message": "Debug-Modus"
+  },
+  "opt_debug_desc": {
+    "message": "Ausführliche Protokollierung in die Browser-Konsole und in Aktivität, damit du sie teilen kannst. Schalte ihn aus, wenn du fertig bist."
+  },
+  "opt_about_section": {
+    "message": "Über"
+  },
+  "opt_version_label": {
+    "message": "Version"
+  },
+  "opt_source_label": {
+    "message": "Quellcode"
+  },
+  "opt_source_desc": {
+    "message": "Keine Telemetrie. Keine externen Server."
+  },
+  "opt_devices_bad_reply": {
+    "message": "Die Geräteliste konnte nicht gelesen werden."
   }
 }
