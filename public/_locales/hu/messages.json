@@ -451,5 +451,170 @@
   },
   "datatype_extensions_desc": {
     "message": "A bővítmények listája, a hiányzókhoz telepítési linkkel."
+  },
+  "opt_secret_copy": {
+    "message": "Másolás"
+  },
+  "opt_secret_copied": {
+    "message": "Másolva"
+  },
+  "opt_secret_replace": {
+    "message": "Csere"
+  },
+  "opt_webdav_user_label": {
+    "message": "Felhasználónév"
+  },
+  "opt_webdav_user_placeholder": {
+    "message": "felhasználónév"
+  },
+  "opt_webdav_pass_label": {
+    "message": "Jelszó / app-token"
+  },
+  "opt_webdav_http_warn": {
+    "message": "Ez egy $SCHEME$ cím, így a jelszavad titkosítatlanul utazna.",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "http://"
+      }
+    }
+  },
+  "opt_webdav_http_use": {
+    "message": "Használj $SCHEME$ címet.",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "https://"
+      }
+    }
+  },
+  "opt_snap_saved": {
+    "message": "Visszaállítási pont elmentve."
+  },
+  "opt_snap_restored_one": {
+    "message": "$COUNT$ könyvjelző visszaállítva. Szinkronizálás a többi eszközödre…",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_snap_restored_other": {
+    "message": "$COUNT$ könyvjelző visszaállítva. Szinkronizálás a többi eszközödre…",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "opt_snap_deleted": {
+    "message": "Visszaállítási pont törölve."
+  },
+  "opt_err_perms_no_prompt": {
+    "message": "Ez a böngésző nem tud engedélykérő ablakot megjeleníteni, ezért a Konode nem tudott hozzáférést kérni a WebDAV-szerveredhez. Add meg a Konode engedélyeinél a böngésző bővítménybeállításaiban, majd próbáld újra."
+  },
+  "opt_err_perms_bad_url": {
+    "message": "A Konode-nak nincs használható WebDAV-címe, amihez hozzáférést kérhetne. Ellenőrizd a fenti szerver-címet."
+  },
+  "opt_err_perms_denied": {
+    "message": "A WebDAV-szerver eléréséhez szükséges engedély nem lett megadva."
+  },
+  "opt_err_pass_too_short": {
+    "message": "Használj legalább $MIN$ karaktert. A szinkronizált adatok offline is támadhatók, ezért a rövid jelmondat kitalálható. A hosszabb jobb, vagy generálj kulcsot.",
+    "placeholders": {
+      "min": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "opt_err_pass_mismatch": {
+    "message": "A két jelmondat nem egyezik. Írd be újra a megerősítéshez, mielőtt mentesz."
+  },
+  "opt_saving": {
+    "message": "Mentés…"
+  },
+  "opt_saved": {
+    "message": "Mentve"
+  },
+  "opt_save_changes": {
+    "message": "Változások mentése"
+  },
+  "opt_nav_backend": {
+    "message": "Tárhely"
+  },
+  "opt_nav_data": {
+    "message": "Adattípusok"
+  },
+  "opt_nav_device": {
+    "message": "Eszköz"
+  },
+  "opt_nav_activity": {
+    "message": "Aktivitás"
+  },
+  "opt_nav_advanced": {
+    "message": "Speciális"
+  },
+  "opt_setup_title": {
+    "message": "Fejezd be a Konode beállítását"
+  },
+  "opt_setup_step_storage": {
+    "message": "Válaszd ki, hol tároljuk az adataidat"
+  },
+  "opt_setup_step_types": {
+    "message": "Válaszd ki, mi szinkronizálódjon"
+  },
+  "opt_backend_head": {
+    "message": "Tárhely"
+  },
+  "opt_backend_head_sub": {
+    "message": "Válaszd ki, hol tároljuk a szinkronizált adataidat. Az adataid soha nem érintik a szervereinket."
+  },
+  "opt_gdrive_connect_failed": {
+    "message": "A kapcsolódás nem sikerült"
+  },
+  "opt_gdrive_scope_hint": {
+    "message": "Csak a $SCOPE$ engedélykör, így a Konode kizárólag az általa létrehozott fájlokhoz fér hozzá.",
+    "placeholders": {
+      "scope": {
+        "content": "$1",
+        "example": "drive.file"
+      }
+    }
+  },
+  "opt_drive_folder_label": {
+    "message": "Drive mappa-azonosító"
+  },
+  "opt_optional": {
+    "message": "(nem kötelező)"
+  },
+  "opt_drive_folder_placeholder": {
+    "message": "Hagyd üresen, és a Konode létrehoz egy „Konode” mappát"
+  },
+  "opt_region_label": {
+    "message": "Régió"
+  },
+  "opt_webdav_host_label": {
+    "message": "Szerver címe"
+  },
+  "opt_webdav_url_label": {
+    "message": "Szerver URL"
+  },
+  "opt_github_token_label": {
+    "message": "Személyes hozzáférési token"
+  },
+  "opt_github_repo_label": {
+    "message": "Tároló"
+  },
+  "opt_github_branch_label": {
+    "message": "Branch"
+  },
+  "opt_stat_never": {
+    "message": "Soha"
+  },
+  "opt_setup_sub": {
+    "message": "A Konode a böngésződet a saját tárhelyedre szinkronizálja. Nincs Konode-szerver. Két gyors lépés, és készen vagy. (Ha a beállítás-varázsló nem nyílt meg a böngésződben, itt is el tudsz mindent végezni.)"
   }
 }

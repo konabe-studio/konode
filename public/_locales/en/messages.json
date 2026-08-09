@@ -509,5 +509,196 @@
   },
   "datatype_extensions_desc": {
     "message": "Extension list, showing missing ones with install links."
+  },
+  "opt_secret_copy": {
+    "message": "Copy",
+    "description": "Tooltip on the button that copies a saved secret (token, password, passphrase) to the clipboard."
+  },
+  "opt_secret_copied": {
+    "message": "Copied",
+    "description": "Replaces opt_secret_copy for a moment after the copy succeeded."
+  },
+  "opt_secret_replace": {
+    "message": "Replace",
+    "description": "Tooltip on the button that clears a saved secret so a new one can be typed. Konode never shows a saved secret in an editable field, so replacing is the only way to change it."
+  },
+  "opt_webdav_user_label": {
+    "message": "Username"
+  },
+  "opt_webdav_user_placeholder": {
+    "message": "username",
+    "description": "Greyed-out example inside the empty username field. Lowercase on purpose, so it reads as an example rather than a filled-in value."
+  },
+  "opt_webdav_pass_label": {
+    "message": "Password / App token",
+    "description": "Most WebDAV servers want an app-specific token here rather than the account password, which is why both words appear."
+  },
+  "opt_webdav_http_warn": {
+    "message": "This is an $SCHEME$ URL, so your password would be sent unencrypted.",
+    "description": "Warning under a WebDAV card whose address would send credentials in the clear. $SCHEME$ is rendered as code and is never translated. Split around the placeholder with tParts, so word order stays yours.",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "http://"
+      }
+    }
+  },
+  "opt_webdav_http_use": {
+    "message": "Use $SCHEME$.",
+    "description": "Follows opt_webdav_http_warn. $SCHEME$ is rendered as code and is never translated.",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "https://"
+      }
+    }
+  },
+  "opt_snap_saved": {
+    "message": "Snapshot saved."
+  },
+  "opt_snap_restored_one": {
+    "message": "Restored $COUNT$ bookmark. Syncing to your other devices…",
+    "description": "A restore only ever ADDS bookmarks back, so this number is what was re-added, never what was removed.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_snap_restored_other": {
+    "message": "Restored $COUNT$ bookmarks. Syncing to your other devices…",
+    "description": "Plural form of opt_snap_restored_one. Hungarian keeps the singular after a numeral, so both forms are worded the same there.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "opt_snap_deleted": {
+    "message": "Restore point deleted."
+  },
+  "opt_err_perms_no_prompt": {
+    "message": "This browser can't show permission prompts, so Konode couldn't ask for access to your WebDAV server. Grant it on Konode's permissions screen in your browser's extension settings, then try again.",
+    "description": "Firefox for Android implements no runtime permission prompts. Saying 'you declined' there would blame the user for something they were never asked."
+  },
+  "opt_err_perms_bad_url": {
+    "message": "Konode has no usable WebDAV address to ask for access to. Check the server URL above."
+  },
+  "opt_err_perms_denied": {
+    "message": "Permission to access the WebDAV server was not granted."
+  },
+  "opt_err_pass_too_short": {
+    "message": "Use at least $MIN$ characters. Synced data can be attacked offline, so a short passphrase is guessable. Longer is better, or generate a key.",
+    "description": "Settings' version of onb_pass_too_short. Longer than the onboarding one because here there is room to say what to do about it.",
+    "placeholders": {
+      "min": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "opt_err_pass_mismatch": {
+    "message": "The two passphrases don't match. Re-enter to confirm before saving."
+  },
+  "opt_saving": {
+    "message": "Saving…"
+  },
+  "opt_saved": {
+    "message": "Saved",
+    "description": "Shown on the Save button for a moment after a write the extension actually confirmed. Never shown for a write that failed."
+  },
+  "opt_save_changes": {
+    "message": "Save changes"
+  },
+  "opt_nav_backend": {
+    "message": "Storage",
+    "description": "Tab in the Settings navigation strip. Keep every nav label short: the strip has to stay legible when the window is narrow. The section heading is a separate key (opt_backend_head), so you can be shorter here than there."
+  },
+  "opt_nav_data": {
+    "message": "Data Types",
+    "description": "Tab in the Settings navigation strip. Keep it short, see opt_nav_backend."
+  },
+  "opt_nav_device": {
+    "message": "Device",
+    "description": "Tab in the Settings navigation strip. Keep it short, see opt_nav_backend."
+  },
+  "opt_nav_activity": {
+    "message": "Activity",
+    "description": "Tab in the Settings navigation strip. Keep it short, see opt_nav_backend."
+  },
+  "opt_nav_advanced": {
+    "message": "Advanced",
+    "description": "Tab in the Settings navigation strip. Keep it short, see opt_nav_backend."
+  },
+  "opt_setup_title": {
+    "message": "Finish setting up Konode",
+    "description": "Card shown at the top of Settings until first-run setup is complete."
+  },
+  "opt_setup_step_storage": {
+    "message": "Choose where your data is stored"
+  },
+  "opt_setup_step_types": {
+    "message": "Pick what to sync"
+  },
+  "opt_backend_head": {
+    "message": "Storage",
+    "description": "Heading of the Storage section. Separate from the nav label opt_nav_backend, which has to fit a narrow strip, so this one can be as long as it needs to be."
+  },
+  "opt_backend_head_sub": {
+    "message": "Choose where your sync data is stored. Your data never touches our servers."
+  },
+  "opt_gdrive_connect_failed": {
+    "message": "Connection failed",
+    "description": "Fallback when Google sign-in throws without a message of its own."
+  },
+  "opt_gdrive_scope_hint": {
+    "message": "Only the $SCOPE$ scope, so Konode can only access files it creates.",
+    "description": "$SCOPE$ is the OAuth scope name drive.file, rendered as code and never translated. Split around the placeholder with tParts.",
+    "placeholders": {
+      "scope": {
+        "content": "$1",
+        "example": "drive.file"
+      }
+    }
+  },
+  "opt_drive_folder_label": {
+    "message": "Drive Folder ID"
+  },
+  "opt_optional": {
+    "message": "(optional)",
+    "description": "Appended to a field label the user can leave empty. Keep the parentheses."
+  },
+  "opt_drive_folder_placeholder": {
+    "message": "Leave blank to auto-create a 'Konode' folder",
+    "description": "'Konode' is the folder name the extension creates. It is data, not copy, so leave the word itself untranslated."
+  },
+  "opt_region_label": {
+    "message": "Region"
+  },
+  "opt_webdav_host_label": {
+    "message": "Server host"
+  },
+  "opt_webdav_url_label": {
+    "message": "Server URL"
+  },
+  "opt_github_token_label": {
+    "message": "Personal Access Token",
+    "description": "GitHub's own name for this credential. If GitHub's interface uses a translated name in your language, match it."
+  },
+  "opt_github_repo_label": {
+    "message": "Repository"
+  },
+  "opt_github_branch_label": {
+    "message": "Branch",
+    "description": "The git branch. Most languages keep the English word here; use whatever git's own interface uses in yours."
+  },
+  "opt_stat_never": {
+    "message": "Never",
+    "description": "Value of the 'Last sync' tile when this device has never completed a sync."
+  },
+  "opt_setup_sub": {
+    "message": "Konode syncs your browser to storage you own. There's no Konode server. Two quick steps and you're done. (If the setup wizard never opened on your browser, you can do everything right here.)"
   }
 }

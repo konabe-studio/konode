@@ -451,5 +451,170 @@
   },
   "datatype_extensions_desc": {
     "message": "Liste der Erweiterungen, fehlende mit Installationslinks."
+  },
+  "opt_secret_copy": {
+    "message": "Kopieren"
+  },
+  "opt_secret_copied": {
+    "message": "Kopiert"
+  },
+  "opt_secret_replace": {
+    "message": "Ersetzen"
+  },
+  "opt_webdav_user_label": {
+    "message": "Benutzername"
+  },
+  "opt_webdav_user_placeholder": {
+    "message": "benutzername"
+  },
+  "opt_webdav_pass_label": {
+    "message": "Passwort / App-Token"
+  },
+  "opt_webdav_http_warn": {
+    "message": "Das ist eine $SCHEME$-Adresse, dein Passwort würde also unverschlüsselt übertragen.",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "http://"
+      }
+    }
+  },
+  "opt_webdav_http_use": {
+    "message": "Verwende $SCHEME$.",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "https://"
+      }
+    }
+  },
+  "opt_snap_saved": {
+    "message": "Wiederherstellungspunkt gespeichert."
+  },
+  "opt_snap_restored_one": {
+    "message": "$COUNT$ Lesezeichen wiederhergestellt. Wird mit deinen anderen Geräten synchronisiert…",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_snap_restored_other": {
+    "message": "$COUNT$ Lesezeichen wiederhergestellt. Wird mit deinen anderen Geräten synchronisiert…",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "opt_snap_deleted": {
+    "message": "Wiederherstellungspunkt gelöscht."
+  },
+  "opt_err_perms_no_prompt": {
+    "message": "Dieser Browser kann keine Berechtigungsdialoge anzeigen, daher konnte Konode nicht um Zugriff auf deinen WebDAV-Server bitten. Erteile ihn auf der Berechtigungsseite von Konode in den Erweiterungseinstellungen deines Browsers und versuche es dann erneut."
+  },
+  "opt_err_perms_bad_url": {
+    "message": "Konode hat keine verwendbare WebDAV-Adresse, für die es Zugriff anfragen könnte. Prüfe die Server-URL oben."
+  },
+  "opt_err_perms_denied": {
+    "message": "Die Berechtigung für den Zugriff auf den WebDAV-Server wurde nicht erteilt."
+  },
+  "opt_err_pass_too_short": {
+    "message": "Verwende mindestens $MIN$ Zeichen. Synchronisierte Daten lassen sich offline angreifen, eine kurze Passphrase ist also erratbar. Länger ist besser, oder generiere einen Schlüssel.",
+    "placeholders": {
+      "min": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "opt_err_pass_mismatch": {
+    "message": "Die beiden Passphrasen stimmen nicht überein. Gib sie zur Bestätigung erneut ein, bevor du speicherst."
+  },
+  "opt_saving": {
+    "message": "Wird gespeichert…"
+  },
+  "opt_saved": {
+    "message": "Gespeichert"
+  },
+  "opt_save_changes": {
+    "message": "Änderungen speichern"
+  },
+  "opt_nav_backend": {
+    "message": "Speicher"
+  },
+  "opt_nav_data": {
+    "message": "Datentypen"
+  },
+  "opt_nav_device": {
+    "message": "Gerät"
+  },
+  "opt_nav_activity": {
+    "message": "Aktivität"
+  },
+  "opt_nav_advanced": {
+    "message": "Erweitert"
+  },
+  "opt_setup_title": {
+    "message": "Konode-Einrichtung abschließen"
+  },
+  "opt_setup_step_storage": {
+    "message": "Wähle, wo deine Daten gespeichert werden"
+  },
+  "opt_setup_step_types": {
+    "message": "Wähle aus, was synchronisiert wird"
+  },
+  "opt_backend_head": {
+    "message": "Speicher"
+  },
+  "opt_backend_head_sub": {
+    "message": "Wähle, wo deine Synchronisierungsdaten gespeichert werden. Deine Daten berühren unsere Server nie."
+  },
+  "opt_gdrive_connect_failed": {
+    "message": "Verbindung fehlgeschlagen"
+  },
+  "opt_gdrive_scope_hint": {
+    "message": "Nur der Bereich $SCOPE$, Konode kann also ausschließlich auf selbst erstellte Dateien zugreifen.",
+    "placeholders": {
+      "scope": {
+        "content": "$1",
+        "example": "drive.file"
+      }
+    }
+  },
+  "opt_drive_folder_label": {
+    "message": "Drive-Ordner-ID"
+  },
+  "opt_optional": {
+    "message": "(optional)"
+  },
+  "opt_drive_folder_placeholder": {
+    "message": "Leer lassen, dann wird automatisch ein Ordner „Konode“ erstellt"
+  },
+  "opt_region_label": {
+    "message": "Region"
+  },
+  "opt_webdav_host_label": {
+    "message": "Server-Host"
+  },
+  "opt_webdav_url_label": {
+    "message": "Server-URL"
+  },
+  "opt_github_token_label": {
+    "message": "Persönlicher Zugriffstoken"
+  },
+  "opt_github_repo_label": {
+    "message": "Repository"
+  },
+  "opt_github_branch_label": {
+    "message": "Branch"
+  },
+  "opt_stat_never": {
+    "message": "Nie"
+  },
+  "opt_setup_sub": {
+    "message": "Konode synchronisiert deinen Browser mit einem Speicher, der dir gehört. Es gibt keinen Konode-Server. Zwei kurze Schritte und du bist fertig. (Falls der Einrichtungsassistent in deinem Browser nie geöffnet wurde, kannst du alles direkt hier erledigen.)"
   }
 }

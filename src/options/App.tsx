@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef, Fragment } from "react";
 import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, SyncExtension, SnapshotMeta, DeviceInfo } from "@/lib/types";
 import { sendMessage, request } from "@/lib/utils/messaging";
-import { t, tParts } from "@/lib/utils/i18n";
+import { t, tParts, plural } from "@/lib/utils/i18n";
 import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
 import {
   allDataTypeAvailability, dataTypeAvailability, dataTypeApiPresent, ensurePermission,
@@ -154,7 +154,7 @@ function SecretField({
           <button
             className="btn-eye"
             type="button"
-            title={revealed ? "Hide" : "Show"}
+            title={revealed ? t("common_hide") : t("common_show")}
             onClick={() => setRevealed((v) => !v)}
           >
             {revealed ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -162,7 +162,7 @@ function SecretField({
           <button
             className="btn-eye"
             type="button"
-            title={copied ? "Copied" : "Copy"}
+            title={copied ? t("opt_secret_copied") : t("opt_secret_copy")}
             style={copied ? { color: "var(--accent)" } : undefined}
             onClick={copy}
           >
@@ -171,7 +171,7 @@ function SecretField({
           <button
             className="btn-eye"
             type="button"
-            title="Replace"
+            title={t("opt_secret_replace")}
             onClick={() => { setDraft(""); setRevealed(false); setEditing(true); }}
           >
             <Pencil size={14} />
@@ -194,7 +194,7 @@ function SecretField({
       <button
         className="btn-eye"
         type="button"
-        title={revealed ? "Hide" : "Show"}
+        title={revealed ? t("common_hide") : t("common_show")}
         onClick={() => setRevealed((v) => !v)}
       >
         {revealed ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -213,12 +213,12 @@ const SAVEABLE_TABS = new Set<NavSection>(["backend", "data", "device", "advance
 // Text only. The tab icons were noise: six glyphs competing with six words that
 // already said the same thing, in the one strip that has to stay legible when the
 // window is narrow.
-const NAV: { id: NavSection; label: string }[] = [
-  { id: "backend",  label: "Storage" },
-  { id: "data",     label: "Data Types" },
-  { id: "device",   label: "Device" },
-  { id: "activity", label: "Activity" },
-  { id: "advanced", label: "Advanced" },
+const NAV: { id: NavSection; labelKey: string }[] = [
+  { id: "backend",  labelKey: "opt_nav_backend" },
+  { id: "data",     labelKey: "opt_nav_data" },
+  { id: "device",   labelKey: "opt_nav_device" },
+  { id: "activity", labelKey: "opt_nav_activity" },
+  { id: "advanced", labelKey: "opt_nav_advanced" },
 ];
 
 /** An information box. The icon belongs to the pattern, the same way notice-warn owns
@@ -563,23 +563,30 @@ export default function OptionsApp() {
     return <>{before}<code>{url}</code>{after}</>;
   };
 
+  // Same shape as syncingTo(): one placeholder rendered as <code>, so the scope name stays
+  // a literal and the sentence around it stays the translator's to arrange.
+  const scopeHint = () => {
+    const [before, after] = tParts("opt_gdrive_scope_hint");
+    return <>{before}<code>drive.file</code>{after}</>;
+  };
+
   // Shared WebDAV username + password fields (used by every WebDAV preset card).
   const webdavCreds = () => {
     const w = getBackend("webdav")?.webdav;
     return (
       <div className="field-row-2">
         <div className="field-group" style={{ flex: 1 }}>
-          <label className="field-label">Username</label>
+          <label className="field-label">{t("opt_webdav_user_label")}</label>
           <input
             className="field-input mono"
             value={w?.username ?? ""}
             onChange={(e) => updateBackend("webdav", { webdav: { ...w, username: e.target.value } as any })}
-            placeholder="username"
+            placeholder={t("opt_webdav_user_placeholder")}
             autoComplete="off"
           />
         </div>
         <div className="field-group" style={{ flex: 1 }}>
-          <label className="field-label">Password / App token</label>
+          <label className="field-label">{t("opt_webdav_pass_label")}</label>
           <SecretField
             value={w?.password ?? ""}
             placeholder="••••••••"
@@ -599,7 +606,7 @@ export default function OptionsApp() {
   const createSnapshot = async () => {
     setSnapBusy(true); setSnapMsg(null);
     const res = await sendMessage({ type: "CREATE_SNAPSHOT" });
-    if (res.type === "SNAPSHOTS") { setSnapshots(res.payload); setSnapMsg("Snapshot saved."); }
+    if (res.type === "SNAPSHOTS") { setSnapshots(res.payload); setSnapMsg(t("opt_snap_saved")); }
     else if (res.type === "ERROR") setSnapMsg(res.payload);
     setSnapBusy(false);
   };
@@ -607,7 +614,7 @@ export default function OptionsApp() {
   const restoreSnapshot = async (name: string) => {
     setSnapBusy(true); setSnapMsg(null); setConfirmRestore(null);
     const res = await sendMessage({ type: "RESTORE_SNAPSHOT", payload: { name } });
-    if (res.type === "SNAPSHOT_RESTORED") setSnapMsg(`Restored ${res.payload.restored} bookmark(s). Syncing to your other devices…`);
+    if (res.type === "SNAPSHOT_RESTORED") setSnapMsg(plural("opt_snap_restored", res.payload.restored));
     else if (res.type === "ERROR") setSnapMsg(res.payload);
     setSnapBusy(false);
   };
@@ -615,7 +622,7 @@ export default function OptionsApp() {
   const deleteSnapshot = async (name: string) => {
     setSnapBusy(true); setSnapMsg(null); setConfirmDelete(null);
     const res = await sendMessage({ type: "DELETE_SNAPSHOT", payload: { name } });
-    if (res.type === "SNAPSHOTS") { setSnapshots(res.payload); setSnapMsg("Restore point deleted."); }
+    if (res.type === "SNAPSHOTS") { setSnapshots(res.payload); setSnapMsg(t("opt_snap_deleted")); }
     else if (res.type === "ERROR") setSnapMsg(res.payload);
     setSnapBusy(false);
   };
@@ -624,9 +631,14 @@ export default function OptionsApp() {
   const webdavHttpWarn = () => {
     const u = getBackend("webdav")?.webdav?.url ?? "";
     if (!/^http:\/\//i.test(u) || /^http:\/\/(localhost|127\.)/i.test(u)) return null;
+    // Two sentences, each split around its own scheme, rather than one string with two
+    // inline elements: tParts carries a single placeholder, and the schemes are literals
+    // that never translate, so they stay <code> and word order stays the translator's.
+    const [warnBefore, warnAfter] = tParts("opt_webdav_http_warn");
+    const [useBefore, useAfter] = tParts("opt_webdav_http_use");
     return (
       <div className="error-row">
-        <AlertTriangle size={12} /> This is an <code>http://</code> URL, so your password would be sent unencrypted. Use <code>https://</code>.
+        <AlertTriangle size={12} /> {warnBefore}<code>http://</code>{warnAfter} {useBefore}<code>https://</code>{useAfter}
       </div>
     );
   };
@@ -662,20 +674,20 @@ export default function OptionsApp() {
    *  user is told they refused something they were never asked. */
   const webdavPermissionError = (outcome: PermissionOutcome | "bad-url"): string =>
     outcome === "cannot-prompt"
-      ? "This browser can't show permission prompts, so Konode couldn't ask for access to your WebDAV server. Grant it on Konode's permissions screen in your browser's extension settings, then try again."
+      ? t("opt_err_perms_no_prompt")
       : outcome === "bad-url"
-        ? "Konode has no usable WebDAV address to ask for access to. Check the server URL above."
-        : "Permission to access the WebDAV server was not granted.";
+        ? t("opt_err_perms_bad_url")
+        : t("opt_err_perms_denied");
 
   const save = async () => {
     if (!settings) return;
     setSaveError(null);
     if (passTooShort) {
-      setSaveError(`Use at least ${MIN_PASSPHRASE_LENGTH} characters. Synced data can be attacked offline, so a short passphrase is guessable. Longer is better, or generate a key.`);
+      setSaveError(t("opt_err_pass_too_short", String(MIN_PASSPHRASE_LENGTH)));
       return;
     }
     if (passMismatch) {
-      setSaveError("The two passphrases don't match. Re-enter to confirm before saving.");
+      setSaveError(t("opt_err_pass_mismatch"));
       return;
     }
     if (settings.active_backend === "webdav") {
@@ -719,7 +731,7 @@ export default function OptionsApp() {
     <div className="action-row">
       <div className="action-buttons">
         <button className={`btn-save ${saveOk ? "saved" : ""} ${dirty ? "pending" : ""}`} onClick={save} disabled={saving || opts.disabled}>
-          {saving ? "Saving…" : saveOk ? "Saved" : "Save changes"}
+          {saving ? t("opt_saving") : saveOk ? t("opt_saved") : t("opt_save_changes")}
         </button>
       </div>
       {(saveError || dirty) && (
@@ -816,7 +828,7 @@ export default function OptionsApp() {
       setGdriveUser({ email: s.email, displayName: s.displayName });
       update({ active_backend: "gdrive" });
     } catch (err) {
-      setGdriveError(err instanceof Error ? err.message : "Connection failed");
+      setGdriveError(err instanceof Error ? err.message : t("opt_gdrive_connect_failed"));
     } finally {
       setGdriveConnecting(false);
     }
@@ -1010,7 +1022,7 @@ export default function OptionsApp() {
   const totalSyncRuns = syncState ? Object.values(syncState.sync_counts).reduce((a, b) => a + b, 0) : 0;
   const lastSyncLabel = syncState?.last_sync
     ? new Date(syncState.last_sync).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
-    : "Never";
+    : t("opt_stat_never");
 
   return (
     <div className="settings-root">
@@ -1024,14 +1036,14 @@ export default function OptionsApp() {
             <span className="topbar-title">Konode</span>
           </div>
           <nav ref={tabbarFade.ref} className={`tabbar ${tabbarFade.className}`}>
-            {NAV.map(({ id, label }) => (
+            {NAV.map(({ id, labelKey }) => (
               <button
                 key={id}
                 className={`tab-item ${activeNav === id ? "active" : ""}`}
                 onClick={() => setActiveNav(id)}
                 aria-current={activeNav === id ? "page" : undefined}
               >
-                <span>{label}</span>
+                <span>{t(labelKey)}</span>
               </button>
             ))}
           </nav>
@@ -1048,30 +1060,26 @@ export default function OptionsApp() {
               <div className="setup-card-head">
                 <div className="setup-card-mark"><BrandMark size={16} /></div>
                 <div>
-                  <div className="setup-card-title">Finish setting up Konode</div>
-                  <div className="setup-card-sub">
-                    Konode syncs your browser to storage you own. There's no Konode server. Two quick
-                    steps and you're done. (If the setup wizard never opened on your browser, you can do
-                    everything right here.)
-                  </div>
+                  <div className="setup-card-title">{t("opt_setup_title")}</div>
+                  <div className="setup-card-sub">{t("opt_setup_sub")}</div>
                 </div>
               </div>
               <ol className="setup-steps">
                 <li className={activeBackendConfigured ? "done" : ""}>
                   <span className="step-badge">{activeBackendConfigured ? <CheckCircle2 size={14} /> : "1"}</span>
-                  <span className="step-text">Choose where your data is stored</span>
+                  <span className="step-text">{t("opt_setup_step_storage")}</span>
                   {!activeBackendConfigured && (
                     <button className="step-action" onClick={() => setActiveNav("backend")}>
-                      Storage <ArrowRight size={12} />
+                      {t("opt_nav_backend")} <ArrowRight size={12} />
                     </button>
                   )}
                 </li>
                 <li className={settings.enabled_types.length > 0 ? "done" : ""}>
                   <span className="step-badge">{settings.enabled_types.length > 0 ? <CheckCircle2 size={14} /> : "2"}</span>
-                  <span className="step-text">Pick what to sync</span>
+                  <span className="step-text">{t("opt_setup_step_types")}</span>
                   {settings.enabled_types.length === 0 && (
                     <button className="step-action" onClick={() => setActiveNav("data")}>
-                      Data types <ArrowRight size={12} />
+                      {t("opt_nav_data")} <ArrowRight size={12} />
                     </button>
                   )}
                 </li>
@@ -1082,8 +1090,8 @@ export default function OptionsApp() {
           {/* ── BACKEND ── */}
           {activeNav === "backend" && (
             <div className="section-wrap">
-              <h1 className="page-title">Storage</h1>
-              <p className="page-subtitle">Choose where your sync data is stored. Your data never touches our servers.</p>
+              <h1 className="page-title">{t("opt_backend_head")}</h1>
+              <p className="page-subtitle">{t("opt_backend_head_sub")}</p>
 
               <div className="card-list">
                 {PROVIDERS.map((p) => {
@@ -1150,20 +1158,20 @@ export default function OptionsApp() {
                                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                                   </svg>
                                 )}
-                                {gdriveConnecting ? "Connecting…" : "Sign in with Google"}
+                                {gdriveConnecting ? t("onb_connecting") : t("onb_sign_in_google")}
                               </button>
                               {gdriveError && <div className="error-row"><XCircle size={12} /> {gdriveError}</div>}
-                              <InfoHint>Only the <code>drive.file</code> scope, so Konode can only access files it creates.</InfoHint>
+                              <InfoHint>{scopeHint()}</InfoHint>
                             </div>
                           )}
                           {gdriveUser && (
                             <div className="field-group">
-                              <label className="field-label">Drive Folder ID <span className="optional">(optional)</span></label>
+                              <label className="field-label">{t("opt_drive_folder_label")} <span className="optional">{t("opt_optional")}</span></label>
                               <input
                                 className="field-input"
                                 value={getBackend("gdrive")?.gdrive?.folderId ?? ""}
                                 onChange={(e) => updateBackend("gdrive", { gdrive: { folderId: e.target.value } })}
-                                placeholder="Leave blank to auto-create a 'Konode' folder"
+                                placeholder={t("opt_drive_folder_placeholder")}
                               />
                             </div>
                           )}
@@ -1185,7 +1193,7 @@ export default function OptionsApp() {
                       {isActive && p.id === "pcloud" && (
                         <div className="backend-config" onClick={(e) => e.stopPropagation()}>
                           <div className="field-group">
-                            <label className="field-label">Region</label>
+                            <label className="field-label">{t("opt_region_label")}</label>
                             <div className="seg-group">
                               {p.regions!.map((r) => {
                                 const on = pcloudRegionOf(getBackend("webdav")?.webdav?.url) === r.id;
@@ -1217,7 +1225,7 @@ export default function OptionsApp() {
                       {isActive && p.id === "nextcloud" && (
                         <div className="backend-config" onClick={(e) => e.stopPropagation()}>
                           <div className="field-group">
-                            <label className="field-label">Server host</label>
+                            <label className="field-label">{t("opt_webdav_host_label")}</label>
                             <input
                               className="field-input mono"
                               value={nextcloudBaseFromUrl(getBackend("webdav")?.webdav?.url)}
@@ -1229,7 +1237,7 @@ export default function OptionsApp() {
                             />
                           </div>
                           <div className="field-group">
-                            <label className="field-label">Username</label>
+                            <label className="field-label">{t("opt_webdav_user_label")}</label>
                             <input
                               className="field-input mono"
                               value={getBackend("webdav")?.webdav?.username ?? ""}
@@ -1237,12 +1245,12 @@ export default function OptionsApp() {
                                 const w = getBackend("webdav")?.webdav;
                                 updateBackend("webdav", { webdav: { ...w, username: e.target.value, url: nextcloudUrl(nextcloudBaseFromUrl(w?.url), e.target.value) } as any });
                               }}
-                              placeholder="username"
+                              placeholder={t("opt_webdav_user_placeholder")}
                               autoComplete="off"
                             />
                           </div>
                           <div className="field-group">
-                            <label className="field-label">Password / App token</label>
+                            <label className="field-label">{t("opt_webdav_pass_label")}</label>
                             <SecretField
                               value={getBackend("webdav")?.webdav?.password ?? ""}
                               placeholder="••••••••"
@@ -1263,7 +1271,7 @@ export default function OptionsApp() {
                       {isActive && p.id === "webdav" && (
                         <div className="backend-config" onClick={(e) => e.stopPropagation()}>
                           <div className="field-group">
-                            <label className="field-label">Server URL</label>
+                            <label className="field-label">{t("opt_webdav_url_label")}</label>
                             <input
                               className="field-input mono"
                               value={getBackend("webdav")?.webdav?.url ?? ""}
@@ -1280,7 +1288,7 @@ export default function OptionsApp() {
                       {isActive && p.id === "github" && (
                         <div className="backend-config" onClick={(e) => e.stopPropagation()}>
                           <div className="field-group">
-                            <label className="field-label">Personal Access Token</label>
+                            <label className="field-label">{t("opt_github_token_label")}</label>
                             <SecretField
                               value={getBackend("github")?.github?.token ?? ""}
                               placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
@@ -1290,14 +1298,14 @@ export default function OptionsApp() {
                                 if (v.length > 10) await verifyGithubToken(v);
                               }}
                             />
-                            {githubChecking && <div className="verify-row"><Loader2 size={12} className="spin" /> Verifying…</div>}
+                            {githubChecking && <div className="verify-row"><Loader2 size={12} className="spin" /> {t("onb_verifying")}</div>}
                             {githubUser && !githubChecking && (
                               <div className="verify-row ok"><CheckCircle2 size={12} /> @{githubUser.login} · {githubUser.name}</div>
                             )}
                           </div>
                           <div className="field-row-2">
                             <div className="field-group" style={{ flex: 2 }}>
-                              <label className="field-label">Repository</label>
+                              <label className="field-label">{t("opt_github_repo_label")}</label>
                               <input
                                 className="field-input mono"
                                 value={getBackend("github")?.github?.repo ?? ""}
@@ -1306,7 +1314,7 @@ export default function OptionsApp() {
                               />
                             </div>
                             <div className="field-group" style={{ flex: 1 }}>
-                              <label className="field-label">Branch</label>
+                              <label className="field-label">{t("opt_github_branch_label")}</label>
                               <input
                                 className="field-input mono"
                                 value={getBackend("github")?.github?.branch ?? "main"}
