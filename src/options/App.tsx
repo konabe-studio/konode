@@ -203,6 +203,14 @@ function SecretField({
   );
 }
 
+/** The bookmark folder an import creates, and the name the message reports.
+ *
+ *  Deliberately NOT a translated string: it is a folder name, so it travels to every other
+ *  device through the sync. Translating it would give each language a different folder and
+ *  break the one thing the sync exists for. Hoisted to a constant so the folder we create
+ *  and the folder we claim to have created cannot drift apart. */
+const IMPORT_FOLDER_NAME = "Konode Import";
+
 // ─── Nav ──────────────────────────────────────────────────────────────────
 
 type NavSection = "backend" | "data" | "device" | "activity" | "advanced";
@@ -445,7 +453,7 @@ export default function OptionsApp() {
     // restore points learned the hard way. request() already folds an ERROR reply into
     // ok:false, so the only surprise left is a reply of the wrong shape.
     if (r.res.type === "DEVICES") setDevices(r.res.payload);
-    else { setDevicesError("Couldn't read the device list."); setDevices([]); }
+    else { setDevicesError(t("opt_devices_bad_reply")); setDevices([]); }
   }, []);
 
   useEffect(() => {
@@ -568,6 +576,28 @@ export default function OptionsApp() {
   const scopeHint = () => {
     const [before, after] = tParts("opt_gdrive_scope_hint");
     return <>{before}<code>drive.file</code>{after}</>;
+  };
+
+  // The word carrying the warning is emphasised, so it is its own key dropped into the
+  // sentence through tParts — same reason as syncingTo(): word order stays translatable.
+  const boldUnencrypted = (key: string) => {
+    const [before, after] = tParts(key);
+    return <>{before}<b>{t("opt_unencrypted")}</b>{after}</>;
+  };
+
+  // Two links inside one clause, so the pair is the placeholder and opt_or joins them.
+  // Splitting the sentence instead would have hard-coded English word order around them.
+  const passwordManagers = () => {
+    const [before, after] = tParts("opt_no_password_use");
+    return (
+      <>
+        {before}
+        <a href="https://bitwarden.com" target="_blank" rel="noreferrer">Bitwarden</a>
+        {` ${t("opt_or")} `}
+        <a href="https://proton.me/pass" target="_blank" rel="noreferrer">Proton Pass</a>
+        {after}
+      </>
+    );
   };
 
   // Shared WebDAV username + password fields (used by every WebDAV preset card).
@@ -921,7 +951,7 @@ export default function OptionsApp() {
         if (otherId) {
           const importFolder = await browser.bookmarks.create({
             parentId: otherId,
-            title: `Konode Import ${new Date().toLocaleDateString()}`,
+            title: `${IMPORT_FOLDER_NAME} ${new Date().toLocaleDateString()}`,
           });
 
           const walk = async (nodes: chrome.bookmarks.BookmarkTreeNode[], parentId: string) => {
@@ -1364,16 +1394,12 @@ export default function OptionsApp() {
                   whether it can read your data. On Advanced it sat in a drawer with Feedback,
                   Debug mode and About, which undersold one of the reasons to use Konode. */}
               <div className="settings-section">
-                <div className="settings-card-head">Encryption</div>
+                <div className="settings-card-head">{t("opt_encryption_section")}</div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div>
-                      <div className="row-label">End-to-End Encryption</div>
-                      <div className="row-desc">
-                        AES-256-GCM. Data is encrypted with your passphrase before it leaves this
-                        device, so the storage provider can never read it. Keep the passphrase safe:
-                        without it, encrypted data can't be recovered, and every device must use the same one.
-                      </div>
+                      <div className="row-label">{t("common_e2ee")}</div>
+                      <div className="row-desc">{t("opt_e2ee_desc")}</div>
                     </div>
                   </div>
                   <label className="toggle-wrap">
@@ -1398,13 +1424,12 @@ export default function OptionsApp() {
                   <div className="settings-row" style={{ paddingTop: 0 }}>
                     <div className="settings-row-left">
                       <div className="row-desc" style={{ color: "var(--danger)" }}>
-                        Turn off encryption? Your synced data will be stored <b>unencrypted</b> on your
-                        backend from the next sync on. Every device must then also turn it off.
+                        {boldUnencrypted("opt_e2ee_disable_confirm")}
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                       <button className="btn-secondary" type="button" onClick={() => setConfirmDisableEnc(false)}>
-                        Cancel
+                        {t("opt_cancel")}
                       </button>
                       <button
                         className="btn-secondary"
@@ -1412,7 +1437,7 @@ export default function OptionsApp() {
                         style={{ color: "var(--danger)", borderColor: "var(--danger)" }}
                         onClick={() => { update({ encryption_enabled: false }); setConfirmDisableEnc(false); }}
                       >
-                        Turn off
+                        {t("opt_e2ee_turn_off")}
                       </button>
                     </div>
                   </div>
@@ -1421,20 +1446,20 @@ export default function OptionsApp() {
                   <div className="settings-row">
                     <div className="settings-row-left">
                       <div>
-                        <div className="row-label">Passphrase</div>
-                        <div className="row-desc">Derives the encryption key. Stored only on this device, never uploaded.</div>
+                        <div className="row-label">{t("opt_passphrase_label")}</div>
+                        <div className="row-desc">{t("opt_passphrase_desc")}</div>
                       </div>
                     </div>
                     <div style={{ width: 220 }}>
                       <SecretField
                         value={settings.encryption_passphrase ?? ""}
-                        placeholder="Choose a strong passphrase"
+                        placeholder={t("opt_passphrase_placeholder")}
                         sensitive
                         onChange={(v) => update({ encryption_passphrase: v })}
                       />
                       {passTooShort && (
                         <div className="row-desc" style={{ marginTop: 4, color: "var(--danger)" }}>
-                          At least {MIN_PASSPHRASE_LENGTH} characters. Synced data can be attacked offline, so short passphrases are guessable.
+                          {t("onb_pass_too_short", String(MIN_PASSPHRASE_LENGTH))}
                         </div>
                       )}
                       {needsPassConfirm && (
@@ -1443,17 +1468,17 @@ export default function OptionsApp() {
                             className="field-input mono"
                             type="password"
                             value={passConfirm}
-                            placeholder="Confirm passphrase"
+                            placeholder={t("opt_passphrase_confirm_placeholder")}
                             autoComplete="off"
                             onChange={(e) => setPassConfirm(e.target.value)}
                           />
                           {passMismatch ? (
                             <div className="row-desc" style={{ marginTop: 4, color: "var(--danger)" }}>
-                              Passphrases don't match yet.
+                              {t("onb_pass_mismatch")}
                             </div>
                           ) : (
                             <div className="row-desc" style={{ marginTop: 4, color: "var(--accent)", display: "flex", alignItems: "center", gap: 4 }}>
-                              <CheckCircle2 size={12} style={{ flexShrink: 0 }} /> Passphrases match.
+                              <CheckCircle2 size={12} style={{ flexShrink: 0 }} /> {t("opt_passphrase_match")}
                             </div>
                           )}
                         </div>
@@ -1462,14 +1487,14 @@ export default function OptionsApp() {
                         type="button"
                         onClick={() => { const k = generateRecoveryKey(); setGenKey(k); update({ encryption_passphrase: k }); }}
                         style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                        <Key size={12} /> Generate a strong key
+                        <Key size={12} /> {t("common_generate_key")}
                       </button>
                       {genKey && (
                         <div className="row-desc" style={{ marginTop: 8, color: "var(--text-primary)" }}>
-                          Save this now. It's the only way to recover your data if you forget it. Enter the same key on your other devices.
+                          {t("opt_genkey_saved_warning")}
                           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
                             <code style={{ userSelect: "all", fontSize: 12, wordBreak: "break-all" }}>{genKey}</code>
-                            <button type="button" title="Copy" onClick={() => navigator.clipboard?.writeText(genKey)}
+                            <button type="button" title={t("opt_secret_copy")} onClick={() => navigator.clipboard?.writeText(genKey)}
                               style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", flexShrink: 0 }}>
                               <Copy size={12} />
                             </button>
@@ -1483,7 +1508,7 @@ export default function OptionsApp() {
                   <div className="settings-row" style={{ paddingTop: 0 }}>
                     <div className="settings-row-left">
                       <div className="row-desc" style={{ color: "var(--danger)" }}>
-                        Encryption is on but no passphrase is set, so sync keeps uploading plaintext until you add one.
+                        {t("opt_e2ee_no_passphrase")}
                       </div>
                     </div>
                   </div>
@@ -1493,8 +1518,7 @@ export default function OptionsApp() {
                     <div className="settings-row-left">
                       <AlertTriangle size={14} className="row-icon" style={{ color: "var(--warn-border)" }} />
                       <div className="row-desc" style={{ color: "var(--warn-text)" }}>
-                        Encryption is off, so your synced data (bookmarks, history, sessions, extensions) is stored
-                        <b> unencrypted</b> on your backend. Turn it on to encrypt everything before it leaves this device.
+                        {boldUnencrypted("opt_e2ee_off_warning")}
                       </div>
                     </div>
                   </div>
@@ -1507,11 +1531,11 @@ export default function OptionsApp() {
           {/* ── DATA TYPES ── */}
           {activeNav === "data" && (
             <div className="section-wrap">
-              <h1 className="page-title">Data Types</h1>
-              <p className="page-subtitle">Choose what gets synced across your devices.</p>
+              <h1 className="page-title">{t("opt_data_head")}</h1>
+              <p className="page-subtitle">{t("opt_data_head_sub")}</p>
 
               <div className="settings-section">
-                <div className="settings-card-head">Data to sync</div>
+                <div className="settings-card-head">{t("opt_data_section")}</div>
                 {DATA_TYPES.map((type) => {
                   // Not implemented by this browser: keep the row, drop the switch, and
                   // put the reason where the description was. A dead toggle that springs
@@ -1533,9 +1557,7 @@ export default function OptionsApp() {
                             && availability[type]?.state === "needs-permission"
                             && typeError?.type !== type && (
                             <div className="error-row" role="alert">
-                              <AlertTriangle size={12} /> Konode doesn't have the permission
-                              this needs any more, so it isn't syncing. Switch it off and on
-                              again to restore it.
+                              <AlertTriangle size={12} /> {t("opt_data_permission_lost")}
                             </div>
                           )}
                           {typeError?.type === type && (
@@ -1563,12 +1585,12 @@ export default function OptionsApp() {
                   only suggest the feature is one setting away. */}
               {availability.history?.state !== "unsupported" && (
               <div className="settings-section">
-                <div className="settings-card-head">History</div>
+                <div className="settings-card-head">{t("datatype_history")}</div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div>
-                      <div className="row-label">Days to sync</div>
-                      <div className="row-desc">Recommended: 30 days.</div>
+                      <div className="row-label">{t("opt_history_days_label")}</div>
+                      <div className="row-desc">{t("opt_history_days_desc")}</div>
                     </div>
                   </div>
                   <div className="slider-wrap">
@@ -1576,7 +1598,7 @@ export default function OptionsApp() {
                       value={settings.history_days_limit}
                       onChange={(e) => update({ history_days_limit: Number(e.target.value) })}
                       className="slider" />
-                    <span className="slider-val">{settings.history_days_limit}d</span>
+                    <span className="slider-val">{t("opt_history_days_value", String(settings.history_days_limit))}</span>
                   </div>
                 </div>
                 {/* Nothing said this anywhere, and it makes a working sync look broken: a
@@ -1584,18 +1606,14 @@ export default function OptionsApp() {
                     concludes the history never arrived. Chrome's history.addUrl takes no
                     visit time (Firefox's does, and we pass it), so on Chromium the arriving
                     page can only be stamped with the moment it arrived. */}
-                <InfoHint>
-                  Pages from your other devices are added with the time they arrived, not the
-                  time you first visited them, so on Chromium browsers they show up under
-                  today rather than the day you were browsing. Firefox keeps the original date.
-                </InfoHint>
+                <InfoHint>{t("opt_history_hint")}</InfoHint>
               </div>
               )}
 
               {missingExtensions.length > 0 && (
                 <>
                   <div className="settings-section">
-                    <div className="settings-card-head">Missing extensions ({missingExtensions.length})</div>
+                    <div className="settings-card-head">{t("opt_missing_ext_head", String(missingExtensions.length))}</div>
                     {missingExtensions.map((ext) => (
                       <div key={ext.id} className="settings-row">
                         <div className="settings-row-left">
@@ -1603,13 +1621,13 @@ export default function OptionsApp() {
                           <div>
                             <div className="row-label">
                               {ext.name}{" "}
-                              <span className="row-desc">· from {inferStore(ext) === "firefox" ? "Firefox" : "Chrome"}</span>
+                              <span className="row-desc">{t("opt_ext_from", inferStore(ext) === "firefox" ? "Firefox" : "Chrome")}</span>
                             </div>
                             {ext.description && <div className="row-desc">{ext.description.slice(0, 80)}</div>}
                           </div>
                         </div>
                         <a href={installOrSearchUrl(ext, currentStore())} target="_blank" rel="noreferrer" className="btn-install">
-                          {inferStore(ext) === currentStore() ? "Install" : "Find"}
+                          {inferStore(ext) === currentStore() ? t("opt_ext_install") : t("opt_ext_find")}
                         </a>
                       </div>
                     ))}
@@ -1620,10 +1638,9 @@ export default function OptionsApp() {
               <div className="notice-warn">
                 <AlertTriangle size={14} />
                 <div>
-                  <strong>Password sync not available.</strong>{" "}
-                  Chrome extensions cannot access the native password store. Use{" "}
-                  <a href="https://bitwarden.com" target="_blank" rel="noreferrer">Bitwarden</a> or{" "}
-                  <a href="https://proton.me/pass" target="_blank" rel="noreferrer">Proton Pass</a> for self-hosted password sync.
+                  <strong>{t("opt_no_password_title")}</strong>{" "}
+                  {t("opt_no_password_body")}{" "}
+                  {passwordManagers()}
                 </div>
               </div>
 
@@ -1633,28 +1650,28 @@ export default function OptionsApp() {
           {/* ── DEVICE ── */}
           {activeNav === "device" && (
             <div className="section-wrap">
-              <h1 className="page-title">Device</h1>
-              <p className="page-subtitle">Identify this device in the sync network.</p>
+              <h1 className="page-title">{t("opt_device_head")}</h1>
+              <p className="page-subtitle">{t("opt_device_head_sub")}</p>
 
               <div className="settings-section">
-                <div className="settings-card-head">Identity</div>
+                <div className="settings-card-head">{t("opt_identity_section")}</div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div>
-                      <div className="row-label">Device name</div>
-                      <div className="row-desc">How this device appears in sync logs.</div>
+                      <div className="row-label">{t("opt_device_name_label")}</div>
+                      <div className="row-desc">{t("opt_device_name_desc")}</div>
                     </div>
                   </div>
                   <input className="field-input-inline"
                     value={settings.device_label}
                     onChange={(e) => update({ device_label: e.target.value })}
-                    placeholder="My Laptop" />
+                    placeholder={t("opt_device_name_placeholder")} />
                 </div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div>
-                      <div className="row-label">Device ID</div>
-                      <div className="row-desc">Auto-generated. Do not change.</div>
+                      <div className="row-label">{t("opt_device_id_label")}</div>
+                      <div className="row-desc">{t("opt_device_id_desc")}</div>
                     </div>
                   </div>
                   <span className="mono-value">{settings.device_id.slice(0, 16)}…</span>
@@ -1662,10 +1679,10 @@ export default function OptionsApp() {
               </div>
 
               <div className="settings-section">
-                <div className="settings-card-head">Sync behavior</div>
+                <div className="settings-card-head">{t("opt_behavior_section")}</div>
                 <div className="settings-row">
                   <div className="settings-row-left">
-                    <div><div className="row-label">Sync on change</div><div className="row-desc">Instantly sync bookmarks and tabs when they change. Recommended.</div></div>
+                    <div><div className="row-label">{t("opt_sync_on_change_label")}</div><div className="row-desc">{t("opt_sync_on_change_desc")}</div></div>
                   </div>
                   <label className="toggle-wrap">
                     <input type="checkbox" className="toggle-input" checked={settings.sync_on_change ?? true}
@@ -1675,7 +1692,7 @@ export default function OptionsApp() {
                 </div>
                 <div className="settings-row">
                   <div className="settings-row-left">
-                    <div><div className="row-label">Auto sync</div><div className="row-desc">Also sync on a regular schedule.</div></div>
+                    <div><div className="row-label">{t("opt_auto_sync_label")}</div><div className="row-desc">{t("opt_auto_sync_desc")}</div></div>
                   </div>
                   <label className="toggle-wrap">
                     <input type="checkbox" className="toggle-input" checked={settings.auto_sync}
@@ -1685,7 +1702,7 @@ export default function OptionsApp() {
                 </div>
                 <div className="settings-row">
                   <div className="settings-row-left">
-                    <div><div className="row-label">Notifications</div><div className="row-desc">Sync status and conflict alerts.</div></div>
+                    <div><div className="row-label">{t("opt_notifications_label")}</div><div className="row-desc">{t("opt_notifications_desc")}</div></div>
                   </div>
                   <label className="toggle-wrap">
                     <input type="checkbox" className="toggle-input" checked={settings.notifications_enabled}
@@ -1695,29 +1712,29 @@ export default function OptionsApp() {
                 </div>
                 <div className="settings-row">
                   <div className="settings-row-left">
-                    <div><div className="row-label">Sync interval</div><div className="row-desc">How often this device pulls remote changes. 30s is the browser's minimum for background checks. Your own changes upload almost instantly.</div></div>
+                    <div><div className="row-label">{t("opt_interval_label")}</div><div className="row-desc">{t("opt_interval_desc")}</div></div>
                   </div>
                   <div className="slider-wrap">
                     <input type="range" min={30} max={600} step={30}
                       value={settings.sync_interval_seconds}
                       onChange={(e) => update({ sync_interval_seconds: Number(e.target.value) })}
                       className="slider" />
-                    <span className="slider-val">{settings.sync_interval_seconds}s</span>
+                    <span className="slider-val">{t("opt_interval_value", String(settings.sync_interval_seconds))}</span>
                   </div>
                 </div>
               </div>
 
               <div className="settings-section">
-                <div className="settings-card-head">Conflict resolution</div>
+                <div className="settings-card-head">{t("opt_conflict_section")}</div>
                 {([
-                  { value: "lww",           label: "Last Write Wins",  desc: "Most recent change always wins." },
-                  { value: "prefer-local",  label: "Prefer Local",     desc: "Local changes override remote." },
-                  { value: "prefer-remote", label: "Prefer Remote",    desc: "Remote changes override local." },
-                  { value: "manual",        label: "Manual",           desc: "Ask me to resolve each conflict in the popup." },
-                ] as const).map(({ value, label, desc }) => (
+                  { value: "lww",           labelKey: "opt_conflict_lww",    descKey: "opt_conflict_lww_desc" },
+                  { value: "prefer-local",  labelKey: "opt_conflict_local",  descKey: "opt_conflict_local_desc" },
+                  { value: "prefer-remote", labelKey: "opt_conflict_remote", descKey: "opt_conflict_remote_desc" },
+                  { value: "manual",        labelKey: "opt_conflict_manual", descKey: "opt_conflict_manual_desc" },
+                ] as const).map(({ value, labelKey, descKey }) => (
                   <label key={value} className="settings-row radio-row">
                     <div className="settings-row-left">
-                      <div><div className="row-label">{label}</div><div className="row-desc">{desc}</div></div>
+                      <div><div className="row-label">{t(labelKey)}</div><div className="row-desc">{t(descKey)}</div></div>
                     </div>
                     {/* The real input stays, hidden, so this is still a radio GROUP to the
                         keyboard and to a screen reader: arrow keys move between options and
@@ -1734,16 +1751,12 @@ export default function OptionsApp() {
               </div>
 
               <div className="settings-section">
-                <div className="settings-card-head">Safety</div>
+                <div className="settings-card-head">{t("opt_safety_section")}</div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div>
-                      <div className="row-label">Max bulk delete from a peer</div>
-                      <div className="row-desc">
-                        A safety net: if a peer's deletions would remove more than this share of
-                        your local bookmarks, the merge skips them (guards against a corrupt sync
-                        wiping your tree). Raise it if you routinely delete in bulk.
-                      </div>
+                      <div className="row-label">{t("opt_bulk_delete_label")}</div>
+                      <div className="row-desc">{t("opt_bulk_delete_desc")}</div>
                     </div>
                   </div>
                   <div className="slider-wrap">
@@ -1770,19 +1783,15 @@ export default function OptionsApp() {
             const noticeCount = audit.filter((e) => e.level === "notice").length;
             return (
               <div className="section-wrap">
-                <h1 className="page-title">Activity</h1>
-                <p className="page-subtitle">
-                  What Konode did on this device, and what it has to work with. All computed
-                  here: the numbers, the restore points and the last 200 log entries are local
-                  and nothing on this page is ever uploaded.
-                </p>
+                <h1 className="page-title">{t("opt_activity_head")}</h1>
+                <p className="page-subtitle">{t("opt_activity_head_sub")}</p>
 
                 <div className="settings-section">
-                  <div className="settings-card-head">Sync activity</div>
+                  <div className="settings-card-head">{t("opt_sync_activity_section")}</div>
                   <div className="stat-grid">
-                    <div className="stat-tile"><div className="stat-value">{formatBytes(syncState?.bytes_transferred ?? 0)}</div><div className="stat-label">Data transferred</div></div>
-                    <div className="stat-tile"><div className="stat-value">{totalSyncRuns}</div><div className="stat-label">Sync runs</div></div>
-                    <div className="stat-tile"><div className="stat-value stat-value-sm">{lastSyncLabel}</div><div className="stat-label">Last sync</div></div>
+                    <div className="stat-tile"><div className="stat-value">{formatBytes(syncState?.bytes_transferred ?? 0)}</div><div className="stat-label">{t("opt_stat_transferred")}</div></div>
+                    <div className="stat-tile"><div className="stat-value">{totalSyncRuns}</div><div className="stat-label">{t("opt_stat_runs")}</div></div>
+                    <div className="stat-tile"><div className="stat-value stat-value-sm">{lastSyncLabel}</div><div className="stat-label">{t("opt_stat_last_sync")}</div></div>
                   </div>
                 </div>
 
@@ -1792,33 +1801,25 @@ export default function OptionsApp() {
                     cost half a day on a field report. */}
                 <div className="settings-section">
                   <div className="settings-card-head">
-                    Devices
-                    <span className="head-sub">
-                      Every device with files in your sync folder, and what each one last
-                      uploaded. Forgetting a device deletes its files from your storage. It
-                      removes no bookmarks from any browser.
-                    </span>
+                    {t("opt_devices_section")}
+                    <span className="head-sub">{t("opt_devices_section_sub")}</span>
                   </div>
                   {forgetResult && (
                     <div className="settings-row">
                       <div className="settings-row-left">
                         <div className="row-desc">
-                          Deleted {forgetResult.removed} {forgetResult.removed === 1 ? "file" : "files"} belonging
-                          to {forgetResult.label}. If that browser is still running, it will upload
-                          itself again within a minute and reappear here. That is not a fault: to
-                          keep a device out, turn Konode off there first, then forget it here.
+                          {plural("opt_forget_result", forgetResult.removed, [String(forgetResult.removed), forgetResult.label])}
                         </div>
                       </div>
                       <button className="btn-secondary" style={{ flexShrink: 0 }}
-                        onClick={() => setForgetResult(null)}>Dismiss</button>
+                        onClick={() => setForgetResult(null)}>{t("opt_dismiss")}</button>
                     </div>
                   )}
                   {devicesError && (
                     <div className="settings-row">
                       <div className="settings-row-left">
                         <div className="row-desc" style={{ color: "var(--danger)" }}>
-                          Couldn't read your devices: {devicesError}. This does not mean you have
-                          none. Check the connection in Storage and reopen this tab.
+                          {t("opt_devices_error", devicesError)}
                         </div>
                       </div>
                     </div>
@@ -1826,14 +1827,14 @@ export default function OptionsApp() {
                   {devices === null && !devicesError && (
                     <div className="settings-row">
                       <div className="settings-row-left">
-                        <div className="row-desc"><Loader2 size={12} className="spin" /> Reading your sync folder…</div>
+                        <div className="row-desc"><Loader2 size={12} className="spin" /> {t("opt_devices_loading")}</div>
                       </div>
                     </div>
                   )}
                   {devices?.length === 0 && !devicesError && (
                     <div className="settings-row">
                       <div className="settings-row-left">
-                        <div className="row-desc">Nothing in the folder yet. Run a sync and this device will appear.</div>
+                        <div className="row-desc">{t("opt_devices_empty")}</div>
                       </div>
                     </div>
                   )}
@@ -1843,12 +1844,12 @@ export default function OptionsApp() {
                         <div className="settings-row-left">
                           <div>
                             <div className="row-label">
-                              {d.label ?? `Unnamed device (${d.device_id.slice(0, 8)})`}
-                              {d.isSelf && <span className="badge-active" style={{ marginLeft: 8 }}>THIS DEVICE</span>}
+                              {d.label ?? t("opt_device_unnamed", d.device_id.slice(0, 8))}
+                              {d.isSelf && <span className="badge-active" style={{ marginLeft: 8 }}>{t("opt_this_device")}</span>}
                             </div>
                             <div className="row-desc">
                               {d.types.join(", ")}
-                              {d.lastSeen && ` · last upload ${new Date(d.lastSeen).toLocaleString()}`}
+                              {d.lastSeen && ` ${t("opt_last_upload", new Date(d.lastSeen).toLocaleString())}`}
                             </div>
                           </div>
                         </div>
@@ -1858,7 +1859,7 @@ export default function OptionsApp() {
                         {!d.isSelf && confirmForget !== d.device_id && (
                           <button className="btn-secondary" disabled={forgetting !== null}
                             onClick={() => setConfirmForget(d.device_id)}>
-                            {forgetting === d.device_id && <Loader2 size={12} className="spin" />} Forget
+                            {forgetting === d.device_id && <Loader2 size={12} className="spin" />} {t("opt_forget")}
                           </button>
                         )}
                       </div>
@@ -1868,18 +1869,14 @@ export default function OptionsApp() {
                         <div className="settings-row">
                           <div className="settings-row-left">
                             <div className="row-desc">
-                              Deletes {d.types.length === 1 ? "the one file" : `the ${d.types.length} files`} this
-                              device has in your storage ({d.types.join(", ")}). No bookmarks are removed
-                              from any browser, here or there. If that browser is still running it will
-                              upload itself again and reappear; to keep it out, turn Konode off there
-                              first.
+                              {plural("opt_forget_confirm", d.types.length, [String(d.types.length), d.types.join(", ")])}
                             </div>
                           </div>
                           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                            <button className="btn-secondary" onClick={() => setConfirmForget(null)}>Cancel</button>
+                            <button className="btn-secondary" onClick={() => setConfirmForget(null)}>{t("opt_cancel")}</button>
                             <button className="btn-secondary" style={{ color: "var(--danger)" }}
-                              onClick={() => void forgetDevice(d.device_id, d.label ?? "that device")}>
-                              Forget it
+                              onClick={() => void forgetDevice(d.device_id, d.label ?? t("opt_that_device"))}>
+                              {t("opt_forget_it")}
                             </button>
                           </div>
                         </div>
@@ -1891,42 +1888,39 @@ export default function OptionsApp() {
                 {/* ── Restore points ── */}
                 <div className="settings-section">
                   <div className="settings-card-head">
-                    Restore points
-                    <span className="head-sub">Timestamped copies of your bookmarks on the backend, shared by all your devices. Restoring adds back any bookmarks missing on this device (it never deletes). The newest 10 are kept; older ones are removed automatically, and you can delete any of them here.</span>
+                    {t("opt_snapshots_section")}
+                    <span className="head-sub">{t("opt_snapshots_section_sub")}</span>
                   </div>
                   <div className="settings-row">
                     <div className="settings-row-left">
                       <div>
-                        <div className="row-label">Save a snapshot now</div>
-                        <div className="row-desc">A restore point of your current bookmark tree.</div>
+                        <div className="row-label">{t("opt_snap_now_label")}</div>
+                        <div className="row-desc">{t("opt_snap_now_desc")}</div>
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
                       {snapMsg && <span className="row-desc">{snapMsg}</span>}
                       <button className="btn-secondary" onClick={createSnapshot} disabled={snapBusy}>
-                        {snapBusy ? <Loader2 size={12} className="spin" /> : <Camera size={12} />} Create snapshot
+                        {snapBusy ? <Loader2 size={12} className="spin" /> : <Camera size={12} />} {t("opt_snap_create")}
                       </button>
                     </div>
                   </div>
                   {snapLoad === "loading" ? (
                     <div className="settings-row">
-                      <div className="settings-row-left"><div className="row-desc">Loading restore points…</div></div>
+                      <div className="settings-row-left"><div className="row-desc">{t("opt_snap_loading")}</div></div>
                     </div>
                   ) : snapLoad !== "ok" ? (
                     <div className="settings-row">
                       <div className="settings-row-left">
                         <div className="error-row" role="alert">
-                          <AlertTriangle size={12} /> Couldn't read your restore points: {snapLoad}
+                          <AlertTriangle size={12} /> {t("opt_snap_error", snapLoad)}
                         </div>
-                        <div className="row-desc">
-                          This does not mean you have none. They live on your storage and could not be
-                          listed just now. Check the connection in Storage Backend and reopen this tab.
-                        </div>
+                        <div className="row-desc">{t("opt_snap_error_desc")}</div>
                       </div>
                     </div>
                   ) : snapshots.length === 0 ? (
                     <div className="settings-row">
-                      <div className="settings-row-left"><div className="row-desc">No restore points yet. Create one above, or one is saved automatically if an unusual deletion is ever blocked.</div></div>
+                      <div className="settings-row-left"><div className="row-desc">{t("opt_snap_empty")}</div></div>
                     </div>
                   ) : snapshots.map((s) => (
                     <div key={s.name} className="settings-row">
@@ -1937,30 +1931,30 @@ export default function OptionsApp() {
                               (e.g. no passphrase set yet) leaves it unknown, and a bare
                               "bookmarks" with no number reads as a rendering fault. */}
                           <div className="row-desc">
-                            {s.count != null ? `${s.count} bookmark${s.count === 1 ? "" : "s"}` : "Bookmark restore point"}
+                            {s.count != null ? plural("opt_snap_count", s.count) : t("opt_snap_unknown")}
                           </div>
                         </div>
                       </div>
                       {confirmRestore === s.name ? (
                         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                          <button className="btn-secondary" onClick={() => setConfirmRestore(null)} disabled={snapBusy}>Cancel</button>
+                          <button className="btn-secondary" onClick={() => setConfirmRestore(null)} disabled={snapBusy}>{t("opt_cancel")}</button>
                           <button className="btn-secondary" style={{ color: "var(--accent)", borderColor: "var(--accent)" }} onClick={() => restoreSnapshot(s.name)} disabled={snapBusy}>
-                            {snapBusy ? <Loader2 size={12} className="spin" /> : <RotateCcw size={12} />} Confirm restore
+                            {snapBusy ? <Loader2 size={12} className="spin" /> : <RotateCcw size={12} />} {t("opt_snap_confirm_restore")}
                           </button>
                         </div>
                       ) : confirmDelete === s.name ? (
                         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                          <button className="btn-secondary" onClick={() => setConfirmDelete(null)} disabled={snapBusy}>Cancel</button>
+                          <button className="btn-secondary" onClick={() => setConfirmDelete(null)} disabled={snapBusy}>{t("opt_cancel")}</button>
                           <button className="btn-secondary" style={{ color: "var(--danger)", borderColor: "var(--danger)" }} onClick={() => deleteSnapshot(s.name)} disabled={snapBusy}>
-                            {snapBusy ? <Loader2 size={12} className="spin" /> : <Trash2 size={12} />} Confirm delete
+                            {snapBusy ? <Loader2 size={12} className="spin" /> : <Trash2 size={12} />} {t("opt_snap_confirm_delete")}
                           </button>
                         </div>
                       ) : (
                         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                           <button className="btn-secondary" onClick={() => setConfirmRestore(s.name)} disabled={snapBusy}>
-                            <RotateCcw size={12} /> Restore
+                            <RotateCcw size={12} /> {t("popup_restore")}
                           </button>
-                          <button className="btn-icon" aria-label="Delete this restore point" title="Delete this restore point" onClick={() => setConfirmDelete(s.name)} disabled={snapBusy}>
+                          <button className="btn-icon" aria-label={t("opt_snap_delete_aria")} title={t("opt_snap_delete_aria")} onClick={() => setConfirmDelete(s.name)} disabled={snapBusy}>
                             <Trash2 size={12} />
                           </button>
                         </div>
@@ -1971,11 +1965,11 @@ export default function OptionsApp() {
 
                 <div className="settings-section">
                   <div className="settings-card-head">
-                    Log
+                    {t("opt_log_section")}
                     <span className="head-sub">
                       {audit.length === 0
-                        ? "No entries yet."
-                        : `${audit.length} entr${audit.length === 1 ? "y" : "ies"}${errorCount ? ` · ${errorCount} with errors` : ""}${noticeCount ? ` · ${noticeCount} skipped` : ""}.`}
+                        ? t("opt_log_empty_sub")
+                        : `${plural("opt_log_count", audit.length)}${errorCount ? t("opt_log_errors", String(errorCount)) : ""}${noticeCount ? t("opt_log_skipped", String(noticeCount)) : ""}.`}
                     </span>
                   </div>
 
@@ -1983,8 +1977,8 @@ export default function OptionsApp() {
                     <div className="settings-row">
                       <div className="settings-row-left">
                         <div>
-                          <div className="row-label">Show errors only</div>
-                          <div className="row-desc">Hide successful entries.</div>
+                          <div className="row-label">{t("opt_log_errors_only_label")}</div>
+                          <div className="row-desc">{t("opt_log_errors_only_desc")}</div>
                         </div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
@@ -1995,7 +1989,7 @@ export default function OptionsApp() {
                           <span className="toggle-track"><span className="toggle-thumb" /></span>
                         </label>
                         <button className="btn-secondary" onClick={clearAudit}>
-                          <Trash2 size={12} /> Clear log
+                          <Trash2 size={12} /> {t("opt_log_clear")}
                         </button>
                       </div>
                     </div>
@@ -2006,8 +2000,8 @@ export default function OptionsApp() {
                       <div className="settings-row-left">
                         <div className="row-desc">
                           {audit.length === 0
-                            ? "Nothing logged yet. Run a sync and it'll show up here."
-                            : "No errors logged. Nice."}
+                            ? t("opt_log_nothing")
+                            : t("opt_log_no_errors")}
                         </div>
                       </div>
                     </div>
@@ -2044,41 +2038,41 @@ export default function OptionsApp() {
           {/* ── ADVANCED ── */}
           {activeNav === "advanced" && (
             <div className="section-wrap">
-              <h1 className="page-title">Advanced</h1>
-              <p className="page-subtitle">Backups, feedback and developer options.</p>
+              <h1 className="page-title">{t("opt_advanced_head")}</h1>
+              <p className="page-subtitle">{t("opt_advanced_head_sub")}</p>
 
               <div className="settings-section">
-                <div className="settings-card-head">Import / Export</div>
+                <div className="settings-card-head">{t("opt_impexp_section")}</div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div>
-                      <div className="row-label">Export backup</div>
-                      <div className="row-desc">Download bookmarks, history, and extensions as a JSON file. No cloud needed.</div>
+                      <div className="row-label">{t("opt_export_label")}</div>
+                      <div className="row-desc">{t("opt_export_desc")}</div>
                     </div>
                   </div>
                   <button className="btn-secondary" onClick={exportData}>
-                    {exportStatus === "ok" ? <><CheckCircle2 size={12} /> Exported</> :
-                     exportStatus === "error" ? <><XCircle size={12} /> Failed</> :
-                     "Export"}
+                    {exportStatus === "ok" ? <><CheckCircle2 size={12} /> {t("opt_exported")}</> :
+                     exportStatus === "error" ? <><XCircle size={12} /> {t("opt_export_failed")}</> :
+                     t("opt_export")}
                   </button>
                 </div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div>
-                      <div className="row-label">Import backup</div>
+                      <div className="row-label">{t("opt_import_label")}</div>
                       <div className="row-desc">
                         {importStatus === "ok"
-                          ? `✓ Imported ${importCount} bookmarks into "Konode Import" folder.`
+                          ? plural("opt_import_ok", importCount, [String(importCount), IMPORT_FOLDER_NAME])
                           : importStatus === "error"
-                          ? "Invalid or unsupported file format."
-                          : "Restore from a Konode JSON backup. Bookmarks added to a new folder."}
+                          ? t("opt_import_bad_file")
+                          : t("opt_import_desc")}
                       </div>
                     </div>
                   </div>
                   <label className="btn-secondary" style={{ cursor: "pointer" }}>
-                    {importStatus === "ok" ? <><CheckCircle2 size={12} /> Done</> :
-                     importStatus === "error" ? <><XCircle size={12} /> Error</> :
-                     "Import"}
+                    {importStatus === "ok" ? <><CheckCircle2 size={12} /> {t("opt_import_done")}</> :
+                     importStatus === "error" ? <><XCircle size={12} /> {t("opt_import_error")}</> :
+                     t("opt_import")}
                     <input
                       type="file" accept=".json" style={{ display: "none" }}
                       onChange={(e) => { const f = e.target.files?.[0]; if (f) importData(f); e.target.value = ""; }}
@@ -2089,25 +2083,25 @@ export default function OptionsApp() {
 
               <div className="settings-section">
                 <div className="settings-card-head">
-                  Feedback
-                  <span className="head-sub">Nothing is sent automatically. These just open when you click them.</span>
+                  {t("opt_feedback_section")}
+                  <span className="head-sub">{t("opt_feedback_section_sub")}</span>
                 </div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div>
-                      <div className="row-label">Report a bug or request a feature</div>
-                      <div className="row-desc">Opens the project's GitHub issues (public, tied to your GitHub account).</div>
+                      <div className="row-label">{t("opt_report_label")}</div>
+                      <div className="row-desc">{t("opt_report_desc")}</div>
                     </div>
                   </div>
                   <a className="link-external" href="https://github.com/konabe-studio/konode/issues" target="_blank" rel="noreferrer">
-                    <Github size={12} /> Open issues <ExternalLink size={10} />
+                    <Github size={12} /> {t("opt_open_issues")} <ExternalLink size={10} />
                   </a>
                 </div>
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div>
-                      <div className="row-label">Email us</div>
-                      <div className="row-desc">For anything you'd rather not post publicly.</div>
+                      <div className="row-label">{t("opt_email_label")}</div>
+                      <div className="row-desc">{t("opt_email_desc")}</div>
                     </div>
                   </div>
                   <a className="link-external" href="mailto:konabe@proton.me">
@@ -2117,10 +2111,10 @@ export default function OptionsApp() {
               </div>
 
               <div className="settings-section">
-                <div className="settings-card-head">Developer</div>
+                <div className="settings-card-head">{t("opt_developer_section")}</div>
                 <div className="settings-row">
                   <div className="settings-row-left">
-                    <div><div className="row-label">Debug mode</div><div className="row-desc">Verbose logging, to the browser console and to Activity so you can share it. Turn it off when you're done.</div></div>
+                    <div><div className="row-label">{t("opt_debug_label")}</div><div className="row-desc">{t("opt_debug_desc")}</div></div>
                   </div>
                   <label className="toggle-wrap">
                     <input type="checkbox" className="toggle-input" checked={settings.debug_mode}
@@ -2131,14 +2125,14 @@ export default function OptionsApp() {
               </div>
 
               <div className="settings-section">
-                <div className="settings-card-head">About</div>
+                <div className="settings-card-head">{t("opt_about_section")}</div>
                 <div className="settings-row">
-                  <div className="settings-row-left"><div><div className="row-label">Version</div></div></div>
+                  <div className="settings-row-left"><div><div className="row-label">{t("opt_version_label")}</div></div></div>
                   <span className="mono-value">{APP_VERSION}</span>
                 </div>
                 <div className="settings-row">
                   <div className="settings-row-left">
-                    <div><div className="row-label">Source code</div><div className="row-desc">No telemetry. No external servers.</div></div>
+                    <div><div className="row-label">{t("opt_source_label")}</div><div className="row-desc">{t("opt_source_desc")}</div></div>
                   </div>
                   <a href="https://github.com/konabe-studio/konode" target="_blank" rel="noreferrer" className="link-external">
                     <Github size={12} /> GitHub <ExternalLink size={10} />

@@ -700,5 +700,615 @@
   },
   "opt_setup_sub": {
     "message": "Konode syncs your browser to storage you own. There's no Konode server. Two quick steps and you're done. (If the setup wizard never opened on your browser, you can do everything right here.)"
+  },
+  "opt_data_head": {
+    "message": "Data Types",
+    "description": "Heading of the Data Types tab. Separate from the nav label opt_nav_data, which has to fit a narrow strip."
+  },
+  "opt_data_head_sub": {
+    "message": "Choose what gets synced across your devices."
+  },
+  "opt_data_section": {
+    "message": "Data to sync"
+  },
+  "opt_data_permission_lost": {
+    "message": "Konode doesn't have the permission this needs any more, so it isn't syncing. Switch it off and on again to restore it.",
+    "description": "A browser can revoke an optional permission from its own extension settings without telling the extension, which leaves a data type looking enabled while it syncs nothing."
+  },
+  "opt_history_days_label": {
+    "message": "Days to sync"
+  },
+  "opt_history_days_desc": {
+    "message": "Recommended: 30 days."
+  },
+  "opt_history_days_value": {
+    "message": "$COUNT$d",
+    "description": "The slider's current value, in a narrow space beside it. Abbreviate the unit if your language can; there is not much room.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
+  "opt_history_hint": {
+    "message": "Pages from your other devices are added with the time they arrived, not the time you first visited them, so on Chromium browsers they show up under today rather than the day you were browsing. Firefox keeps the original date.",
+    "description": "Chrome's history.addUrl takes no visit time; Firefox's does and Konode passes it. Without this note a working sync looks broken."
+  },
+  "opt_missing_ext_head": {
+    "message": "Missing extensions ($COUNT$)",
+    "description": "Heading over the list of extensions your other devices have and this one does not.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "6"
+      }
+    }
+  },
+  "opt_ext_from": {
+    "message": "· from $STORE$",
+    "description": "Which store a missing extension came from. $STORE$ is a brand name (Chrome or Firefox) and is never translated. Keep the leading middle dot, it separates this from the extension's name.",
+    "placeholders": {
+      "store": {
+        "content": "$1",
+        "example": "Firefox"
+      }
+    }
+  },
+  "opt_ext_install": {
+    "message": "Install",
+    "description": "Link on a missing extension that exists in THIS browser's store, so it can be installed directly."
+  },
+  "opt_ext_find": {
+    "message": "Find",
+    "description": "Replaces opt_ext_install when the extension came from the other browser's store: extension IDs don't cross stores, so the link can only run a name search."
+  },
+  "opt_no_password_title": {
+    "message": "Password sync not available."
+  },
+  "opt_no_password_body": {
+    "message": "Browser extensions cannot access the native password store.",
+    "description": "A deliberate security boundary in the browser, not a Konode limitation."
+  },
+  "opt_no_password_use": {
+    "message": "Use $MANAGERS$ for self-hosted password sync.",
+    "description": "$MANAGERS$ is rendered as two product links joined by opt_or, so it is never translated. Split around the placeholder with tParts.",
+    "placeholders": {
+      "managers": {
+        "content": "$1",
+        "example": "Bitwarden or Proton Pass"
+      }
+    }
+  },
+  "opt_or": {
+    "message": "or",
+    "description": "Joins two alternatives that are each their own link, so they cannot be part of one translatable sentence."
+  },
+  "opt_device_head": {
+    "message": "Device",
+    "description": "Heading of the Device tab. Separate from the nav label opt_nav_device, which has to fit a narrow strip."
+  },
+  "opt_device_head_sub": {
+    "message": "Identify this device in the sync network."
+  },
+  "opt_identity_section": {
+    "message": "Identity"
+  },
+  "opt_device_name_label": {
+    "message": "Device name"
+  },
+  "opt_device_name_desc": {
+    "message": "How this device appears in sync logs."
+  },
+  "opt_device_name_placeholder": {
+    "message": "My Laptop",
+    "description": "Example device name in the empty field. Use something ordinary in your language, it is only an example."
+  },
+  "opt_device_id_label": {
+    "message": "Device ID"
+  },
+  "opt_device_id_desc": {
+    "message": "Auto-generated. Do not change.",
+    "description": "Every synced file is named after this id, so a new one would orphan the old files."
+  },
+  "opt_behavior_section": {
+    "message": "Sync behavior"
+  },
+  "opt_sync_on_change_label": {
+    "message": "Sync on change"
+  },
+  "opt_sync_on_change_desc": {
+    "message": "Instantly sync bookmarks and tabs when they change. Recommended."
+  },
+  "opt_auto_sync_label": {
+    "message": "Auto sync"
+  },
+  "opt_auto_sync_desc": {
+    "message": "Also sync on a regular schedule."
+  },
+  "opt_notifications_label": {
+    "message": "Notifications"
+  },
+  "opt_notifications_desc": {
+    "message": "Sync status and conflict alerts."
+  },
+  "opt_interval_label": {
+    "message": "Sync interval"
+  },
+  "opt_interval_desc": {
+    "message": "How often this device pulls remote changes. 30s is the browser's minimum for background checks. Your own changes upload almost instantly."
+  },
+  "opt_interval_value": {
+    "message": "$COUNT$s",
+    "description": "The interval slider's current value in seconds, in a narrow space beside it. Abbreviate the unit if your language can.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
+  "opt_conflict_section": {
+    "message": "Conflict resolution"
+  },
+  "opt_conflict_lww": {
+    "message": "Last Write Wins"
+  },
+  "opt_conflict_lww_desc": {
+    "message": "Most recent change always wins."
+  },
+  "opt_conflict_local": {
+    "message": "Prefer Local"
+  },
+  "opt_conflict_local_desc": {
+    "message": "Local changes override remote."
+  },
+  "opt_conflict_remote": {
+    "message": "Prefer Remote"
+  },
+  "opt_conflict_remote_desc": {
+    "message": "Remote changes override local."
+  },
+  "opt_conflict_manual": {
+    "message": "Manual"
+  },
+  "opt_conflict_manual_desc": {
+    "message": "Ask me to resolve each conflict in the popup."
+  },
+  "opt_safety_section": {
+    "message": "Safety"
+  },
+  "opt_bulk_delete_label": {
+    "message": "Max bulk delete from a peer"
+  },
+  "opt_bulk_delete_desc": {
+    "message": "A safety net: if a peer's deletions would remove more than this share of your local bookmarks, the merge skips them (guards against a corrupt sync wiping your tree). Raise it if you routinely delete in bulk."
+  },
+  "opt_activity_head": {
+    "message": "Activity",
+    "description": "Heading of the Activity tab. Separate from the nav label opt_nav_activity, which has to fit a narrow strip."
+  },
+  "opt_activity_head_sub": {
+    "message": "What Konode did on this device, and what it has to work with. All computed here: the numbers, the restore points and the last 200 log entries are local and nothing on this page is ever uploaded."
+  },
+  "opt_sync_activity_section": {
+    "message": "Sync activity"
+  },
+  "opt_stat_transferred": {
+    "message": "Data transferred"
+  },
+  "opt_stat_runs": {
+    "message": "Sync runs"
+  },
+  "opt_stat_last_sync": {
+    "message": "Last sync"
+  },
+  "opt_devices_section": {
+    "message": "Devices"
+  },
+  "opt_devices_section_sub": {
+    "message": "Every device with files in your sync folder, and what each one last uploaded. Forgetting a device deletes its files from your storage. It removes no bookmarks from any browser."
+  },
+  "opt_forget_result_one": {
+    "message": "Deleted one file belonging to $LABEL$. If that browser is still running, it will upload itself again within a minute and reappear here. That is not a fault: to keep a device out, turn Konode off there first, then forget it here.",
+    "description": "$LABEL$ is the device's own name, so it is never translated. $COUNT$ is available as the second substitution but this form does not need it.",
+    "placeholders": {
+      "label": {
+        "content": "$2",
+        "example": "Work laptop"
+      }
+    }
+  },
+  "opt_forget_result_other": {
+    "message": "Deleted $COUNT$ files belonging to $LABEL$. If that browser is still running, it will upload itself again within a minute and reappear here. That is not a fault: to keep a device out, turn Konode off there first, then forget it here.",
+    "description": "Plural of opt_forget_result_one. $LABEL$ is the device's own name and is never translated.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      },
+      "label": {
+        "content": "$2",
+        "example": "Work laptop"
+      }
+    }
+  },
+  "opt_dismiss": {
+    "message": "Dismiss"
+  },
+  "opt_devices_error": {
+    "message": "Couldn't read your devices: $ERROR$. This does not mean you have none. Check the connection in Storage and reopen this tab.",
+    "description": "An empty list must never stand in for a list that failed to load. $ERROR$ is the technical message and is not translated.",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "404 Not Found"
+      }
+    }
+  },
+  "opt_devices_loading": {
+    "message": "Reading your sync folder…"
+  },
+  "opt_devices_empty": {
+    "message": "Nothing in the folder yet. Run a sync and this device will appear."
+  },
+  "opt_device_unnamed": {
+    "message": "Unnamed device ($ID$)",
+    "description": "Shown when every packet Konode could read for a device came from a build that carried no name. $ID$ is the start of the device id.",
+    "placeholders": {
+      "id": {
+        "content": "$1",
+        "example": "a1b2c3d4"
+      }
+    }
+  },
+  "opt_this_device": {
+    "message": "THIS DEVICE",
+    "description": "Badge marking your own device in the list. Upper case matches the other badges; use whatever reads as a badge in your language."
+  },
+  "opt_last_upload": {
+    "message": "· last upload $WHEN$",
+    "description": "Follows the list of data types on a device row. $WHEN$ is a date already formatted in the browser's own locale. Keep the leading middle dot, it separates this from the types.",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "8/9/2026, 10:20:45 AM"
+      }
+    }
+  },
+  "opt_forget": {
+    "message": "Forget",
+    "description": "Button that deletes a device's files from your storage. Deliberately not a bin icon: what goes is a few files in your own folder, not anybody's bookmarks."
+  },
+  "opt_forget_it": {
+    "message": "Forget it",
+    "description": "Confirms the Forget action."
+  },
+  "opt_forget_confirm_one": {
+    "message": "Deletes the one file this device has in your storage ($TYPES$). No bookmarks are removed from any browser, here or there. If that browser is still running it will upload itself again and reappear; to keep it out, turn Konode off there first.",
+    "description": "$TYPES$ is the list of data types, already translated elsewhere and joined with commas.",
+    "placeholders": {
+      "types": {
+        "content": "$2",
+        "example": "Bookmarks, Sessions"
+      }
+    }
+  },
+  "opt_forget_confirm_other": {
+    "message": "Deletes the $COUNT$ files this device has in your storage ($TYPES$). No bookmarks are removed from any browser, here or there. If that browser is still running it will upload itself again and reappear; to keep it out, turn Konode off there first.",
+    "description": "Plural of opt_forget_confirm_one.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      },
+      "types": {
+        "content": "$2",
+        "example": "Bookmarks, Sessions"
+      }
+    }
+  },
+  "opt_that_device": {
+    "message": "that device",
+    "description": "Stands in for a device's name in opt_forget_result_* when the device never published one."
+  },
+  "opt_cancel": {
+    "message": "Cancel"
+  },
+  "opt_snapshots_section": {
+    "message": "Restore points"
+  },
+  "opt_snapshots_section_sub": {
+    "message": "Timestamped copies of your bookmarks on the backend, shared by all your devices. Restoring adds back any bookmarks missing on this device (it never deletes). The newest 10 are kept; older ones are removed automatically, and you can delete any of them here."
+  },
+  "opt_snap_now_label": {
+    "message": "Save a snapshot now"
+  },
+  "opt_snap_now_desc": {
+    "message": "A restore point of your current bookmark tree."
+  },
+  "opt_snap_create": {
+    "message": "Create snapshot"
+  },
+  "opt_snap_loading": {
+    "message": "Loading restore points…"
+  },
+  "opt_snap_error": {
+    "message": "Couldn't read your restore points: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "404 Not Found"
+      }
+    }
+  },
+  "opt_snap_error_desc": {
+    "message": "This does not mean you have none. They live on your storage and could not be listed just now. Check the connection in Storage and reopen this tab.",
+    "description": "On a recovery screen, 'you have no backups' is the worst possible thing to say by mistake."
+  },
+  "opt_snap_empty": {
+    "message": "No restore points yet. Create one above, or one is saved automatically if an unusual deletion is ever blocked."
+  },
+  "opt_snap_count_one": {
+    "message": "$COUNT$ bookmark",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_snap_count_other": {
+    "message": "$COUNT$ bookmarks",
+    "description": "Plural of opt_snap_count_one. Hungarian and German keep the same noun form here.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "opt_snap_unknown": {
+    "message": "Bookmark restore point",
+    "description": "Used instead of a count when the shared index could not be read, for instance before a passphrase is set. A bare 'bookmarks' with no number reads as a rendering fault."
+  },
+  "opt_snap_confirm_restore": {
+    "message": "Confirm restore"
+  },
+  "opt_snap_confirm_delete": {
+    "message": "Confirm delete"
+  },
+  "opt_snap_delete_aria": {
+    "message": "Delete this restore point"
+  },
+  "opt_log_section": {
+    "message": "Log"
+  },
+  "opt_log_empty_sub": {
+    "message": "No entries yet."
+  },
+  "opt_log_count_one": {
+    "message": "$COUNT$ entry",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_log_count_other": {
+    "message": "$COUNT$ entries",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "opt_log_errors": {
+    "message": " · $COUNT$ with errors",
+    "description": "Appended after opt_log_count_*. Keep the leading space and middle dot, they separate it from what came before.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_log_skipped": {
+    "message": " · $COUNT$ skipped",
+    "description": "Appended after opt_log_count_* and opt_log_errors. Keep the leading space and middle dot.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "opt_log_errors_only_label": {
+    "message": "Show errors only"
+  },
+  "opt_log_errors_only_desc": {
+    "message": "Hide successful entries."
+  },
+  "opt_log_clear": {
+    "message": "Clear log"
+  },
+  "opt_log_nothing": {
+    "message": "Nothing logged yet. Run a sync and it'll show up here."
+  },
+  "opt_log_no_errors": {
+    "message": "No errors logged. Nice."
+  },
+  "opt_encryption_section": {
+    "message": "Encryption"
+  },
+  "opt_e2ee_desc": {
+    "message": "AES-256-GCM. Data is encrypted with your passphrase before it leaves this device, so the storage provider can never read it. Keep the passphrase safe: without it, encrypted data can't be recovered, and every device must use the same one."
+  },
+  "opt_e2ee_disable_confirm": {
+    "message": "Turn off encryption? Your synced data will be stored $UNENCRYPTED$ on your backend from the next sync on. Every device must then also turn it off.",
+    "description": "$UNENCRYPTED$ is opt_unencrypted, rendered bold. Split around the placeholder with tParts. Turning E2EE off is a downgrade, which is why it asks.",
+    "placeholders": {
+      "unencrypted": {
+        "content": "$1",
+        "example": "unencrypted"
+      }
+    }
+  },
+  "opt_unencrypted": {
+    "message": "unencrypted",
+    "description": "Rendered bold inside opt_e2ee_disable_confirm and opt_e2ee_off_warning. It is the word carrying the warning, which is why it is emphasised."
+  },
+  "opt_e2ee_turn_off": {
+    "message": "Turn off"
+  },
+  "opt_passphrase_label": {
+    "message": "Passphrase"
+  },
+  "opt_passphrase_desc": {
+    "message": "Derives the encryption key. Stored only on this device, never uploaded."
+  },
+  "opt_passphrase_placeholder": {
+    "message": "Choose a strong passphrase"
+  },
+  "opt_passphrase_confirm_placeholder": {
+    "message": "Confirm passphrase"
+  },
+  "opt_passphrase_match": {
+    "message": "Passphrases match."
+  },
+  "opt_genkey_saved_warning": {
+    "message": "Save this now. It's the only way to recover your data if you forget it. Enter the same key on your other devices."
+  },
+  "opt_e2ee_no_passphrase": {
+    "message": "Encryption is on but no passphrase is set, so sync keeps uploading plaintext until you add one."
+  },
+  "opt_e2ee_off_warning": {
+    "message": "Encryption is off, so your synced data (bookmarks, history, sessions, extensions) is stored $UNENCRYPTED$ on your backend. Turn it on to encrypt everything before it leaves this device.",
+    "description": "$UNENCRYPTED$ is opt_unencrypted, rendered bold. Split around the placeholder with tParts.",
+    "placeholders": {
+      "unencrypted": {
+        "content": "$1",
+        "example": "unencrypted"
+      }
+    }
+  },
+  "opt_advanced_head": {
+    "message": "Advanced",
+    "description": "Heading of the Advanced tab. Separate from the nav label opt_nav_advanced, which has to fit a narrow strip."
+  },
+  "opt_advanced_head_sub": {
+    "message": "Backups, feedback and developer options."
+  },
+  "opt_impexp_section": {
+    "message": "Import / Export"
+  },
+  "opt_export_label": {
+    "message": "Export backup"
+  },
+  "opt_export_desc": {
+    "message": "Download bookmarks, history, and extensions as a JSON file. No cloud needed."
+  },
+  "opt_export": {
+    "message": "Export"
+  },
+  "opt_exported": {
+    "message": "Exported"
+  },
+  "opt_export_failed": {
+    "message": "Failed"
+  },
+  "opt_import_label": {
+    "message": "Import backup"
+  },
+  "opt_import_desc": {
+    "message": "Restore from a Konode JSON backup. Bookmarks added to a new folder."
+  },
+  "opt_import_bad_file": {
+    "message": "Invalid or unsupported file format."
+  },
+  "opt_import_ok_one": {
+    "message": "✓ Imported $COUNT$ bookmark into the $FOLDER$ folder.",
+    "description": "$FOLDER$ is the folder name the import creates. It is data shared across devices, so it is never translated.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      },
+      "folder": {
+        "content": "$2",
+        "example": "Konode Import"
+      }
+    }
+  },
+  "opt_import_ok_other": {
+    "message": "✓ Imported $COUNT$ bookmarks into the $FOLDER$ folder.",
+    "description": "Plural of opt_import_ok_one. $FOLDER$ is never translated.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      },
+      "folder": {
+        "content": "$2",
+        "example": "Konode Import"
+      }
+    }
+  },
+  "opt_import": {
+    "message": "Import"
+  },
+  "opt_import_done": {
+    "message": "Done"
+  },
+  "opt_import_error": {
+    "message": "Error"
+  },
+  "opt_feedback_section": {
+    "message": "Feedback"
+  },
+  "opt_feedback_section_sub": {
+    "message": "Nothing is sent automatically. These just open when you click them."
+  },
+  "opt_report_label": {
+    "message": "Report a bug or request a feature"
+  },
+  "opt_report_desc": {
+    "message": "Opens the project's GitHub issues (public, tied to your GitHub account)."
+  },
+  "opt_open_issues": {
+    "message": "Open issues"
+  },
+  "opt_email_label": {
+    "message": "Email us"
+  },
+  "opt_email_desc": {
+    "message": "For anything you'd rather not post publicly."
+  },
+  "opt_developer_section": {
+    "message": "Developer"
+  },
+  "opt_debug_label": {
+    "message": "Debug mode"
+  },
+  "opt_debug_desc": {
+    "message": "Verbose logging, to the browser console and to Activity so you can share it. Turn it off when you're done."
+  },
+  "opt_about_section": {
+    "message": "About"
+  },
+  "opt_version_label": {
+    "message": "Version"
+  },
+  "opt_source_label": {
+    "message": "Source code"
+  },
+  "opt_source_desc": {
+    "message": "No telemetry. No external servers."
+  },
+  "opt_devices_bad_reply": {
+    "message": "Couldn't read the device list.",
+    "description": "Reported through opt_devices_error when the extension replies in a shape the page did not expect. An empty list must never stand in for a list that failed to load."
   }
 }
