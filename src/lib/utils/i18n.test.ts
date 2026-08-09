@@ -162,13 +162,34 @@ describe.each(languages.filter((l) => l !== "en"))("the %s catalogue", (lang) =>
 
   it("keeps every placeholder, so no interpolated value goes missing", () => {
     // The classic translation loss: the sentence survives, `$COUNT$` doesn't, and the
-    // count silently disappears from the screen.
+    // count silently disappears from the screen. The mirror case is just as bad and reads
+    // worse: a `$NAME$` English never had is declared nowhere, so nothing substitutes it
+    // and the raw `$NAME$` ships to the screen. Both are what this hunts.
+    //
+    // Two things deliberately DON'T count as broken, because neither loses a value and
+    // failing over them cost us more than it ever caught:
+    //
+    // A key this language hasn't translated yet. chrome.i18n falls back per message, so an
+    // absent key renders the whole English string, `$COUNT$` included — nothing is lost.
+    // Counting those failed the build over every unfinished language, which is the state
+    // the SHIPPED note above calls normal and healthy, and buried any real break under a
+    // wall of them: of 22 reported on the first Weblate contribution, 21 were this.
+    //
+    // The same placeholder used more than once. getMessage substitutes EVERY occurrence,
+    // so repeating one is a normal thing to need — zh_Hans names the region twice because
+    // that is how the sentence works in Chinese — and it interpolates correctly both
+    // times. What matters is WHICH placeholders appear, not how often, so compare sets.
+    const names = (s: string) => new Set([...s.matchAll(/\$([A-Z_]+)\$/g)].map((m) => m[1]));
     const broken: string[] = [];
     for (const [key, entry] of Object.entries(en)) {
-      const want = [...entry.message.matchAll(/\$([A-Z_]+)\$/g)].map((m) => m[1]).sort();
-      if (!want.length) continue;
-      const got = [...(other[key]?.message ?? "").matchAll(/\$([A-Z_]+)\$/g)].map((m) => m[1]).sort();
-      if (want.join() !== got.join()) broken.push(`${key}: expected ${want.join()}, found ${got.join() || "none"}`);
+      const translated = other[key]?.message;
+      if (translated === undefined) continue;
+      const want = names(entry.message);
+      const got = names(translated);
+      const lost = [...want].filter((n) => !got.has(n));
+      const invented = [...got].filter((n) => !want.has(n));
+      if (lost.length) broken.push(`${key}: dropped $${lost.join("$, $")}$`);
+      if (invented.length) broken.push(`${key}: invented $${invented.join("$, $")}$`);
     }
     expect(broken).toEqual([]);
   });

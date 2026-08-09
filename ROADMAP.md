@@ -39,7 +39,7 @@ on any Chromium browser and on Firefox.
   with the manifest `key` stripped (the CWS rejects `key` on a first upload) while
   `dist/` keeps it for unpacked dev; pushing a `v*` tag runs a GitHub Actions release
   that attaches both packaged zips, Chrome and Firefox (source builds, no client secret).
-  Released through v1.2.0.
+  Released through v1.2.1.
 - **Pre-submission hardening**: a peer's extension `storeUrl` is rebuilt locally
   from the id (a forged URL was a phishing vector); onboarding requests all optional
   permissions in one call (a second request lost the user gesture); the dead
@@ -59,10 +59,16 @@ on any Chromium browser and on Firefox.
   propagating. See `CHANGELOG.md`.
 
 ## Now live
-Konode **1.2.0 is live on both stores**: the Chrome Web Store (first published 2026-07-20,
-item ID `mmlfiiimnpnjcjhhbldenpcmnibedkfa`) and
-[Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/) (2026-08-04). Nothing
-is waiting on a submission.
+Konode is live on both stores, and the two are one patch apart:
+**Firefox Add-ons serves 1.2.1**, the Chrome Web Store still serves **1.2.0**.
+
+- [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/): **1.2.1**, listed
+  since 2026-08-04.
+- Chrome Web Store: **1.2.0**, first published 2026-07-20, item ID
+  `mmlfiiimnpnjcjhhbldenpcmnibedkfa`.
+
+The gap is the only thing outstanding on the store side, and it is already moving: 1.2.1
+is uploaded to the Chrome Web Store and **waiting on review**. Nothing is waiting on us.
 
 ## Next
 - **Backend expansion**, cheapest sign-in first. See *Platform priority* item 3 below.
@@ -201,12 +207,14 @@ pitch.
 
 **Chrome Web Store.** 1.0.0 submitted for review on **2026-07-19**, **published
 2026-07-20** (<https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa>).
-1.2.0 is what the listing serves today.
+**1.2.0 is what the listing serves today**, so it is one patch behind Firefox: 1.2.1 is
+uploaded and in review.
 
 **Firefox Add-ons.** Live at <https://addons.mozilla.org/firefox/addon/konode/> since
-**2026-08-04**, shipped with 1.2.0. Packaged with `npm run package:firefox` and checked
-with `npm run lint:firefox`. AMO requires a source submission, since the build is bundled
-and minified, and the reviewer rebuilds and diffs it.
+**2026-08-04**, first listed with 1.2.0 and **serving 1.2.1 today**. Packaged with
+`npm run package:firefox` and checked with `npm run lint:firefox`. AMO requires a source
+submission, since the build is bundled and minified, and the reviewer rebuilds and diffs
+it.
 
 Done for the Chrome Web Store: keyless store package (`npm run package:chrome`), $5
 developer registration,
