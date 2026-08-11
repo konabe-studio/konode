@@ -122,7 +122,11 @@ categories left out; Firefox Sync is end-to-end encrypted by default.
 ## Translations
 
 Konode speaks **English, Hungarian and German**, and follows your browser's language.
-Dates and numbers follow your browser's locale everywhere.
+Every screen is translated: the popup, the setup wizard, and Settings. Dates and numbers
+follow your browser's locale everywhere.
+
+**Spanish** and **Chinese (Simplified)** are well under way and should be complete for
+1.3.0; Italian and Estonian have been started.
 
 Translations are edited on
 [Hosted Weblate](https://hosted.weblate.org/projects/konode/). You don't need git, a
@@ -130,8 +134,8 @@ pull request, or any knowledge of the code to help. If your language is missing,
 for it there and it will appear. The strings themselves live in this repository, under
 `public/_locales/<lang>/messages.json`.
 
-Most strings carry a note explaining what they are and why they are worded the way
-they are; a few of them make promises about not losing your data, and those have to be
+About half the strings carry a note explaining what they are and why they are worded the
+way they are; a few of them make promises about not losing your data, and those have to be
 translated literally. If a string's meaning isn't clear, leave it and ask. An
 untranslated string falls back to English, which is safe.
 
@@ -206,8 +210,10 @@ use a dedicated manager like [Bitwarden](https://bitwarden.com),
 - **Shipped**: bookmarks / sessions / history / extension-list sync · Google Drive +
   GitHub + WebDAV · WebDAV provider presets · multi-device merge · per-item conflict
   resolution · opt-in E2EE · Drive OAuth refresh (PKCE) · cross-browser extension
-  matching · **Chrome Web Store listing** · **Firefox Add-ons listing**.
-- **Next**: more backends, cheapest sign-in first (Dropbox, S3-compatible, OneDrive).
+  matching · **Chrome Web Store listing** · **Firefox Add-ons listing** · **translated
+  interface** (English, Hungarian, German).
+- **Next**: Spanish and Chinese (Simplified) finished for 1.3.0 · more backends, cheapest
+  sign-in first (Dropbox, S3-compatible, OneDrive).
 - **Later**: MEGA · incremental diff for very large bookmark trees · faster history
   sync.
 

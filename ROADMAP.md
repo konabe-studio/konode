@@ -54,6 +54,15 @@ on any Chromium browser and on Firefox.
 - **Firefox shipped** (1.2.0): the build is in the release and the add-on is live on
   Firefox Add-ons. Verified across Firefox, Brave and Helium on one sync folder, with
   history arriving on the original visit dates, which only Firefox permits.
+- **The interface translated** (1.2.0, finished on `main` after 1.2.1): every screen reads
+  through the browser's own `chrome.i18n`, so no library and no bundle cost. The popup and
+  the setup wizard shipped in 1.2.0; Settings was the last surface holding hardcoded
+  English and is now translated too, unreleased, due with 1.3.0. English, Hungarian and
+  German are complete at 305 strings each. `i18n.test.ts` guards the catalogues: a shipped
+  language must translate every key, and no language may drop or invent a placeholder.
+- **Translation opened to volunteers** on
+  [Hosted Weblate](https://hosted.weblate.org/projects/konode/), which is where Spanish,
+  Chinese (Simplified), Italian and Estonian came from.
 - **A full review pass** (1.2.0): correctness fixes across the sync engine, the storage
   backends and the interface, including bookmark renames, moves and folder reorders now
   propagating. See `CHANGELOG.md`.
@@ -71,6 +80,10 @@ The gap is the only thing outstanding on the store side, and it is already movin
 is uploaded to the Chrome Web Store and **waiting on review**. Nothing is waiting on us.
 
 ## Next
+- **Spanish and Chinese (Simplified) finished**, for 1.3.0. Both stand at 123 of 305
+  strings today. Italian (55) and Estonian (22) are open volunteer work with no target
+  date. A language joins `SHIPPED` in `i18n.test.ts` only once it is complete and
+  reviewed, which is the last step of shipping it.
 - **Backend expansion**, cheapest sign-in first. See *Platform priority* item 3 below.
 - **History sync performance**: the full-history dedup scan every import runs.
 

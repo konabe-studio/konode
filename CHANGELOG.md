@@ -3,6 +3,32 @@
 All notable changes to Konode. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+
+- **Settings speaks your language too.** The popup and the setup wizard already followed
+  the language your browser is set to, but Settings stayed in English whatever the rest of
+  Konode was reading in, which made it the one screen you had to switch languages for.
+  Every tab, label and explanation on it now comes from the same translation files as
+  everything else.
+- **Anyone can translate Konode, without touching the code.** Translations are edited on
+  [Hosted Weblate](https://hosted.weblate.org/projects/konode/): no git, no pull request,
+  and nothing to install. Spanish, Chinese (Simplified), Italian and Estonian have all
+  been started there, and a language that isn't finished is still safe to use, because
+  anything not yet translated falls back to English string by string.
+
+### Fixed
+
+- **An unfinished translation no longer fails the build.** The check that stops a
+  translation from losing a `$COUNT$`, and taking the number out of the sentence with it,
+  treated a string nobody had translated yet as a loss. Every language still in progress
+  therefore broke the build, and the real problems were buried: of 22 reported on the
+  first contribution from Weblate, 21 were simply work not done yet. The same check also
+  objected to one placeholder used twice in a sentence, which Chinese needs and which the
+  browser substitutes correctly both times. It now reports only what it was written to
+  catch, a placeholder that went missing or one that was never in English.
+
 ## [1.2.1] - 2026-08-07
 
 ### Changed
