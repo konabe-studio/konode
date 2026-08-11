@@ -62,6 +62,40 @@ describe("matchLocalRoot — Orion 'Favorites' root", () => {
   });
 });
 
+// The other direction, and the one that tore a real tree in half: Orion as the LOCAL
+// browser, where id "1" is a bar by id and id "3" is a bar by title. Two roots answering
+// to one kind meant `find` returned whichever came first, so a peer's bookmarks bar landed
+// in Favourites on one sync and in the Bookmarks Bar on the next. From the field bundle:
+// 80 bookmarks arrived as 32 + 48 split across both, one folder living in each half.
+describe("matchLocalRoot — Orion has TWO roots that answer to 'bar'", () => {
+  it("sends a peer's bar to the same root whatever order the browser enumerates them", () => {
+    const forward = matchLocalRootEx(CHROME_ROOTS[0], ORION_ROOTS, 0);
+    const reversed = matchLocalRootEx(CHROME_ROOTS[0], [...ORION_ROOTS].reverse(), 0);
+    expect(forward.id).toBe(reversed.id);
+    expect(forward.confident).toBe(true);
+  });
+
+  it("prefers the root that is a bar by ID over the one rescued by its title", () => {
+    // "Bookmarks Bar" (id 1) is already right; the Favorites override exists to fix a
+    // WRONG id, so it must not outrank one that needs no fixing.
+    expect(matchLocalRoot(CHROME_ROOTS[0], ORION_ROOTS, 0)).toBe("1");
+  });
+
+  it("does not let Chrome's Mobile bookmarks fall into Favorites", () => {
+    // Favorites is id "3", which is Chrome's mobile id. Resolving the local kind by id
+    // alone would match it here and quietly merge two unrelated collections.
+    expect(matchLocalRoot(CHROME_ROOTS[2], ORION_ROOTS, 2)).not.toBe("3");
+  });
+
+  it("still rescues an Orion that has Favorites and NO id-1 bar (the 1.0.2 case)", () => {
+    const olderOrion = [
+      { id: "2", title: "Bookmarks" },
+      { id: "3", title: "Favorites" },
+    ];
+    expect(matchLocalRoot(CHROME_ROOTS[0], olderOrion, 0)).toBe("3");
+  });
+});
+
 describe("defaultOtherRootId", () => {
   it("picks the 'other' root on Chrome", () => {
     expect(defaultOtherRootId(CHROME_ROOTS)).toBe("2");

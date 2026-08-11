@@ -97,11 +97,39 @@ export function matchLocalRootEx(
   // Title-derived kind wins over the id — it's how we disambiguate WebKit's
   // reused numeric ids (id "3" titled "Favorites" is a bar, not Chrome's mobile).
   const kind = rootKindFromTitle(remoteRoot.title) ?? rootKind(remoteRoot.id);
+  // A root's kind, with the title override applied. Shared by the kind match below and by
+  // the exact-id fast path, which needs it to spot a false friend.
+  const effectiveKind = (r: RootLike) => rootKindFromTitle(r.title) ?? rootKind(r.id);
   if (kind) {
-    const byKind = localRoots.find((r) => (rootKindFromTitle(r.title) ?? rootKind(r.id)) === kind);
+    // TWO local roots can answer to one kind, and a real Orion install is the case that
+    // proves it: it has BOTH id "1" titled "Bookmarks Bar" (a bar by id) and id "3"
+    // titled "Favorites" (a bar by the title override above). `find` then returned
+    // whichever the browser happened to enumerate first, so one peer's bookmarks bar
+    // landed in Favourites and the next sync's landed in the Bookmarks Bar. Seen in the
+    // field as a tree torn in half: 80 bookmarks arriving as 32 + 48 across the two, with
+    // the same folder existing in both and its contents divided between them.
+    //
+    // The title override exists to RESCUE engines whose id is misleading, so it must not
+    // outrank an id that is already right. Prefer the id-derived root and fall back to the
+    // title-derived one, which leaves the 1.0.2 fix intact (an Orion with only
+    // "Favorites" and no id-1 bar still resolves through the title) while making the
+    // answer independent of enumeration order.
+    // The effective kind still resolves title-first, so the override keeps its power to
+    // CORRECT a misleading id (Orion's id "3" is a bar, and must therefore not answer to
+    // Chrome's "mobile"). Only the tie-break among equals changes.
+    const candidates = localRoots.filter((r) => effectiveKind(r) === kind);
+    const byKind = candidates.find((r) => rootKind(r.id) === kind) ?? candidates[0];
     if (byKind) return { id: byKind.id, confident: true };
   }
-  if (localRoots.some((r) => r.id === remoteRoot.id)) return { id: remoteRoot.id, confident: true };
+  // Same-browser fast path, but only when the id isn't a false friend. Chrome and WebKit
+  // both use "3" and mean different things by it, so an id match that CONTRADICTS the
+  // kinds is worse than no match: it was routing Chrome's Mobile bookmarks straight into
+  // Orion's Favourites, merging two unrelated collections under a coincidence of numbering.
+  const sameId = localRoots.find((r) => r.id === remoteRoot.id);
+  if (sameId) {
+    const localKind = effectiveKind(sameId);
+    if (!kind || !localKind || localKind === kind) return { id: sameId.id, confident: true };
+  }
   const title = remoteRoot.title?.toLowerCase();
   if (title) {
     const byTitle = localRoots.find((r) => r.title?.toLowerCase() === title);
