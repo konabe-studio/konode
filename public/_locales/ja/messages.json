@@ -1,1 +1,182 @@
-{}
+{
+  "datatype_bookmarks": {
+    "message": "ブックマーク"
+  },
+  "datatype_history": {
+    "message": "履歴"
+  },
+  "datatype_sessions": {
+    "message": "タブ"
+  },
+  "datatype_extensions": {
+    "message": "拡張機能"
+  },
+  "popup_sync_now": {
+    "message": "今すぐ同期"
+  },
+  "popup_load_error": {
+    "message": "失敗しました。タップして再試行。"
+  },
+  "stream_syncing": {
+    "message": "同期中…"
+  },
+  "stream_pending": {
+    "message": "待機中"
+  },
+  "status_syncing": {
+    "message": "同期中…"
+  },
+  "status_success": {
+    "message": "同期済み"
+  },
+  "status_error": {
+    "message": "エラー"
+  },
+  "status_conflict": {
+    "message": "衝突"
+  },
+  "extension_name": {
+    "message": "Konode | ブックマーク、タブ同期"
+  },
+  "extension_description": {
+    "message": "Google Drive, WebDAV, GitHubなどでブラウザを同期させます。"
+  },
+  "status_idle": {
+    "message": "準備完了"
+  },
+  "stream_off": {
+    "message": "オフ"
+  },
+  "stream_never": {
+    "message": "まだ同期されていません"
+  },
+  "stream_stale": {
+    "message": "最後の同期失敗"
+  },
+  "stream_synced": {
+    "message": "同期済み"
+  },
+  "popup_recovery_notice": {
+    "message": "珍しい削除($COUNT$ ブックマーク)がブロックされ、復元ポイントが保存されました。設定 -> アクティビティから確認してください。。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "popup_no_backend": {
+    "message": "バックエンドが設定されていません"
+  },
+  "popup_conflict_title": {
+    "message": "$TYPE$ で衝突が起きています。バージョンを選んでください",
+    "placeholders": {
+      "type": {
+        "content": "$1",
+        "example": "bookmarks"
+      }
+    }
+  },
+  "popup_keep_local": {
+    "message": "このデバイスにのみ保存"
+  },
+  "popup_use_remote": {
+    "message": "リモートのバージョンを利用"
+  },
+  "popup_active_streams": {
+    "message": "アクティブな同期の種類"
+  },
+  "popup_missing_extensions_one": {
+    "message": "$COUNT$ 個の欠損した拡張機能",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_missing_extensions_other": {
+    "message": "$COUNT$ 個の欠損した拡張機能",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "7"
+      }
+    }
+  },
+  "popup_open_all": {
+    "message": "すべてを開く"
+  },
+  "popup_sessions_head": {
+    "message": "ほかのデバイスのタブ"
+  },
+  "popup_unknown_device": {
+    "message": "不明なデバイス"
+  },
+  "popup_tabs_one": {
+    "message": "$COUNT$ 個のタブ",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_tabs_other": {
+    "message": "$COUNT$個のタブ",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "23"
+      }
+    }
+  },
+  "popup_restore": {
+    "message": "復元"
+  },
+  "popup_backend_label": {
+    "message": "バックエンド"
+  },
+  "popup_backend_none": {
+    "message": "なし"
+  },
+  "popup_device_label": {
+    "message": "デバイス"
+  },
+  "popup_configure": {
+    "message": "設定 →"
+  },
+  "popup_activity_log": {
+    "message": "アクティビティログ →"
+  },
+  "common_back": {
+    "message": "戻る"
+  },
+  "common_continue": {
+    "message": "進む"
+  },
+  "common_open_settings": {
+    "message": "設定を開く"
+  },
+  "common_close": {
+    "message": "閉じる"
+  },
+  "common_show": {
+    "message": "表示"
+  },
+  "common_hide": {
+    "message": "非表示"
+  },
+  "common_e2ee": {
+    "message": "エンドツーエンド暗号化"
+  },
+  "common_generate_key": {
+    "message": "強力なキーを生成"
+  },
+  "popup_settings_aria": {
+    "message": "設定"
+  },
+  "provider_nextcloud_desc": {
+    "message": "あなたのNextcloudかownCloudサーバー。"
+  }
+}
