@@ -886,7 +886,7 @@
     "message": "Elfelejtem"
   },
   "opt_forget_confirm_one": {
-    "message": "Törli azt az egy fájlt, amit ez az eszköz a tárhelyeden tart ($TYPES$). Egyetlen böngészőből sem törlődik könyvjelző, sem itt, sem ott. Ha az a böngésző még fut, újra feltölti magát és megjelenik; ha ki akarod tartani, először kapcsold ki ott a Konode-ot.",
+    "message": "Törli azt az egy fájlt, amit ez az eszköz a tárhelyeden tart ($TYPES$). Egyetlen böngészőből sem törlődik könyvjelző, sem itt, sem ott. Ha az a böngésző még fut, újra feltölti magát és megjelenik; ha egy eszközt ki akarsz zárni, először ott kapcsold ki a Konodeot.",
     "placeholders": {
       "types": {
         "content": "$2",
@@ -895,7 +895,7 @@
     }
   },
   "opt_forget_confirm_other": {
-    "message": "Törli azt a $COUNT$ fájlt, amit ez az eszköz a tárhelyeden tart ($TYPES$). Egyetlen böngészőből sem törlődik könyvjelző, sem itt, sem ott. Ha az a böngésző még fut, újra feltölti magát és megjelenik; ha ki akarod tartani, először kapcsold ki ott a Konode-ot.",
+    "message": "Törli azt a $COUNT$ fájlt, amit ez az eszköz a tárhelyeden tart ($TYPES$). Egyetlen böngészőből sem törlődik könyvjelző, sem itt, sem ott. Ha az a böngésző még fut, újra feltölti magát és megjelenik; ha egy eszközt ki akarsz zárni, először ott kapcsold ki a Konodeot.",
     "placeholders": {
       "count": {
         "content": "$1",
