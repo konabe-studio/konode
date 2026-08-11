@@ -71,6 +71,15 @@
   "popup_no_backend": {
     "message": "Kein Speicher eingerichtet"
   },
+  "popup_setup_title": {
+    "message": "Einrichtung von Konode abschließen"
+  },
+  "popup_setup_body": {
+    "message": "Wähle, wo deine Daten gespeichert werden. Bis dahin wird nichts synchronisiert und nichts hochgeladen."
+  },
+  "popup_setup_cta": {
+    "message": "Einrichtung starten"
+  },
   "popup_conflict_title": {
     "message": "Konflikt bei $TYPE$: Version wählen",
     "placeholders": {

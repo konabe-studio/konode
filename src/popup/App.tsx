@@ -192,6 +192,10 @@ export default function PopupApp() {
 
   const openOptions = () => browser.runtime.openOptionsPage();
 
+  // Opened from a click, never from a lifecycle event — see `showSetupCard`.
+  const openOnboarding = () =>
+    void browser.tabs.create({ url: browser.runtime.getURL("onboarding.html") });
+
   // The audit log lives in Settings → Activity (a popup is too cramped to scan a
   // long history). The hash selects that tab on load.
   const openActivityLog = () =>
@@ -226,9 +230,25 @@ export default function PopupApp() {
   const isSyncing = status === "syncing";
   const settingsLoaded = settings !== null;
   const hasBackend = !!settings?.active_backend;
+  /**
+   * A first install that never saw the wizard.
+   *
+   * The service worker opens onboarding from `onInstalled`, and on WebKit (Orion) that
+   * open is a no-op, so the wizard simply never appeared and setup had to be found by
+   * opening Settings and knowing what to look for. This card is the way back in, and it
+   * works there precisely because a popup click is a real user gesture, which is the one
+   * thing WebKit does honour.
+   *
+   * It earns its place on every engine, though: the `onInstalled` tab is also gone for
+   * good on Chrome if you close it, or never noticed if the install left you looking
+   * somewhere else.
+   */
+  const showSetupCard = settingsLoaded && !settings?.onboarding_completed && !hasBackend;
   // Only treat "no backend" as real once settings have actually loaded — otherwise
   // the first paint (settings still null) flashes a false "No backend configured".
-  const showNoBackend = settingsLoaded && !hasBackend;
+  // Suppressed while the setup card is up: on a fresh install both are true, and the
+  // card already says the same thing in a more useful way.
+  const showNoBackend = settingsLoaded && !hasBackend && !showSetupCard;
   const lastSync = state?.last_sync
     ? new Date(state.last_sync).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : null;
@@ -272,6 +292,21 @@ export default function PopupApp() {
           </button>
         </div>
       </div>
+
+      {/* ── First-run setup ── */}
+      {showSetupCard && (
+        <div className="mt-3 rounded-box border border-sk-hairline bg-sk-raised px-3 py-3">
+          <p className="text-[13px] font-medium text-sk-text">{t("popup_setup_title")}</p>
+          <p className="mt-1 text-[12px] text-sk-muted">{t("popup_setup_body")}</p>
+          <button
+            onClick={openOnboarding}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-box bg-sk-signal px-3 py-2 text-[13px] font-medium text-sk-on-signal transition-opacity hover:opacity-90 active:scale-[0.99]"
+          >
+            {t("popup_setup_cta")}
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
 
       {/* ── Banners ── */}
       {(loadError || actionError || state?.last_error || state?.recovery_notice || (state?.pending_conflicts?.length ?? 0) > 0 || showNoBackend) && (

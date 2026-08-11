@@ -93,6 +93,18 @@
     "message": "No backend configured",
     "description": "No storage provider has been set up yet. The banner opens Settings."
   },
+  "popup_setup_title": {
+    "message": "Finish setting up Konode",
+    "description": "First-run card in the popup, shown until a storage provider is chosen. The button opens the setup wizard."
+  },
+  "popup_setup_body": {
+    "message": "Choose where your data is stored. Nothing is synced or uploaded until you do.",
+    "description": "Body of the first-run card. The second sentence is a promise about data and must be translated literally."
+  },
+  "popup_setup_cta": {
+    "message": "Start setup",
+    "description": "Button on the first-run card. Opens the setup wizard in a new tab."
+  },
   "popup_conflict_title": {
     "message": "Conflict in $TYPE$: choose a version",
     "description": "A conflict is waiting for a decision. $TYPE$ is a data type name (bookmarks, history, sessions, extensions).",

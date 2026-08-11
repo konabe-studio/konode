@@ -71,6 +71,15 @@
   "popup_no_backend": {
     "message": "Nincs beállítva tárhely"
   },
+  "popup_setup_title": {
+    "message": "Fejezd be a Konode beállítását"
+  },
+  "popup_setup_body": {
+    "message": "Válaszd ki, hol tároljuk az adataidat. Addig semmi nem szinkronizálódik és semmi nem töltődik fel."
+  },
+  "popup_setup_cta": {
+    "message": "Beállítás indítása"
+  },
   "popup_conflict_title": {
     "message": "Ütközés itt: $TYPE$. Válassz egy verziót.",
     "placeholders": {

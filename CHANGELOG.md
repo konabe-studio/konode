@@ -12,6 +12,11 @@ All notable changes to Konode. Format loosely follows
   Konode was reading in, which made it the one screen you had to switch languages for.
   Every tab, label and explanation on it now comes from the same translation files as
   everything else.
+- **A way back into setup, from the popup.** Konode opens the setup wizard once, in a tab,
+  the moment it installs. If you closed that tab, or were looking elsewhere when it
+  appeared, or are on a browser where it never opened at all, there was nothing telling you
+  what to do next, and setup had to be found by opening Settings and knowing what to look
+  for. The popup now offers to finish setting up until a storage provider has been chosen.
 - **Anyone can translate Konode, without touching the code.** Translations are edited on
   [Hosted Weblate](https://hosted.weblate.org/projects/konode/): no git, no pull request,
   and nothing to install. Spanish, Chinese (Simplified), Italian and Estonian have all
