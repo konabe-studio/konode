@@ -108,6 +108,7 @@ export const KEYS = {
   HIST_IMPORTED: "konode_hist_imported",
   HIST_REJECTED: "konode_hist_rejected",
   HIST_VISITTIME_OK: "konode_hist_visittime_ok",
+  TABS_SINGLE_OPEN: "konode_tabs_single_open",
   REMOTE_SESSIONS: "konode_remote_sessions",
   REMOTE_EXTENSIONS: "konode_remote_extensions",
   UPLOAD_CHECKSUMS: "konode_upload_checksums",
@@ -440,6 +441,24 @@ export async function getVisitTimeSupport(): Promise<boolean | null> {
 }
 export async function setVisitTimeSupport(ok: boolean): Promise<void> {
   await set(KEYS.HIST_VISITTIME_OK, ok);
+}
+
+/**
+ * Whether this browser allows only ONE programmatic tab/window open per user gesture,
+ * once a restore has found out. WebKit (Orion) does: the first `tabs.create` after the
+ * click goes through and everything after it is silently swallowed, which is why a
+ * 10-tab session restored as 1 tab in the field.
+ *
+ * Persisted for the same reasons as `visitTime` above, plus one specific to this case:
+ * the answer can only be learned by SPENDING the gesture, so a worker restart must not
+ * throw it away and make the user pay for the lesson twice.
+ */
+export async function getSingleTabOpenLimit(): Promise<boolean | null> {
+  const v = await get<boolean | null>(KEYS.TABS_SINGLE_OPEN, null);
+  return typeof v === "boolean" ? v : null;
+}
+export async function setSingleTabOpenLimit(limited: boolean): Promise<void> {
+  await set(KEYS.TABS_SINGLE_OPEN, limited);
 }
 
 /** Forget every recorded rejection, e.g. once we learn WE were the cause. */

@@ -87,16 +87,40 @@ is uploaded to the Chrome Web Store and **waiting on review**. Nothing is waitin
 - **Backend expansion**, cheapest sign-in first. See *Platform priority* item 3 below.
 - **History sync performance**: the full-history dedup scan every import runs.
 
-## Not supported: iOS / WebKit
+## Not supported, but closer than it was: iOS / WebKit
 
-**e.g. Orion on iOS.** First install there shows no
-onboarding (the `onInstalled` → `tabs.create(onboarding.html)` open is a no-op on
-WebKit) and Google Drive sign-in fails inside the browser's own API bridge
-(`identity.launchWebAuthFlow` is not reliably implemented on iOS WebKit web
-extensions). The Drive option is now feature-gated + fails with a friendly message
-there. Sync itself has run on Orion, and 1.0.2 fixed three WebKit-specific bugs found that
-way, so this is not untested ground. It is still not a supported target: a real iOS/WebKit
-target is its own scoped effort, not a quick fix.
+**e.g. Orion on iOS.** Still not a supported target, and the honest reason is no longer
+"it doesn't work" but "nobody has signed up to keep it working". A field session on
+2026-08-11, Orion against Brave on one WebDAV folder with E2EE on, got all four data types
+syncing. What it also found is that WebKit breaks the assumptions the Chromium code is
+written on, in ways the test suite cannot see.
+
+What is fixed but **not yet verified on the device**, both from that session:
+
+- **Two roots answering to one kind.** Orion has a "Bookmarks Bar" *and* a "Favorites",
+  and the WebKit title override made both of them the bar, so arriving bookmarks landed in
+  whichever the browser listed first. An 80-bookmark tree arrived as 32 + 48 across the
+  two. The match now prefers the root that is a bar by id and only falls back to the title
+  rescue, which keeps the 1.0.2 fix working on an Orion that has no id-1 bar.
+- **One open per gesture, not per call.** WebKit grants a click a single programmatic
+  open. Session restore was spending it on a probe tab and then rescuing the rest with a
+  `windows.create` that was swallowed just as silently, so a 10-tab session restored as 1.
+  The engine is now settled before the gesture is spent, seeded from the platform and
+  remembered in `konode_tabs_single_open`. The suite stayed green through all of this
+  because the fake exempted `windows.create` from the blocker; it no longer does.
+
+What is still genuinely missing:
+
+- **Onboarding never opens.** The `onInstalled` → `tabs.create(onboarding.html)` open is a
+  no-op on WebKit, so a first install has to be set up by opening Settings by hand. This is
+  the one gap that keeps iOS from being merely "a browser we support".
+- **Google Drive sign-in fails** inside the browser's own API bridge
+  (`identity.launchWebAuthFlow` is not reliably implemented on iOS WebKit web extensions).
+  Feature-gated, with a message pointing at GitHub or WebDAV. WebDAV is verified there;
+  GitHub is untested.
+
+A real iOS/WebKit target is still its own scoped effort. The difference is that the
+remaining list is now short and specific.
 
 ## Platform priority (set 2026-07-10; items 1 and 2 have since shipped)
 Sequenced by where our value prop is strongest, not by raw browser size:

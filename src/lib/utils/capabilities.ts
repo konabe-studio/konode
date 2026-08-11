@@ -231,6 +231,29 @@ export async function promptsForPermissions(): Promise<boolean> {
 export function resetCapabilityCache(): void {
   promptsCache = undefined;
   androidCache = undefined;
+  iosCache = undefined;
+}
+
+let iosCache: boolean | undefined;
+/**
+ * iOS, where every browser is WebKit underneath (Orion, Safari, and the rest).
+ *
+ * Only a HINT, never a gate: it lets the first session restore on a WebKit engine take
+ * the single-open path instead of learning it the expensive way. If it answers wrong in
+ * either direction, `importSession` measures the truth and remembers it, so the cost of
+ * being wrong is one restore, not a broken feature.
+ */
+export async function isIOS(): Promise<boolean> {
+  if (iosCache !== undefined) return iosCache;
+  try {
+    const info = await browser.runtime.getPlatformInfo();
+    // Not in the typed PlatformOs union (which predates any iOS port), but it is what a
+    // WebKit build answers, so compare as a string rather than narrowing it away.
+    iosCache = String(info.os) === "ios";
+  } catch {
+    iosCache = /iphone|ipad|ipod/i.test(globalThis.navigator?.userAgent ?? "");
+  }
+  return iosCache;
 }
 
 let androidCache: boolean | undefined;

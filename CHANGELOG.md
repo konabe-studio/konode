@@ -20,6 +20,24 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **On Orion, your bookmarks were being split between two places.** Orion keeps both a
+  "Bookmarks Bar" and a "Favorites", and Konode recognised both of them as the bookmarks
+  bar. Which one an arriving bookmark went into came down to the order Orion happened to
+  list them in, so the same folder could end up existing in both, with its contents
+  divided. On a real 80-bookmark tree it arrived as 32 in one and 48 in the other. Nothing
+  was ever lost, but the tree was torn in half. Arriving bookmarks now go to the real
+  bookmarks bar, consistently. A related case is fixed with it: Konode no longer treats
+  Chrome's "Mobile bookmarks" and Orion's "Favorites" as the same place, which it did
+  because the two browsers happen to number them alike.
+- **Restoring a session on Orion brought back a single tab.** Orion allows one tab or
+  window to open per click, and Konode spent that one allowance checking whether it was
+  allowed to open more, leaving nothing to open the rest with. A 10-tab session arrived as
+  1 tab, silently, with nothing in the log to explain it. Konode now settles the question
+  before it opens anything, so the whole session arrives in one window. On a browser it
+  hasn't met before, the first restore may still fall short, and it now says so and gets
+  it right from then on. Chrome, Brave and Firefox are unaffected and keep restoring into
+  the window you are already in, pinned tabs still pinned.
+
 - **An unfinished translation no longer fails the build.** The check that stops a
   translation from losing a `$COUNT$`, and taking the number out of the sentence with it,
   treated a string nobody had translated yet as a loss. Every language still in progress

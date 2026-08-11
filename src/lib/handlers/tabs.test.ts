@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { importSession, exportCurrentTabs } from "@/lib/handlers/tabs-handler";
+import { getSingleTabOpenLimit, setSingleTabOpenLimit } from "@/lib/utils/storage";
+import { resetCapabilityCache } from "@/lib/utils/capabilities";
 import type { SyncSession } from "@/lib/types";
 
 // Uses the in-memory chrome.tabs / chrome.windows fakes from test/setup.ts.
@@ -92,7 +94,7 @@ describe("exportCurrentTabs — only plain, non-secret web pages leave the devic
 // switch and its record of created windows. See test/setup.ts.
 const tabsFake = chrome.tabs as unknown as { __popupBlocked: boolean };
 const windowsFake = chrome.windows as unknown as {
-  __created: () => Array<{ urls: string[]; focused: boolean }>;
+  __created: () => Array<{ urls: string[]; focused: boolean; blocked: boolean }>;
 };
 
 describe("restoring a session lands in the window you're already in", () => {
@@ -122,23 +124,6 @@ describe("restoring a session lands in the window you're already in", () => {
     expect(tabs.map((t) => t.pinned)).toEqual([false, true]);
   });
 
-  it("still restores every tab on an engine that blocks the second one", async () => {
-    // Orion is not hypothetical — session restore works there with a backend you can sign
-    // into on that engine (Koofr/WebDAV). Its blocker SILENTLY swallows tab 2 onward, so
-    // the return value looks like success and only a tab count can catch it.
-    tabsFake.__popupBlocked = true;
-
-    await importSession(withPinned(["https://a.com/", "https://b.com/", "https://c.com/"], []));
-
-    expect((await chrome.tabs.query({})).map((t) => t.url).sort()).toEqual([
-      "https://a.com/", "https://b.com/", "https://c.com/",
-    ]);
-    const wins = windowsFake.__created();
-    expect(wins).toHaveLength(1);
-    expect(wins[0].urls).toEqual(["https://b.com/", "https://c.com/"]); // the ones that didn't land
-    expect(wins[0].focused).toBe(true); // it used to open unfocused, behind everything
-  });
-
   it("doesn't open a window for a single-tab session on a blocking engine", async () => {
     // The first tab is the one every engine allows, so there is nothing to fall back to.
     tabsFake.__popupBlocked = true;
@@ -147,5 +132,65 @@ describe("restoring a session lands in the window you're already in", () => {
 
     expect(windowsFake.__created()).toEqual([]);
     expect((await chrome.tabs.query({})).map((t) => t.url)).toEqual(["https://only.com/"]);
+  });
+
+  it("remembers that this engine is fine, so later restores skip the measurement", async () => {
+    await importSession(withPinned(["https://a.com/", "https://b.com/"], []));
+    expect(await getSingleTabOpenLimit()).toBe(false);
+  });
+});
+
+// WebKit's allowance is one open per USER GESTURE, not one per method: spending it on the
+// first tab leaves nothing for a windows.create rescue, which is then swallowed exactly
+// like the tab was. Measuring after the fact therefore cannot work, and the field proved
+// it — a 10-tab session restored as 1 tab on Orion while this suite was green, because the
+// fake used to exempt windows.create from the blocker.
+describe("a session restore on an engine that allows one open per click", () => {
+  const many = (n: number): SyncSession => ({
+    id: "s1", device_id: "peer", savedAt: "2026-07-21T00:00:00.000Z", label: "Peer session",
+    tabs: Array.from({ length: n }, (_, i) => ({ url: `https://s${i}.com/`, pinned: false })),
+  });
+
+  it("opens all of them in ONE window once the limit is known", async () => {
+    await setSingleTabOpenLimit(true);
+    tabsFake.__popupBlocked = true;
+
+    await importSession(many(10));
+
+    const wins = windowsFake.__created();
+    expect(wins).toHaveLength(1);
+    expect(wins[0].urls).toHaveLength(10); // the whole session, not just the tail
+    expect(wins[0].blocked).toBe(false); // the allowance went to the call that carries them all
+    expect(await chrome.tabs.query({})).toHaveLength(10);
+  });
+
+  it("takes the iOS hint before it has ever measured, so the FIRST restore works", async () => {
+    const runtime = chrome.runtime as unknown as { getPlatformInfo: () => Promise<{ os: string }> };
+    const realPlatform = runtime.getPlatformInfo;
+    runtime.getPlatformInfo = () => Promise.resolve({ os: "ios" });
+    resetCapabilityCache();
+    tabsFake.__popupBlocked = true;
+
+    try {
+      await importSession(many(10));
+      expect(await chrome.tabs.query({})).toHaveLength(10);
+      expect(windowsFake.__created()[0].urls).toHaveLength(10);
+    } finally {
+      runtime.getPlatformInfo = realPlatform;
+      resetCapabilityCache();
+    }
+  });
+
+  it("degrades on an unrecognised blocking engine, but records it so the next one is right", async () => {
+    // Nothing stored and the platform doesn't admit to being WebKit: the only way to learn
+    // is to spend the gesture, so this restore really does lose tabs. What must NOT happen
+    // is losing them again every time.
+    tabsFake.__popupBlocked = true;
+
+    await importSession(many(10));
+
+    expect(await chrome.tabs.query({})).toHaveLength(1); // the honest, measured outcome
+    expect(windowsFake.__created()[0].blocked).toBe(true); // the rescue was swallowed too
+    expect(await getSingleTabOpenLimit()).toBe(true); // and that is why the next one works
   });
 });

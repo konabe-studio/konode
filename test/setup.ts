@@ -82,23 +82,28 @@ resetHistory();
 
 // ─── chrome.tabs / chrome.windows in-memory fake ───────────────────────────
 //
-// `__popupBlocked` models WebKit/Orion: only the FIRST programmatic tab is allowed and
-// every later tabs.create is SILENTLY swallowed — it resolves with a Tab object and opens
-// nothing. That silence is the whole difficulty (a thrown error would be easy), and the
-// old fake couldn't express it, so the 1.0.2 workaround and its cost were both untestable.
-// windows.create is one user-initiated action, so it is never blocked.
+// `__popupBlocked` models WebKit/Orion: the click buys ONE programmatic open and every
+// one after it is SILENTLY swallowed — it resolves with a real-looking object and opens
+// nothing. That silence is the whole difficulty; a thrown error would be easy.
+//
+// The allowance is spent by tabs.create AND windows.create alike, because it belongs to
+// the user gesture, not to the method. An earlier version of this fake exempted
+// windows.create ("one user-initiated action, so it is never blocked"), and that single
+// wrong assumption is why a real regression stayed invisible: the code under test spent
+// the allowance on the first tab and then rescued the rest with a windows.create that the
+// fake always honoured and Orion always swallowed. The suite was green while a 10-tab
+// session restored as 1 tab in the field.
 let openTabs = [];
 let windowsCreated = [];
+let programmaticOpens = 0;
+const allowanceSpent = () => tabsApi.__popupBlocked && programmaticOpens > 1;
 const tabsApi = {
   __popupBlocked: false,
-  __programmaticTabs: 0,
   query: () => Promise.resolve(openTabs.slice()),
   create: (props = {}) => {
     const t = { id: openTabs.length + 1, url: props.url, pinned: !!props.pinned, active: props.active ?? true };
-    tabsApi.__programmaticTabs++;
-    if (tabsApi.__popupBlocked && tabsApi.__programmaticTabs > 1) {
-      return Promise.resolve(t); // resolves, opens nothing — exactly the hard case
-    }
+    programmaticOpens++;
+    if (allowanceSpent()) return Promise.resolve(t); // resolves, opens nothing
     openTabs.push(t);
     return Promise.resolve(t);
   },
@@ -106,7 +111,9 @@ const tabsApi = {
 const windowsApi = {
   create: (props = {}) => {
     const urls = Array.isArray(props.url) ? props.url : props.url != null ? [props.url] : [];
-    windowsCreated.push({ urls, focused: !!props.focused });
+    programmaticOpens++;
+    windowsCreated.push({ urls, focused: !!props.focused, blocked: allowanceSpent() });
+    if (allowanceSpent()) return Promise.resolve({ id: 1, focused: !!props.focused, tabs: [] });
     const tabs = urls.map((u) => { const t = { id: openTabs.length + 1, url: u }; openTabs.push(t); return t; });
     return Promise.resolve({ id: 1, focused: !!props.focused, tabs });
   },
@@ -116,7 +123,7 @@ function resetTabs() {
   openTabs = [];
   windowsCreated = [];
   tabsApi.__popupBlocked = false;
-  tabsApi.__programmaticTabs = 0;
+  programmaticOpens = 0;
 }
 resetTabs();
 
