@@ -1131,5 +1131,70 @@
   },
   "opt_devices_bad_reply": {
     "message": "No se pudo leer la lista de dispositivos."
+  },
+  "popup_setup_title": {
+    "message": "Terminar de configurar Konode"
+  },
+  "popup_setup_body": {
+    "message": "Elige dónde se almacenan tus datos. No se sincroniza ni se sube nada hasta que tú lo decidas."
+  },
+  "popup_setup_cta": {
+    "message": "Iniciar la configuración"
+  },
+  "opt_bulk_delete_desc": {
+    "message": "Una red de seguridad: Si las eliminaciones de un dispositivo par borran más de esta proporción de tus marcadores locales, la fusión las omitirá (protege contra una sincronización corrupta que borre tu árbol de marcadores). Aumenta este valor si sueles eliminar marcadores de forma masiva."
+  },
+  "opt_activity_head_sub": {
+    "message": "Lo que hizo Konode en este dispositivo y los recursos con los que cuenta. Todo calculado aquí: los números, los puntos de restauración y las últimas 200 entradas del registro son locales, y nada de lo que está en esta página se sube jamás a la red."
+  },
+  "opt_devices_section_sub": {
+    "message": "Cada dispositivo con archivos en tu carpeta de sincronización y lo último que subió cada uno. Al eliminar un dispositivo, se borran sus archivos de tu almacenamiento, pero no se eliminan los marcadores de ningún navegador."
+  },
+  "opt_forget_result_one": {
+    "message": "Se eliminó un archivo perteneciente a ‭$LABEL$‬. Si ese navegador aún se encuentra en ejecución, volverá a subirse en cuestión de un minuto y reaparecerá aquí. Esto no es un error: para excluir un dispositivo, primero desactiva Konode en ese dispositivo y luego elimínalo aquí.",
+    "placeholders": {
+      "label": {
+        "content": "$2",
+        "example": "Work laptop"
+      }
+    }
+  },
+  "opt_forget_result_other": {
+    "message": "Se eliminaron ‭$COUNT$‬ archivos pertenecientes a ‭$LABEL$‬. Si ese navegador aún se encuentra en ejecución, volverá a subirse en cuestión de un minuto y reaparecerá aquí. Esto no es un error: para excluir un dispositivo, primero desactiva Konode en ese dispositivo y luego olvídalo aquí.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      },
+      "label": {
+        "content": "$2",
+        "example": "Work laptop"
+      }
+    }
+  },
+  "opt_forget_confirm_one": {
+    "message": "Elimina el único archivo que este dispositivo tiene en tu almacenamiento (‭$TYPES$‬). No se remueve ningún marcador de ningún navegador, ni aquí ni allá. Si ese navegador aún se encuentra en ejecución, volverá a subirse y reaparecerá; para mantenerlo fuera, primero desactiva Konode en ese dispositivo.",
+    "placeholders": {
+      "types": {
+        "content": "$2",
+        "example": "Bookmarks, Sessions"
+      }
+    }
+  },
+  "opt_forget_confirm_other": {
+    "message": "Elimina los ‭$COUNT$‬ archivos que este dispositivo tiene en tu almacenamiento (‭$TYPES$‬). No se remueve ningún marcador de ningún navegador, ni aquí ni allá. Si ese navegador aún se encuentra en ejecución, volverá a subirse y reaparecerá; para mantenerlo fuera, primero desactiva Konode en ese dispositivo.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      },
+      "types": {
+        "content": "$2",
+        "example": "Bookmarks, Sessions"
+      }
+    }
+  },
+  "opt_snapshots_section_sub": {
+    "message": "Copias con marca de tiempo de tus marcadores en el servidor, compartidas por todos tus dispositivos. Al restaurar, se vuelven a agregar los marcadores que falten en este dispositivo (nunca los elimina). Se conservan las 10 más recientes; las más antiguas se eliminan automáticamente y puedes borrar cualquiera de ellas aquí."
   }
 }
