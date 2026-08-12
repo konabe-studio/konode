@@ -1187,5 +1187,14 @@
   },
   "opt_impexp_section": {
     "message": "导入/导出"
+  },
+  "popup_setup_title": {
+    "message": "完成 Konode 的设置"
+  },
+  "popup_setup_body": {
+    "message": "选择您的数据存储位置。在您选择之前，不会同步或上传任何内容。"
+  },
+  "popup_setup_cta": {
+    "message": "开始设置"
   }
 }
