@@ -28,6 +28,8 @@ import {
   acquireSyncLock,
   releaseSyncLock,
   dropRemoteDevice,
+  getRemoteDeviceIds,
+  dropRemoteDevices,
 } from "@/lib/utils/storage";
 import { logger } from "@/lib/utils/logger";
 import { encrypt, decrypt, sha256, verifyPassphrase } from "@/lib/crypto/encryption";
@@ -629,6 +631,68 @@ export class SyncEngine {
 
   // ─── Per-type Sync ────────────────────────────────────────────────────
 
+  /**
+   * Drop cached peers whose file is no longer in the folder.
+   *
+   * `sessions` and `extensions` are device-keyed caches of what each peer last published,
+   * and applyRemote only ever UPSERTS them — nothing ever removed an entry. So "forget this
+   * device", which deletes that device's files, only ever tidied the cache on the machine
+   * that clicked it (issue #14). Every other device went on offering the forgotten one's
+   * session to restore, and went on counting its extensions in "missing on this device",
+   * with nothing left in the folder to justify either.
+   *
+   * The folder is the authority, and the FILE LISTING is the signal — deliberately not the
+   * packets `downloadAll` returned. A peer whose file is present but unreadable (HTTP
+   * error, corrupt JSON, an encryption disagreement) is absent from `peers` too, so
+   * pruning on that would delete a live device's session over a transient 500 and turn a
+   * cosmetic bug into a destructive one. `listDevices` draws the same line for the same
+   * reason: an unreadable file costs a device its name, not its existence.
+   *
+   * Cheap in the steady state: when every cached peer came back in `peers` there is
+   * nothing to explain, so the listing is never fetched at all.
+   */
+  private async pruneVanishedPeers(
+    dataType: DataType,
+    backend: ReturnType<typeof createBackend>,
+    peers: SyncPacket[]
+  ): Promise<void> {
+    const cached = await getRemoteDeviceIds(dataType);
+    if (cached.length === 0) return;
+    const arrived = new Set(peers.map((p) => p.device_id));
+    const unexplained = cached.filter(
+      (id) => id !== this.settings.device_id && !arrived.has(id)
+    );
+    if (unexplained.length === 0) return;
+
+    let names: string[];
+    try {
+      names = await backend.listFiles(`konode_${dataType}_`);
+    } catch (err) {
+      // Not knowing what the folder holds is not evidence that anything left it, and an
+      // emptied popup is the one outcome worth avoiding here. Say so and change nothing.
+      logger.warn(
+        "pruneVanishedPeers",
+        `Couldn't list the ${dataType} files (${err instanceof Error ? err.message : err}), so no cached device was dropped`
+      );
+      return;
+    }
+    const present = new Set(
+      names
+        .map((n) => new RegExp(`^konode_${dataType}_(.+)\\.json$`).exec(n)?.[1])
+        .filter((id): id is string => !!id)
+    );
+    const gone = unexplained.filter((id) => !present.has(id));
+    if (gone.length === 0) return;
+
+    await dropRemoteDevices(dataType, gone);
+    // Worth an event: from the user's side a session or an extension set disappears from
+    // the popup, and the reason (someone forgot that device) happened on another machine.
+    logger.event(
+      "pruneVanishedPeers",
+      `Dropped the cached ${dataType} of ${gone.length} device(s) whose files are no longer in the sync folder`
+    );
+  }
+
   private async syncType(
     dataType: DataType,
     backend: ReturnType<typeof createBackend>,
@@ -648,6 +712,13 @@ export class SyncEngine {
       );
       // Count pulled bytes (the serialized peer payloads) toward the transfer stat.
       for (const p of peers) this.bytesThisSync += p.payload?.length ?? 0;
+
+      // A device we hold a cached session / extension list for, that did NOT arrive here,
+      // may simply be gone from the folder — someone forgot it on another machine. Runs
+      // before the flow decision below because every branch of it can be the one that
+      // matters: forgetting the ONLY other device leaves zero peers, and `manual` never
+      // reaches applyRemote at all.
+      await this.pruneVanishedPeers(dataType, backend, peers);
 
       // 2. Build local payload
       const localPayload = await this.buildPayload(dataType);

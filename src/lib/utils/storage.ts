@@ -595,25 +595,69 @@ export async function setRemoteSession(entry: RemoteSessionEntry): Promise<void>
  * current device-keyed map, the legacy single-object shape, and empty/undefined.
  * Pure so the popup can use it synchronously after a `chrome.storage.local.get`.
  */
+/** The device-keyed peer cache each data type fills. The other two types have none. */
+const REMOTE_CACHE_KEY: Partial<Record<DataType, string>> = {
+  sessions: KEYS.REMOTE_SESSIONS,
+  extensions: KEYS.REMOTE_EXTENSIONS,
+};
+
+/** Removes device ids from one device-keyed cache value, tolerating the legacy shape. */
+function withoutDevices(
+  current: Record<string, unknown> | undefined,
+  deviceIds: string[]
+): Record<string, unknown> {
+  // The legacy single-object shape has no id key to delete; clear it outright when it is
+  // one of the devices being dropped.
+  if (current && typeof current === "object" && "device_id" in current) {
+    const id = (current as { device_id?: string }).device_id;
+    return id && deviceIds.includes(id) ? {} : current;
+  }
+  const next = { ...(current ?? {}) };
+  for (const id of deviceIds) delete next[id];
+  return next;
+}
+
 /**
  * Forget one device in both device-keyed caches.
  *
  * Local only: these are this device's view of its peers. Without it, the popup keeps
- * listing a session and an extension set for a device whose files are gone.
+ * listing a session and an extension set for a device whose files are gone. Being local is
+ * also why it isn't enough on its own — every OTHER device has the same two caches and
+ * never saw the click, which is what `dropRemoteDevices` exists to settle.
  */
 export async function dropRemoteDevice(deviceId: string): Promise<void> {
   for (const key of [KEYS.REMOTE_SESSIONS, KEYS.REMOTE_EXTENSIONS]) {
-    await updateKey<Record<string, unknown>>(key, (current) => {
-      // The legacy single-object shape has no id key to delete; clear it outright when it
-      // is the device being forgotten.
-      if (current && typeof current === "object" && "device_id" in current) {
-        return (current as { device_id?: string }).device_id === deviceId ? {} : current;
-      }
-      const next = { ...(current ?? {}) };
-      delete next[deviceId];
-      return next;
-    }, {});
+    await updateKey<Record<string, unknown>>(key, (c) => withoutDevices(c, [deviceId]), {});
   }
+}
+
+/**
+ * The peer device ids this device currently caches for a type ([] for a type with no cache).
+ */
+export async function getRemoteDeviceIds(dataType: DataType): Promise<string[]> {
+  const key = REMOTE_CACHE_KEY[dataType];
+  if (!key) return [];
+  const raw = (await browser.storage.local.get(key))[key];
+  if (!raw || typeof raw !== "object") return [];
+  // The legacy single-object shape carries its one id in a field, not in the keys.
+  if ("device_id" in (raw as Record<string, unknown>)) {
+    const id = (raw as { device_id?: string }).device_id;
+    return id ? [id] : [];
+  }
+  return Object.keys(raw as Record<string, unknown>);
+}
+
+/**
+ * Drop devices from ONE type's cache.
+ *
+ * Deliberately not `dropRemoteDevice`, which clears both: a missing
+ * `konode_sessions_<id>.json` says nothing about that device's extension list, and
+ * throwing away a cache we were never told about would be its own version of this bug.
+ */
+export async function dropRemoteDevices(dataType: DataType, deviceIds: string[]): Promise<void> {
+  const key = REMOTE_CACHE_KEY[dataType];
+  if (!key || deviceIds.length === 0) return;
+  await updateKey<Record<string, unknown>>(key, (c) => withoutDevices(c, deviceIds), {});
 }
 
 export function normalizeRemoteExtensions(raw: unknown): SyncExtension[] {

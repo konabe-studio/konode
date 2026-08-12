@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { SyncEngine, statusAfterSync } from "@/lib/sync/sync-engine";
 import { BADGE_TEXT, BADGE_COLORS } from "@/lib/constants";
 import { createKeyVerifier } from "@/lib/crypto/encryption";
-import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState, setTombstones, acquireSyncLock, KEYS } from "@/lib/utils/storage";
+import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState, setTombstones, acquireSyncLock, KEYS, getRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/storage";
 import type {
   IBackend,
   DataType,
@@ -11,6 +11,8 @@ import type {
   SyncSettings,
   SyncBookmark,
   BookmarkPayload,
+  RemoteSessionEntry,
+  SyncSession,
 } from "@/lib/types";
 
 // Integration test for SyncEngine.syncType against an in-memory backend +
@@ -1297,5 +1299,142 @@ describe("SyncEngine — putting back our own file after it has gone from the fo
 
     expect(backend.uploads).toHaveLength(0);
     expect(await announcements()).toBe(0);
+  });
+});
+
+describe("SyncEngine.syncType — a forgotten device must not linger on the other machines", () => {
+  // Issue #14. "Forget this device" deletes that device's files AND clears the two
+  // device-keyed caches — but only on the machine that clicked it, because those caches are
+  // local. On every other device applyRemote only ever UPSERTED them, so nothing removed an
+  // entry, ever: the forgotten machine went on offering its session to restore and went on
+  // counting its extensions in "missing on this device", with nothing left in the folder to
+  // justify either.
+
+  function session(deviceId: string): SyncSession {
+    return {
+      id: `s-${deviceId}`,
+      device_id: deviceId,
+      savedAt: new Date().toISOString(),
+      label: deviceId,
+      tabs: [{ url: `https://${deviceId}.example/`, pinned: false }],
+    };
+  }
+
+  /** What this device has cached about a peer — the state a Forget elsewhere leaves behind. */
+  async function cacheSessionOf(deviceId: string): Promise<void> {
+    const entry: RemoteSessionEntry = {
+      device_id: deviceId,
+      timestamp: new Date().toISOString(),
+      session: session(deviceId),
+    };
+    await chrome.storage.local.set({ [KEYS.REMOTE_SESSIONS]: { [deviceId]: entry } });
+  }
+
+  /** A peer's sessions file, in the folder and readable — the shape upload() writes. */
+  async function publishSessionOf(
+    engine: SyncEngine, backend: FakeBackend, deviceId: string
+  ): Promise<void> {
+    const packet = await priv(engine).buildPacket("sessions", session(deviceId));
+    packet.device_id = deviceId; // the checksum is over the payload, so it stays valid
+    backend.files.set(`sessions_${deviceId}`, packet);
+    backend.blobs.set(`konode_sessions_${deviceId}.json`, JSON.stringify(packet));
+  }
+
+  async function cachedSessionDevices(): Promise<string[]> {
+    return (await getRemoteSessions()).map((e) => e.device_id).sort();
+  }
+
+  it("drops the cached session of a device whose file has left the folder", async () => {
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    await cacheSessionOf("forgotten");
+    await publishSessionOf(engine, backend, "live"); // a second peer, still syncing
+
+    await priv(engine).syncType("sessions", backend, DEFAULT_STATE);
+
+    // The live peer is folded in as always; the forgotten one is gone from the popup.
+    expect(await cachedSessionDevices()).toEqual(["live"]);
+  });
+
+  it("drops it even when the forgotten device was the only other one", async () => {
+    // Zero peers takes its own branch in syncType, and it is the likeliest case of all:
+    // two devices, you retire one.
+    const engine = makeEngine();
+    const backend = new FakeBackend(); // an empty folder
+    await cacheSessionOf("forgotten");
+
+    await priv(engine).syncType("sessions", backend, DEFAULT_STATE);
+
+    expect(await cachedSessionDevices()).toEqual([]);
+  });
+
+  it("keeps a device whose file is still there but could not be read", async () => {
+    // THE TRAP, and the reason the prune reads the folder listing rather than the packets
+    // downloadAll returned. An unreadable file — HTTP error, corrupt JSON, an encryption
+    // disagreement — is absent from `peers` exactly like a file that is gone. Pruning on
+    // that signal would delete a live device's session over a transient 500, turning a
+    // cosmetic bug into a destructive one.
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    await cacheSessionOf("unreadable");
+    backend.blobs.set("konode_sessions_unreadable.json", "{ truncated"); // listed, unparseable
+
+    await priv(engine).syncType("sessions", backend, DEFAULT_STATE);
+
+    expect(await cachedSessionDevices()).toEqual(["unreadable"]);
+  });
+
+  it("drops nothing when the folder listing itself fails", async () => {
+    // Not knowing what the folder holds is not evidence that anything left it, and an
+    // emptied popup is the one outcome worth avoiding here.
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    await cacheSessionOf("maybe-gone");
+    backend.listFiles = () => Promise.reject(new Error("503 Service Unavailable"));
+
+    await priv(engine).syncType("sessions", backend, DEFAULT_STATE);
+
+    expect(await cachedSessionDevices()).toEqual(["maybe-gone"]);
+  });
+
+  it("leaves the extension cache alone when only the sessions file is missing", async () => {
+    // A missing konode_sessions_<id>.json says nothing about that device's extension list,
+    // which is a separate file with a separate cache. Clearing both on this evidence would
+    // be its own version of the same bug.
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    await cacheSessionOf("partial");
+    await chrome.storage.local.set({
+      [KEYS.REMOTE_EXTENSIONS]: {
+        partial: {
+          device_id: "partial",
+          timestamp: new Date().toISOString(),
+          extensions: [{ id: "ext-1", name: "Kept", version: "1", enabled: true, storeUrl: "" }],
+        },
+      },
+    });
+
+    await priv(engine).syncType("sessions", backend, DEFAULT_STATE);
+
+    expect(await cachedSessionDevices()).toEqual([]);
+    const raw = (await chrome.storage.local.get(KEYS.REMOTE_EXTENSIONS))[KEYS.REMOTE_EXTENSIONS];
+    expect(normalizeRemoteExtensions(raw).map((e) => e.id)).toEqual(["ext-1"]);
+  });
+
+  it("does not list the folder at all when every cached peer arrived", async () => {
+    // The steady state, which is every sync but the rare one: nothing is unexplained, so
+    // there is nothing to ask the folder about and the extra round trip never happens.
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    await publishSessionOf(engine, backend, "live");
+    await cacheSessionOf("live");
+    let listings = 0;
+    const realListFiles = backend.listFiles.bind(backend);
+    backend.listFiles = (prefix: string) => { listings++; return realListFiles(prefix); };
+
+    await priv(engine).syncType("sessions", backend, DEFAULT_STATE);
+
+    expect(listings).toBe(0);
+    expect(await cachedSessionDevices()).toEqual(["live"]);
   });
 });

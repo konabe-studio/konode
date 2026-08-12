@@ -25,6 +25,17 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **A device you forgot went on haunting your other machines.** Forgetting a device deletes
+  its files from your storage, and the machine you did it on stopped listing it straight
+  away. Every other device carried on exactly as before: the forgotten machine's tabs were
+  still offered for you to restore, and its extensions still counted toward what is
+  "missing on this device", with nothing left in your storage to justify either. Each device
+  now checks what it remembers about the others against what your storage actually holds,
+  and drops whatever is no longer there. Not at the same moment, though: your other devices
+  notice on their next sync, not the instant you click Forget. A device whose file simply
+  couldn't be read that time is left alone, because "I couldn't reach it" and "it's gone"
+  are not the same thing, and only one of them is a reason to forget a machine you still
+  use.
 - **On Orion, your bookmarks were being split between two places.** Orion keeps both a
   "Bookmarks Bar" and a "Favorites", and Konode recognised both of them as the bookmarks
   bar. Which one an arriving bookmark went into came down to the order Orion happened to
