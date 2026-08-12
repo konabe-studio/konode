@@ -58,8 +58,10 @@ on any Chromium browser and on Firefox.
   through the browser's own `chrome.i18n`, so no library and no bundle cost. The popup and
   the setup wizard shipped in 1.2.0; Settings was the last surface holding hardcoded
   English and is now translated too, unreleased, due with 1.3.0. English, Hungarian and
-  German are complete at 305 strings each. `i18n.test.ts` guards the catalogues: a shipped
-  language must translate every key, and no language may drop or invent a placeholder.
+  German are complete at 308 strings each. `i18n.test.ts` guards the catalogues: a shipped
+  language must translate every key, and no language may drop a placeholder English has or
+  invent one it doesn't. A key nobody has translated yet is work in progress, not a
+  failure, so a language still being worked on cannot break the build.
 - **Translation opened to volunteers** on
   [Hosted Weblate](https://hosted.weblate.org/projects/konode/), which is where Spanish,
   Chinese (Simplified), Italian and Estonian came from.
@@ -80,7 +82,7 @@ The gap is the only thing outstanding on the store side, and it is already movin
 is uploaded to the Chrome Web Store and **waiting on review**. Nothing is waiting on us.
 
 ## Next
-- **Spanish and Chinese (Simplified) finished**, for 1.3.0. Both stand at 123 of 305
+- **Spanish and Chinese (Simplified) finished**, for 1.3.0. Both stand at 123 of 308
   strings today. Italian (55) and Estonian (22) are open volunteer work with no target
   date. A language joins `SHIPPED` in `i18n.test.ts` only once it is complete and
   reviewed, which is the last step of shipping it.
@@ -95,7 +97,8 @@ is uploaded to the Chrome Web Store and **waiting on review**. Nothing is waitin
 syncing. What it also found is that WebKit breaks the assumptions the Chromium code is
 written on, in ways the test suite cannot see.
 
-What is fixed but **not yet verified on the device**, both from that session:
+What is fixed but **not yet verified on the device**. The first two came out of that
+session; the third is what the session made obvious:
 
 - **Two roots answering to one kind.** Orion has a "Bookmarks Bar" *and* a "Favorites",
   and the WebKit title override made both of them the bar, so arriving bookmarks landed in
@@ -108,19 +111,27 @@ What is fixed but **not yet verified on the device**, both from that session:
   The engine is now settled before the gesture is spent, seeded from the platform and
   remembered in `konode_tabs_single_open`. The suite stayed green through all of this
   because the fake exempted `windows.create` from the blocker; it no longer does.
+- **No way back into setup.** Onboarding was opened from exactly one place, the
+  `onInstalled` → `tabs.create(onboarding.html)` call, and on WebKit that open is a no-op.
+  A first install therefore showed nothing: no wizard, and a popup saying only "No backend
+  configured", so setup had to be found by opening Settings and knowing what to look for.
+  The popup now offers to finish setting up until a provider has been chosen, and opens the
+  wizard from a **click**, which is the one allowance WebKit reliably honours. This was the
+  gap that kept iOS from being merely "a browser we support". It is also the item on this
+  list that has never run on Orion at all, since a first install is the only thing that
+  shows it.
 
 What is still genuinely missing:
 
-- **Onboarding never opens.** The `onInstalled` → `tabs.create(onboarding.html)` open is a
-  no-op on WebKit, so a first install has to be set up by opening Settings by hand. This is
-  the one gap that keeps iOS from being merely "a browser we support".
 - **Google Drive sign-in fails** inside the browser's own API bridge
   (`identity.launchWebAuthFlow` is not reliably implemented on iOS WebKit web extensions).
   Feature-gated, with a message pointing at GitHub or WebDAV. WebDAV is verified there;
   GitHub is untested.
 
-A real iOS/WebKit target is still its own scoped effort. The difference is that the
-remaining list is now short and specific.
+A real iOS/WebKit target is still its own scoped effort, and the honest blocker is now
+verification rather than code: three fixes are written and none has been run on the device.
+What is left after that is one sign-in method that already degrades to a working
+alternative.
 
 ## Platform priority (set 2026-07-10; items 1 and 2 have since shipped)
 Sequenced by where our value prop is strongest, not by raw browser size:
