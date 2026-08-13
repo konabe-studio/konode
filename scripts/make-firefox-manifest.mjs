@@ -28,15 +28,20 @@ const repoRoot = resolve(here, "..");
 const srcPath = resolve(repoRoot, "public/manifest.json");
 const outPath = resolve(repoRoot, process.argv[2] ?? "dist-firefox/manifest.json");
 
-// Firefox add-on id. An email-form id is the convention when you don't own a domain —
-// and konode.org is NOT registered and not ours (the domain + marketing site were
-// dropped 2026-07-16), so the earlier `konode@konode.org` was a leftover pointing at a
-// domain that will never exist. `konabe@proton.me` is the contact address already used
-// everywhere else (README, PRIVACY.md, the options Feedback link).
+// Firefox add-on id. An email-form id is the convention when you don't own a domain, and
+// when this was chosen konode.org was neither registered nor ours (the domain + marketing
+// site were dropped 2026-07-16), so the earlier `konode@konode.org` pointed at a domain
+// that did not exist. `konabe@proton.me` is the contact address already used everywhere
+// else (README, PRIVACY.md, the options Feedback link).
 //
-// STABLE once AMO has a listing: a different id there is a brand-new add-on that loses
-// its reviews and users. Nothing is uploaded to AMO yet (2026-07-28), so changing it is
-// still free — after the first upload it is not.
+// konode.org IS ours again since, and serves the site. That changes NOTHING here.
+//
+// DO NOT "tidy" this into `konode@konode.org` now that the domain resolves. The id is
+// STABLE once AMO has a listing: a different id is a brand-new add-on that loses its
+// reviews, its ratings and every existing user's updates. AMO has listed Konode since
+// 2026-08-04, so the window in which this was free to change is closed. An earlier version
+// of this comment said "nothing is uploaded to AMO yet, so changing it is still free",
+// which was true when written and would now be an expensive thing to believe.
 //
 // It is ALSO locked to the Google OAuth client, see driveRedirectFor() below.
 const GECKO_ID = "konabe@proton.me";
