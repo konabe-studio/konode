@@ -1,0 +1,43 @@
+# Tells konode-site that the documents it renders have moved.
+#
+# roadmap.html on the site is a rendering of ROADMAP.md and CHANGELOG.md in this
+# repository, and it has drifted from them before: the site told Firefox users to
+# build from source for months after the add-on went live on AMO. The site already
+# checks daily on its own; this only makes it check now, while whoever changed the
+# document is still holding the context.
+#
+# The site repo decides what to do about it. All this does is knock.
+#
+# Needs SITE_DISPATCH_TOKEN: a fine-grained PAT owned by the account that owns
+# benstone326/konode-site, scoped to that one repository, with Contents: read and
+# write — which is what POST /repos/{owner}/{repo}/dispatches requires, and the
+# narrowest permission GitHub offers for it.
+#
+# When that token expires, this job fails and mails you. The site's own daily cron
+# keeps working meanwhile, so an expired token costs a day of latency, not the check.
+name: Tell the site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ROADMAP.md
+      - CHANGELOG.md
+  release:
+    types: [published]
+  # So the wiring can be tested without editing a document.
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Knock on konode-site
+        env:
+          GH_TOKEN: ${{ secrets.SITE_DISPATCH_TOKEN }}
+        run: |
+          gh api repos/benstone326/konode-site/dispatches \
+            --method POST \
+            -f event_type=upstream-docs-changed
