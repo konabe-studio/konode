@@ -1082,7 +1082,7 @@
     "message": "Importar"
   },
   "opt_import_done": {
-    "message": "Listo"
+    "message": "Hecho"
   },
   "opt_import_error": {
     "message": "Error"
