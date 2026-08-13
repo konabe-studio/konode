@@ -1019,7 +1019,7 @@
     }
   },
   "opt_log_errors_only_label": {
-    "message": "Csak a hibák"
+    "message": "Csak a hibák mutatása"
   },
   "opt_log_errors_only_desc": {
     "message": "A sikeres bejegyzések elrejtése."
@@ -1037,7 +1037,7 @@
     "message": "Titkosítás"
   },
   "opt_e2ee_desc": {
-    "message": "AES-256-GCM. Az adatok a jelmondatoddal titkosítva hagyják el ezt az eszközt, így a tárhelyszolgáltató soha nem tudja elolvasni őket. Őrizd meg a jelmondatot: nélküle a titkosított adatok nem visszanyerhetők, és minden eszközön ugyanazt kell használni."
+    "message": "AES-256-GCM. Az adatok a jelmondatoddal titkosítva hagyják el ezt az eszközt, így a tárhelyszolgáltató soha nem tudja elolvasni őket. Őrizd meg a jelmondatot: nélküle a titkosított adatok nem nyerhetők vissza és minden eszközön ugyanazt kell használni."
   },
   "opt_e2ee_disable_confirm": {
     "message": "Kikapcsolod a titkosítást? A szinkronizált adataid a következő szinkronizálástól $UNENCRYPTED$ lesznek a tárhelyeden. Ezután minden eszközön ki kell kapcsolni.",
@@ -1085,7 +1085,7 @@
     }
   },
   "opt_advanced_head": {
-    "message": "Speciális"
+    "message": "Haladó"
   },
   "opt_advanced_head_sub": {
     "message": "Biztonsági mentések, visszajelzés és fejlesztői beállítások."
@@ -1171,7 +1171,7 @@
     "message": "Írj nekünk"
   },
   "opt_email_desc": {
-    "message": "Bármihez, amit inkább nem tennél közzé nyilvánosan."
+    "message": "Bármit, amit inkább nem tennél közzé nyilvánosan."
   },
   "opt_developer_section": {
     "message": "Fejlesztői"
@@ -1180,7 +1180,7 @@
     "message": "Hibakeresési mód"
   },
   "opt_debug_desc": {
-    "message": "Részletes naplózás a böngésző konzoljába és az Aktivitás fülre, hogy meg tudd osztani. Kapcsold ki, ha végeztél."
+    "message": "Részletes naplózás a böngésző konzoljába és az Aktivitás fülön, hogy meg tudd osztani. Kapcsold ki, ha végeztél."
   },
   "opt_about_section": {
     "message": "Névjegy"
