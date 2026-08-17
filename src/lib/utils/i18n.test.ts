@@ -31,12 +31,19 @@ const en = catalogue("en");
  * progress, and failing the build over it would only teach us to reject the contribution.
  *
  * Every OTHER rule below still applies to every language: no invented keys, no dropped
- * placeholders. Those are correctness. Only the "finish it" rule is a policy, and it binds
- * the languages the maintainer can actually read and vouch for.
+ * placeholders. Those are correctness. Only the "finish it" rule is a policy, and the bar
+ * it sets is completeness: 100% of the English keys, translated by someone who speaks the
+ * language.
  *
- * Adding a language here is the last step of shipping it, after review.
+ * It used to also require that the maintainer could read the language and vouch for it,
+ * which was a bar only en/hu/de could ever clear and which would have held finished work
+ * out of a release for no reason anyone could act on. Weblate's translators are native
+ * speakers and their work is reviewable there by other speakers, which is a better check
+ * than a maintainer squinting at a language they don't read.
+ *
+ * Adding a language here is the last step of shipping it.
  */
-const SHIPPED = ["hu", "de"];
+const SHIPPED = ["hu", "de", "es", "zh_Hans"];
 
 /**
  * Every `.ts`/`.tsx` file under src/ that could ASK for a message — tests excluded, and

@@ -39,7 +39,7 @@ on any Chromium browser and on Firefox.
   with the manifest `key` stripped (the CWS rejects `key` on a first upload) while
   `dist/` keeps it for unpacked dev; pushing a `v*` tag runs a GitHub Actions release
   that attaches both packaged zips, Chrome and Firefox (source builds, no client secret).
-  Released through v1.2.1.
+  Released through v1.3.0.
 - **Pre-submission hardening**: a peer's extension `storeUrl` is rebuilt locally
   from the id (a forged URL was a phishing vector); onboarding requests all optional
   permissions in one call (a second request lost the user gesture); the dead
@@ -54,11 +54,11 @@ on any Chromium browser and on Firefox.
 - **Firefox shipped** (1.2.0): the build is in the release and the add-on is live on
   Firefox Add-ons. Verified across Firefox, Brave and Helium on one sync folder, with
   history arriving on the original visit dates, which only Firefox permits.
-- **The interface translated** (1.2.0, finished on `main` after 1.2.1): every screen reads
+- **The interface translated** (1.2.0, completed in 1.3.0): every screen reads
   through the browser's own `chrome.i18n`, so no library and no bundle cost. The popup and
   the setup wizard shipped in 1.2.0; Settings was the last surface holding hardcoded
-  English and is now translated too, unreleased, due with 1.3.0. English, Hungarian and
-  German are complete at 308 strings each. `i18n.test.ts` guards the catalogues: a shipped
+  English and went out with 1.3.0. English, Hungarian, German, Spanish and Chinese
+  (Simplified) are complete at 308 strings each. `i18n.test.ts` guards the catalogues: a shipped
   language must translate every key, and no language may drop a placeholder English has or
   invent one it doesn't. A key nobody has translated yet is work in progress, not a
   failure, so a language still being worked on cannot break the build.
@@ -70,24 +70,28 @@ on any Chromium browser and on Firefox.
   propagating. See `CHANGELOG.md`.
 
 ## Now live
-Konode is live on both stores, and the two are one patch apart:
-**Firefox Add-ons serves 1.2.1**, the Chrome Web Store still serves **1.2.0**.
+Konode is live on both stores, and both served **1.2.1** going into this release. The
+Chrome Web Store's review of 1.2.1 cleared, which closed the one-patch gap that had been
+open since 2026-08-07 and was the only thing outstanding on the store side.
 
-- [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/): **1.2.1**, listed
-  since 2026-08-04.
-- Chrome Web Store: **1.2.0**, first published 2026-07-20, item ID
+- [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/): listed since
+  2026-08-04.
+- Chrome Web Store: first published 2026-07-20, item ID
   `mmlfiiimnpnjcjhhbldenpcmnibedkfa`.
 
-The gap is the only thing outstanding on the store side, and it is already moving: 1.2.1
-is uploaded to the Chrome Web Store and **waiting on review**. Nothing is waiting on us.
+**1.3.0 goes to both**, and each reviews on its own schedule, so expect the two to sit a
+version apart again for a few days. Both store uploads are built by hand with Konode's own
+OAuth client compiled in; the zips attached to the release are source builds without it,
+and the two must not be confused.
 
 ## Next
-- **Spanish and Chinese (Simplified) finished**, for 1.3.0. Both stand at 123 of 308
-  strings today. Italian (55) and Estonian (22) are open volunteer work with no target
-  date. A language joins `SHIPPED` in `i18n.test.ts` only once it is complete and
-  reviewed, which is the last step of shipping it.
 - **Backend expansion**, cheapest sign-in first. See *Platform priority* item 3 below.
 - **History sync performance**: the full-history dedup scan every import runs.
+- **More languages.** Japanese, Italian and Estonian are open volunteer work on Weblate
+  with no target date. A language joins `SHIPPED` in `i18n.test.ts` once it is complete,
+  which is the last step of shipping it. Completeness is the whole bar: the translators
+  are native speakers and Weblate is where their work gets reviewed, so a language no
+  maintainer here reads is not thereby held back.
 
 ## Not supported, but closer than it was: iOS / WebKit
 
@@ -97,8 +101,8 @@ is uploaded to the Chrome Web Store and **waiting on review**. Nothing is waitin
 syncing. What it also found is that WebKit breaks the assumptions the Chromium code is
 written on, in ways the test suite cannot see.
 
-What is fixed but **not yet verified on the device**. The first two came out of that
-session; the third is what the session made obvious:
+What is fixed and **shipped in 1.3.0**, but **not yet verified on the device**. The first
+two came out of that session; the third is what the session made obvious:
 
 - **Two roots answering to one kind.** Orion has a "Bookmarks Bar" *and* a "Favorites",
   and the WebKit title override made both of them the bar, so arriving bookmarks landed in
@@ -255,11 +259,14 @@ pitch.
 
 **Chrome Web Store.** 1.0.0 submitted for review on **2026-07-19**, **published
 2026-07-20** (<https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa>).
-**1.2.0 is what the listing serves today**, so it is one patch behind Firefox: 1.2.1 is
-uploaded and in review.
+1.2.1 cleared review after it, and **1.3.0 is submitted on top of it**. Listing copy is
+maintained per language in the dashboard: the name and the short description come from the
+extension's own catalogues and translate themselves, but the long description is entered by
+hand, in each of the languages Konode ships (note the dashboard calls Simplified Chinese
+`zh-CN`, not `zh_Hans`).
 
 **Firefox Add-ons.** Live at <https://addons.mozilla.org/firefox/addon/konode/> since
-**2026-08-04**, first listed with 1.2.0 and **serving 1.2.1 today**. Packaged with
+**2026-08-04**, first listed with 1.2.0, then 1.2.1, with **1.3.0 submitted**. Packaged with
 `npm run package:firefox` and checked with `npm run lint:firefox`. AMO requires a source
 submission, since the build is bundled and minified, and the reviewer rebuilds and diffs
 it.
