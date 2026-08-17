@@ -30,10 +30,9 @@ you thought you had forgotten no longer haunts your other machines.
   to.
 - **Anyone can translate Konode, without touching the code.** Translations are edited on
   [Hosted Weblate](https://hosted.weblate.org/projects/konode/): no git, no pull request,
-  and nothing to install. Japanese, Italian and Estonian are under way there. A language
-  reaches a release once it is complete, so those three are not in this build: a screen
-  that is half translated reads worse than an English one, and working out which half you
-  were given is not something anyone should have to do.
+  and nothing to install. A language reaches a release once it is complete, because a
+  screen that is half translated reads worse than an English one, and working out which
+  half you were given is not something anyone should have to do.
 
 ### Fixed
 
