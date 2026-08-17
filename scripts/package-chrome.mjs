@@ -23,6 +23,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve, join } from "node:path";
 import { tmpdir } from "node:os";
+import { pruneUnshippedLocales } from "./prune-locales.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
@@ -62,6 +63,8 @@ try {
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
     console.log("Stripped `key` from the store manifest (kept in dist/ for dev).");
   }
+
+  pruneUnshippedLocales(join(staging, "_locales"), manifest.default_locale);
 
   // Zip the CONTENTS of the staging dir (cwd: staging) so manifest.json lands at
   // the archive root. -r recurse, -X strip extra file attributes, exclude junk.

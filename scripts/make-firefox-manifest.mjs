@@ -21,7 +21,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import { dirname, resolve, join } from "node:path";
+import { pruneUnshippedLocales } from "./prune-locales.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
@@ -86,6 +87,12 @@ manifest.browser_specific_settings = {
 };
 
 writeFileSync(outPath, JSON.stringify(manifest, null, 2) + "\n");
+
+// Same rule as the Chrome package: ship the finished languages only. AMO accepts a package
+// carrying half-translated locales without complaint, where the Web Store rejects it, so
+// nothing here would have told us — the reason to do it is the users, not the validator.
+pruneUnshippedLocales(join(dirname(outPath), "_locales"), manifest.default_locale);
+
 console.log(`Firefox manifest written → ${outPath}`);
 console.log(`  add-on id:      ${GECKO_ID}`);
 console.log(`  Drive redirect: ${driveRedirectFor(GECKO_ID)}`);

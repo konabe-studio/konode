@@ -41,9 +41,16 @@ const en = catalogue("en");
  * speakers and their work is reviewable there by other speakers, which is a better check
  * than a maintainer squinting at a language they don't read.
  *
- * Adding a language here is the last step of shipping it.
+ * Adding a language to that file is the last step of shipping it.
+ *
+ * The list lives in shipped-languages.json rather than here because the packaging scripts
+ * need the same answer: they drop every unshipped locale from the zip, so a language that
+ * counts as shipped for this test and a language that reaches users would otherwise be two
+ * lists to keep in agreement, and the failure would be silent in both directions.
  */
-const SHIPPED = ["hu", "de", "es", "zh_Hans"];
+const SHIPPED = JSON.parse(
+  readFileSync(resolve(__dirname, "../../../shipped-languages.json"), "utf8")
+) as string[];
 
 /**
  * Every `.ts`/`.tsx` file under src/ that could ASK for a message — tests excluded, and
