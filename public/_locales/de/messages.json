@@ -880,10 +880,10 @@
     }
   },
   "opt_forget": {
-    "message": "Vergessen"
+    "message": "Vergiss es"
   },
   "opt_forget_it": {
-    "message": "Vergessen"
+    "message": "Vergiss es"
   },
   "opt_forget_confirm_one": {
     "message": "Löscht die eine Datei, die dieses Gerät in deinem Speicher hat ($TYPES$). In keinem Browser werden Lesezeichen entfernt, weder hier noch dort. Wenn dieser Browser noch läuft, lädt er sich erneut hoch und erscheint wieder; um ihn draußen zu halten, schalte Konode dort zuerst aus.",

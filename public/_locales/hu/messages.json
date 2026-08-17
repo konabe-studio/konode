@@ -480,7 +480,7 @@
     "message": "Jelszó / app-token"
   },
   "opt_webdav_http_warn": {
-    "message": "Ez egy $SCHEME$ cím, így a jelszavad titkosítatlanul utazna.",
+    "message": "Ez egy $SCHEME$ cím, így a jelszavad titkosítatlanul kerülne elküldésre.",
     "placeholders": {
       "scheme": {
         "content": "$1",
@@ -522,10 +522,10 @@
     "message": "Visszaállítási pont törölve."
   },
   "opt_err_perms_no_prompt": {
-    "message": "Ez a böngésző nem tud engedélykérő ablakot megjeleníteni, ezért a Konode nem tudott hozzáférést kérni a WebDAV-szerveredhez. Add meg a Konode engedélyeinél a böngésző bővítménybeállításaiban, majd próbáld újra."
+    "message": "Ez a böngésző nem tud engedélykérő ablakot megjeleníteni, ezért a Konode nem tudott hozzáférést kérni a WebDAV-szerveredhez. Engedélyezd a hozzáférést a Konode bővítménybeállításainál a böngésződben, majd próbáld meg újra."
   },
   "opt_err_perms_bad_url": {
-    "message": "A Konode-nak nincs használható WebDAV-címe, amihez hozzáférést kérhetne. Ellenőrizd a fenti szerver-címet."
+    "message": "A Konodenak nincs használható WebDAV-címe, amihez hozzáférést kérhetne. Ellenőrizd a fenti szerver-címet."
   },
   "opt_err_perms_denied": {
     "message": "A WebDAV-szerver eléréséhez szükséges engedély nem lett megadva."
@@ -564,13 +564,13 @@
     "message": "Aktivitás"
   },
   "opt_nav_advanced": {
-    "message": "Speciális"
+    "message": "Haladó"
   },
   "opt_setup_title": {
     "message": "Fejezd be a Konode beállítását"
   },
   "opt_setup_step_storage": {
-    "message": "Válaszd ki, hol tároljuk az adataidat"
+    "message": "Válaszd ki, hol szeretnéd tárolni az adataidat"
   },
   "opt_setup_step_types": {
     "message": "Válaszd ki, mi szinkronizálódjon"
@@ -579,10 +579,10 @@
     "message": "Tárhely"
   },
   "opt_backend_head_sub": {
-    "message": "Válaszd ki, hol tároljuk a szinkronizált adataidat. Az adataid soha nem érintik a szervereinket."
+    "message": "Válaszd ki, hol szeretnéd tárolni a szinkronizált adataidat. Az adataid soha nem érintik a szervereinket."
   },
   "opt_gdrive_connect_failed": {
-    "message": "A kapcsolódás nem sikerült"
+    "message": "A csatlakozás nem sikerült"
   },
   "opt_gdrive_scope_hint": {
     "message": "Csak a $SCOPE$ engedélykör, így a Konode kizárólag az általa létrehozott fájlokhoz fér hozzá.",
@@ -636,10 +636,10 @@
     "message": "Szinkronizált adatok"
   },
   "opt_data_permission_lost": {
-    "message": "A Konode-nak már nincs meg az ehhez szükséges engedélye, ezért ez nem szinkronizál. Kapcsold ki, majd újra be, hogy visszaálljon."
+    "message": "A Konodenak már nincs meg az ehhez szükséges engedélye, ezért ez nem szinkronizál. Kapcsold ki, majd újra be, hogy visszaálljon."
   },
   "opt_history_days_label": {
-    "message": "Szinkronizált napok"
+    "message": "Szinkronizált napok száma"
   },
   "opt_history_days_desc": {
     "message": "Javasolt: 30 nap."
@@ -684,10 +684,10 @@
     "message": "A jelszó-szinkronizálás nem elérhető."
   },
   "opt_no_password_body": {
-    "message": "A böngészőbővítmények nem érik el a böngésző saját jelszótárolóját."
+    "message": "A bővítmények nem érik el a böngésző saját jelszótárolóját."
   },
   "opt_no_password_use": {
-    "message": "Önállóan üzemeltetett jelszó-szinkronizáláshoz használd ezeket: $MANAGERS$.",
+    "message": "Saját szerveren üzemeltetett jelszó-szinkronizáláshoz használd ezeket: $MANAGERS$.",
     "placeholders": {
       "managers": {
         "content": "$1",
@@ -702,10 +702,10 @@
     "message": "Eszköz"
   },
   "opt_device_head_sub": {
-    "message": "Így azonosítod ezt az eszközt a szinkronizálásban."
+    "message": "Így azonosíthatod ezt az eszközt a szinkronizálásban."
   },
   "opt_identity_section": {
-    "message": "Azonosítás"
+    "message": "Azonosító"
   },
   "opt_device_name_label": {
     "message": "Eszköz neve"
@@ -729,7 +729,7 @@
     "message": "Szinkronizálás változáskor"
   },
   "opt_sync_on_change_desc": {
-    "message": "Azonnal szinkronizálja a könyvjelzőket és lapokat, amikor megváltoznak. Javasolt."
+    "message": "Azonnal szinkronizálja a könyvjelzőket és lapokat, amikor változás történik. Javasolt."
   },
   "opt_auto_sync_label": {
     "message": "Automatikus szinkronizálás"
@@ -816,10 +816,10 @@
     "message": "Eszközök"
   },
   "opt_devices_section_sub": {
-    "message": "Minden eszköz, aminek fájljai vannak a szinkronizálási mappádban, és hogy melyik mit töltött fel utoljára. Egy eszköz elfelejtése törli a fájljait a tárhelyedről. Egyetlen böngészőből sem távolít el könyvjelzőt."
+    "message": "Minden eszköz, aminek fájljai vannak a szinkronizálási mappádban, és hogy melyik mit töltött fel utoljára. Egy eszköz elfelejtése törli az adott eszköz fájljait a tárhelyedről. Egyetlen böngészőből sem távolít el könyvjelzőt."
   },
   "opt_forget_result_one": {
-    "message": "Egy fájl törölve, ami ehhez tartozott: $LABEL$. Ha az a böngésző még fut, egy percen belül újra feltölti magát, és ismét megjelenik itt. Ez nem hiba: ha ki akarod tartani, először kapcsold ki ott a Konode-ot, és csak utána felejtsd el itt.",
+    "message": "Egy fájl törölve, ami ehhez tartozott: $LABEL$. Ha az a böngésző még fut, egy percen belül újra feltölti magát, és ismét megjelenik itt. Ez nem hiba: ha egy eszközt ki akarsz zárni, először ott kapcsold ki a Konodeot, majd itt nyomj az \"Elfelejt\" gombra.",
     "placeholders": {
       "label": {
         "content": "$2",
@@ -828,7 +828,7 @@
     }
   },
   "opt_forget_result_other": {
-    "message": "$COUNT$ fájl törölve, ami ehhez tartozott: $LABEL$. Ha az a böngésző még fut, egy percen belül újra feltölti magát, és ismét megjelenik itt. Ez nem hiba: ha ki akarod tartani, először kapcsold ki ott a Konode-ot, és csak utána felejtsd el itt.",
+    "message": "$COUNT$ fájl törölve, ami ehhez tartozott: $LABEL$. Ha az a böngésző még fut, egy percen belül újra feltölti magát, és ismét megjelenik itt. Ez nem hiba: ha egy eszközt ki akarsz zárni, először ott kapcsold ki a Konodeot, majd itt nyomj az \"Elfelejt\" gombra.",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -886,7 +886,7 @@
     "message": "Elfelejtem"
   },
   "opt_forget_confirm_one": {
-    "message": "Törli azt az egy fájlt, amit ez az eszköz a tárhelyeden tart ($TYPES$). Egyetlen böngészőből sem törlődik könyvjelző, sem itt, sem ott. Ha az a böngésző még fut, újra feltölti magát és megjelenik; ha ki akarod tartani, először kapcsold ki ott a Konode-ot.",
+    "message": "Törli azt az egy fájlt, amit ez az eszköz a tárhelyeden tart ($TYPES$). Egyetlen böngészőből sem törlődik könyvjelző, sem itt, sem ott. Ha az a böngésző még fut, újra feltölti magát és megjelenik; ha egy eszközt ki akarsz zárni, először ott kapcsold ki a Konodeot.",
     "placeholders": {
       "types": {
         "content": "$2",
@@ -895,7 +895,7 @@
     }
   },
   "opt_forget_confirm_other": {
-    "message": "Törli azt a $COUNT$ fájlt, amit ez az eszköz a tárhelyeden tart ($TYPES$). Egyetlen böngészőből sem törlődik könyvjelző, sem itt, sem ott. Ha az a böngésző még fut, újra feltölti magát és megjelenik; ha ki akarod tartani, először kapcsold ki ott a Konode-ot.",
+    "message": "Törli azt a $COUNT$ fájlt, amit ez az eszköz a tárhelyeden tart ($TYPES$). Egyetlen böngészőből sem törlődik könyvjelző, sem itt, sem ott. Ha az a böngésző még fut, újra feltölti magát és megjelenik; ha egy eszközt ki akarsz zárni, először ott kapcsold ki a Konodeot.",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -1019,7 +1019,7 @@
     }
   },
   "opt_log_errors_only_label": {
-    "message": "Csak a hibák"
+    "message": "Csak a hibák mutatása"
   },
   "opt_log_errors_only_desc": {
     "message": "A sikeres bejegyzések elrejtése."
@@ -1037,7 +1037,7 @@
     "message": "Titkosítás"
   },
   "opt_e2ee_desc": {
-    "message": "AES-256-GCM. Az adatok a jelmondatoddal titkosítva hagyják el ezt az eszközt, így a tárhelyszolgáltató soha nem tudja elolvasni őket. Őrizd meg a jelmondatot: nélküle a titkosított adatok nem visszanyerhetők, és minden eszközön ugyanazt kell használni."
+    "message": "AES-256-GCM. Az adatok a jelmondatoddal titkosítva hagyják el ezt az eszközt, így a tárhelyszolgáltató soha nem tudja elolvasni őket. Őrizd meg a jelmondatot: nélküle a titkosított adatok nem nyerhetők vissza és minden eszközön ugyanazt kell használni."
   },
   "opt_e2ee_disable_confirm": {
     "message": "Kikapcsolod a titkosítást? A szinkronizált adataid a következő szinkronizálástól $UNENCRYPTED$ lesznek a tárhelyeden. Ezután minden eszközön ki kell kapcsolni.",
@@ -1085,7 +1085,7 @@
     }
   },
   "opt_advanced_head": {
-    "message": "Speciális"
+    "message": "Haladó"
   },
   "opt_advanced_head_sub": {
     "message": "Biztonsági mentések, visszajelzés és fejlesztői beállítások."
@@ -1171,7 +1171,7 @@
     "message": "Írj nekünk"
   },
   "opt_email_desc": {
-    "message": "Bármihez, amit inkább nem tennél közzé nyilvánosan."
+    "message": "Bármit, amit inkább nem tennél közzé nyilvánosan."
   },
   "opt_developer_section": {
     "message": "Fejlesztői"
@@ -1180,7 +1180,7 @@
     "message": "Hibakeresési mód"
   },
   "opt_debug_desc": {
-    "message": "Részletes naplózás a böngésző konzoljába és az Aktivitás fülre, hogy meg tudd osztani. Kapcsold ki, ha végeztél."
+    "message": "Részletes naplózás a böngésző konzoljába és az Aktivitás fülön, hogy meg tudd osztani. Kapcsold ki, ha végeztél."
   },
   "opt_about_section": {
     "message": "Névjegy"
