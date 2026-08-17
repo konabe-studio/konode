@@ -70,16 +70,14 @@ on any Chromium browser and on Firefox.
   propagating. See `CHANGELOG.md`.
 
 ## Now live
-Konode is live on both stores, and the two are one patch apart:
-**Firefox Add-ons serves 1.2.1**, the Chrome Web Store still serves **1.2.0**.
+Konode **1.2.1 is live on both stores**, and they are in step.
 
 - [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/): **1.2.1**, listed
   since 2026-08-04.
-- Chrome Web Store: **1.2.0**, first published 2026-07-20, item ID
+- Chrome Web Store: **1.2.1**, listing first published 2026-07-20, item ID
   `mmlfiiimnpnjcjhhbldenpcmnibedkfa`.
 
-The gap is the only thing outstanding on the store side, and it is already moving: 1.2.1
-is uploaded to the Chrome Web Store and **waiting on review**. Nothing is waiting on us.
+Nothing is waiting on a submission.
 
 ## Next
 - **Spanish and Chinese (Simplified) finished**, for 1.3.0. Both stand at 123 of 308
@@ -249,14 +247,23 @@ pitch.
 - Incremental diff for >10k bookmarks; history sync performance (the full-history dedup
   scan every import runs is what's left, after 1.2.0 overlapped the per-page writes that
   were the bigger part of a slow first sync).
+- **Diffs between restore points.** Show what actually changed between two restore
+  points in the Activity tab, rather than only that a sync ran. Checked against the code
+  before listing it: `sync/snapshots.ts` writes a full bookmark tree per restore point
+  through the generic `IBackend` file ops, and `restoreSnapshot()` already reads one back
+  and decrypts it in order to restore it. So this is a comparison view over data that
+  already exists plus a tree diff, not new plumbing, and it behaves the same on Drive,
+  GitHub and WebDAV because restore points are ordinary files we write ourselves. The
+  provider-side route is *not* available for this: `listVersions()` returns `[]` on all
+  three backends. Two limits worth stating wherever this is described: bookmarks only
+  (`exportBookmarkPayload`), and only across the newest `MAX_SNAPSHOTS`, which is 10.
 - Optional OAuth proxy (serverless) to avoid shipping the Google client secret.
 
 ## Publishing
 
 **Chrome Web Store.** 1.0.0 submitted for review on **2026-07-19**, **published
 2026-07-20** (<https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa>).
-**1.2.0 is what the listing serves today**, so it is one patch behind Firefox: 1.2.1 is
-uploaded and in review.
+**1.2.1 is what the listing serves today**, in step with Firefox.
 
 **Firefox Add-ons.** Live at <https://addons.mozilla.org/firefox/addon/konode/> since
 **2026-08-04**, first listed with 1.2.0 and **serving 1.2.1 today**. Packaged with
