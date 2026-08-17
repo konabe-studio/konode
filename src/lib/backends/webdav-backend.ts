@@ -50,6 +50,45 @@ export class WebDAVBackend implements IBackend {
     };
   }
 
+  /**
+   * What to say about a 401. "Check username/password" is the obvious reading and it is
+   * wrong on a whole class of server: a 401 means "not authenticated", and
+   * `WWW-Authenticate` says WHICH scheme the server is willing to accept. A server that
+   * offers `Bearer` and not `Basic` will refuse a perfectly correct username and password
+   * forever, so sending that user to re-check their credentials sends them to look at the
+   * one thing that isn't broken.
+   *
+   * The case that prompted this, from a field report: ownCloud Infinite Scale ships with
+   * `PROXY_ENABLE_BASIC_AUTH=false` and authenticates over OIDC, so every attempt got
+   * "Authentication failed. Check username/password" and the reporter spent their time on
+   * the password. The fix on their side is an app token (`PROXY_ENABLE_APP_AUTH`), which
+   * travels in this same Basic header, so it is worth naming.
+   *
+   * Absent or unparseable header means we know nothing extra, so say the ordinary thing.
+   * Reading response headers is fine here: the request runs under a host permission, so
+   * it is not CORS-restricted and nothing is hidden from us.
+   */
+  private authFailureMessage(res: Response): string {
+    const credentials = "Authentication failed. Check username/password";
+    let challenge = "";
+    try {
+      challenge = res.headers?.get("WWW-Authenticate") ?? "";
+    } catch {
+      return credentials; // a stubbed or exotic Response without headers
+    }
+    if (!challenge.trim()) return credentials;
+
+    // Scheme tokens only: a challenge is `Scheme param=..., param=...` and may list
+    // several, so the parameters (which can contain the word "basic" inside a realm)
+    // must not be mistaken for one. A scheme sits at the start or after a comma and is
+    // followed by whitespace or the end.
+    const schemes = [...challenge.matchAll(/(?:^|,)\s*([A-Za-z][\w!#$%&'*+.^`|~-]*)(?=\s|$)/g)]
+      .map((m) => m[1]);
+    if (!schemes.length || schemes.some((s) => s.toLowerCase() === "basic")) return credentials;
+
+    return `This server won't take a username and password over WebDAV: it refused the login and asked for ${schemes.join(" or ")} instead. Some servers want an app token in the password field, and ownCloud Infinite Scale has HTTP Basic switched off by default (its admin can turn on app tokens with PROXY_ENABLE_APP_AUTH). Your password is probably fine.`;
+  }
+
   async connect(): Promise<void> {
     // Refuse to send Basic-auth credentials over plaintext http:// (loopback aside).
     if (!isSecureBackendUrl(this.w.url)) throw new Error(INSECURE_URL_MSG);
@@ -80,6 +119,14 @@ export class WebDAVBackend implements IBackend {
         `The server redirects ${new URL(this.w.url).hostname} to a different address. Sync should still work, but use the final URL your server shows — some servers drop the login across a redirect and then reject a correct password.`
       );
     }
+
+    // A 401 is answered here rather than below, because the folder question is moot: the
+    // server refused the login at the door, so the PROPFIND check would 401 too and the
+    // user would be told to look at the path and their write permissions for what is an
+    // authentication problem. This is the message a FIRST-RUN user gets, since onboarding
+    // saves and syncs instead of running Test connection, so it is the one that has to be
+    // right.
+    if (res.status === 401) throw new HttpError(401, this.authFailureMessage(res));
 
     // 405 means the collection is already there. A bare 301 used to be waved through as
     // well, which was wrong twice over: fetch follows redirects by default, so a 301 only
@@ -251,7 +298,7 @@ export class WebDAVBackend implements IBackend {
       if (res.ok || res.status === 207) {
         return { ok: true, message: `Connected to ${new URL(this.w.url).hostname}` };
       }
-      if (res.status === 401) return { ok: false, message: "Authentication failed. Check username/password" };
+      if (res.status === 401) return { ok: false, message: this.authFailureMessage(res) };
       return { ok: false, message: `Server returned HTTP ${res.status}` };
     } catch (err) {
       return { ok: false, message: err instanceof Error ? err.message : "Connection failed" };

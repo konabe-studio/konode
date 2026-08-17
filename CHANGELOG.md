@@ -63,6 +63,19 @@ All notable changes to Konode. Format loosely follows
   browser substitutes correctly both times. It now reports only what it was written to
   catch, a placeholder that went missing or one that was never in English.
 
+- **"Check your username and password", when the password was never the problem.** Some
+  servers don't accept a username and password over WebDAV at all. ownCloud Infinite Scale
+  is the one that came up: it arrives with HTTP Basic switched off and authenticates through
+  OpenID Connect instead, so it refuses every login Konode is able to make, however correct
+  that login is. Konode read the refusal as a bad password and said exactly that, and the
+  person who reported it spent their time on the one thing that was fine. A server refusing
+  this way also states what it would accept, and Konode now reads that: it says the server
+  won't take a password here, names what it asked for instead, and mentions that an app
+  token goes in the same field. On a first sync it was worse, because setup saves and syncs
+  rather than testing the connection, so the same refusal surfaced as a complaint about the
+  sync folder and whether your account may write to it. That path now reports the
+  authentication problem it actually hit, and stops asking the server twice to find out.
+
 ## [1.2.1] - 2026-08-07
 
 ### Changed
