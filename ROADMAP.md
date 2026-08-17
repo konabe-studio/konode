@@ -262,8 +262,16 @@ pitch.
 1.2.1 cleared review after it, and **1.3.0 is submitted on top of it**. Listing copy is
 maintained per language in the dashboard: the name and the short description come from the
 extension's own catalogues and translate themselves, but the long description is entered by
-hand, in each of the languages Konode ships (note the dashboard calls Simplified Chinese
-`zh-CN`, not `zh_Hans`).
+hand, in each of the languages Konode ships.
+
+**Locale codes are Chrome's list, not BCP 47.** `_locales` directory names must come from
+the set Chrome documents, and a name outside it is not an error: Chrome ignores the
+directory and quietly serves English. Simplified Chinese arrived from Weblate as `zh_Hans`,
+which is correct BCP 47 and which Chrome does not know, so 308 translated strings reached
+nobody, and the Web Store offered no Chinese listing language because as far as it could
+tell the extension had no Chinese. It is `zh_CN` (and `zh_TW` for Traditional). Weblate's
+component needs a language-code style that writes Chrome's codes, or it recreates the
+BCP 47 name on its next push and the directory quietly stops being read again.
 
 **Firefox Add-ons.** Live at <https://addons.mozilla.org/firefox/addon/konode/> since
 **2026-08-04**, first listed with 1.2.0, then 1.2.1, with **1.3.0 submitted**. Packaged with
