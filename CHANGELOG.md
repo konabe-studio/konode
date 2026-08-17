@@ -76,11 +76,11 @@ you thought you had forgotten no longer haunts your other machines.
 
 ### Where you can get it
 
-1.3.0 goes to both stores at once, and each reviews on its own schedule.
-**[Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/)** is usually the
-quicker of the two, and Firefox and Waterfox update themselves once it clears. The Chrome
-Web Store listing serves the previous version until its own review is done, and Chrome
-updates itself after that. If you would rather not wait, both zips are on the
+1.3.0 went to both stores at once, and each reviews on its own schedule.
+**[Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/) is serving it
+already**, so Firefox and Waterfox update themselves with nothing for you to do. The Chrome
+Web Store listing serves 1.2.1 until its own review is done, and Chrome updates itself
+after that. If you would rather not wait, both zips are on the
 [v1.3.0 release](https://github.com/konabe-studio/konode/releases/tag/v1.3.0) page. Note
 that the release zips are built without Konode's own Google OAuth client, so Google Drive
 sign-in in those needs an OAuth client of your own. GitHub and WebDAV work with no extra

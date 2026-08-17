@@ -75,19 +75,23 @@ on any Chromium browser and on Firefox.
   propagating. See `CHANGELOG.md`.
 
 ## Now live
-Konode is live on both stores, and both served **1.2.1** going into this release. The
-Chrome Web Store's review of 1.2.1 cleared, which closed the one-patch gap that had been
-open since 2026-08-07 and was the only thing outstanding on the store side.
+Konode is live on both stores. Both served **1.2.1** going into this release, after the
+Chrome Web Store's review of 1.2.1 cleared and closed the one-patch gap that had been open
+since 2026-08-07.
 
-- [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/): listed since
-  2026-08-04.
-- Chrome Web Store: first published 2026-07-20, item ID
-  `mmlfiiimnpnjcjhhbldenpcmnibedkfa`.
+- [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/): **serving 1.3.0**
+  since 2026-08-17, listed since 2026-08-04. AMO auto-approved and signed the upload, so
+  it went out within minutes; the source submission a bundled add-on requires is reviewed
+  afterwards rather than before.
+- Chrome Web Store: **1.3.0 submitted, in review**, so the listing serves 1.2.1 until it
+  clears. First published 2026-07-20, item ID `mmlfiiimnpnjcjhhbldenpcmnibedkfa`.
 
-**1.3.0 goes to both**, and each reviews on its own schedule, so expect the two to sit a
-version apart again for a few days. Both store uploads are built by hand with Konode's own
-OAuth client compiled in; the zips attached to the release are source builds without it,
-and the two must not be confused.
+The two therefore sit a version apart again for a few days, which is the normal shape of a
+release here rather than anything going wrong. Both store uploads are built by hand with
+Konode's own OAuth client compiled in and live in `web-ext-artifacts/chrome/` and
+`.../firefox/`; the zips attached to the GitHub release are source builds without it, from
+`.../source/`. See the packaging note under *Store packaging + releases* above for what
+keeps the two from being confused.
 
 ## Next
 - **Backend expansion**, cheapest sign-in first. See *Platform priority* item 3 below.
@@ -264,7 +268,8 @@ pitch.
 
 **Chrome Web Store.** 1.0.0 submitted for review on **2026-07-19**, **published
 2026-07-20** (<https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa>).
-1.2.1 cleared review after it, and **1.3.0 is submitted on top of it**. Listing copy is
+1.2.1 cleared review after it, and **1.3.0 is submitted on top of it and in review**,
+so the listing serves 1.2.1 meanwhile. Listing copy is
 maintained per language in the dashboard: the name and the short description come from the
 extension's own catalogues and translate themselves, but the long description is entered by
 hand, in each of the languages Konode ships.
@@ -279,7 +284,14 @@ component needs a language-code style that writes Chrome's codes, or it recreate
 BCP 47 name on its next push and the directory quietly stops being read again.
 
 **Firefox Add-ons.** Live at <https://addons.mozilla.org/firefox/addon/konode/> since
-**2026-08-04**, first listed with 1.2.0, then 1.2.1, with **1.3.0 submitted**. Packaged with
+**2026-08-04**, first listed with 1.2.0, then 1.2.1, **serving 1.3.0 since 2026-08-17**.
+An update to an add-on that is already listed is auto-approved and signed on upload, and
+the source review happens afterwards, which is why 1.3.0 reached users while its version
+notes were still being filled in. The source archive must be the commit the upload was
+BUILT from, not necessarily the tag: 1.3.0 was built from `efd6eb0`, two commits past
+`v1.3.0`, and an archive of the tag would have rebuilt into a package with eight locale
+directories and the old Chinese name against an upload with five and the new one. AMO
+diffs that rebuild and requires no differences. Packaged with
 `npm run package:firefox` and checked with `npm run lint:firefox`. AMO requires a source
 submission, since the build is bundled and minified, and the reviewer rebuilds and diffs
 it.
