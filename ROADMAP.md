@@ -39,7 +39,12 @@ on any Chromium browser and on Firefox.
   with the manifest `key` stripped (the CWS rejects `key` on a first upload) while
   `dist/` keeps it for unpacked dev; pushing a `v*` tag runs a GitHub Actions release
   that attaches both packaged zips, Chrome and Firefox (source builds, no client secret).
-  Released through v1.3.0.
+  Released through v1.3.0. **One folder per destination**, because the two variants of a
+  version are otherwise indistinguishable once zipped: `web-ext-artifacts/chrome/` and
+  `.../firefox/` hold the store uploads, with Konode's OAuth secret compiled in;
+  `.../source/` holds what goes on the release page, with no secret. Each package run
+  declares which it means to build, reads the bundle back, and refuses to write the zip
+  when the two disagree, in either direction. See `scripts/build-variant.mjs`.
 - **Pre-submission hardening**: a peer's extension `storeUrl` is rebuilt locally
   from the id (a forged URL was a phishing vector); onboarding requests all optional
   permissions in one call (a second request lost the user gesture); the dead

@@ -15,8 +15,12 @@
 // authorized redirect URIs, or Drive sign-in breaks for published users. See
 // STORE_LISTING.md.
 //
-// Usage: node scripts/package-chrome.mjs
-//   (or `npm run package:chrome`, which builds first)
+// Usage: node scripts/package-chrome.mjs [--variant=store|source]
+//   `npm run package:chrome` builds and packages the STORE variant;
+//   `npm run package:source` does both browsers as SOURCE builds.
+//
+// The variant decides which folder the zip lands in, and it is checked against the built
+// bundle before anything is written. See build-variant.mjs for why that check exists.
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, cpSync, readdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -24,16 +28,21 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve, join } from "node:path";
 import { tmpdir } from "node:os";
 import { pruneUnshippedLocales } from "./prune-locales.mjs";
+import { variantFromArgv, assertVariant, artifactDir } from "./build-variant.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..");
 const distDir = resolve(repoRoot, "dist");
-const artifactsDir = resolve(repoRoot, "web-ext-artifacts");
 
 if (!existsSync(resolve(distDir, "manifest.json"))) {
   console.error("dist/manifest.json not found — run `npm run build` first.");
   process.exit(1);
 }
+
+const variant = variantFromArgv();
+assertVariant(distDir, variant);
+
+const artifactsDir = resolve(repoRoot, "web-ext-artifacts", artifactDir("chrome", variant));
 
 const { version } = JSON.parse(
   readFileSync(resolve(repoRoot, "package.json"), "utf8")
@@ -90,4 +99,11 @@ try {
   rmSync(staging, { recursive: true, force: true });
 }
 
-console.log(`\nChrome package written → ${outPath}`);
+console.log(
+  `\n${variant === "store" ? "STORE" : "SOURCE"} package (Chrome) written → ${outPath}`
+);
+console.log(
+  variant === "store"
+    ? "  ↑ this is the one that goes to the Chrome Web Store."
+    : "  ↑ this is the one that goes on the GitHub release. Not to a store."
+);
