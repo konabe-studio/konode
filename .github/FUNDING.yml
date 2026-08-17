@@ -2,3 +2,4 @@
 # is not what keeps third-party scripts out (the manifest CSP does that). Keep it a plain
 # link anyway, matching the one in README.md.
 buy_me_a_coffee: konabe.studio
+liberapay: konabe
