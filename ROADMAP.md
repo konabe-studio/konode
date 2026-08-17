@@ -279,9 +279,20 @@ the set Chrome documents, and a name outside it is not an error: Chrome ignores 
 directory and quietly serves English. Simplified Chinese arrived from Weblate as `zh_Hans`,
 which is correct BCP 47 and which Chrome does not know, so 308 translated strings reached
 nobody, and the Web Store offered no Chinese listing language because as far as it could
-tell the extension had no Chinese. It is `zh_CN` (and `zh_TW` for Traditional). Weblate's
-component needs a language-code style that writes Chrome's codes, or it recreates the
-BCP 47 name on its next push and the directory quietly stops being read again.
+tell the extension had no Chinese. It is `zh_CN` (and `zh_TW` for Traditional).
+
+Renaming the directory was enough, and Weblate needed no change: on its next pull it
+adopted `public/_locales/zh_CN/messages.json` and writes there now. The `zh_Hans` still in
+its URLs is its own internal code for the language, not the filename, and the two are not
+the same thing. Do **not** "fix" this with the component's *Language code style*: the only
+option that yields `zh_CN` is POSIX-with-country-code, which forces a country onto every
+language, turning `de` into `de_DE` and `hu` into `hu_HU`. Chrome accepts neither, so it
+would break four shipped languages to fix one.
+
+What is still worth watching is a NEW language whose code carries a script subtag, such as
+Traditional Chinese, since Weblate would create it under the BCP 47 name. `i18n.test.ts`
+fails on that shape, so it surfaces as a red CI on the Weblate pull request rather than as
+a translation nobody can read.
 
 **Firefox Add-ons.** Live at <https://addons.mozilla.org/firefox/addon/konode/> since
 **2026-08-04**, first listed with 1.2.0, then 1.2.1, **serving 1.3.0 since 2026-08-17**.
