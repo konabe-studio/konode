@@ -69,22 +69,21 @@ prefer this device, always prefer the other, or resolve it yourself from the pop
 ## How Konode compares
 
 Every tool below is good at what it does. They just make different choices about where
-your data ends up, which is the one thing this table is about. Checked 2026-08-07.
+your data ends up, which is the one thing this table is about. Checked August 2026.
 
-| | **Konode** | floccus | Raindrop.io | xBrowserSync | Built-in sync |
-|---|---|---|---|---|---|
-| **What syncs** | **Bookmarks, tabs, history, extension list** | Bookmarks, or open tabs | Its own library, not your browser's bookmarks | Bookmarks | Bookmarks, tabs, history, passwords, and more |
-| **Where it writes** | **Your Drive, GitHub, or WebDAV** | Nextcloud, WebDAV, Git, Drive, Dropbox, Linkwarden, KaraKeep | Raindrop's servers | Its own service: official, community-run, or self-hosted | Google's or Mozilla's servers |
-| **Account needed** | **No Konode account** | No floccus account | Yes, and cloud only | No account, just a sync ID and password | Yes, a Google or Mozilla account |
-| **End-to-end encryption** | **Optional, on every backend** | Optional, on WebDAV, Drive and Dropbox | No | Always on | Firefox by default, Chrome behind a passphrase |
-| **Open source** | **Yes, MPL-2.0** | Yes, MPL-2.0 | Client apps, not the server | Yes, GPL-3.0 | Clients open, sync servers not |
+| | **Konode** | floccus | xBrowserSync | Built-in sync |
+|---|---|---|---|---|
+| **What syncs** | **Bookmarks, tabs, history, extension list** | Bookmarks, or open tabs | Bookmarks | Bookmarks, tabs, history, passwords, and more |
+| **Where synced data is stored** | **Your Drive, GitHub, or WebDAV** | Nextcloud, WebDAV, Git, Drive, Dropbox, Linkwarden, KaraKeep | Its own service: official, community-run, or self-hosted | Google's or Mozilla's servers |
+| **Account needed** | **No Konode account** | No floccus account | No account, just a sync ID and password | Yes, a Google or Mozilla account |
+| **End-to-end encryption** | **Optional, on every backend** | Optional, on WebDAV and Drive | Always on | Firefox by default, Chrome behind a passphrase |
+| **Open source** | **Yes, MPL-2.0** | Yes, MPL-2.0 | Yes, GPL-3.0 | Clients open. Firefox's server too, Chrome's not |
 
 A few details the cells are too small for. floccus syncs open tabs as an alternative to
 bookmarks inside one sync profile, so doing both means setting up a second profile.
-Raindrop is a bookmark manager with a library of its own: it imports an exported bookmarks
-file rather than keeping your browser's bookmark tree in sync. Chrome's built-in sync
-encrypts passwords by default and the rest once you set a sync passphrase, with some
-categories left out; Firefox Sync is end-to-end encrypted by default.
+Chrome's built-in sync encrypts passwords by default and the rest once you set a sync
+passphrase, with some categories left out; Firefox Sync is end-to-end encrypted by
+default.
 
 ## Privacy & security
 
@@ -121,12 +120,13 @@ categories left out; Firefox Sync is end-to-end encrypted by default.
 
 ## Translations
 
-Konode speaks **English, Hungarian and German**, and follows your browser's language.
-Every screen is translated: the popup, the setup wizard, and Settings. Dates and numbers
-follow your browser's locale everywhere.
+Konode speaks **English, Hungarian, German, Spanish and Chinese (Simplified)**, and
+follows your browser's language. Every screen is translated: the popup, the setup wizard,
+and Settings. Dates and numbers follow your browser's locale everywhere.
 
-**Spanish** and **Chinese (Simplified)** are well under way and should be complete for
-1.3.0; Italian and Estonian have been started.
+**Japanese**, **Italian** and **Estonian** have been started. A language reaches a release
+once it is complete, because a screen that is half translated reads worse than an English
+one.
 
 Translations are edited on
 [Hosted Weblate](https://hosted.weblate.org/projects/konode/). You don't need git, a
@@ -211,11 +211,12 @@ use a dedicated manager like [Bitwarden](https://bitwarden.com),
   GitHub + WebDAV · WebDAV provider presets · multi-device merge · per-item conflict
   resolution · opt-in E2EE · Drive OAuth refresh (PKCE) · cross-browser extension
   matching · **Chrome Web Store listing** · **Firefox Add-ons listing** · **translated
-  interface** (English, Hungarian, German).
-- **Next**: Spanish and Chinese (Simplified) finished for 1.3.0 · more backends, cheapest
-  sign-in first (Dropbox, S3-compatible, OneDrive).
-- **Later**: MEGA · incremental diff for very large bookmark trees · faster history
-  sync.
+  interface** (English, Hungarian, German, Spanish, Chinese (Simplified)).
+- **Next**: more backends, cheapest sign-in first (Dropbox token and S3-compatible, then
+  Dropbox OAuth and OneDrive) · faster history sync · more languages (Japanese, Italian,
+  Estonian).
+- **Later**: MEGA · incremental diff for very large bookmark trees · diffs between
+  restore points.
 
 ## Support & feedback
 
