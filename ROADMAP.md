@@ -103,10 +103,11 @@ keeps the two from being confused.
   drift apart. Completeness is the whole bar: the translators
   are native speakers and Weblate is where their work gets reviewed, so a language no
   maintainer here reads is not thereby held back.
-- **1.4.0 is scoped in the tracker, not here.** Three issues carry the design work, with
-  the API checks and the reasoning written out where contributors can read them rather
-  than in a local file. #11 and #10 were both held behind the translations release, which
-  shipped 2026-08-17, so neither is blocked any more.
+- **Scoped in the tracker, not here.** Three issues carry design work that belongs on this
+  list, with the API checks and the reasoning written out where contributors can read them
+  rather than in a local file. No dates and no version targets, the same as everything else
+  under *Next*: #11 and #10 were gated on the translations release, which shipped
+  2026-08-17, and that is the only timing claim either of them supports.
   - [#11 What Konode can and cannot sync](https://github.com/konabe-studio/konode/issues/11)
     measures us against Brave Sync's list and answers it with a principle instead of a
     backlog: Konode can only sync what means the same thing in every browser. Two real
