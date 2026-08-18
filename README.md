@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/popup.png" alt="The Konode popup: synced status, active data streams, and sessions from other devices" width="100%">
+  <img src="docs/hero.png" alt="Sync across your devices: the Konode popup showing synced status, four active data streams, two missing extensions, and open sessions from a Windows 10 Helium and a Linux Firefox device" width="100%">
 </p>
 
 ---
