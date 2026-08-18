@@ -13,3 +13,9 @@ PUBLISHING-FIREFOX.md
 QA_CHECKLIST.md
 STORE_LISTING.md
 TODO.md
+
+# The listing copy STORE_LISTING.md points at: one file per language, plus the AMO
+# submission fields. Submission notes rather than product source, and the reviewer-notes
+# template has a line meant to be filled with the Google OAuth client secret at paste
+# time, which must never reach a commit.
+store-listing/

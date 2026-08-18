@@ -26,28 +26,28 @@ jobs:
       - name: Check
         run: npm run check
 
-      # Source builds: no VITE_GOOGLE_CLIENT_SECRET in CI, so both released zips are the
-      # "bring your own OAuth client" variant: Drive sign-in needs the user's own
-      # OAuth client. The zips uploaded to the Chrome Web Store and to AMO are built
-      # locally WITH the secret, by hand. Keep it that way: the release page is a public
-      # download, and these two must not become the same file by accident.
-      - name: Package (Chrome)
-        run: npm run package:chrome
-
-      # Runtime-verified on Firefox desktop as of 1.2.0, which is what the note here used
-      # to be waiting for. `package:firefox` passes --filename, so this lands as
-      # konode-firefox-<version>.zip; web-ext's default name (konode-<version>.zip) sat
-      # beside the Chrome zip with nothing to tell a downloader which was which.
-      - name: Package (Firefox)
-        run: npm run package:firefox
+      # SOURCE builds, for both browsers, into web-ext-artifacts/source/.
+      #
+      # A release page is a public download, so what goes on it must not carry Konode's own
+      # Google OAuth client secret: these are the "bring your own OAuth client" variant, and
+      # Drive sign-in in them needs the user's own. The zips uploaded to the Chrome Web Store
+      # and to AMO are built locally WITH the secret, by hand, and land in
+      # web-ext-artifacts/chrome/ and .../firefox/ instead.
+      #
+      # `package:source` does not merely rely on CI having no .env. It builds through
+      # `--mode source`, which blanks the secret via .env.source, and then reads the built
+      # bundle back and refuses to zip if a secret is in there after all. That check is the
+      # point: the two variants are otherwise indistinguishable once zipped.
+      - name: Package (source builds, both browsers)
+        run: npm run package:source
 
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
         run: >
           gh release create "$GITHUB_REF_NAME"
-          web-ext-artifacts/konode-chrome-*.zip
-          web-ext-artifacts/konode-firefox-*.zip
+          web-ext-artifacts/source/konode-chrome-*.zip
+          web-ext-artifacts/source/konode-firefox-*.zip
           --title "$GITHUB_REF_NAME"
           --generate-notes
 

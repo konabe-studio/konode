@@ -5,6 +5,29 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **"Check your username and password", when the password was never the problem.** Some
+  servers don't accept a username and password over WebDAV at all. ownCloud Infinite Scale
+  is the one that came up: it arrives with HTTP Basic switched off and authenticates through
+  OpenID Connect instead, so it refuses every login Konode is able to make, however correct
+  that login is. Konode read the refusal as a bad password and said exactly that, and the
+  person who reported it spent their time on the one thing that was fine. A server refusing
+  this way also states what it would accept, and Konode now reads that: it says the server
+  won't take a password here, names what it asked for instead, and mentions that an app
+  token goes in the same field. On a first sync it was worse, because setup saves and syncs
+  rather than testing the connection, so the same refusal surfaced as a complaint about the
+  sync folder and whether your account may write to it. That path now reports the
+  authentication problem it actually hit, and stops asking the server twice to find out.
+
+## [1.3.0] - 2026-08-17
+
+Konode speaks your language on every screen it has. Settings was the last one still in
+English whatever the rest of Konode was reading in, and it now comes from the same
+translation files as everything else. Alongside that, three fixes for browsers built on
+WebKit, where a first install could leave you with no way into setup at all, and a device
+you thought you had forgotten no longer haunts your other machines.
+
 ### Added
 
 - **Settings speaks your language too.** The popup and the setup wizard already followed
@@ -17,11 +40,16 @@ All notable changes to Konode. Format loosely follows
   appeared, or are on a browser where it never opened at all, there was nothing telling you
   what to do next, and setup had to be found by opening Settings and knowing what to look
   for. The popup now offers to finish setting up until a storage provider has been chosen.
+- **Konode speaks Spanish and Chinese.** Both are complete, all 308 strings, translated by
+  native speakers who volunteered for it. That brings the languages Konode ships finished
+  to five: English, Hungarian, German, Spanish and Chinese (Simplified). There is nothing
+  to choose in Settings, because Konode follows the language your browser is already set
+  to.
 - **Anyone can translate Konode, without touching the code.** Translations are edited on
   [Hosted Weblate](https://hosted.weblate.org/projects/konode/): no git, no pull request,
-  and nothing to install. Spanish, Chinese (Simplified), Italian and Estonian have all
-  been started there, and a language that isn't finished is still safe to use, because
-  anything not yet translated falls back to English string by string.
+  and nothing to install. A language reaches a release once it is complete, because a
+  screen that is half translated reads worse than an English one, and working out which
+  half you were given is not something anyone should have to do.
 
 ### Fixed
 
@@ -63,18 +91,17 @@ All notable changes to Konode. Format loosely follows
   browser substitutes correctly both times. It now reports only what it was written to
   catch, a placeholder that went missing or one that was never in English.
 
-- **"Check your username and password", when the password was never the problem.** Some
-  servers don't accept a username and password over WebDAV at all. ownCloud Infinite Scale
-  is the one that came up: it arrives with HTTP Basic switched off and authenticates through
-  OpenID Connect instead, so it refuses every login Konode is able to make, however correct
-  that login is. Konode read the refusal as a bad password and said exactly that, and the
-  person who reported it spent their time on the one thing that was fine. A server refusing
-  this way also states what it would accept, and Konode now reads that: it says the server
-  won't take a password here, names what it asked for instead, and mentions that an app
-  token goes in the same field. On a first sync it was worse, because setup saves and syncs
-  rather than testing the connection, so the same refusal surfaced as a complaint about the
-  sync folder and whether your account may write to it. That path now reports the
-  authentication problem it actually hit, and stops asking the server twice to find out.
+### Where you can get it
+
+1.3.0 went to both stores at once, and each reviews on its own schedule.
+**[Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/) is serving it
+already**, so Firefox and Waterfox update themselves with nothing for you to do. The Chrome
+Web Store listing serves 1.2.1 until its own review is done, and Chrome updates itself
+after that. If you would rather not wait, both zips are on the
+[v1.3.0 release](https://github.com/konabe-studio/konode/releases/tag/v1.3.0) page. Note
+that the release zips are built without Konode's own Google OAuth client, so Google Drive
+sign-in in those needs an OAuth client of your own. GitHub and WebDAV work with no extra
+setup.
 
 ## [1.2.1] - 2026-08-07
 

@@ -31,12 +31,26 @@ const en = catalogue("en");
  * progress, and failing the build over it would only teach us to reject the contribution.
  *
  * Every OTHER rule below still applies to every language: no invented keys, no dropped
- * placeholders. Those are correctness. Only the "finish it" rule is a policy, and it binds
- * the languages the maintainer can actually read and vouch for.
+ * placeholders. Those are correctness. Only the "finish it" rule is a policy, and the bar
+ * it sets is completeness: 100% of the English keys, translated by someone who speaks the
+ * language.
  *
- * Adding a language here is the last step of shipping it, after review.
+ * It used to also require that the maintainer could read the language and vouch for it,
+ * which was a bar only en/hu/de could ever clear and which would have held finished work
+ * out of a release for no reason anyone could act on. Weblate's translators are native
+ * speakers and their work is reviewable there by other speakers, which is a better check
+ * than a maintainer squinting at a language they don't read.
+ *
+ * Adding a language to that file is the last step of shipping it.
+ *
+ * The list lives in shipped-languages.json rather than here because the packaging scripts
+ * need the same answer: they drop every unshipped locale from the zip, so a language that
+ * counts as shipped for this test and a language that reaches users would otherwise be two
+ * lists to keep in agreement, and the failure would be silent in both directions.
  */
-const SHIPPED = ["hu", "de"];
+const SHIPPED = JSON.parse(
+  readFileSync(resolve(__dirname, "../../../shipped-languages.json"), "utf8")
+) as string[];
 
 /**
  * Every `.ts`/`.tsx` file under src/ that could ASK for a message — tests excluded, and
@@ -144,6 +158,25 @@ describe("the English catalogue is the contract", () => {
   });
 });
 
+describe("the locale directory names", () => {
+  it("uses Chrome's locale codes, not BCP 47", () => {
+    // A directory whose name Chrome doesn't recognise is not an error anywhere. Chrome
+    // ignores it and serves `default_locale` instead, so the language simply never appears
+    // and nothing says why. Simplified Chinese arrived from Weblate as `zh_Hans`, which is
+    // correct BCP 47 and which Chrome has never accepted: 308 translated strings reached
+    // nobody, and the Web Store offered no Chinese listing language because as far as it
+    // could tell the extension had no Chinese. It wants `zh_CN`.
+    //
+    // Checking the SHAPE rather than listing every locale Chrome supports: the list is
+    // long and would rot, while the shape is what BCP 47 actually breaks. Chrome takes a
+    // 2-3 letter language, optionally an underscore and a 2-letter uppercase region, plus
+    // `es_419` (Latin American Spanish). BCP 47 adds a script subtag — `Hans`, `Hant`,
+    // `Latn`, `Cyrl` — and that is exactly what Chrome drops on the floor.
+    const chromeShaped = /^[a-z]{2,3}(_([A-Z]{2}|419))?$/;
+    expect(languages.filter((l) => !chromeShaped.test(l))).toEqual([]);
+  });
+});
+
 describe.each(languages.filter((l) => l !== "en"))("the %s catalogue", (lang) => {
   const other = catalogue(lang);
 
@@ -176,7 +209,7 @@ describe.each(languages.filter((l) => l !== "en"))("the %s catalogue", (lang) =>
     // wall of them: of 22 reported on the first Weblate contribution, 21 were this.
     //
     // The same placeholder used more than once. getMessage substitutes EVERY occurrence,
-    // so repeating one is a normal thing to need — zh_Hans names the region twice because
+    // so repeating one is a normal thing to need — zh_CN names the region twice because
     // that is how the sentence works in Chinese — and it interpolates correctly both
     // times. What matters is WHICH placeholders appear, not how often, so compare sets.
     const names = (s: string) => new Set([...s.matchAll(/\$([A-Z_]+)\$/g)].map((m) => m[1]));

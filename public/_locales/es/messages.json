@@ -451,5 +451,750 @@
   },
   "onb_err_perms_no_prompt": {
     "message": "Este navegador no puede mostrar mensajes de solicitud de permisos, por lo que Konode no pudo solicitar el acceso que este necesita. Concédelo en la pantalla de permisos de Konode, en la configuración de extensiones de tu navegador, y luego vuelve a presionar Finalizar."
+  },
+  "opt_secret_copy": {
+    "message": "Copiar"
+  },
+  "opt_secret_copied": {
+    "message": "Copiado"
+  },
+  "opt_secret_replace": {
+    "message": "Reemplazar"
+  },
+  "opt_webdav_user_label": {
+    "message": "Nombre de usuario"
+  },
+  "opt_webdav_user_placeholder": {
+    "message": "nombre de usuario"
+  },
+  "opt_webdav_pass_label": {
+    "message": "Contraseña / Token de la aplicación"
+  },
+  "opt_webdav_http_warn": {
+    "message": "Esta es una URL $SCHEME$, por lo que tu contraseña se enviará sin cifrar.",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "http://"
+      }
+    }
+  },
+  "opt_webdav_http_use": {
+    "message": "Utiliza $SCHEME$.",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "https://"
+      }
+    }
+  },
+  "opt_snap_saved": {
+    "message": "Se guardó la imagen."
+  },
+  "opt_snap_restored_one": {
+    "message": "Se ha restaurado $COUNT$ marcador. Sincronizando con tus otros dispositivos…",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_snap_restored_other": {
+    "message": "Se han restaurado $COUNT$ marcadores. Sincronizando con tus otros dispositivos…",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "opt_snap_deleted": {
+    "message": "Se ha eliminado el punto de restauración."
+  },
+  "opt_err_perms_no_prompt": {
+    "message": "Este navegador no puede mostrar mensajes de solicitud de permisos, por lo que Konode no pudo solicitar acceso a tu servidor WebDAV. Concédelo en la pantalla de permisos de Konode, que se encuentra en la configuración de extensiones de tu navegador, y luego reintenta."
+  },
+  "opt_err_perms_bad_url": {
+    "message": "Konode no tiene una dirección WebDAV válida a la que solicitar acceso. Revisa la URL del servidor que aparece arriba."
+  },
+  "opt_err_perms_denied": {
+    "message": "No se autorizó el permiso para acceder al servidor WebDAV."
+  },
+  "opt_err_pass_too_short": {
+    "message": "Usa al menos $MIN$ caracteres. Los datos sincronizados pueden ser objeto de ataques sin conexión, por lo que una passphrase corta es fácil de adivinar. Cuanto más larga, mejor; o bien, genera una clave.",
+    "placeholders": {
+      "min": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "opt_err_pass_mismatch": {
+    "message": "Las dos passphrases no coinciden. Vuelve a ingresarlas para confirmar antes de guardar."
+  },
+  "opt_saving": {
+    "message": "Guardando…"
+  },
+  "opt_saved": {
+    "message": "Guardado"
+  },
+  "opt_save_changes": {
+    "message": "Guardar cambios"
+  },
+  "opt_nav_backend": {
+    "message": "Almacenamiento"
+  },
+  "opt_nav_data": {
+    "message": "Tipos de datos"
+  },
+  "opt_nav_device": {
+    "message": "Dispositivo"
+  },
+  "opt_nav_activity": {
+    "message": "Actividad"
+  },
+  "opt_nav_advanced": {
+    "message": "Avanzado"
+  },
+  "opt_setup_title": {
+    "message": "Finaliza la configuración de Konode"
+  },
+  "opt_setup_step_storage": {
+    "message": "Elige dónde se almacenan tus datos"
+  },
+  "opt_setup_step_types": {
+    "message": "Elige qué quieres sincronizar"
+  },
+  "opt_backend_head": {
+    "message": "Almacenamiento"
+  },
+  "opt_backend_head_sub": {
+    "message": "Elige dónde se almacenan tus datos de sincronización. Tus datos nunca pasan por nuestros servidores."
+  },
+  "opt_gdrive_connect_failed": {
+    "message": "Error de conexión"
+  },
+  "opt_gdrive_scope_hint": {
+    "message": "Solo el ámbito $SCOPE$, por lo que Konode solo puede acceder a los archivos que crea.",
+    "placeholders": {
+      "scope": {
+        "content": "$1",
+        "example": "drive.file"
+      }
+    }
+  },
+  "opt_drive_folder_label": {
+    "message": "ID de la carpeta de unidad"
+  },
+  "opt_optional": {
+    "message": "(opcional)"
+  },
+  "opt_drive_folder_placeholder": {
+    "message": "Déjalo en blanco para que se cree automáticamente una carpeta 'Konode'"
+  },
+  "opt_region_label": {
+    "message": "Región"
+  },
+  "opt_webdav_host_label": {
+    "message": "Host del servidor"
+  },
+  "opt_webdav_url_label": {
+    "message": "URL del servidor"
+  },
+  "opt_github_token_label": {
+    "message": "Token de acceso personal"
+  },
+  "opt_github_repo_label": {
+    "message": "Repositorio"
+  },
+  "opt_github_branch_label": {
+    "message": "Branch"
+  },
+  "opt_stat_never": {
+    "message": "Nunca"
+  },
+  "opt_setup_sub": {
+    "message": "Konode sincroniza tu navegador con el espacio de almacenamiento de tú pertenencia. No hay ningún servidor de Konode. Dos pasos rápidos y ya está. (Si el asistente de configuración nunca se abrió en tu navegador, puedes hacer todo desde aquí mismo.)"
+  },
+  "opt_data_head": {
+    "message": "Tipos de datos"
+  },
+  "opt_data_head_sub": {
+    "message": "Elige qué deseas que se sincronice entre tus dispositivos."
+  },
+  "opt_data_section": {
+    "message": "Datos para sincronizar"
+  },
+  "opt_data_permission_lost": {
+    "message": "Konode ya no tiene el permiso necesario para esto, por lo que no se está sincronizando. Desactívalo y vuelve a activarlo para restablecerlo."
+  },
+  "opt_history_days_label": {
+    "message": "Días a sincronizar"
+  },
+  "opt_history_days_desc": {
+    "message": "Recomendado: 30 días."
+  },
+  "opt_history_days_value": {
+    "message": "$COUNT$d",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
+  "opt_history_hint": {
+    "message": "Las páginas de tus otros dispositivos se agregan con la hora en que llegaron, no con la hora en que las visitaste por primera vez, en los navegadores basados en Chromium aparecen en la sección hoy en lugar del día en que las visitaste. Firefox conserva la fecha original."
+  },
+  "opt_missing_ext_head": {
+    "message": "Extensiones faltantes ($COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "6"
+      }
+    }
+  },
+  "opt_ext_from": {
+    "message": "· de $STORE$",
+    "placeholders": {
+      "store": {
+        "content": "$1",
+        "example": "Firefox"
+      }
+    }
+  },
+  "opt_ext_install": {
+    "message": "Instalar"
+  },
+  "opt_ext_find": {
+    "message": "Buscar"
+  },
+  "opt_no_password_title": {
+    "message": "La sincronización de contraseñas no está disponible."
+  },
+  "opt_no_password_body": {
+    "message": "Las extensiones del navegador no pueden acceder al almacenamiento nativo de contraseñas."
+  },
+  "opt_no_password_use": {
+    "message": "Utiliza $MANAGERS$ para la sincronización de contraseñas en un servidor propio.",
+    "placeholders": {
+      "managers": {
+        "content": "$1",
+        "example": "Bitwarden or Proton Pass"
+      }
+    }
+  },
+  "opt_or": {
+    "message": "o"
+  },
+  "opt_device_head": {
+    "message": "Dispositivo"
+  },
+  "opt_device_head_sub": {
+    "message": "Identifica este dispositivo en la red de sincronización."
+  },
+  "opt_identity_section": {
+    "message": "Identidad"
+  },
+  "opt_device_name_label": {
+    "message": "Nombre del dispositivo"
+  },
+  "opt_device_name_desc": {
+    "message": "Cómo aparece este dispositivo en los registros de sincronización."
+  },
+  "opt_device_name_placeholder": {
+    "message": "Mi computadora portátil"
+  },
+  "opt_device_id_label": {
+    "message": "ID del dispositivo"
+  },
+  "opt_device_id_desc": {
+    "message": "Generado automáticamente. No modificar."
+  },
+  "opt_behavior_section": {
+    "message": "Comportamiento de sincronización"
+  },
+  "opt_sync_on_change_label": {
+    "message": "Sincronizar al haber cambios"
+  },
+  "opt_sync_on_change_desc": {
+    "message": "Sincroniza al instante los marcadores y pestañas cada vez que cambien. Recomendado."
+  },
+  "opt_auto_sync_label": {
+    "message": "Sincronización automática"
+  },
+  "opt_auto_sync_desc": {
+    "message": "Además, sincroniza de forma periódica."
+  },
+  "opt_notifications_label": {
+    "message": "Notificaciones"
+  },
+  "opt_notifications_desc": {
+    "message": "Estado de la sincronización y alertas de conflictos."
+  },
+  "opt_interval_label": {
+    "message": "Intervalo de sincronización"
+  },
+  "opt_interval_desc": {
+    "message": "Con qué frecuencia este dispositivo descarga los cambios remotos. 30 segundos es el tiempo mínimo que establece el navegador para las verificaciones en segundo plano. Tus propios cambios se suben casi al instante."
+  },
+  "opt_interval_value": {
+    "message": "$COUNT$s",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
+  "opt_conflict_section": {
+    "message": "Resolución de conflictos"
+  },
+  "opt_conflict_lww": {
+    "message": "Prevalece la última modificación"
+  },
+  "opt_conflict_lww_desc": {
+    "message": "El cambio más reciente siempre prevalece."
+  },
+  "opt_conflict_local": {
+    "message": "Preferir lo local"
+  },
+  "opt_conflict_local_desc": {
+    "message": "Los cambios locales tienen prioridad sobre los remotos."
+  },
+  "opt_conflict_remote": {
+    "message": "Preferir lo remoto"
+  },
+  "opt_conflict_remote_desc": {
+    "message": "Los cambios remotos tienen prioridad sobre los locales."
+  },
+  "opt_conflict_manual": {
+    "message": "Manual"
+  },
+  "opt_conflict_manual_desc": {
+    "message": "Preguntarme a que resuelva cada conflicto en la ventana emergente."
+  },
+  "opt_safety_section": {
+    "message": "Seguridad"
+  },
+  "opt_bulk_delete_label": {
+    "message": "Cantidad máxima de elementos que se pueden eliminar en bloque de un peer"
+  },
+  "opt_activity_head": {
+    "message": "Actividad"
+  },
+  "opt_sync_activity_section": {
+    "message": "Actividad de sincronización"
+  },
+  "opt_stat_transferred": {
+    "message": "Datos transferidos"
+  },
+  "opt_stat_runs": {
+    "message": "Ejecuciones de sincronización"
+  },
+  "opt_stat_last_sync": {
+    "message": "Última sincronización"
+  },
+  "opt_devices_section": {
+    "message": "Dispositivos"
+  },
+  "opt_dismiss": {
+    "message": "Descartar"
+  },
+  "opt_devices_loading": {
+    "message": "Leyendo tu carpeta de sincronización…"
+  },
+  "opt_devices_empty": {
+    "message": "Todavía no hay nada en la carpeta. Realiza una sincronización y aparecerá este dispositivo."
+  },
+  "opt_device_unnamed": {
+    "message": "Dispositivo sin nombre ($ID$)",
+    "placeholders": {
+      "id": {
+        "content": "$1",
+        "example": "a1b2c3d4"
+      }
+    }
+  },
+  "opt_this_device": {
+    "message": "ESTE DISPOSITIVO"
+  },
+  "opt_last_upload": {
+    "message": "· última subida $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "8/9/2026, 10:20:45 AM"
+      }
+    }
+  },
+  "opt_forget": {
+    "message": "Olvidar"
+  },
+  "opt_forget_it": {
+    "message": "Olvídalo"
+  },
+  "opt_that_device": {
+    "message": "ese dispositivo"
+  },
+  "opt_cancel": {
+    "message": "Cancelar"
+  },
+  "opt_snapshots_section": {
+    "message": "Puntos de restauración"
+  },
+  "opt_snap_now_label": {
+    "message": "Guarda una imagen ahora"
+  },
+  "opt_snap_now_desc": {
+    "message": "Un punto de restauración de tu árbol de marcadores actual."
+  },
+  "opt_snap_create": {
+    "message": "Crear imagen"
+  },
+  "opt_snap_loading": {
+    "message": "Cargando puntos de restauración…"
+  },
+  "opt_snap_error": {
+    "message": "No se pudieron leer tus puntos de restauración: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "404 Not Found"
+      }
+    }
+  },
+  "opt_snap_error_desc": {
+    "message": "Esto no significa que no tengas ninguno. Están guardados en tu espacio de almacenamiento y es posible que no aparezcan en este momento. Revisa la conexión en Almacenamiento y vuelve a abrir esta pestaña."
+  },
+  "opt_snap_empty": {
+    "message": "Aún no hay puntos de restauración. Crea uno arriba, o se guardará uno automáticamente si se bloquea una eliminación inusual."
+  },
+  "opt_snap_count_one": {
+    "message": "$COUNT$ marcador",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_snap_count_other": {
+    "message": "$COUNT$ marcadores",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "opt_devices_error": {
+    "message": "No se pudieron leer tus dispositivos: $ERROR$. Esto no significa que no tengas ninguno. Revisa la conexión en Almacenamiento y vuelve a abrir esta pestaña.",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "404 Not Found"
+      }
+    }
+  },
+  "opt_snap_unknown": {
+    "message": "Marcar punto de restauración"
+  },
+  "opt_snap_confirm_restore": {
+    "message": "Confirmar restauración"
+  },
+  "opt_snap_confirm_delete": {
+    "message": "Confirmar eliminación"
+  },
+  "opt_snap_delete_aria": {
+    "message": "Eliminar este punto de restauración"
+  },
+  "opt_log_section": {
+    "message": "Registro"
+  },
+  "opt_log_empty_sub": {
+    "message": "Aún no hay entradas."
+  },
+  "opt_log_count_one": {
+    "message": "$COUNT$ entrada",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_log_count_other": {
+    "message": "$COUNT$ entradas",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "opt_log_errors": {
+    "message": " · $COUNT$ con errores",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_log_skipped": {
+    "message": " · $COUNT$ omitidos",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "opt_log_errors_only_label": {
+    "message": "Mostrar solo los errores"
+  },
+  "opt_log_errors_only_desc": {
+    "message": "Ocultar las entradas correctas."
+  },
+  "opt_log_clear": {
+    "message": "Borrar registro"
+  },
+  "opt_log_nothing": {
+    "message": "Aún no hay nada registrado. Ejecuta una sincronización y aparecerá aquí."
+  },
+  "opt_log_no_errors": {
+    "message": "No se registraron errores. Genial."
+  },
+  "opt_encryption_section": {
+    "message": "Cifrado"
+  },
+  "opt_e2ee_desc": {
+    "message": "AES-256-GCM. Los datos se cifran con tu passphrase antes de salir de este dispositivo, por lo que el proveedor de almacenamiento nunca podrá leerlos. Mantén tu passphrase a salvo: sin ella, los datos cifrados no se pueden recuperar, y todos los dispositivos deben usar la misma."
+  },
+  "opt_e2ee_disable_confirm": {
+    "message": "¿Desea desactivar el cifrado? A partir de la próxima sincronización, tus datos sincronizados se almacenarán $UNENCRYPTED$ en tu servidor. Todos los dispositivos también deberán desactivarlo.",
+    "placeholders": {
+      "unencrypted": {
+        "content": "$1",
+        "example": "unencrypted"
+      }
+    }
+  },
+  "opt_unencrypted": {
+    "message": "sin cifrar"
+  },
+  "opt_e2ee_turn_off": {
+    "message": "Desactivar"
+  },
+  "opt_passphrase_label": {
+    "message": "Passphrase"
+  },
+  "opt_passphrase_desc": {
+    "message": "Genera la clave de cifrado. Se almacena únicamente en este dispositivo; nunca se sube a la nube."
+  },
+  "opt_passphrase_placeholder": {
+    "message": "Elige una passphrase segura"
+  },
+  "opt_passphrase_confirm_placeholder": {
+    "message": "Confirmar passphrase"
+  },
+  "opt_passphrase_match": {
+    "message": "Las passphrases coinciden."
+  },
+  "opt_genkey_saved_warning": {
+    "message": "Guárdalo ahora. Es la única forma de recuperar tus datos si lo olvidas. Ingresa la misma clave en tus otros dispositivos."
+  },
+  "opt_e2ee_no_passphrase": {
+    "message": "El cifrado está activado, pero no se ha configurado ninguna passphrase, por lo que la sincronización sigue subiendo texto sin cifrar hasta que agregues una."
+  },
+  "opt_e2ee_off_warning": {
+    "message": "El cifrado está desactivado, por lo que tus datos sincronizados (marcadores, historial, sesiones, extensiones) se almacenan $UNENCRYPTED$ en tu servidor. Actívalo para cifrar todo antes de que salga de este dispositivo.",
+    "placeholders": {
+      "unencrypted": {
+        "content": "$1",
+        "example": "unencrypted"
+      }
+    }
+  },
+  "opt_advanced_head": {
+    "message": "Avanzado"
+  },
+  "opt_advanced_head_sub": {
+    "message": "Copias de seguridad, comentarios y opciones de desarrollador."
+  },
+  "opt_impexp_section": {
+    "message": "Importación / Exportación"
+  },
+  "opt_export_label": {
+    "message": "Exportar copia de seguridad"
+  },
+  "opt_export_desc": {
+    "message": "Descarga tus marcadores, historial y extensiones como un archivo JSON. No necesitas la nube."
+  },
+  "opt_export": {
+    "message": "Exportar"
+  },
+  "opt_exported": {
+    "message": "Exportado"
+  },
+  "opt_export_failed": {
+    "message": "Fallido"
+  },
+  "opt_import_label": {
+    "message": "Importar copia de seguridad"
+  },
+  "opt_import_desc": {
+    "message": "Restaurar desde una copia de seguridad JSON de Konode. Los marcadores se agregaron a una nueva carpeta."
+  },
+  "opt_import_bad_file": {
+    "message": "Formato de archivo no válido o no compatible."
+  },
+  "opt_import_ok_one": {
+    "message": "✓ Se importó $COUNT$ marcador en la carpeta $FOLDER$.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      },
+      "folder": {
+        "content": "$2",
+        "example": "Konode Import"
+      }
+    }
+  },
+  "opt_import_ok_other": {
+    "message": "✓ Se importaron $COUNT$ marcadores en la carpeta $FOLDER$.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      },
+      "folder": {
+        "content": "$2",
+        "example": "Konode Import"
+      }
+    }
+  },
+  "opt_import": {
+    "message": "Importar"
+  },
+  "opt_import_done": {
+    "message": "Hecho"
+  },
+  "opt_import_error": {
+    "message": "Error"
+  },
+  "opt_feedback_section": {
+    "message": "Comentarios"
+  },
+  "opt_feedback_section_sub": {
+    "message": "Nada se envía automáticamente. Estos solo se abren cuando haces clic en ellos."
+  },
+  "opt_report_label": {
+    "message": "Informar de un error o solicitar una funcionalidad"
+  },
+  "opt_report_desc": {
+    "message": "Abre las incidencias del proyecto en GitHub (públicas, vinculadas a tu cuenta de GitHub)."
+  },
+  "opt_open_issues": {
+    "message": "Abrir incidencias"
+  },
+  "opt_email_label": {
+    "message": "Envíanos un correo electrónico"
+  },
+  "opt_email_desc": {
+    "message": "Para cualquier cosa que prefieras no publicar de manera pública."
+  },
+  "opt_developer_section": {
+    "message": "Desarrollador"
+  },
+  "opt_debug_label": {
+    "message": "Modo de depuración"
+  },
+  "opt_debug_desc": {
+    "message": "Registro detallado, tanto en la consola del navegador como en Activity, para que puedas compartirlo. Desactívalo cuando hayas terminado."
+  },
+  "opt_about_section": {
+    "message": "Acerca de"
+  },
+  "opt_version_label": {
+    "message": "Versión"
+  },
+  "opt_source_label": {
+    "message": "Código fuente"
+  },
+  "opt_source_desc": {
+    "message": "Sin telemetría. Sin servidores externos."
+  },
+  "opt_devices_bad_reply": {
+    "message": "No se pudo leer la lista de dispositivos."
+  },
+  "popup_setup_title": {
+    "message": "Terminar de configurar Konode"
+  },
+  "popup_setup_body": {
+    "message": "Elige dónde se almacenan tus datos. No se sincroniza ni se sube nada hasta que tú lo decidas."
+  },
+  "popup_setup_cta": {
+    "message": "Iniciar la configuración"
+  },
+  "opt_bulk_delete_desc": {
+    "message": "Una red de seguridad: Si las eliminaciones de un dispositivo par borran más de esta proporción de tus marcadores locales, la fusión las omitirá (protege contra una sincronización corrupta que borre tu árbol de marcadores). Aumenta este valor si sueles eliminar marcadores de forma masiva."
+  },
+  "opt_activity_head_sub": {
+    "message": "Lo que hizo Konode en este dispositivo y los recursos con los que cuenta. Todo calculado aquí: los números, los puntos de restauración y las últimas 200 entradas del registro son locales, y nada de lo que está en esta página se sube jamás a la red."
+  },
+  "opt_devices_section_sub": {
+    "message": "Cada dispositivo con archivos en tu carpeta de sincronización y lo último que subió cada uno. Al eliminar un dispositivo, se borran sus archivos de tu almacenamiento, pero no se eliminan los marcadores de ningún navegador."
+  },
+  "opt_forget_result_one": {
+    "message": "Se eliminó un archivo perteneciente a ‭$LABEL$‬. Si ese navegador aún se encuentra en ejecución, volverá a subirse en cuestión de un minuto y reaparecerá aquí. Esto no es un error: para excluir un dispositivo, primero desactiva Konode en ese dispositivo y luego elimínalo aquí.",
+    "placeholders": {
+      "label": {
+        "content": "$2",
+        "example": "Work laptop"
+      }
+    }
+  },
+  "opt_forget_result_other": {
+    "message": "Se eliminaron ‭$COUNT$‬ archivos pertenecientes a ‭$LABEL$‬. Si ese navegador aún se encuentra en ejecución, volverá a subirse en cuestión de un minuto y reaparecerá aquí. Esto no es un error: para excluir un dispositivo, primero desactiva Konode en ese dispositivo y luego olvídalo aquí.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      },
+      "label": {
+        "content": "$2",
+        "example": "Work laptop"
+      }
+    }
+  },
+  "opt_forget_confirm_one": {
+    "message": "Elimina el único archivo que este dispositivo tiene en tu almacenamiento (‭$TYPES$‬). No se remueve ningún marcador de ningún navegador, ni aquí ni allá. Si ese navegador aún se encuentra en ejecución, volverá a subirse y reaparecerá; para mantenerlo fuera, primero desactiva Konode en ese dispositivo.",
+    "placeholders": {
+      "types": {
+        "content": "$2",
+        "example": "Bookmarks, Sessions"
+      }
+    }
+  },
+  "opt_forget_confirm_other": {
+    "message": "Elimina los ‭$COUNT$‬ archivos que este dispositivo tiene en tu almacenamiento (‭$TYPES$‬). No se remueve ningún marcador de ningún navegador, ni aquí ni allá. Si ese navegador aún se encuentra en ejecución, volverá a subirse y reaparecerá; para mantenerlo fuera, primero desactiva Konode en ese dispositivo.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      },
+      "types": {
+        "content": "$2",
+        "example": "Bookmarks, Sessions"
+      }
+    }
+  },
+  "opt_snapshots_section_sub": {
+    "message": "Copias con marca de tiempo de tus marcadores en el servidor, compartidas por todos tus dispositivos. Al restaurar, se vuelven a agregar los marcadores que falten en este dispositivo (nunca los elimina). Se conservan las 10 más recientes; las más antiguas se eliminan automáticamente y puedes borrar cualquiera de ellas aquí."
   }
 }

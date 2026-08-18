@@ -1,0 +1,1200 @@
+{
+  "extension_description": {
+    "message": "隐私优先的浏览器同步，支持同步至个人存储空间：Google Drive、WebDAV、GitHub。"
+  },
+  "datatype_bookmarks": {
+    "message": "书签"
+  },
+  "datatype_history": {
+    "message": "历史记录"
+  },
+  "datatype_sessions": {
+    "message": "会话"
+  },
+  "datatype_extensions": {
+    "message": "扩展"
+  },
+  "status_idle": {
+    "message": "完成"
+  },
+  "status_syncing": {
+    "message": "同步中…"
+  },
+  "status_success": {
+    "message": "同步完成"
+  },
+  "status_error": {
+    "message": "错误"
+  },
+  "status_conflict": {
+    "message": "冲突"
+  },
+  "stream_off": {
+    "message": "关闭"
+  },
+  "stream_syncing": {
+    "message": "同步中…"
+  },
+  "stream_pending": {
+    "message": "等待"
+  },
+  "stream_never": {
+    "message": "未同步"
+  },
+  "stream_stale": {
+    "message": "上次同步失败"
+  },
+  "stream_synced": {
+    "message": "已同步"
+  },
+  "popup_settings_aria": {
+    "message": "设置"
+  },
+  "popup_sync_now": {
+    "message": "立即同步"
+  },
+  "popup_load_error": {
+    "message": "无法连接 Konode。点击重试。"
+  },
+  "popup_recovery_notice": {
+    "message": "一次异常删除（$COUNT$ 条书签）被阻止，已保存恢复点。请在设置 → 活动中查看。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "popup_no_backend": {
+    "message": "未配置后端"
+  },
+  "popup_conflict_title": {
+    "message": "在 $TYPE$ 中出现冲突：请选择一个版本",
+    "placeholders": {
+      "type": {
+        "content": "$1",
+        "example": "bookmarks"
+      }
+    }
+  },
+  "popup_keep_local": {
+    "message": "本地保留"
+  },
+  "popup_use_remote": {
+    "message": "使用远程"
+  },
+  "popup_active_streams": {
+    "message": "活跃数据流"
+  },
+  "popup_missing_extensions_one": {
+    "message": "$COUNT$ 缺失的扩展",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_missing_extensions_other": {
+    "message": "$COUNT$ 缺失的扩展",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "7"
+      }
+    }
+  },
+  "popup_open_all": {
+    "message": "打开全部"
+  },
+  "popup_sessions_head": {
+    "message": "其他设备的会话"
+  },
+  "popup_unknown_device": {
+    "message": "未知设备"
+  },
+  "popup_tabs_one": {
+    "message": "$COUNT$ 标签页",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_tabs_other": {
+    "message": "$COUNT$ 标签页",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "23"
+      }
+    }
+  },
+  "popup_restore": {
+    "message": "还原"
+  },
+  "popup_backend_label": {
+    "message": "后端"
+  },
+  "popup_backend_none": {
+    "message": "无"
+  },
+  "popup_device_label": {
+    "message": "设备"
+  },
+  "popup_configure": {
+    "message": "配置 →"
+  },
+  "popup_activity_log": {
+    "message": "活动日志 →"
+  },
+  "common_back": {
+    "message": "后退"
+  },
+  "common_continue": {
+    "message": "继续"
+  },
+  "common_open_settings": {
+    "message": "打开设置"
+  },
+  "common_close": {
+    "message": "关闭"
+  },
+  "common_show": {
+    "message": "显示"
+  },
+  "common_hide": {
+    "message": "隐藏"
+  },
+  "common_e2ee": {
+    "message": "端对端加密"
+  },
+  "common_generate_key": {
+    "message": "生成强密钥"
+  },
+  "provider_gdrive_desc": {
+    "message": "直接同步至您的个人 Google Drive。得益于 OAuth，访问令牌仅保存在此设备上。"
+  },
+  "provider_nextcloud_desc": {
+    "message": "您自己的 Nextcloud 或 ownCloud 服务器。"
+  },
+  "provider_nextcloud_note": {
+    "message": "输入您的服务器主机地址；请使用应用专用密码（设置 → 安全）。"
+  },
+  "provider_pcloud_desc": {
+    "message": "pCloud 存储。需要付费的 pCloud 计划。"
+  },
+  "provider_pcloud_note": {
+    "message": "如果你的 pCloud 账户位于 $REGION$ 区域，请选择 $REGION$ 区域。",
+    "placeholders": {
+      "region": {
+        "content": "$1",
+        "example": "EU"
+      }
+    }
+  },
+  "provider_koofr_desc": {
+    "message": "Koofr 云端存储。"
+  },
+  "provider_koofr_note": {
+    "message": "使用您的 Koofr 邮箱作为用户名，使用 Koofr 应用专用密码作为密码。"
+  },
+  "provider_fastmail_desc": {
+    "message": "Fastmail 文件存储。"
+  },
+  "provider_fastmail_note": {
+    "message": "使用您的 Fastmail 完整邮箱地址作为用户名，并使用具备文件（WebDAV）访问权限的应用专用密码。"
+  },
+  "provider_github_desc": {
+    "message": "你的同步数据存放在一个私有的 GitHub 仓库中，Konode 通过个人访问令牌进行访问。"
+  },
+  "provider_webdav_desc": {
+    "message": "Synology、kDrive，或任何其他 WebDAV 服务器。"
+  },
+  "provider_syncing_to": {
+    "message": "正在同步至 $URL$。",
+    "placeholders": {
+      "url": {
+        "example": "https://app.koofr.net/dav/Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_welcome_title": {
+    "message": "欢迎使用Konode"
+  },
+  "onb_welcome_subtitle": {
+    "message": "浏览器同步，让你的数据真正属于你。你的书签、会话和扩展直接保存到你自己的存储空间。没有中间服务器。"
+  },
+  "onb_feature_storage": {
+    "message": "您的数据始终保存在您自己的存储空间中。"
+  },
+  "onb_feature_instant": {
+    "message": "实时同步每一次更改。"
+  },
+  "onb_feature_browsers": {
+    "message": "适用于基于 Chromium 和 Firefox 的浏览器。"
+  },
+  "onb_feature_providers": {
+    "message": "由您决定数据存放在哪里。"
+  },
+  "onb_get_started": {
+    "message": "开始使用"
+  },
+  "onb_backend_title": {
+    "message": "选择你的存储"
+  },
+  "onb_backend_subtitle": {
+    "message": "Konode 应该把你的数据存放在哪里？"
+  },
+  "onb_use_provider": {
+    "message": "使用 $PROVIDER$",
+    "placeholders": {
+      "provider": {
+        "example": "Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_drive_unavailable": {
+    "message": "此浏览器不支持 Google 登录。请选择其他选项。"
+  },
+  "onb_connecting": {
+    "message": "连接中…"
+  },
+  "onb_sign_in_google": {
+    "message": "通过 Google 登录"
+  },
+  "onb_signin_failed": {
+    "message": "登录失败。"
+  },
+  "onb_webdav_user_placeholder": {
+    "message": "用户名"
+  },
+  "onb_webdav_pass_placeholder": {
+    "message": "密码 / 应用令牌"
+  },
+  "onb_verifying": {
+    "message": "验证中…"
+  },
+  "onb_github_401": {
+    "message": "GitHub 拒绝了此令牌。请检查它是否已过期，以及是否已完整粘贴所有内容。"
+  },
+  "onb_github_http": {
+    "message": "GitHub 无法验证令牌（HTTP $STATUS$）。",
+    "placeholders": {
+      "status": {
+        "example": "500",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_github_unreachable": {
+    "message": "无法连接到 GitHub。请检查网络连接后重试。"
+  },
+  "onb_github_branch_placeholder": {
+    "message": "分支（默认：main）"
+  },
+  "onb_github_token_link": {
+    "message": "创建细粒度令牌（仅限此仓库） →"
+  },
+  "onb_data_title": {
+    "message": "要同步哪些内容？"
+  },
+  "onb_data_subtitle": {
+    "message": "您可以随时在设置中更改此项。"
+  },
+  "onb_device_name_label": {
+    "message": "为此设备命名"
+  },
+  "onb_device_name_desc": {
+    "message": "它在其他设备的会话列表中显示的方式。"
+  },
+  "onb_device_name_placeholder": {
+    "message": "工作笔记本电脑"
+  },
+  "onb_encrypt_title": {
+    "message": "加密你的数据吗？"
+  },
+  "onb_encrypt_subtitle": {
+    "message": "如果开启加密，您的数据会在上传前先在此设备上加密。连您的存储提供商都无法读取其中的内容。"
+  },
+  "onb_e2ee_desc": {
+    "message": "AES-256-GCM。推荐。"
+  },
+  "onb_pass_placeholder": {
+    "message": "请选择一个密码短语，或生成加密密钥"
+  },
+  "onb_pass_missing": {
+    "message": "输入密码短语，或生成密钥。"
+  },
+  "onb_pass_too_short": {
+    "message": "至少 $MIN$ 个字符。同步的数据可能被离线攻击，简短的密码短语易于被猜到。",
+    "placeholders": {
+      "min": {
+        "example": "12",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_pass_confirm_placeholder": {
+    "message": "确认密码短语"
+  },
+  "onb_pass_confirm_missing": {
+    "message": "确认您的密码短语。"
+  },
+  "onb_pass_mismatch": {
+    "message": "密码短语尚未匹配。"
+  },
+  "onb_save_passphrase_lead": {
+    "message": "保存此密码短语。"
+  },
+  "onb_save_passphrase_rest": {
+    "message": "它永远不会离开此设备，丢失后也无法恢复。您需要在每台设备上输入相同的密码短语。您可以稍后在设置中复制它。"
+  },
+  "onb_plaintext_note": {
+    "message": "如果不加密，您的数据会直接存储到您自己的存储 $WORD$ 中。若您完全信任存储提供商，这可能是合适的选择。您可以随时在设置里开启加密。",
+    "placeholders": {
+      "word": {
+        "example": "unencrypted",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_plaintext_word": {
+    "message": "可读形式"
+  },
+  "onb_setting_up": {
+    "message": "正在设置…"
+  },
+  "onb_finish_sync": {
+    "message": "完成并同步"
+  },
+  "onb_err_bad_webdav_url": {
+    "message": "那个 WebDAV 地址看起来不像是有效的 URL。"
+  },
+  "onb_err_perms_webdav": {
+    "message": "Konode 需要获得访问您的 WebDAV 服务器以及您所选择的数据类型的权限。请允许它继续。"
+  },
+  "onb_err_perms_types": {
+    "message": "某些权限被拒绝。请授予这些权限，或关闭相应的数据类型，以继续。"
+  },
+  "onb_err_read_settings": {
+    "message": "无法读取您当前的设置，请再试一次。"
+  },
+  "onb_err_save": {
+    "message": "无法保存您的设置：$ERROR$",
+    "placeholders": {
+      "error": {
+        "example": "HTTP 403",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_sync_title": {
+    "message": "正在同步您的数据…"
+  },
+  "onb_sync_subtitle": {
+    "message": "Konode 正在进行首次同步。此过程会在后台运行，因此您无需在此等待。"
+  },
+  "onb_sync_error_title": {
+    "message": "无法完成首次同步"
+  },
+  "onb_sync_error_subtitle": {
+    "message": "您的设置已保存。打开设置进行修复，或直接完成，让 Konode 在后台重试。"
+  },
+  "onb_sync_timeout": {
+    "message": "耗时比平时更长。历史记录较多可能会导致这种情况。同步将在后台继续运行，您现在可以完成操作。"
+  },
+  "onb_finish": {
+    "message": "完成"
+  },
+  "onb_finish_anyway": {
+    "message": "仍要完成"
+  },
+  "onb_done_title": {
+    "message": "一切就绪!"
+  },
+  "onb_done_subtitle": {
+    "message": "Konode 正在将您的浏览器数据同步至 $BACKEND$。首次同步已在后台运行。",
+    "placeholders": {
+      "backend": {
+        "example": "Google Drive",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_done_backend": {
+    "message": "存储已成功连接"
+  },
+  "onb_done_autosync": {
+    "message": "同步在后台自动运行"
+  },
+  "onb_done_adjust": {
+    "message": "您可以随时更改设置"
+  },
+  "datatype_bookmarks_desc": {
+    "message": "完整的书签树，包含文件夹和排序。"
+  },
+  "datatype_sessions_desc": {
+    "message": "可在任何地方恢复的已命名标签会话。"
+  },
+  "datatype_history_desc": {
+    "message": "浏览历史，受天数设置限制。"
+  },
+  "datatype_extensions_desc": {
+    "message": "扩展列表，显示缺失的扩展及其安装链接。"
+  },
+  "extension_name": {
+    "message": "Konode | 私人书签与标签页同步"
+  },
+  "onb_err_perms_no_prompt": {
+    "message": "此浏览器无法显示权限提示，因此 Konode 无法请求所需的访问权限。请在浏览器扩展设置的 Konode 权限页面上授予权限，然后再次点击完成。"
+  },
+  "opt_secret_copy": {
+    "message": "复制"
+  },
+  "opt_secret_copied": {
+    "message": "已复制"
+  },
+  "opt_secret_replace": {
+    "message": "替换"
+  },
+  "opt_webdav_user_label": {
+    "message": "用户名"
+  },
+  "opt_webdav_user_placeholder": {
+    "message": "用户名"
+  },
+  "opt_webdav_pass_label": {
+    "message": "密码/密钥"
+  },
+  "opt_webdav_http_warn": {
+    "message": "这是一个 $SCHEME$ URL，因此您的密码将以未加密的方式发送。",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "http://"
+      }
+    }
+  },
+  "opt_webdav_http_use": {
+    "message": "使用 $SCHEME$。",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "https://"
+      }
+    }
+  },
+  "opt_snap_saved": {
+    "message": "已保存快照。"
+  },
+  "opt_snap_restored_one": {
+    "message": "已恢复 $COUNT$ 条书签。正在同步到您的其他设备…",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_snap_restored_other": {
+    "message": "已恢复 $COUNT$ 条书签。正在同步到其他设备…",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "opt_snap_deleted": {
+    "message": "还原点已删除。"
+  },
+  "opt_err_perms_no_prompt": {
+    "message": "此浏览器无法显示权限提示，因此 Konode 无法请求访问您的 WebDAV 服务器。请在浏览器扩展设置的 Konode 权限页面中授予权限，然后重试。"
+  },
+  "opt_err_perms_bad_url": {
+    "message": "Konode 没有可用的 WebDAV 地址可供请求访问。请检查上面的服务器 URL。"
+  },
+  "opt_err_perms_denied": {
+    "message": "未获得访问 WebDAV 服务器的权限。"
+  },
+  "opt_err_pass_too_short": {
+    "message": "使用至少 $MIN$ 个字符。同步的数据可能离线被攻击，因此短的密码短语容易被猜到。越长越好，或者生成密钥。",
+    "placeholders": {
+      "min": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "opt_err_pass_mismatch": {
+    "message": "两次密码短语不匹配。请重新输入以确认后再保存。"
+  },
+  "opt_saving": {
+    "message": "保存中…"
+  },
+  "opt_saved": {
+    "message": "已保存"
+  },
+  "opt_save_changes": {
+    "message": "保存更改"
+  },
+  "opt_nav_backend": {
+    "message": "存储"
+  },
+  "opt_nav_data": {
+    "message": "数据类型"
+  },
+  "opt_nav_device": {
+    "message": "设备"
+  },
+  "opt_nav_activity": {
+    "message": "活动"
+  },
+  "opt_nav_advanced": {
+    "message": "高级"
+  },
+  "opt_setup_title": {
+    "message": "完成 Konode 设置"
+  },
+  "opt_setup_step_storage": {
+    "message": "选择数据存储位置"
+  },
+  "opt_setup_step_types": {
+    "message": "选择要同步的内容"
+  },
+  "opt_backend_head": {
+    "message": "存储"
+  },
+  "opt_backend_head_sub": {
+    "message": "选择同步数据的存储位置。您的数据永不触及我们的服务器。"
+  },
+  "opt_gdrive_connect_failed": {
+    "message": "连接失败"
+  },
+  "opt_gdrive_scope_hint": {
+    "message": "仅限 $SCOPE$ 范围，因此 Konode 只能访问它自己创建的文件。",
+    "placeholders": {
+      "scope": {
+        "content": "$1",
+        "example": "drive.file"
+      }
+    }
+  },
+  "opt_drive_folder_label": {
+    "message": "云端硬盘文件夹 ID"
+  },
+  "opt_optional": {
+    "message": "(可选)"
+  },
+  "opt_drive_folder_placeholder": {
+    "message": "留空以自动创建一个 “Konode” 文件夹"
+  },
+  "opt_region_label": {
+    "message": "地区"
+  },
+  "opt_webdav_host_label": {
+    "message": "服务器主机"
+  },
+  "opt_webdav_url_label": {
+    "message": "服务器 URL"
+  },
+  "opt_github_token_label": {
+    "message": "个人访问令牌"
+  },
+  "opt_github_repo_label": {
+    "message": "仓库"
+  },
+  "opt_github_branch_label": {
+    "message": "分支"
+  },
+  "opt_stat_never": {
+    "message": "用不"
+  },
+  "opt_setup_sub": {
+    "message": "Konode 将您的浏览器同步至您自己的存储空间。不存在 Konode 服务器。只需简单两步即可完成。（如果设置向导未在您的浏览器中打开，您可以在此处完成所有设置。）"
+  },
+  "opt_data_head": {
+    "message": "数据类型"
+  },
+  "opt_data_head_sub": {
+    "message": "选择在设备之间同步的内容。"
+  },
+  "opt_data_section": {
+    "message": "同步数据"
+  },
+  "opt_data_permission_lost": {
+    "message": "Konode 已经不再拥有所需的权限，因此无法同步。将其关闭后再重新开启即可恢复。"
+  },
+  "opt_history_days_label": {
+    "message": "同步天数"
+  },
+  "opt_history_days_desc": {
+    "message": "推荐：30 天。"
+  },
+  "opt_history_days_value": {
+    "message": "$COUNT$天",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
+  "opt_history_hint": {
+    "message": "来自其他设备的页面是按到达时间而非您首次访问的时间添加的，因此在 Chromium 浏览器中，它们会显示在“今天”分类下，而非您实际浏览的日期。Firefox 则会保留原始日期。"
+  },
+  "opt_missing_ext_head": {
+    "message": "缺失的扩展 ($COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "6"
+      }
+    }
+  },
+  "opt_ext_from": {
+    "message": "· 来自 $STORE$",
+    "placeholders": {
+      "store": {
+        "content": "$1",
+        "example": "Firefox"
+      }
+    }
+  },
+  "opt_ext_install": {
+    "message": "安装"
+  },
+  "opt_ext_find": {
+    "message": "查找"
+  },
+  "opt_no_password_title": {
+    "message": "密码同步不可用。"
+  },
+  "opt_no_password_body": {
+    "message": "浏览器扩展无法访问本机密码存储。"
+  },
+  "opt_no_password_use": {
+    "message": "使用 $MANAGERS$ 进行自托管密码同步。",
+    "placeholders": {
+      "managers": {
+        "content": "$1",
+        "example": "Bitwarden or Proton Pass"
+      }
+    }
+  },
+  "opt_or": {
+    "message": "或"
+  },
+  "opt_device_head": {
+    "message": "设备"
+  },
+  "opt_device_head_sub": {
+    "message": "在同步网络中标识此设备。"
+  },
+  "opt_identity_section": {
+    "message": "身份"
+  },
+  "opt_device_name_label": {
+    "message": "设备名称"
+  },
+  "opt_device_name_desc": {
+    "message": "此设备在同步日志中的显示方式。"
+  },
+  "opt_device_name_placeholder": {
+    "message": "我的笔记本电脑"
+  },
+  "opt_device_id_label": {
+    "message": "设备iD"
+  },
+  "opt_device_id_desc": {
+    "message": "自动生成。请勿更改。"
+  },
+  "opt_behavior_section": {
+    "message": "同步行为"
+  },
+  "opt_sync_on_change_label": {
+    "message": "更改时同步"
+  },
+  "opt_sync_on_change_desc": {
+    "message": "在更改时即时同步书签和标签页。推荐。"
+  },
+  "opt_auto_sync_label": {
+    "message": "自动同步"
+  },
+  "opt_auto_sync_desc": {
+    "message": "并按常规计划同步。"
+  },
+  "opt_notifications_label": {
+    "message": "通知"
+  },
+  "opt_notifications_desc": {
+    "message": "同步状态和冲突警报。"
+  },
+  "opt_interval_label": {
+    "message": "同步间隔"
+  },
+  "opt_interval_desc": {
+    "message": "此设备拉取远程更改的频率。30 秒是浏览器后台检查的最小间隔。您自己的更改几乎会即时上传。"
+  },
+  "opt_interval_value": {
+    "message": "$COUNT$秒",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
+  "opt_conflict_section": {
+    "message": "冲突解决"
+  },
+  "opt_conflict_lww": {
+    "message": "以最后一次写入为准"
+  },
+  "opt_conflict_lww_desc": {
+    "message": "以最新的更改为准。"
+  },
+  "opt_conflict_local": {
+    "message": "本地优先"
+  },
+  "opt_conflict_local_desc": {
+    "message": "本地更改会覆盖远程。"
+  },
+  "opt_conflict_remote": {
+    "message": "远程优先"
+  },
+  "opt_conflict_remote_desc": {
+    "message": "远程更改覆盖本地。"
+  },
+  "opt_conflict_manual": {
+    "message": "手动"
+  },
+  "opt_conflict_manual_desc": {
+    "message": "在弹窗中提示我解决每个冲突。"
+  },
+  "opt_safety_section": {
+    "message": "安全"
+  },
+  "opt_bulk_delete_label": {
+    "message": "来自节点的最大批量删除数"
+  },
+  "opt_bulk_delete_desc": {
+    "message": "安全机制：如果来自节点的删除操作影响到超过此比例的本地书签，合并过程将跳过这些删除（防止因同步异常而清空您的书签树）。如果您经常批量删除，可调高此数值。"
+  },
+  "opt_activity_head": {
+    "message": "活动"
+  },
+  "opt_activity_head_sub": {
+    "message": "Konode 在此设备上所执行的操作，以及它所依赖的内容。所有数据均在本地计算：数字、恢复点以及最近 200 条日志条目都只存放在本地，此页面上的任何信息都不会被上传。"
+  },
+  "opt_sync_activity_section": {
+    "message": "同步活动"
+  },
+  "opt_stat_transferred": {
+    "message": "已传输的数据"
+  },
+  "opt_stat_runs": {
+    "message": "同步运行"
+  },
+  "opt_stat_last_sync": {
+    "message": "上次同步"
+  },
+  "opt_devices_section": {
+    "message": "设备"
+  },
+  "opt_devices_section_sub": {
+    "message": "列出所有在同步文件夹中拥有文件的设备，以及它们最近一次上传的内容。 忘记某个设备会从存储中删除该设备的文件，但不会删除任何浏览器的书签。"
+  },
+  "opt_forget_result_one": {
+    "message": "已删除属于 $LABEL$ 的一个文件。如果该浏览器仍在运行，它将在一分钟内重新上传并再次显示在这里。这并非故障：若要彻底移除设备，请先在该设备上关闭 Konode，然后再在此处将其移除。",
+    "placeholders": {
+      "label": {
+        "content": "$2",
+        "example": "Work laptop"
+      }
+    }
+  },
+  "opt_forget_result_other": {
+    "message": "已删除属于 $LABEL$ 的 $COUNT$ 个文件。如果该浏览器仍在运行，它将在一分钟内重新上传并再次显示在这里。这并非故障：若要彻底移除设备，请先在该设备上关闭 Konode，然后再在此处将其移除。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      },
+      "label": {
+        "content": "$2",
+        "example": "Work laptop"
+      }
+    }
+  },
+  "opt_dismiss": {
+    "message": "忽略"
+  },
+  "opt_devices_error": {
+    "message": "无法读取您的设备：$ERROR$。这并不意味着您没有设备。请检查 Storage 中的连接，然后重新打开此标签页。",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "404 Not Found"
+      }
+    }
+  },
+  "opt_devices_loading": {
+    "message": "正在读取您的同步文件夹…"
+  },
+  "opt_devices_empty": {
+    "message": "文件夹里还没有内容。同步一下，这个设备就会出现。"
+  },
+  "opt_device_unnamed": {
+    "message": "未命名设备 ($ID$)",
+    "placeholders": {
+      "id": {
+        "content": "$1",
+        "example": "a1b2c3d4"
+      }
+    }
+  },
+  "opt_this_device": {
+    "message": "此设备"
+  },
+  "opt_last_upload": {
+    "message": "· 最后上传 $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "8/9/2026, 10:20:45 AM"
+      }
+    }
+  },
+  "opt_forget": {
+    "message": "忘记"
+  },
+  "opt_forget_it": {
+    "message": "忘记它"
+  },
+  "opt_forget_confirm_one": {
+    "message": "删除此设备在您的存储（$TYPES$）中的唯一文件。不会删除任何浏览器中的书签，无论在此处还是其他地方。如果该浏览器仍在运行，它会重新上传并再次出现；要让它保持不出现，先在该浏览器上关闭 Konode。",
+    "placeholders": {
+      "types": {
+        "content": "$2",
+        "example": "Bookmarks, Sessions"
+      }
+    }
+  },
+  "opt_forget_confirm_other": {
+    "message": "删除此设备在您存储中的 $COUNT$ 个文件（$TYPES$）。不会删除任何浏览器中的书签，无论是这里还是那里。如果该浏览器仍在运行，它会再次上传并重新出现；若想让它不再出现，请先在该浏览器上关闭 Konode。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      },
+      "types": {
+        "content": "$2",
+        "example": "Bookmarks, Sessions"
+      }
+    }
+  },
+  "opt_that_device": {
+    "message": "那台设备"
+  },
+  "opt_cancel": {
+    "message": "取消"
+  },
+  "opt_snapshots_section": {
+    "message": "还原点"
+  },
+  "opt_snapshots_section_sub": {
+    "message": "在后端保存了带时间戳的书签副本，所有设备共享。恢复时会把该设备缺失的书签补回（永不删除）。仅保留最新的 10 条，较旧的会自动移除，你也可以在此删除任意一条。"
+  },
+  "opt_snap_now_label": {
+    "message": "立即保存快照"
+  },
+  "opt_snap_now_desc": {
+    "message": "当前书签树的恢复点。"
+  },
+  "opt_snap_create": {
+    "message": "创建快照"
+  },
+  "opt_snap_loading": {
+    "message": "正在加载恢复点…"
+  },
+  "opt_snap_error": {
+    "message": "无法读取您的恢复点：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "404 Not Found"
+      }
+    }
+  },
+  "opt_snap_error_desc": {
+    "message": "这并不意味着您没有设备。它们保存在您的存储空间中，刚才无法列出。请检查“存储”中的连接，然后重新打开此标签页。"
+  },
+  "opt_snap_empty": {
+    "message": "尚未创建任何恢复点。请在上方创建，或在出现异常删除被阻止时自动保存一个。"
+  },
+  "opt_snap_count_one": {
+    "message": "$COUNT$ 书签",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_snap_count_other": {
+    "message": "$COUNT$ 书签",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "opt_snap_unknown": {
+    "message": "书签恢复点"
+  },
+  "opt_snap_confirm_restore": {
+    "message": "确认恢复"
+  },
+  "opt_snap_confirm_delete": {
+    "message": "确认删除"
+  },
+  "opt_snap_delete_aria": {
+    "message": "删除此还原点"
+  },
+  "opt_log_section": {
+    "message": "日志"
+  },
+  "opt_log_empty_sub": {
+    "message": "暂无条目."
+  },
+  "opt_log_count_one": {
+    "message": "$COUNT$ 条目",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_log_count_other": {
+    "message": "$COUNT$ 条目",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "opt_log_errors": {
+    "message": " · $COUNT$ 项错误",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_log_skipped": {
+    "message": " · $COUNT$ 已跳过",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "opt_log_errors_only_label": {
+    "message": "仅显示错误"
+  },
+  "opt_log_errors_only_desc": {
+    "message": "隐藏成功条目。"
+  },
+  "opt_log_clear": {
+    "message": "清除日志"
+  },
+  "opt_log_nothing": {
+    "message": "暂无日志。运行一次同步后即可在此显示。"
+  },
+  "opt_log_no_errors": {
+    "message": "未记录任何错误。太棒了。"
+  },
+  "opt_encryption_section": {
+    "message": "加密"
+  },
+  "opt_e2ee_desc": {
+    "message": "AES-256-GCM。数据在离开此设备前会使用您的密码短语进行加密，因此存储提供商永远无法读取它。请妥善保管密码短语：如果没有它，就无法恢复加密数据，且每个设备都必须使用同一个。"
+  },
+  "opt_e2ee_disable_confirm": {
+    "message": "关闭加密？从下一次同步起，您的同步数据将在后端以 $UNENCRYPTED$ 的形式存储。此后，每台设备也必须将其关闭。",
+    "placeholders": {
+      "unencrypted": {
+        "content": "$1",
+        "example": "unencrypted"
+      }
+    }
+  },
+  "opt_unencrypted": {
+    "message": "未加密"
+  },
+  "opt_e2ee_turn_off": {
+    "message": "关闭"
+  },
+  "opt_passphrase_label": {
+    "message": "密码"
+  },
+  "opt_passphrase_desc": {
+    "message": "生成加密密钥。仅存储在此设备上，永不上传。"
+  },
+  "opt_passphrase_placeholder": {
+    "message": "选择一个强密码"
+  },
+  "opt_passphrase_confirm_placeholder": {
+    "message": "确认密码"
+  },
+  "opt_passphrase_match": {
+    "message": "密码匹配."
+  },
+  "opt_genkey_saved_warning": {
+    "message": "请立即保存。如果您忘记了它，这是恢复数据的唯一方法。请在您的其他设备上输入相同的密钥。"
+  },
+  "opt_export_label": {
+    "message": "导出备份"
+  },
+  "opt_export_desc": {
+    "message": "将书签、历史记录和扩展程序下载为 JSON 文件。无需云端。"
+  },
+  "opt_export": {
+    "message": "导出"
+  },
+  "opt_exported": {
+    "message": "已导出"
+  },
+  "opt_export_failed": {
+    "message": "失败"
+  },
+  "opt_import_label": {
+    "message": "导入备份"
+  },
+  "opt_import_desc": {
+    "message": "从 Konode JSON 备份恢复。书签将添加至新文件夹。"
+  },
+  "opt_import_bad_file": {
+    "message": "无效或不支持的文件格式。"
+  },
+  "opt_import_ok_one": {
+    "message": "✓ 已将 $COUNT$ 个书签导入至 $FOLDER$ 文件夹。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      },
+      "folder": {
+        "content": "$2",
+        "example": "Konode Import"
+      }
+    }
+  },
+  "opt_import_ok_other": {
+    "message": "✓ 已将 $COUNT$ 个书签导入至 $FOLDER$ 文件夹。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      },
+      "folder": {
+        "content": "$2",
+        "example": "Konode Import"
+      }
+    }
+  },
+  "opt_import": {
+    "message": "导入"
+  },
+  "opt_import_done": {
+    "message": "完成"
+  },
+  "opt_import_error": {
+    "message": "错误"
+  },
+  "opt_feedback_section": {
+    "message": "反馈"
+  },
+  "opt_feedback_section_sub": {
+    "message": "不会自动发送任何内容。点击时才会打开。"
+  },
+  "opt_report_label": {
+    "message": "报告 Bug 或建议新功能"
+  },
+  "opt_report_desc": {
+    "message": "打开项目的 GitHub Issues（公开，关联至您的 GitHub 账号）。"
+  },
+  "opt_open_issues": {
+    "message": "查看 Issues"
+  },
+  "opt_email_label": {
+    "message": "给我们发邮件"
+  },
+  "opt_email_desc": {
+    "message": "适用于不便公开的内容。"
+  },
+  "opt_developer_section": {
+    "message": "开发者"
+  },
+  "opt_debug_label": {
+    "message": "调试模式"
+  },
+  "opt_debug_desc": {
+    "message": "详细日志记录，输出至浏览器控制台和“活动”以便分享。使用完毕后请将其关闭。"
+  },
+  "opt_about_section": {
+    "message": "关于"
+  },
+  "opt_version_label": {
+    "message": "版本"
+  },
+  "opt_source_label": {
+    "message": "源码"
+  },
+  "opt_source_desc": {
+    "message": "无遥测。无外部服务器。"
+  },
+  "opt_devices_bad_reply": {
+    "message": "无法读取设备列表。"
+  },
+  "opt_e2ee_no_passphrase": {
+    "message": "加密已经开启，但没有设定明文密码，同步将持续上传明文文文件，直到你添加一个明文密码。"
+  },
+  "opt_e2ee_off_warning": {
+    "message": "加密已关闭，因此您的同步数据（书签、历史记录、会话、扩展程序）以 $UNENCRYPTED$ 形式存储在后端。开启加密可在数据离开此设备前加密所有内容。",
+    "placeholders": {
+      "unencrypted": {
+        "content": "$1",
+        "example": "unencrypted"
+      }
+    }
+  },
+  "opt_advanced_head": {
+    "message": "高级"
+  },
+  "opt_advanced_head_sub": {
+    "message": "备份、反馈和开发者选项。"
+  },
+  "opt_impexp_section": {
+    "message": "导入/导出"
+  },
+  "popup_setup_title": {
+    "message": "完成 Konode 的设置"
+  },
+  "popup_setup_body": {
+    "message": "选择您的数据存储位置。在您选择之前，不会同步或上传任何内容。"
+  },
+  "popup_setup_cta": {
+    "message": "开始设置"
+  }
+}
