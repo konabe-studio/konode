@@ -97,10 +97,38 @@ keeps the two from being confused.
 - **Backend expansion**, cheapest sign-in first. See *Platform priority* item 3 below.
 - **History sync performance**: the full-history dedup scan every import runs.
 - **More languages.** Japanese, Italian and Estonian are open volunteer work on Weblate
-  with no target date. A language joins `SHIPPED` in `i18n.test.ts` once it is complete,
-  which is the last step of shipping it. Completeness is the whole bar: the translators
+  with no target date. A language joins `shipped-languages.json` once it is complete, which
+  is the last step of shipping it: that one list is what both the packaging scripts and
+  `i18n.test.ts` read, so what we ship and what we hold to a completeness check cannot
+  drift apart. Completeness is the whole bar: the translators
   are native speakers and Weblate is where their work gets reviewed, so a language no
   maintainer here reads is not thereby held back.
+- **1.4.0 is scoped in the tracker, not here.** Three issues carry the design work, with
+  the API checks and the reasoning written out where contributors can read them rather
+  than in a local file. #11 and #10 were both held behind the translations release, which
+  shipped 2026-08-17, so neither is blocked any more.
+  - [#11 What Konode can and cannot sync](https://github.com/konabe-studio/konode/issues/11)
+    measures us against Brave Sync's list and answers it with a principle instead of a
+    backlog: Konode can only sync what means the same thing in every browser. Two real
+    candidates fall out. **Reading list** (`chrome.readingList`, Chrome 120+) is the
+    cheaper of them, because `capabilities.ts` already handles a data type a browser does
+    not implement, so it would report itself unavailable on Firefox and the sync would skip
+    it with no engine change. **Live tab groups** (`chrome.tabGroups`, live groups only,
+    since Brave's *saved* groups are not exposed to extensions) is structurally the same
+    problem as #6 and belongs in the same design.
+  - [#10 Device identity is per install, not per machine](https://github.com/konabe-studio/konode/issues/10),
+    split from #7. The rule it lands on: never merge identities automatically, ask, and ask
+    with the only two facts that let a human decide, how recently the device uploaded and
+    what data it holds. Default to keeping both, because Forget is reversible while taking
+    over an identity overwrites. The structural half is worth more than the duplicate row:
+    **nothing ages out a peer**, so a device that never syncs again is merged every cycle,
+    forever, until somebody hits Forget.
+  - [#6 Sync a tab's container](https://github.com/konabe-studio/konode/issues/6), matched
+    by NAME, because `cookieStoreId` is per profile and means nothing on another machine.
+    Firefox only: Chromium has no container concept at all, and whether Brave 1.92's
+    containers reach extensions is unverified rather than settled. Needs `cookies` and
+    `contextualIdentities`, both as optional permissions, which `capabilities.ts` is
+    already the right place to gate.
 
 ## Not supported, but closer than it was: iOS / WebKit
 
