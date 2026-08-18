@@ -225,7 +225,8 @@ stuck, or have an idea? **Open an issue**. It's the best way to reach us:
 [github.com/konabe-studio/konode/issues](https://github.com/konabe-studio/konode/issues).
 
 If Konode is useful to you and you'd like to support its development, you can
-[buy me a coffee](https://buymeacoffee.com/konabe.studio). Entirely optional. Konode
+[buy me a coffee](https://buymeacoffee.com/konabe.studio) for a one-off tip, or give a
+recurring amount on [Liberapay](https://liberapay.com/konabe). Entirely optional. Konode
 is free and open source.
 
 ## License
