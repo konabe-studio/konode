@@ -287,6 +287,28 @@ pitch.
   MEGA backend exists. The Firefox build itself is runtime-verified as of 1.2.0, so the open
   question is the new backend, not the build.
 
+## iCloud: asked for, and not on our terms
+
+Requested on Reddit, 2026-08-17. The answer is no, and the reason is not effort.
+
+- **iCloud Drive has no public API for third parties, and no WebDAV.** What circulates as
+  "iCloud over WebDAV" is a relay service that proxies the files through its own server,
+  which is precisely what this project exists to avoid. Routing someone's bookmarks
+  through a third party on the way to storage they own is worse than not supporting it.
+- **The one sanctioned route is CloudKit**, which needs a paid Apple Developer membership
+  and writes into a container the *developer* registers, not into the user's iCloud Drive.
+  The data lands in a private database they cannot open in Finder, cannot copy files out
+  of, and cannot hand to another tool. They can delete it wholesale through Apple's
+  storage settings, and that is the whole of their control over it.
+
+The second point disqualifies it, not the fee. "Storage you own" means the files are
+visible, copyable and portable, and that a user can walk away from Konode without losing
+them. CloudKit would be the one backend where that stops being true, so it would buy an
+Apple logo on a card in the setup wizard at the cost of the only claim the project makes.
+
+Apple users are served today by any WebDAV provider, and by a private GitHub repository.
+Reopen this if Apple ever ships an API that writes to the user's visible iCloud Drive.
+
 ## Later / nice-to-have
 - Incremental diff for >10k bookmarks; history sync performance (the full-history dedup
   scan every import runs is what's left, after 1.2.0 overlapped the per-page writes that
