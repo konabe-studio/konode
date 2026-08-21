@@ -205,5 +205,44 @@
   },
   "provider_fastmail_note": {
     "message": "Usa il tuo indirizzo Fastmail completo come nome utente e una password per l'app che abbia l'accesso a File (WebDAV)."
+  },
+  "extension_name": {
+    "message": "Konode | Sincronizzazione privata di preferiti e schede"
+  },
+  "popup_setup_title": {
+    "message": "Completa la configurazione di Konode"
+  },
+  "popup_setup_body": {
+    "message": "Scegli dove archiviare i tuoi dati. Niente viene sincronizzato o caricato finché non lo fai tu."
+  },
+  "popup_setup_cta": {
+    "message": "Avvia configurazione"
+  },
+  "provider_github_desc": {
+    "message": "I tuoi dati sincronizzati risiedono in un repository privato su GitHub, Konode lo raggiunge tramite un Personal Access Token."
+  },
+  "provider_webdav_desc": {
+    "message": "Synology, kDrive o qualsiasi altro server WebDAV."
+  },
+  "provider_syncing_to": {
+    "message": "Sincronizzazione su $URL$.",
+    "placeholders": {
+      "url": {
+        "example": "https://app.koofr.net/dav/Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_welcome_title": {
+    "message": "Benvenuto su Konode"
+  },
+  "onb_welcome_subtitle": {
+    "message": "Sincronizzazione del browser in cui i tuoi dati rimangono veramente tuoi. I tuoi preferiti, le tue sessioni e le tue estensioni vanno direttamente nello spazio di archiviazione di tua proprietà. Nessun server nel mezzo."
+  },
+  "onb_feature_storage": {
+    "message": "I tuoi dati rimangono sempre nel tuo spazio di archiviazione."
+  },
+  "onb_feature_instant": {
+    "message": "Sincronizza ogni modifica quando avviene."
   }
 }
