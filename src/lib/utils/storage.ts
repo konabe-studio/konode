@@ -115,6 +115,7 @@ export const KEYS = {
   RESOLVED_CONFLICTS: "konode_resolved_conflicts",
   CONFLICT_PACKETS: "konode_conflict_packets",
   RECOVERY_SNAPSHOT: "konode_recovery_snap",
+  BULK_DELETE_APPROVAL: "konode_bulk_delete_ok",
   SYNC_LOCK: "konode_sync_lock",
   GDRIVE_SESSION: "konode_gdrive_session",
   GDRIVE_FOLDER: "konode_gdrive_folder",
@@ -514,6 +515,31 @@ export async function getRecoverySnapshotTaken(): Promise<boolean> {
 
 export async function setRecoverySnapshotTaken(taken: boolean): Promise<void> {
   await set(KEYS.RECOVERY_SNAPSHOT, taken);
+}
+
+// The user's one-shot "yes, apply that deletion" from Settings → Activity.
+//
+// The percentage slider cannot express this. It tops out at 95%, so a peer clearing
+// nearly its whole tree stays blocked at every setting and the warning never clears
+// (#18) — and even where raising it does work, it permanently weakens the guard to wave
+// through a single event that has already happened.
+//
+// So the approval is a latch, not a threshold: set from the UI, consumed by the very
+// next merge that would otherwise block, and cleared as it is consumed. Nothing carries
+// over to the sync after it. The restore point is already on the backend before the
+// button can exist, which is what makes saying yes cheap.
+//
+// It stores the SIZE that was approved rather than a bare true, and the merge honours it
+// only for a deletion that size or smaller. A plain boolean left armed until the next
+// sync would wave through whatever arrived in the meantime, so approving "48 of your 49"
+// could have cashed out against a different and much larger deletion. 0 means none.
+
+export async function getBulkDeleteApproval(): Promise<number> {
+  return get<number>(KEYS.BULK_DELETE_APPROVAL, 0);
+}
+
+export async function setBulkDeleteApproval(maxBlocked: number): Promise<void> {
+  await set(KEYS.BULK_DELETE_APPROVAL, maxBlocked);
 }
 
 // ─── Sync lock (CO-4) ─────────────────────────────────────────────────────────

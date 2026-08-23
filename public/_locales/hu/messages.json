@@ -60,7 +60,7 @@
     "message": "A Konode nem érhető el. Kattints az újrapróbálkozáshoz."
   },
   "popup_recovery_notice": {
-    "message": "Egy szokatlan törlést ($COUNT$ könyvjelző) letiltottunk, és mentettünk egy visszaállítási pontot. Megtekintés: Beállítások → Tevékenység.",
+    "message": "Egy szokatlan törlést ($COUNT$ könyvjelző) letiltottunk, és mentettünk egy visszaállítási pontot. Alkalmazd vagy tartsd meg őket: Beállítások → Aktivitás.",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -912,6 +912,80 @@
   },
   "opt_cancel": {
     "message": "Mégse"
+  },
+  "opt_blocked_section": {
+    "message": "Letiltott törlés"
+  },
+  "opt_blocked_section_sub": {
+    "message": "Egy másik eszköz szokatlanul sok könyvjelződ törlését kérte, ezért a Konode visszatartotta. Alkalmazd, ha szándékos volt, vagy tartsd meg őket."
+  },
+  "opt_blocked_headline_one": {
+    "message": "$COUNT$ könyvjelző a $TOTAL$ közül",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      },
+      "total": {
+        "content": "$2",
+        "example": "49"
+      }
+    }
+  },
+  "opt_blocked_headline_other": {
+    "message": "$COUNT$ könyvjelző a $TOTAL$ közül",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "48"
+      },
+      "total": {
+        "content": "$2",
+        "example": "49"
+      }
+    }
+  },
+  "opt_blocked_count_one": {
+    "message": "$COUNT$ könyvjelző",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_count_other": {
+    "message": "$COUNT$ könyvjelző",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "48"
+      }
+    }
+  },
+  "opt_blocked_from": {
+    "message": "$DEVICE$ kérte.",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_blocked_from_unknown": {
+    "message": "Egy másik eszköz kérte."
+  },
+  "opt_blocked_saved": {
+    "message": "Semmi nem lett törölve, és előtte mentettünk egy visszaállítási pontot."
+  },
+  "opt_blocked_apply": {
+    "message": "Törlés alkalmazása"
+  },
+  "opt_blocked_confirm_apply": {
+    "message": "Alkalmazás és törlés"
+  },
+  "opt_blocked_keep": {
+    "message": "Ha inkább megtartanád őket, állíts vissza egy takarítás előtti pontot azon az eszközön, amelyik kérte. Ezzel ott törlődik a törlés nyoma, így nem küldi tovább ide."
   },
   "opt_snapshots_section": {
     "message": "Visszaállítási pontok"

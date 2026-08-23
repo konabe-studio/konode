@@ -17,9 +17,23 @@ tabs and the extension list have no instant path at all: they travel on that sam
 **Bookmarks I deleted came back / a big cleanup didn't propagate.**
 Konode has a safety cap: a single sync won't apply peer deletions that would remove
 more than a threshold of your local bookmarks (default **60%**), to guard against a
-corrupt deletion log wiping your tree. If you intentionally deleted a large share, raise
-**Max bulk delete from a peer** under **Settings → Device → Safety** (50-95%) and sync
-again. A blocked deletion also saves a restore point, so nothing is lost either way.
+corrupt deletion log wiping your tree. The device receiving the deletion saves a restore
+point and shows "an unusual deletion was blocked", so nothing is lost either way.
+
+**To let the deletion through**, open **Settings → Activity** on the device showing the
+warning and use **Apply the deletion** on the card at the top. It names the device that
+is asking and how many bookmarks are involved, and the restore point is already saved
+before you decide.
+
+**To keep the bookmarks instead**, undo the deletion on the device that made it: open
+**Settings → Activity** there and restore a point from before the cleanup. That puts the
+bookmarks back and clears the deletion record, so it stops being sent to your other
+devices.
+
+Raising **Max bulk delete from a peer** under **Settings → Device → Safety** (50-95%)
+also lets a large cleanup through, but only up to 95% of your tree, so it cannot help
+when a device asks to clear nearly everything. It is a standing setting rather than a
+one-time approval, so prefer the card above.
 
 **Nothing syncs unless I keep a DevTools window open (dev builds).**
 After rebuilding an unpacked extension you must click **↻ reload** on it

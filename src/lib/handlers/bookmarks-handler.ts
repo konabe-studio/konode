@@ -10,6 +10,7 @@ import {
   getFolderMoves, setFolderMoves, updateFolderMoves,
   getTitles, setTitles, updateTitles,
   getFolderRenames, setFolderRenames, updateFolderRenames,
+  getBulkDeleteApproval, setBulkDeleteApproval,
 } from "@/lib/utils/storage";
 import { defaultOtherRootId, matchLocalRoot, matchLocalRootEx, rootKind } from "@/lib/utils/bookmark-roots";
 import { canonicalUrlKey } from "@/lib/utils/url";
@@ -381,14 +382,32 @@ export function normalizePayload(payload: unknown): BookmarkPayload {
 
 // ─── Write (import from remote) ──────────────────────────────────────────
 
+/**
+ * What the mass-delete guard refused, and the arithmetic behind it.
+ *
+ * The count alone was not enough to act on: the popup could say "48 bookmarks" but not
+ * what it was 48 *of*, and the user has to know that before deciding whether to wave it
+ * through. Carrying the cap and the local total means the notice can say "48 of your 49",
+ * and it saves the sync engine recomputing numbers the merge already had in hand.
+ */
+export interface BulkDeleteBlock {
+  /** Local bookmarks the guard refused to remove this merge. */
+  blocked: number;
+  /** The ceiling it exceeded. */
+  cap: number;
+  /** URL bookmarks present locally when the merge ran. */
+  localTotal: number;
+  /** The configured percentage the cap came from. */
+  pct: number;
+}
+
 export async function importBookmarks(
   payload: unknown,
   strategy: "merge" | "replace" = "merge",
   conflictStrategy: ConflictStrategy = "lww",
   deletePercent = 60,
-  // Called when the mass-delete guard blocks a peer's deletions (recovery signal) —
-  // `blocked` is how many local bookmarks the guard refused to remove this merge.
-  onBulkBlocked?: (blocked: number) => void
+  // Called when the mass-delete guard blocks a peer's deletions (recovery signal).
+  onBulkBlocked?: (info: BulkDeleteBlock) => void
 ): Promise<void> {
   assertDataTypeApi("bookmarks");
   const {
@@ -522,7 +541,7 @@ async function mergeBookmarks(
   logs: MergeLogs,
   strategy: ConflictStrategy,
   deletePercent = 60,
-  onBulkBlocked?: (blocked: number) => void,
+  onBulkBlocked?: (info: BulkDeleteBlock) => void,
 ): Promise<void> {
   // All URL identity maps below are keyed by the CANONICAL url (canonicalUrlKey),
   // not the raw string, so a bare-origin bookmark that Chromium/Firefox store with
@@ -574,17 +593,43 @@ async function mergeBookmarks(
     }
   }
   // Safety: refuse a mass-delete from a corrupt/oversized tombstone log. The
-  // threshold is user-configurable (Settings → Advanced, default 60%): a floor of
-  // 20 keeps small trees from tripping it, and a normal bulk cleanup up to the
+  // threshold is user-configurable (Settings → Device → Safety, default 60%): a floor
+  // of 20 keeps small trees from tripping it, and a normal bulk cleanup up to the
   // percentage still propagates.
+  //
+  // The percentage alone cannot answer every case, which is why the approval latch
+  // exists: the slider stops at 95%, so a peer clearing nearly its whole tree was
+  // blocked at every setting and the warning never cleared (#18). Reading the latch is
+  // gated on being over the cap so the ordinary merge does not pay for a storage read
+  // it will not use, and consuming it clears it — one incident, not a new threshold.
   const pct = deletePercent > 0 ? deletePercent : 60;
   const cap = Math.max(20, Math.floor((localFlat.length * pct) / 100));
-  if (toRemove.length > cap) {
-    logger.warn("mergeBookmarks", `Skipped deleting ${toRemove.length} bookmarks (cap ${cap}, ${pct}% of ${localFlat.length}): exceeds the mass-delete guard`);
-    onBulkBlocked?.(toRemove.length);
+  const overCap = toRemove.length > cap;
+  const approvedFor = overCap ? await getBulkDeleteApproval() : 0;
+  // Honoured only for a deletion no larger than the one the user actually saw. Anything
+  // bigger arrived after they decided, and has not been approved by anyone.
+  const approved = approvedFor > 0 && toRemove.length <= approvedFor;
+  // Spent either way: an approval that no longer matches is stale, not pending, and
+  // leaving it armed would let it cash out against some later deletion instead.
+  if (approvedFor > 0) await setBulkDeleteApproval(0);
+  // What the removal loop ACTUALLY did. The summary below used to report
+  // `toRemove.length`, which is what the peer asked for: a blocked merge logged
+  // "-48" directly above the warning saying those 48 were refused (#19). It also
+  // counts a remove() that threw, which the old number quietly included.
+  let removed = 0;
+  if (overCap && !approved) {
+    // Console only, on every cycle. The RETAINED warning is written once per incident
+    // by the sync engine (recordBlockedDeletion), because the guard re-evaluates the
+    // same peer deletions every sync: warning from here wrote one identical pair a
+    // minute into the Activity log and evicted the entry the banner points at (#20).
+    logger.info("mergeBookmarks", `Skipped deleting ${toRemove.length} bookmarks (cap ${cap}, ${pct}% of ${localFlat.length}): exceeds the mass-delete guard`);
+    onBulkBlocked?.({ blocked: toRemove.length, cap, localTotal: localFlat.length, pct });
   } else {
     for (const id of toRemove) {
-      try { await browser.bookmarks.remove(id); } catch (err) { logger.error("Bookmark delete (tombstone)", err); }
+      try { await browser.bookmarks.remove(id); removed++; } catch (err) { logger.error("Bookmark delete (tombstone)", err); }
+    }
+    if (approved) {
+      logger.event("mergeBookmarks", `Applied ${removed} bookmark deletions you approved (over the ${pct}% guard).`);
     }
   }
 
@@ -875,8 +920,8 @@ async function mergeBookmarks(
   // The most informative line about what a sync actually DID to the tree, so it belongs
   // in the user's Activity log — but only when it changed something. Every idle cycle
   // logging "+0 / -0 / moved 0" is exactly the noise that used to evict the warnings.
-  const summary = `Merged +${added} / -${toRemove.length} / moved ${moved} / renamed ${renamed}+${renamedFolders} / folders ${folderMoved} / shells ${shells} (folders preserved)`;
-  if (added || toRemove.length || moved || renamed || renamedFolders || folderMoved || shells) logger.event("mergeBookmarks", summary);
+  const summary = `Merged +${added} / -${removed} / moved ${moved} / renamed ${renamed}+${renamedFolders} / folders ${folderMoved} / shells ${shells} (folders preserved)`;
+  if (added || removed || moved || renamed || renamedFolders || folderMoved || shells) logger.event("mergeBookmarks", summary);
   else logger.info("mergeBookmarks", summary);
 }
 

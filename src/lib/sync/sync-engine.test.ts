@@ -60,13 +60,25 @@ type EnginePrivate = {
   syncAllTypes(types: DataType[], backend: IBackend, state: SyncState): Promise<string[]>;
   buildPacket(dataType: DataType, payload: unknown): Promise<SyncPacket>;
   recordBlockedDeletion(
-    blocked: number,
+    blocked: BlockedArg,
     syncedBookmarks: boolean
   ): Promise<SyncState["recovery_notice"]>;
   encryptionWarnings: Map<string, string>;
 };
 function priv(engine: SyncEngine): EnginePrivate {
   return engine as unknown as EnginePrivate;
+}
+
+/** What the merge hands the engine when the guard blocks, or null when it didn't. */
+type BlockedArg =
+  | { blocked: number; cap: number; localTotal: number; pct: number; device_id?: string; device_label?: string | null }
+  | null;
+
+/** A blocked deletion of `n`, with the arithmetic a 60% guard on a 100-bookmark tree
+ *  would actually have produced. The numbers past `blocked` only ride along to the
+ *  notice, so the tests that care about latching pass the same plausible set every time. */
+function block(n: number, device_label: string | null = "peer-1"): BlockedArg {
+  return { blocked: n, cap: 60, localTotal: 100, pct: 60, device_id: "peer", device_label };
 }
 
 function makeEngine(): SyncEngine {
@@ -625,9 +637,9 @@ describe("SyncEngine — blocked mass-delete takes ONE restore point per inciden
   it("writes ONE restore point even though the deletion is blocked every sync", async () => {
     const { engine, taken } = countingEngine();
 
-    const first = await priv(engine).recordBlockedDeletion(50, true);
-    const second = await priv(engine).recordBlockedDeletion(50, true);
-    const third = await priv(engine).recordBlockedDeletion(50, true);
+    const first = await priv(engine).recordBlockedDeletion(block(50), true);
+    const second = await priv(engine).recordBlockedDeletion(block(50), true);
+    const third = await priv(engine).recordBlockedDeletion(block(50), true);
 
     expect(taken()).toBe(1);
     // ...but the banner keeps being surfaced while the situation persists.
@@ -637,40 +649,60 @@ describe("SyncEngine — blocked mass-delete takes ONE restore point per inciden
   it("earns a new restore point after a clean bookmark sync ends the incident", async () => {
     const { engine, taken } = countingEngine();
 
-    await priv(engine).recordBlockedDeletion(50, true);
+    await priv(engine).recordBlockedDeletion(block(50), true);
     expect(taken()).toBe(1);
 
     // A sync that merged bookmarks and blocked nothing → incident over.
-    expect(await priv(engine).recordBlockedDeletion(0, true)).toBeNull();
+    expect(await priv(engine).recordBlockedDeletion(null, true)).toBeNull();
 
     // A later block is a NEW incident and deserves its own restore point.
-    await priv(engine).recordBlockedDeletion(30, true);
+    await priv(engine).recordBlockedDeletion(block(30), true);
     expect(taken()).toBe(2);
   });
 
   it("a sync that never merged bookmarks does NOT end the incident", async () => {
     const { engine, taken } = countingEngine();
 
-    await priv(engine).recordBlockedDeletion(50, true);
-    await priv(engine).recordBlockedDeletion(0, false); // e.g. sync(["history"])
-    await priv(engine).recordBlockedDeletion(50, true);
+    await priv(engine).recordBlockedDeletion(block(50), true);
+    await priv(engine).recordBlockedDeletion(null, false); // e.g. sync(["history"])
+    await priv(engine).recordBlockedDeletion(block(50), true);
 
     expect(taken()).toBe(1);
+  });
+
+  it("writes ONE Activity-log warning per incident, not one per sync", async () => {
+    const { engine } = countingEngine();
+
+    await priv(engine).recordBlockedDeletion(block(50), true);
+    await priv(engine).recordBlockedDeletion(block(50), true);
+    await priv(engine).recordBlockedDeletion(block(50), true);
+    // logger.warn fires appendAudit without awaiting; let the serialized write land.
+    await new Promise((r) => setTimeout(r, 0));
+
+    const entries = ((await chrome.storage.local.get(KEYS.AUDIT_LOG))[KEYS.AUDIT_LOG] ?? []) as
+      { detail?: string }[];
+    const blocked = entries.filter((e) => e.detail?.includes("Blocked a deletion"));
+    // Three blocked syncs, one entry. The guard re-evaluates the same peer deletions
+    // every cycle, and warning each time buried the entry the popup banner points at.
+    expect(blocked).toHaveLength(1);
+    // And it says enough to act on: the proportion, and who asked.
+    expect(blocked[0].detail).toContain("50 of your 100 bookmarks");
+    expect(blocked[0].detail).toContain("peer-1");
   });
 
   it("retries on the next sync when the restore-point write fails", async () => {
     const { engine, taken } = countingEngine(1); // first snapshotNow() rejects
 
     // A failed write must not throw out, and must not latch the incident closed.
-    await expect(priv(engine).recordBlockedDeletion(50, true)).resolves.toMatchObject({ blocked: 50 });
+    await expect(priv(engine).recordBlockedDeletion(block(50), true)).resolves.toMatchObject({ blocked: 50 });
     expect(taken()).toBe(1);
 
     // Next cycle tries again — and this time succeeds.
-    await priv(engine).recordBlockedDeletion(50, true);
+    await priv(engine).recordBlockedDeletion(block(50), true);
     expect(taken()).toBe(2);
 
     // Now it IS latched, so no third attempt.
-    await priv(engine).recordBlockedDeletion(50, true);
+    await priv(engine).recordBlockedDeletion(block(50), true);
     expect(taken()).toBe(2);
   });
 });
