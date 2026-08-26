@@ -55,6 +55,19 @@ const SYNC_LOCK_TTL_MS = 2 * 60 * 1000;
 const CONFLICTABLE_TYPES = new Set<DataType>(["bookmarks", "history"]);
 
 /**
+ * The queued conflicts that can still exist, given the gate above.
+ *
+ * Pure and exported for the same reason `statusAfterSync` is: it decides what the user
+ * sees, so it is worth testing without a sync around it. A device on `manual` that ran an
+ * older build can be carrying conflicts for sessions or extensions, which went through the
+ * same gate before it was narrowed. Nothing re-queues or clears those now, so without this
+ * the popup would go on asking which of two devices' tab lists to keep, forever.
+ */
+export function conflictsThatCanExist(list: ConflictItem[]): ConflictItem[] {
+  return list.filter((c) => CONFLICTABLE_TYPES.has(c.data_type));
+}
+
+/**
  * A peer's encrypted data can't be read with this device's passphrase — the
  * passphrases don't match (or none is set). Thrown so the sync surfaces a clear,
  * user-visible error instead of silently skipping the peer and diverging forever.
@@ -274,13 +287,29 @@ export class SyncEngine {
       // attention". Neither aborts the cycle.
       const problems = [...this.encryptionWarnings.values(), ...typeErrors];
       const prevState = await getState();
+      // Drop a queued conflict for a type that cannot have one. Before CONFLICTABLE_TYPES
+      // narrowed the gate, sessions and extensions went through it like bookmarks, so a
+      // device on `manual` can be carrying conflicts about a peer's open tabs. Nothing
+      // would ever re-queue or clear those now, so the banner would ask the user to choose
+      // between two devices' tab lists for good. Cleared on the first sync after the
+      // upgrade instead, along with any packet parked behind them.
+      const conflicts = conflictsThatCanExist(prevState.pending_conflicts);
+      const stale = prevState.pending_conflicts.length - conflicts.length;
+      if (stale > 0) {
+        await pruneConflictPackets(conflicts.map((c) => c.id));
+        logger.event(
+          "SyncEngine",
+          `Dropped ${stale} pending conflict(s) for a data type that can't have one (sessions and extensions are per-device lists, not competing versions)`
+        );
+      }
       const newState = await setState({
         // Read AFTER the fold, so it sees any conflict syncType just queued.
-        status: statusAfterSync(problems.length, prevState.pending_conflicts.length),
+        status: statusAfterSync(problems.length, conflicts.length),
         last_sync: new Date().toISOString(),
         last_error: problems.length ? problems.join(" ") : null,
         bytes_transferred: prevState.bytes_transferred + this.bytesThisSync,
         recovery_notice: recovery,
+        ...(stale > 0 ? { pending_conflicts: conflicts } : {}),
       });
       this.onStateChange(newState);
       logger.info("SyncEngine", problems.length ? `Sync complete with ${problems.length} problem(s)` : "Sync complete");

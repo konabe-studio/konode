@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { SyncEngine, statusAfterSync } from "@/lib/sync/sync-engine";
+import { SyncEngine, statusAfterSync, conflictsThatCanExist } from "@/lib/sync/sync-engine";
 import { BADGE_TEXT, BADGE_COLORS } from "@/lib/constants";
 import { createKeyVerifier } from "@/lib/crypto/encryption";
 import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState, setTombstones, acquireSyncLock, KEYS, getRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/storage";
@@ -13,6 +13,7 @@ import type {
   BookmarkPayload,
   RemoteSessionEntry,
   SyncSession,
+  ConflictItem,
 } from "@/lib/types";
 
 // Integration test for SyncEngine.syncType against an in-memory backend +
@@ -1546,5 +1547,34 @@ describe("SyncEngine.syncType: `manual` is about bookmarks and history, not the 
     await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
 
     expect((await getState()).pending_conflicts.map((c) => c.device_id)).toEqual(["peer1"]);
+  });
+});
+
+describe("conflictsThatCanExist: a leftover conflict about a peer's tab list", () => {
+  // An older build queued conflicts for sessions and extensions too, and after the gate
+  // narrowed nothing re-queues or clears them: the banner would ask forever which of two
+  // devices' open tabs to keep. sync() drops them on the first run after the upgrade.
+  const conflict = (data_type: DataType, id: string): ConflictItem => ({
+    id,
+    data_type,
+    device_id: "peer1",
+    timestamp: "2026-08-26T10:00:00.000Z",
+    resolved: false,
+  });
+
+  it("keeps bookmarks and history, drops sessions and extensions", () => {
+    const kept = conflictsThatCanExist([
+      conflict("bookmarks", "a"),
+      conflict("sessions", "b"),
+      conflict("history", "c"),
+      conflict("extensions", "d"),
+    ]);
+
+    expect(kept.map((c) => c.id)).toEqual(["a", "c"]);
+  });
+
+  it("leaves an ordinary list alone", () => {
+    const list = [conflict("bookmarks", "a"), conflict("history", "c")];
+    expect(conflictsThatCanExist(list)).toEqual(list);
   });
 });
