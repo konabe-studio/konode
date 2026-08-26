@@ -17,7 +17,9 @@ All notable changes to Konode. Format loosely follows
   read the older of them and keep it. And if you had set conflicts to be resolved by hand,
   no device's tabs or extensions were stored at all, because they were going through the
   same gate as bookmarks, where Konode stops and waits for you to choose. There is nothing
-  to choose between two devices' open tabs. They are both yours, and both are listed.
+  to choose between two devices' open tabs. They are both yours, and both are listed. If an
+  earlier version left you holding one of those questions, the first sync after this one
+  clears it.
 - **Turning the extension permission off emptied your extension list everywhere.** Reading
   the list needs a permission you can withdraw at any time, from your browser's own
   extensions page. Konode treated withdrawing it as a failure, and reported a failed sync
