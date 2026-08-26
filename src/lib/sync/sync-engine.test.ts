@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { SyncEngine, statusAfterSync } from "@/lib/sync/sync-engine";
 import { BADGE_TEXT, BADGE_COLORS } from "@/lib/constants";
 import { createKeyVerifier } from "@/lib/crypto/encryption";
@@ -1436,5 +1436,84 @@ describe("SyncEngine.syncType — a forgotten device must not linger on the othe
 
     expect(listings).toBe(0);
     expect(await cachedSessionDevices()).toEqual(["live"]);
+  });
+});
+
+describe("SyncEngine.syncType: `manual` is about bookmarks and history, not the display caches", () => {
+  // Sessions and extensions are per-device caches keyed by device_id: one entry per peer,
+  // kept side by side, with nothing to choose between. They went through the manual gate
+  // anyway, and that gate skips the import, so on `manual` no peer's session was ever
+  // stored and "missing on this device" never moved, while every sync reported success.
+
+  function manualEngine(): SyncEngine {
+    return new SyncEngine({ ...DEFAULT_SETTINGS, device_id: "me", conflict_strategy: "manual" }, () => {});
+  }
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const realManagement = (globalThis as any).chrome.management;
+  afterEach(() => { (globalThis as any).chrome.management = realManagement; });
+
+  /** One extension installed HERE, so the local payload is non-empty and the gate is reached. */
+  function installLocally(id: string): void {
+    (globalThis as any).chrome.management = {
+      getAll: () => Promise.resolve([
+        { id, name: "Local", version: "1.0", enabled: true, type: "extension", installType: "normal" },
+      ]),
+    };
+  }
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+
+  async function peerPacketOf(
+    engine: SyncEngine, dataType: DataType, deviceId: string, payloadValue: unknown
+  ): Promise<SyncPacket> {
+    const packet = await priv(engine).buildPacket(dataType, payloadValue);
+    packet.device_id = deviceId; // the checksum is over the payload, so it stays valid
+    return packet;
+  }
+
+  it("stores a peer's session, and queues no conflict for it", async () => {
+    const engine = manualEngine();
+    const backend = new FakeBackend();
+    await chrome.tabs.create({ url: "https://local.example/" }); // local payload: non-empty
+    const peerSession: SyncSession = {
+      id: "s-peer1", device_id: "peer1", savedAt: new Date().toISOString(), label: "peer1",
+      tabs: [{ url: "https://peer.example/", pinned: false }],
+    };
+    backend.files.set("sessions_peer1", await peerPacketOf(engine, "sessions", "peer1", peerSession));
+
+    await priv(engine).syncType("sessions", backend, DEFAULT_STATE);
+
+    expect((await getRemoteSessions()).map((e) => e.device_id)).toEqual(["peer1"]);
+    expect((await getState()).pending_conflicts).toEqual([]);
+  });
+
+  it("stores a peer's extension list, so \"missing on this device\" can move", async () => {
+    const engine = manualEngine();
+    const backend = new FakeBackend();
+    installLocally("local-ext");
+    backend.files.set(
+      "extensions_peer1",
+      await peerPacketOf(engine, "extensions", "peer1", [
+        { id: "peer-ext", name: "Peer only", version: "2.0", enabled: true, storeUrl: "", type: "extension" },
+      ])
+    );
+
+    await priv(engine).syncType("extensions", backend, DEFAULT_STATE);
+
+    const raw = (await chrome.storage.local.get(KEYS.REMOTE_EXTENSIONS))[KEYS.REMOTE_EXTENSIONS];
+    expect(normalizeRemoteExtensions(raw).map((e) => e.id)).toEqual(["peer-ext"]);
+    expect((await getState()).pending_conflicts).toEqual([]);
+  });
+
+  it("still queues the bookmark conflict it is there for", async () => {
+    // The gate narrows `manual`; it must not switch it off.
+    const engine = manualEngine();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    backend.files.set("bookmarks_peer1", await peerPacket(engine, "peer1", payload([link("B", "https://b.com")])));
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    expect((await getState()).pending_conflicts.map((c) => c.device_id)).toEqual(["peer1"]);
   });
 });

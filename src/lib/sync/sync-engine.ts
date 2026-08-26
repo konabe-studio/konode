@@ -42,6 +42,19 @@ import { ConflictResolver, notifyConflict, orderPeersByTime } from "./conflict-r
 const SYNC_LOCK_TTL_MS = 2 * 60 * 1000;
 
 /**
+ * The data types a conflict can exist for.
+ *
+ * `manual` asks which side to keep, which only means something where the two sides are
+ * competing versions of one thing. Bookmarks and history are. Sessions and extensions are
+ * per-device display caches keyed by `device_id`, one entry per peer: another machine's
+ * open tabs are not a rival version of ours, and both lists are kept side by side rather
+ * than resolved. They went through the same gate anyway, so on `manual` the import that
+ * fills those caches never ran. No peer's session was ever stored, "missing on this
+ * device" never changed, and every sync reported success while it happened.
+ */
+const CONFLICTABLE_TYPES = new Set<DataType>(["bookmarks", "history"]);
+
+/**
  * A peer's encrypted data can't be read with this device's passphrase — the
  * passphrases don't match (or none is set). Thrown so the sync surfaces a clear,
  * user-visible error instead of silently skipping the peer and diverging forever.
@@ -735,7 +748,7 @@ export class SyncEngine {
         } else {
           logger.info("SyncEngine", `${dataType}: nothing to sync`);
         }
-      } else if (!isEmpty && this.settings.conflict_strategy === "manual") {
+      } else if (!isEmpty && this.settings.conflict_strategy === "manual" && CONFLICTABLE_TYPES.has(dataType)) {
         // Manual: queue a conflict for EACH diverging peer, not just the newest —
         // otherwise with 3+ devices the other peers' differences are never surfaced.
         // Dedupe by data_type + peer device so the same conflict doesn't pile up
