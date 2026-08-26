@@ -220,9 +220,30 @@ export class GDriveBackend implements IBackend {
       if (!listRes.ok) throw new HttpError(listRes.status, `Drive list failed: ${listRes.status}`);
       const { files } = await listRes.json();
       if (!files?.length) return [];
-      // Every peer file (newest first), minus our own.
-      const own = excludeDeviceId ? `konode_${data_type}_${excludeDeviceId}.json` : null;
-      const peers = (files as Array<{ id: string; name: string }>).filter((f) => f.name !== own);
+      // Every peer file (newest first), minus our own, and at most ONE file per device.
+      //
+      // Both filters are about Drive in particular. `contains` is a loose token match, the
+      // reason listFiles below narrows to a real startsWith, so a name that merely shares
+      // the words can answer this query. A restore point is rejected later by the checksum
+      // guard, but only after being downloaded and complained about, once per sync. And
+      // Drive keys files by id, not by name, so one folder can legitimately hold
+      // two files called konode_<type>_<device>.json: an upload that created where it
+      // should have patched, or two writes racing. This list is newest-first by
+      // modifiedTime, so a device's first sighting is its current file and any later one is
+      // a stale copy. Untouched, that copy came back as a SECOND peer for the same device
+      // and, folded in last, was the one that won. The device-keyed caches now refuse an
+      // older entry on their own, but a stale bookmark tree has no business being merged in
+      // the first place, and neither has the download it costs.
+      const prefix = `konode_${data_type}_`;
+      const seen = new Set<string>();
+      const peers: Array<{ id: string; name: string }> = [];
+      for (const f of files as Array<{ id: string; name: string }>) {
+        if (!f.name?.startsWith(prefix) || !f.name.endsWith(".json")) continue;
+        const deviceId = f.name.slice(prefix.length, -".json".length);
+        if (!deviceId || deviceId === excludeDeviceId || seen.has(deviceId)) continue;
+        seen.add(deviceId);
+        peers.push(f);
+      }
       const packets: SyncPacket[] = [];
       for (const f of peers) {
         const r = await fetch(`${DRIVE_API}/files/${f.id}?alt=media`, { headers: h, cache: "no-store" });
