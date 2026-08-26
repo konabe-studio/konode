@@ -729,13 +729,13 @@
     "message": "Szinkronizálás változáskor"
   },
   "opt_sync_on_change_desc": {
-    "message": "Azonnal szinkronizálja a könyvjelzőket és lapokat, amikor változás történik. Javasolt."
+    "message": "Azonnal szinkronizálja a könyvjelzőket, amikor változás történik. Javasolt."
   },
   "opt_auto_sync_label": {
     "message": "Automatikus szinkronizálás"
   },
   "opt_auto_sync_desc": {
-    "message": "Rendszeres időzítés szerint is szinkronizál."
+    "message": "Rendszeres időzítés szerint is szinkronizál. Az előzmények, a nyitott lapok és a bővítménylista csak így szinkronizálódnak."
   },
   "opt_notifications_label": {
     "message": "Értesítések"

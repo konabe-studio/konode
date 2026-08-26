@@ -720,13 +720,13 @@
     "message": "更改时同步"
   },
   "opt_sync_on_change_desc": {
-    "message": "在更改时即时同步书签和标签页。推荐。"
+    "message": "在更改时即时同步书签。推荐。"
   },
   "opt_auto_sync_label": {
     "message": "自动同步"
   },
   "opt_auto_sync_desc": {
-    "message": "并按常规计划同步。"
+    "message": "并按常规计划同步。历史记录、打开的标签页和扩展列表仅通过这种方式同步。"
   },
   "opt_notifications_label": {
     "message": "通知"

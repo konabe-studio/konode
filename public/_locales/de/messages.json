@@ -729,13 +729,13 @@
     "message": "Bei Änderung synchronisieren"
   },
   "opt_sync_on_change_desc": {
-    "message": "Synchronisiert Lesezeichen und Tabs sofort, wenn sie sich ändern. Empfohlen."
+    "message": "Synchronisiert Lesezeichen sofort, wenn sie sich ändern. Empfohlen."
   },
   "opt_auto_sync_label": {
     "message": "Automatische Synchronisierung"
   },
   "opt_auto_sync_desc": {
-    "message": "Synchronisiert außerdem regelmäßig nach Zeitplan."
+    "message": "Synchronisiert außerdem regelmäßig nach Zeitplan. Verlauf, offene Tabs und die Erweiterungsliste werden nur auf diesem Weg übertragen."
   },
   "opt_notifications_label": {
     "message": "Benachrichtigungen"

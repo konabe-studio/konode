@@ -720,13 +720,13 @@
     "message": "Sincronizar al haber cambios"
   },
   "opt_sync_on_change_desc": {
-    "message": "Sincroniza al instante los marcadores y pestañas cada vez que cambien. Recomendado."
+    "message": "Sincroniza al instante los marcadores cada vez que cambien. Recomendado."
   },
   "opt_auto_sync_label": {
     "message": "Sincronización automática"
   },
   "opt_auto_sync_desc": {
-    "message": "Además, sincroniza de forma periódica."
+    "message": "Además, sincroniza de forma periódica. El historial, las pestañas abiertas y la lista de extensiones solo se sincronizan de esta forma."
   },
   "opt_notifications_label": {
     "message": "Notificaciones"

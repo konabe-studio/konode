@@ -1,5 +1,5 @@
 // ─── Konode Service Worker (MV3) ─────────────────────────────────────────
-// Handles: alarm-based polling, bookmark/tab listeners, message routing
+// Handles: alarm-based polling, bookmark listeners, message routing
 
 import type { ExtensionMessage, ExtensionResponse, SyncState } from "@/lib/types";
 import { getSettings, getState, setState, saveSettings, clearStaleSyncLock, KEYS } from "@/lib/utils/storage";

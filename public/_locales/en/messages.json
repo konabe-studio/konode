@@ -830,13 +830,13 @@
     "message": "Sync on change"
   },
   "opt_sync_on_change_desc": {
-    "message": "Instantly sync bookmarks and tabs when they change. Recommended."
+    "message": "Instantly sync bookmarks when they change. Recommended."
   },
   "opt_auto_sync_label": {
     "message": "Auto sync"
   },
   "opt_auto_sync_desc": {
-    "message": "Also sync on a regular schedule."
+    "message": "Also sync on a regular schedule. History, open tabs and the extension list travel only this way."
   },
   "opt_notifications_label": {
     "message": "Notifications"
