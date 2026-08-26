@@ -7,6 +7,45 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **A device's open tabs or extension list could get stuck on an old version.** The popup
+  lists the tabs each of your other devices has open, and counts the extensions they have
+  that this one doesn't. For one device, either of those could stop moving and stay
+  stopped: every sync after it reported success, and nothing on that screen ever caught up.
+  There were three separate ways to get there, and all three are fixed. Two devices whose
+  data arrived in the same instant could overwrite each other's entry instead of both being
+  kept. On Google Drive, a folder that had ended up holding two files for one device could
+  read the older of them and keep it. And if you had set conflicts to be resolved by hand,
+  no device's tabs or extensions were stored at all, because they were going through the
+  same gate as bookmarks, where Konode stops and waits for you to choose. There is nothing
+  to choose between two devices' open tabs. They are both yours, and both are listed.
+- **Turning the extension permission off emptied your extension list everywhere.** Reading
+  the list needs a permission you can withdraw at any time, from your browser's own
+  extensions page. Konode treated withdrawing it as a failure, and reported a failed sync
+  for as long as it stayed off. It now stops publishing the list and leaves what your other
+  devices already have exactly where it is.
+- **A deletion Konode refused was recorded as one it had made.** When another device asks to
+  delete an unusual number of your bookmarks, Konode keeps them, says so, and saves a
+  restore point. Directly above that, the Activity log recorded the same sync as having
+  deleted the bookmarks it had just kept. Nothing had been deleted, and the log now says so
+  too. Reported by @klausbreyer in
+  [#16](https://github.com/konabe-studio/konode/issues/16).
+- **One refused deletion, and a log full of nothing else.** That refusal is re-examined on
+  every sync, because both halves of it stay true: the other device is still asking, and
+  your bookmarks are all still here. Each pass added two more entries, about two a minute,
+  to a log that keeps the last 200, so the warning the popup sends you there to read was
+  pushing itself out of the list. It is written once now, when it happens, and again only
+  for a different deletion later.
+- **The popup's numbers stood still while you watched a sync finish.** Leaving the popup
+  open across a sync left the list of other devices' tabs, and the count of extensions
+  missing here, showing what they held before it ran. They keep up with the sync now.
+- **"Sync on change" promised more than it does.** The setting said bookmarks and tabs go
+  out the moment they change. Bookmarks do. Open tabs travel on the regular interval, the
+  same as your history and extension list, and Auto sync now says which things those are.
+- **A storage folder Konode couldn't read said nothing about it.** Once per sync Konode
+  checks that its own files are still in the folder, which is how a device notices it was
+  forgotten from somewhere else. If the folder couldn't be listed, the check gave up in
+  silence and the Activity log showed an ordinary, healthy sync. It now reports that it
+  couldn't tell.
 - **"Check your username and password", when the password was never the problem.** Some
   servers don't accept a username and password over WebDAV at all. ownCloud Infinite Scale
   is the one that came up: it arrives with HTTP Basic switched off and authenticates through
