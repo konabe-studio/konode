@@ -13,6 +13,8 @@ on its next scheduled pull, which is every 60 seconds by default. You can move t
 anywhere between 30 and 600 seconds under **Settings → Device → Sync interval**; 30s is the
 browser's minimum for a background check, so that's the floor, not a bug. History, open
 tabs and the extension list have no instant path at all: they travel on that same interval.
+The reason there's an interval at all: Drive, GitHub and WebDAV are ordinary file storage
+with no way to announce a change, so a device only finds out by going and looking.
 
 **Bookmarks I deleted came back / a big cleanup didn't propagate.**
 Konode has a safety cap: a single sync won't apply peer deletions that would remove

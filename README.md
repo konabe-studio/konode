@@ -197,6 +197,28 @@ When E2EE is on, the payload is encrypted on the device and the checksum is stil
 computed over the plaintext, so identical content matches across devices without
 revealing anything to the backend.
 
+## When Konode syncs
+
+Three things start a sync, and nothing else does:
+
+- **A bookmark changes on this device.** The upload goes out about a second later, with a
+  30-second backstop in case the browser suspends the extension mid-edit. Bookmarks only,
+  and only while **Sync on change** is on (it is by default, under Settings → Device).
+- **The scheduled pull**, every 60 seconds by default. This is how a device learns about
+  its *peers'* changes, and it covers every data type you have enabled. Adjust it from 30
+  to 600 seconds under **Settings → Device → Sync interval**, or turn it off with **Auto
+  sync**.
+- **You press Sync now** in the popup.
+
+That's the whole list. History, open tabs and the extension list have no instant path, so
+they travel on the scheduled pull. Starting the browser doesn't sync by itself either: it
+re-arms the schedule, and the first pull arrives on the next tick.
+
+Why the receiving side waits at all: Drive, GitHub and WebDAV are ordinary file storage
+with no way to tell a device that something changed, so Konode has to go and look. 30
+seconds is also the fastest a browser will run an extension's background timer, whichever
+backend you pick, so that's the floor rather than a setting we're being cautious with.
+
 ## Why there's no password sync
 
 Browser extensions **cannot** read the browser's native password store. That's an

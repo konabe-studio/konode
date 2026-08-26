@@ -129,6 +129,10 @@ Optional, and a conscious choice. It's **off by default**.
   on their next scheduled pull, every 60 seconds by default (adjustable from 30 to 600
   under Settings → Device; 30s is the browser's minimum for a background check). History,
   open tabs and the extension list have no instant path, so they travel on that interval.
+- **There's a pull because there's no push.** Drive, GitHub and WebDAV are ordinary file
+  storage with no way to tell your other devices that something changed, so each one goes
+  and looks on a schedule. That's also why the interval has a floor: 30 seconds is the
+  fastest a browser will run an extension's background timer.
 - History restore depends on the browser. **Firefox** keeps each page's original visit
   date. **Chromium** browsers give an extension no way to set it, so on Chrome, Brave and
   the rest an arriving page is stamped with the moment it reached you. Visit counts can't
