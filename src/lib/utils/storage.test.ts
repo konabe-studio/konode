@@ -369,3 +369,18 @@ describe("setRemoteSession / setRemoteExtensions: one peer must not overwrite an
     expect((await getRemoteSessions()).map((e) => e.device_id)).toEqual(["dev-a"]);
   });
 });
+
+describe("normalizeRemoteSessions: a peer entry with no timestamp", () => {
+  // Nothing validates a packet's timestamp, and this list is built from peer packets. One
+  // entry without one used to throw a TypeError out of the sort, and the popup lost every
+  // peer's session to it, not just that one.
+  it("sorts around it instead of throwing", () => {
+    const good = entry("dev-a", "2026-08-20T10:00:00.000Z");
+    const bad = entry("dev-b", "2026-08-21T10:00:00.000Z");
+    delete (bad as { timestamp?: string }).timestamp;
+
+    const out = normalizeRemoteSessions({ "dev-a": good, "dev-b": bad });
+
+    expect(out.map((e) => e.device_id)).toEqual(["dev-a", "dev-b"]);
+  });
+});

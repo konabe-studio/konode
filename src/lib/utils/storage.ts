@@ -567,9 +567,12 @@ export function normalizeRemoteSessions(raw: unknown): RemoteSessionEntry[] {
     return entry.session?.tabs?.length ? [entry] : [];
   }
   // Current map shape: { [device_id]: RemoteSessionEntry }
+  // The timestamps are coalesced because they come from a peer's packet, which nothing
+  // validates them in: one entry with a missing timestamp threw a TypeError out of this
+  // sort, and the popup lost the whole session list to it.
   return Object.values(raw as Record<string, RemoteSessionEntry>)
     .filter((e) => e?.session?.tabs?.length)
-    .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    .sort((a, b) => (b.timestamp ?? "").localeCompare(a.timestamp ?? ""));
 }
 
 export async function getRemoteSessions(): Promise<RemoteSessionEntry[]> {

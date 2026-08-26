@@ -122,29 +122,38 @@ export default function PopupApp() {
    * with a number nobody can reproduce.
    */
   const loadPeerCaches = useCallback(async () => {
-    const r = await browser.storage.local.get([KEYS.REMOTE_SESSIONS, KEYS.REMOTE_EXTENSIONS]);
-    setRemoteSessions(normalizeRemoteSessions(r[KEYS.REMOTE_SESSIONS]));
-    // Union of every peer device's extension list (deduped by id).
-    const remote = normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]);
-    // Three ways to arrive at "we cannot say what is missing here", and all three now CLEAR
-    // the list rather than leave the last answer on screen: nothing cached from any peer, no
-    // API, or the permission not granted. "management" is optional, so the last two are
-    // different questions. A permission can be held on a browser that never implemented
-    // the API, and then the call below is a TypeError inside a popup, where nobody sees it.
-    if (
-      !remote.length ||
-      !dataTypeApiPresent("extensions") ||
-      !(await hasPermission({ permissions: ["management"] }))
-    ) {
-      setMissingExtensions([]);
-      return;
+    try {
+      const r = await browser.storage.local.get([KEYS.REMOTE_SESSIONS, KEYS.REMOTE_EXTENSIONS]);
+      setRemoteSessions(normalizeRemoteSessions(r[KEYS.REMOTE_SESSIONS]));
+      // Union of every peer device's extension list (deduped by id).
+      const remote = normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]);
+      // Three ways to arrive at "we cannot say what is missing here", and all three now
+      // CLEAR the list rather than leave the last answer on screen: nothing cached from any
+      // peer, no API, or the permission not granted. "management" is optional, so the last
+      // two are different questions. A permission can be held on a browser that never
+      // implemented the API, and then the call below is a TypeError inside a popup, where
+      // nobody sees it.
+      if (
+        !remote.length ||
+        !dataTypeApiPresent("extensions") ||
+        !(await hasPermission({ permissions: ["management"] }))
+      ) {
+        setMissingExtensions([]);
+        return;
+      }
+      const local = await browser.management.getAll();
+      const here = currentStore();
+      // Cross-store the same extension has different ids, so match on id (same
+      // store) OR normalized name / homepage host. Otherwise every extension on a
+      // different-browser peer would show as "missing" here.
+      setMissingExtensions(missingLocally(remote, local, here));
+    } catch (err) {
+      // Both of these are peer data, so a malformed entry from another device must not take
+      // the status, the buttons or Sync now down with it. It matters more now that they load
+      // together: as two separate loaders, one failing left the other alone, and this keeps
+      // that true.
+      console.error("Popup peer-cache load error:", err);
     }
-    const local = await browser.management.getAll();
-    const here = currentStore();
-    // Cross-store the same extension has different ids, so match on id (same
-    // store) OR normalized name / homepage host. Otherwise every extension on a
-    // different-browser peer would show as "missing" here.
-    setMissingExtensions(missingLocally(remote, local, here));
   }, []);
 
   useEffect(() => {
