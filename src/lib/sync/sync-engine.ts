@@ -472,6 +472,15 @@ export class SyncEngine {
       try {
         await this.snapshotNow();
         await setRecoverySnapshotTaken(true);
+        // The ONE retained line per incident. The merge used to write it, once per peer per
+        // cycle, which flooded the 200-entry log the popup banner tells the user to go and
+        // read: the warning evicting the warning. Here it is gated by the same latch that
+        // keeps the restore point to one per incident, so a re-evaluation of the same
+        // blocked deletion says nothing and a genuinely new one earns its own line.
+        logger.warn(
+          "SyncEngine",
+          `Kept ${blocked} bookmark(s) a peer asked to delete: more than the mass-delete guard allows in one sync. Nothing was removed and a restore point was saved. The same deletion stays blocked, without adding to this log again, until it is resolved.`
+        );
       } catch (e) {
         // Leave the latch clear so the next cycle retries the write — a failed
         // snapshot must not count as "this incident is covered".

@@ -579,12 +579,25 @@ async function mergeBookmarks(
   // percentage still propagates.
   const pct = deletePercent > 0 ? deletePercent : 60;
   const cap = Math.max(20, Math.floor((localFlat.length * pct) / 100));
+  // What the removal loop actually DID, which is not what the peer asked for. The summary
+  // at the end of this merge reported `toRemove.length`, so a merge the guard had blocked
+  // announced "-48" one line above the warning saying nothing had been deleted, and the
+  // person reading the pair could not tell which half to believe. Counted the way `added`
+  // already is: per node, after the call that removed it.
+  let removed = 0;
   if (toRemove.length > cap) {
-    logger.warn("mergeBookmarks", `Skipped deleting ${toRemove.length} bookmarks (cap ${cap}, ${pct}% of ${localFlat.length}): exceeds the mass-delete guard`);
+    // Console only, deliberately. This fires on every merge for as long as the situation
+    // lasts, because the peer's tombstones live 90 days and the bookmarks are all still
+    // here, precisely because we refused to remove them. At `warn` that wrote a retained
+    // entry per peer per cycle, roughly 120 an hour, into the 200-entry log the popup banner
+    // sends the user to read. The one retained line per incident is written by the engine's
+    // recordBlockedDeletion, which holds the latch that knows whether this is a new
+    // incident or the same one being re-evaluated.
+    logger.info("mergeBookmarks", `Skipped deleting ${toRemove.length} bookmarks (cap ${cap}, ${pct}% of ${localFlat.length}): exceeds the mass-delete guard`);
     onBulkBlocked?.(toRemove.length);
   } else {
     for (const id of toRemove) {
-      try { await browser.bookmarks.remove(id); } catch (err) { logger.error("Bookmark delete (tombstone)", err); }
+      try { await browser.bookmarks.remove(id); removed++; } catch (err) { logger.error("Bookmark delete (tombstone)", err); }
     }
   }
 
@@ -875,8 +888,8 @@ async function mergeBookmarks(
   // The most informative line about what a sync actually DID to the tree, so it belongs
   // in the user's Activity log — but only when it changed something. Every idle cycle
   // logging "+0 / -0 / moved 0" is exactly the noise that used to evict the warnings.
-  const summary = `Merged +${added} / -${toRemove.length} / moved ${moved} / renamed ${renamed}+${renamedFolders} / folders ${folderMoved} / shells ${shells} (folders preserved)`;
-  if (added || toRemove.length || moved || renamed || renamedFolders || folderMoved || shells) logger.event("mergeBookmarks", summary);
+  const summary = `Merged +${added} / -${removed} / moved ${moved} / renamed ${renamed}+${renamedFolders} / folders ${folderMoved} / shells ${shells} (folders preserved)`;
+  if (added || removed || moved || renamed || renamedFolders || folderMoved || shells) logger.event("mergeBookmarks", summary);
   else logger.info("mergeBookmarks", summary);
 }
 

@@ -634,6 +634,37 @@ describe("SyncEngine — blocked mass-delete takes ONE restore point per inciden
     for (const n of [first, second, third]) expect(n?.blocked).toBe(50);
   });
 
+  /** The retained log lines about a deletion the guard refused. */
+  async function blockedLines(): Promise<string[]> {
+    await new Promise((r) => setTimeout(r, 0)); // the logger fires appendAudit unawaited
+    const r = await chrome.storage.local.get(KEYS.AUDIT_LOG);
+    const log = (r[KEYS.AUDIT_LOG] ?? []) as Array<{ detail?: string }>;
+    return log.map((e) => e.detail ?? "").filter((d) => d.includes("mass-delete guard allows"));
+  }
+
+  it("writes ONE retained log line for the incident, not one per sync", async () => {
+    // The same latch, applied to the log. The merge used to write this warning itself, once
+    // per peer per cycle, into the 200-entry log the popup banner sends the user to read:
+    // the field report behind this was 55 entries of the same pair, one a minute.
+    const { engine } = countingEngine();
+
+    await priv(engine).recordBlockedDeletion(48, true);
+    await priv(engine).recordBlockedDeletion(48, true);
+    await priv(engine).recordBlockedDeletion(48, true);
+
+    expect(await blockedLines()).toHaveLength(1);
+  });
+
+  it("says it again for a NEW incident, once the last one was resolved", async () => {
+    const { engine } = countingEngine();
+
+    await priv(engine).recordBlockedDeletion(48, true);
+    await priv(engine).recordBlockedDeletion(0, true);   // a clean bookmark sync ends it
+    await priv(engine).recordBlockedDeletion(12, true);  // a different deletion, later
+
+    expect(await blockedLines()).toHaveLength(2);
+  });
+
   it("earns a new restore point after a clean bookmark sync ends the incident", async () => {
     const { engine, taken } = countingEngine();
 

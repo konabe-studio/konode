@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { importBookmarks, exportBookmarkPayload, registerBookmarkListeners } from "@/lib/handlers/bookmarks-handler";
-import { getTombstones, setTombstones } from "@/lib/utils/storage";
+import { getTombstones, setTombstones, KEYS } from "@/lib/utils/storage";
 import type { BookmarkPayload, SyncBookmark } from "@/lib/types";
 
 // These exercise the real merge/replace logic against the in-memory
@@ -266,6 +266,46 @@ describe("importBookmarks — mass-delete guard (configurable percent)", () => {
     // Same 70% delete, but deletePercent=80 → cap 80 → 70 ≤ 80 → deletions apply.
     await importBookmarks(payload([], tombstonesFor(70)), "merge", "lww", 80);
     expect((await localUrls()).length).toBe(30);
+  });
+
+  /** The retained log, which is what Settings → Activity shows. `info` never reaches it. */
+  async function auditText(): Promise<string> {
+    await new Promise((r) => setTimeout(r, 0)); // the logger fires appendAudit unawaited
+    const r = await chrome.storage.local.get(KEYS.AUDIT_LOG);
+    return JSON.stringify(r[KEYS.AUDIT_LOG] ?? []);
+  }
+
+  it("does not report a blocked deletion as one it made", async () => {
+    // Issue #19. The summary counted what the peer ASKED for, so a blocked merge announced
+    // "-70" directly above the warning saying nothing had been deleted, and the person
+    // reading the pair could not tell which half to believe.
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    await seedMany(100);
+    let blocked = 0;
+
+    await importBookmarks(payload([], tombstonesFor(70)), "merge", "lww", 60, (n) => { blocked += n; });
+
+    expect((await localUrls()).length).toBe(100); // nothing was removed...
+    expect(blocked).toBe(70);                     // ...and the guard still reports what it refused
+    const summary = info.mock.calls.map((c) => c.join(" ")).find((s) => s.includes("Merged +"));
+    info.mockRestore();
+    expect(summary).toContain("-0");
+    expect(summary).not.toContain("-70");
+  });
+
+  it("keeps a merge that changed nothing out of the Activity log entirely", async () => {
+    // Issue #20. Both lines were retained, and the guard re-evaluates the same deletion on
+    // every sync, because the peer's tombstones live 90 days and the bookmarks are all
+    // still here after we refused to remove them. That was ~120 identical entries an hour in a
+    // 200-entry ring: the warning evicting the warning the banner sends people to read.
+    await seedMany(100);
+
+    await importBookmarks(payload([], tombstonesFor(70)), "merge", "lww", 60);
+    await importBookmarks(payload([], tombstonesFor(70)), "merge", "lww", 60);
+
+    const audit = await auditText();
+    expect(audit).not.toContain("Merged +");
+    expect(audit).not.toContain("exceeds the mass-delete guard");
   });
 });
 
