@@ -109,37 +109,52 @@ export default function PopupApp() {
     setSyncedTypes(new Set());
   }, []);
 
+  /**
+   * The two things this popup shows about its peers: each device's session, and the union
+   * of their extension lists minus what is installed here.
+   *
+   * Read on mount AND again when a sync finishes, because a sync is what writes both of
+   * them. The STATE_UPDATE handler only ever replaced the status, so a popup left open
+   * across a sync went on showing the numbers from BEFORE it: a session that had just
+   * arrived was not listed, and "missing on this device" was the pre-sync count. That
+   * cannot leave a permanent gap, since the next open reads storage fresh, but it corrupts
+   * any single measurement somebody takes while watching, which is how a bug report ends up
+   * with a number nobody can reproduce.
+   */
+  const loadPeerCaches = useCallback(async () => {
+    const r = await browser.storage.local.get([KEYS.REMOTE_SESSIONS, KEYS.REMOTE_EXTENSIONS]);
+    setRemoteSessions(normalizeRemoteSessions(r[KEYS.REMOTE_SESSIONS]));
+    // Union of every peer device's extension list (deduped by id).
+    const remote = normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]);
+    // Three ways to arrive at "we cannot say what is missing here", and all three now CLEAR
+    // the list rather than leave the last answer on screen: nothing cached from any peer, no
+    // API, or the permission not granted. "management" is optional, so the last two are
+    // different questions. A permission can be held on a browser that never implemented
+    // the API, and then the call below is a TypeError inside a popup, where nobody sees it.
+    if (
+      !remote.length ||
+      !dataTypeApiPresent("extensions") ||
+      !(await hasPermission({ permissions: ["management"] }))
+    ) {
+      setMissingExtensions([]);
+      return;
+    }
+    const local = await browser.management.getAll();
+    const here = currentStore();
+    // Cross-store the same extension has different ids, so match on id (same
+    // store) OR normalized name / homepage host. Otherwise every extension on a
+    // different-browser peer would show as "missing" here.
+    setMissingExtensions(missingLocally(remote, local, here));
+  }, []);
+
   useEffect(() => {
     load();
-
-    void (async () => {
-      const r = await browser.storage.local.get(KEYS.REMOTE_EXTENSIONS);
-      // Union of every peer device's extension list (deduped by id).
-      const remote = normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]);
-      if (!remote.length) return;
-      // "management" is an optional permission now — only query if it was granted, and
-      // only if this browser has the API behind it at all. Those are two different
-      // questions: a permission can be held on a browser that never implemented the API,
-      // and then the call below is a TypeError inside a popup, where nobody sees it.
-      if (!dataTypeApiPresent("extensions")) return;
-      const hasMgmt = await hasPermission({ permissions: ["management"] });
-      if (!hasMgmt) return;
-      const local = await browser.management.getAll();
-      const here = currentStore();
-      // Cross-store the same extension has different ids, so match on id (same
-      // store) OR normalized name / homepage host — otherwise every extension on a
-      // different-browser peer would show as "missing" here.
-      setMissingExtensions(missingLocally(remote, local, here));
-    })();
-
-    void browser.storage.local.get(KEYS.REMOTE_SESSIONS).then((r) => {
-      setRemoteSessions(normalizeRemoteSessions(r[KEYS.REMOTE_SESSIONS]));
-    });
+    void loadPeerCaches();
 
     return () => {
       if (animTimerRef.current) clearInterval(animTimerRef.current);
     };
-  }, [load]);
+  }, [load, loadPeerCaches]);
 
   // React to state changes — drive animation from status
   useEffect(() => {
@@ -170,8 +185,10 @@ export default function PopupApp() {
     if (prevStatus === "syncing" && currStatus !== "syncing") {
       stopAnimation();
       setTimeout(() => setSyncedTypes(new Set()), 1500);
+      // It just wrote the peer caches, so what is on screen is now the old answer.
+      void loadPeerCaches();
     }
-  }, [state?.status, settings?.enabled_types, startAnimation, stopAnimation]);
+  }, [state?.status, settings?.enabled_types, startAnimation, stopAnimation, loadPeerCaches]);
 
   // Listen for real-time state updates from background
   useEffect(() => {
