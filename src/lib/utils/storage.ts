@@ -577,24 +577,17 @@ export async function getRemoteSessions(): Promise<RemoteSessionEntry[]> {
   return normalizeRemoteSessions(r[KEYS.REMOTE_SESSIONS]);
 }
 
-/** Upserts one peer's session into the device-keyed map (upgrades legacy shape). */
+/** Upserts one peer's session into the device-keyed map. See `upsertRemoteEntry`. */
 export async function setRemoteSession(entry: RemoteSessionEntry): Promise<void> {
-  const r = await browser.storage.local.get(KEYS.REMOTE_SESSIONS);
-  const cur = r[KEYS.REMOTE_SESSIONS] as Record<string, RemoteSessionEntry> | undefined;
-  const map: Record<string, RemoteSessionEntry> =
-    cur && typeof cur === "object" && !("session" in cur) ? { ...cur } : {};
-  map[entry.device_id] = entry;
-  await set(KEYS.REMOTE_SESSIONS, map);
+  await updateKey<Record<string, RemoteSessionEntry>>(
+    KEYS.REMOTE_SESSIONS,
+    (cur) => upsertRemoteEntry(cur, entry, "session"),
+    {}
+  );
 }
 
 // ─── Remote extensions (aggregated across all peers) ────────────────────────
 
-/**
- * Normalizes the `konode_remote_extensions` value into a **deduped union** of every
- * peer device's installed-extension list (first occurrence per id wins). Accepts the
- * current device-keyed map, the legacy single-object shape, and empty/undefined.
- * Pure so the popup can use it synchronously after a `chrome.storage.local.get`.
- */
 /** The device-keyed peer cache each data type fills. The other two types have none. */
 const REMOTE_CACHE_KEY: Partial<Record<DataType, string>> = {
   sessions: KEYS.REMOTE_SESSIONS,
@@ -615,6 +608,38 @@ function withoutDevices(
   const next = { ...(current ?? {}) };
   for (const id of deviceIds) delete next[id];
   return next;
+}
+
+/**
+ * Upserts one peer's entry into a device-keyed cache value, keeping the NEWER of the two
+ * and tolerating the legacy shape.
+ *
+ * Both setters used to be a raw get-then-set across an `await`, which is the lost-update
+ * race `updateKey` exists for. Sessions and extensions are imported independently, so two
+ * peers landing at the same moment each built their map from the value BEFORE the other's
+ * write, and one peer's entry was gone. Gone for good, too: the packet it came from is
+ * unchanged, so `uploadIfChanged` on that peer never sends it again and nothing here
+ * re-reads it. That is what made a frozen peer list permanent instead of something the
+ * next sync fixed.
+ *
+ * The timestamp check is the other half. Peer files arrive in whatever order the backend
+ * lists them, and a folder can hold more than one file for one device, so writing
+ * unconditionally lets an older list win. Keep the newer packet whichever order it turns up
+ * in, by the same clock the engine orders peers by, compared as the string it already is.
+ */
+function upsertRemoteEntry<T extends { device_id: string; timestamp: string }>(
+  current: Record<string, T> | undefined,
+  entry: T,
+  payloadField: keyof T & string
+): Record<string, T> {
+  // The legacy single-object shape IS one peer's entry, recognized by its payload field.
+  // Replace it rather than nesting the new entry inside it.
+  const map: Record<string, T> =
+    current && typeof current === "object" && !(payloadField in current) ? { ...current } : {};
+  const held: T | undefined = map[entry.device_id];
+  if (held?.timestamp && held.timestamp >= entry.timestamp) return map;
+  map[entry.device_id] = entry;
+  return map;
 }
 
 /**
@@ -660,6 +685,12 @@ export async function dropRemoteDevices(dataType: DataType, deviceIds: string[])
   await updateKey<Record<string, unknown>>(key, (c) => withoutDevices(c, deviceIds), {});
 }
 
+/**
+ * Normalizes the `konode_remote_extensions` value into a **deduped union** of every
+ * peer device's installed-extension list (first occurrence per id wins). Accepts the
+ * current device-keyed map, the legacy single-object shape, and empty/undefined.
+ * Pure so the popup can use it synchronously after a `chrome.storage.local.get`.
+ */
 export function normalizeRemoteExtensions(raw: unknown): SyncExtension[] {
   if (!raw || typeof raw !== "object") return [];
   const entries: RemoteExtensionEntry[] =
@@ -685,14 +716,13 @@ export function normalizeRemoteExtensions(raw: unknown): SyncExtension[] {
   return [...byId.values()];
 }
 
-/** Upserts one peer's extension list into the device-keyed map (upgrades legacy shape). */
+/** Upserts one peer's extension list into the device-keyed map. See `upsertRemoteEntry`. */
 export async function setRemoteExtensions(entry: RemoteExtensionEntry): Promise<void> {
-  const r = await browser.storage.local.get(KEYS.REMOTE_EXTENSIONS);
-  const cur = r[KEYS.REMOTE_EXTENSIONS] as Record<string, RemoteExtensionEntry> | undefined;
-  const map: Record<string, RemoteExtensionEntry> =
-    cur && typeof cur === "object" && !("extensions" in cur) ? { ...cur } : {};
-  map[entry.device_id] = entry;
-  await set(KEYS.REMOTE_EXTENSIONS, map);
+  await updateKey<Record<string, RemoteExtensionEntry>>(
+    KEYS.REMOTE_EXTENSIONS,
+    (cur) => upsertRemoteEntry(cur, entry, "extensions"),
+    {}
+  );
 }
 
 // ─── Upload de-dup (skip re-uploading unchanged data) ───────────────────────

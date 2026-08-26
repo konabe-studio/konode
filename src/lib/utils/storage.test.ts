@@ -5,6 +5,7 @@ import {
   getImportedHistoryStamps, recordImportedHistory, releaseImportedHistory,
   updateKey, appendAudit, KEYS,
   getSettings, saveSettings, DEFAULT_SETTINGS,
+  setRemoteSession, setRemoteExtensions, getRemoteSessions,
 } from "@/lib/utils/storage";
 import { browser } from "@/lib/utils/ext";
 import type { RemoteSessionEntry, RemoteExtensionEntry, SyncExtension, SyncSettings } from "@/lib/types";
@@ -309,5 +310,62 @@ describe("device identity is stable and persisted", () => {
     expect(s.device_id).toBe("old");
     expect(s.conflict_strategy).toBe("manual");
     expect(s.bulk_delete_percent).toBe(DEFAULT_SETTINGS.bulk_delete_percent); // newly-added field
+  });
+});
+
+describe("setRemoteSession / setRemoteExtensions: one peer must not overwrite another", () => {
+  // Both were a raw get-then-set across an `await`, so two peers landing at the same
+  // moment each built their map from the value BEFORE the other's write and one of them
+  // was dropped. Dropped for good, too: the packet it came from never changes, so the peer
+  // never re-sends it and nothing here re-reads it. That is what turned a frozen peer list
+  // into something no later sync could fix.
+
+  const remoteExtensions = async (): Promise<string[]> => {
+    const r = await browser.storage.local.get(KEYS.REMOTE_EXTENSIONS);
+    return normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]).map((e) => e.id).sort();
+  };
+
+  it("keeps both sessions when two peers land at the same moment", async () => {
+    await Promise.all([
+      setRemoteSession(entry("dev-a", "2026-08-20T10:00:00.000Z")),
+      setRemoteSession(entry("dev-b", "2026-08-20T10:00:01.000Z")),
+    ]);
+
+    expect((await getRemoteSessions()).map((e) => e.device_id).sort()).toEqual(["dev-a", "dev-b"]);
+  });
+
+  it("keeps both extension lists when two peers land at the same moment", async () => {
+    await Promise.all([
+      setRemoteExtensions(extEntry("dev-a", ["e1"])),
+      setRemoteExtensions(extEntry("dev-b", ["e2"])),
+    ]);
+
+    expect(await remoteExtensions()).toEqual(["e1", "e2"]);
+  });
+
+  it("refuses an OLDER packet for a device it already holds", async () => {
+    // A duplicate file for one device is a real thing on Drive, which keys files by id
+    // rather than by name, and peer files arrive in whatever order the folder lists them.
+    await setRemoteSession(entry("dev-a", "2026-08-20T12:00:00.000Z", 3));
+    await setRemoteSession(entry("dev-a", "2026-08-20T09:00:00.000Z", 1));
+
+    const out = await getRemoteSessions();
+    expect(out).toHaveLength(1);
+    expect(out[0].session.tabs).toHaveLength(3); // the newer list stands
+  });
+
+  it("takes a NEWER packet for a device it already holds", async () => {
+    await setRemoteSession(entry("dev-a", "2026-08-20T09:00:00.000Z", 1));
+    await setRemoteSession(entry("dev-a", "2026-08-20T12:00:00.000Z", 4));
+
+    expect((await getRemoteSessions())[0].session.tabs).toHaveLength(4);
+  });
+
+  it("replaces the legacy single-object shape instead of nesting inside it", async () => {
+    await browser.storage.local.set({ [KEYS.REMOTE_SESSIONS]: entry("dev-old", "2026-08-01T10:00:00.000Z") });
+
+    await setRemoteSession(entry("dev-a", "2026-08-20T10:00:00.000Z"));
+
+    expect((await getRemoteSessions()).map((e) => e.device_id)).toEqual(["dev-a"]);
   });
 });
