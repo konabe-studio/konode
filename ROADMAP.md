@@ -75,19 +75,19 @@ on any Chromium browser and on Firefox.
   propagating. See `CHANGELOG.md`.
 
 ## Now live
-Konode is live on both stores. Both served **1.2.1** going into this release, after the
-Chrome Web Store's review of 1.2.1 cleared and closed the one-patch gap that had been open
-since 2026-08-07.
+Konode is live on both stores, and both serve **1.3.0**.
 
 - [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/): **serving 1.3.0**
   since 2026-08-17, listed since 2026-08-04. AMO auto-approved and signed the upload, so
   it went out within minutes; the source submission a bundled add-on requires is reviewed
   afterwards rather than before.
-- Chrome Web Store: **1.3.0 submitted, in review**, so the listing serves 1.2.1 until it
-  clears. First published 2026-07-20, item ID `mmlfiiimnpnjcjhhbldenpcmnibedkfa`.
+- Chrome Web Store: **serving 1.3.0**, confirmed live 2026-08-26. First published
+  2026-07-20, item ID `mmlfiiimnpnjcjhhbldenpcmnibedkfa`.
 
-The two therefore sit a version apart again for a few days, which is the normal shape of a
-release here rather than anything going wrong. Both store uploads are built by hand with
+The two sat a version apart for nine days, and that is the shape of every release here
+rather than anything going wrong: AMO signs on upload and reviews the source afterwards,
+the Web Store reviews first. It is worth planning around, because it is also how long a
+mistake in a Chrome build stays out there. Both store uploads are built by hand with
 Konode's own OAuth client compiled in and live in `web-ext-artifacts/chrome/` and
 `.../firefox/`; the zips attached to the GitHub release are source builds without it, from
 `.../source/`. See the packaging note under *Store packaging + releases* above for what
@@ -329,8 +329,8 @@ Reopen this if Apple ever ships an API that writes to the user's visible iCloud 
 
 **Chrome Web Store.** 1.0.0 submitted for review on **2026-07-19**, **published
 2026-07-20** (<https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa>).
-1.2.1 cleared review after it, and **1.3.0 is submitted on top of it and in review**,
-so the listing serves 1.2.1 meanwhile. Listing copy is
+1.2.1 cleared review after it, and **1.3.0 is live, confirmed 2026-08-26**, nine days
+after it was submitted. Listing copy is
 maintained per language in the dashboard: the name and the short description come from the
 extension's own catalogues and translate themselves, but the long description is entered by
 hand, in each of the languages Konode ships.
