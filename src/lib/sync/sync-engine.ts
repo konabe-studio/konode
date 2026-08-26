@@ -425,7 +425,15 @@ export class SyncEngine {
     let names: string[];
     try {
       names = await backend.listFiles("konode_");
-    } catch {
+    } catch (err) {
+      // Still not fatal, but no longer silent. Saying nothing left this safety net switched
+      // off while the Activity log showed a clean sync, so a device whose own file had been
+      // deleted from the folder looked perfectly healthy for as long as the listing kept
+      // failing. That is precisely the situation the check exists to end.
+      logger.warn(
+        "findOwnMissingFiles",
+        `Couldn't list the sync folder, so this sync can't tell whether our own files are still there: ${err instanceof Error ? err.message : err}`
+      );
       return;
     }
     const present = new Set(names);
