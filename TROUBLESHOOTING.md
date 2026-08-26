@@ -17,11 +17,25 @@ The reason there's an interval at all: Drive, GitHub and WebDAV are ordinary fil
 with no way to announce a change, so a device only finds out by going and looking.
 
 **Bookmarks I deleted came back / a big cleanup didn't propagate.**
-Konode has a safety cap: a single sync won't apply peer deletions that would remove
-more than a threshold of your local bookmarks (default **60%**), to guard against a
-corrupt deletion log wiping your tree. If you intentionally deleted a large share, raise
-**Max bulk delete from a peer** under **Settings → Device → Safety** (50-95%) and sync
-again. A blocked deletion also saves a restore point, so nothing is lost either way.
+Konode won't let one sync apply deletions from another device that would remove more than a
+share of the bookmarks on this one (default **60%**). It is there so a corrupt deletion log
+can't wipe your tree, and when it stops something it saves a restore point first, so nothing
+is lost either way.
+
+Raising **Max bulk delete from a peer** under **Settings → Device → Safety** is not the way
+to let a deletion through, and for a big cleanup it can't be: the slider stops at 95%, so
+clearing nearly every bookmark on one device stays blocked wherever you put it. It also
+lowers the guard from then on, to wave through one thing that has already happened. Two
+things do work:
+
+- **Delete them on the other device too.** A deletion the receiving device has already made
+  is nothing left to apply, so there is nothing for the guard to stop.
+- **Or undo the cleanup where you made it.** On that device open **Settings → Device →
+  Restore points** and restore the one from before it. Your bookmarks come back, and that
+  device stops asking the others to delete them.
+
+Being able to approve a single deletion instead is tracked in
+[issue #18](https://github.com/konabe-studio/konode/issues/18).
 
 **Nothing syncs unless I keep a DevTools window open (dev builds).**
 After rebuilding an unpacked extension you must click **↻ reload** on it
