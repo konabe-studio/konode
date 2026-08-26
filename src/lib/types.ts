@@ -244,8 +244,20 @@ export interface SyncState {
   bytes_transferred: number;
   // Set when the mass-delete guard blocked an unusual peer deletion on the last sync
   // (and an auto-snapshot was saved). Cleared at the start of each sync. `blocked` is
-  // how many local bookmarks the guard refused to remove.
-  recovery_notice?: { at: string; blocked: number } | null;
+  // how many local bookmarks the guard refused to remove, out of `local_total`.
+  //
+  // Everything past `blocked` is optional because a notice written by an older build
+  // does not carry it, and this object is read back from storage. The device is the
+  // useful half: a bare count says 48 bookmarks without saying 48 of what, or which
+  // machine asked, and both are needed before anyone can decide to approve it (#18).
+  recovery_notice?: {
+    at: string;
+    blocked: number;
+    cap?: number;
+    local_total?: number;
+    device_id?: string;
+    device_label?: string | null;
+  } | null;
 }
 
 /**
@@ -321,7 +333,12 @@ export type ExtensionMessage =
   | { type: "RESTORE_SNAPSHOT"; payload: { name: string } }
   | { type: "DELETE_SNAPSHOT"; payload: { name: string } }
   | { type: "LIST_DEVICES" }
-  | { type: "FORGET_DEVICE"; payload: { device_id: string } };
+  | { type: "FORGET_DEVICE"; payload: { device_id: string } }
+  // "Yes, apply the deletion the guard blocked." One-shot: consumed by the next merge.
+  // `blocked` is the count the UI actually showed, not a number re-read in the worker:
+  // sync() clears recovery_notice as it starts, so a click landing mid-sync would have
+  // found nothing pending and refused. It also pins the approval to what the user saw.
+  | { type: "APPROVE_BULK_DELETE"; payload: { blocked: number } };
 
 /**
  * One device with files in the sync folder.

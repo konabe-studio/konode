@@ -57,7 +57,7 @@
     "message": "无法连接 Konode。点击重试。"
   },
   "popup_recovery_notice": {
-    "message": "一次异常删除（$COUNT$ 条书签）被阻止，已保存恢复点。请在设置 → 活动中查看。",
+    "message": "一次异常删除（$COUNT$ 条书签）被阻止，已保存恢复点。请在设置 → 活动中应用或保留。",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -903,6 +903,80 @@
   },
   "opt_cancel": {
     "message": "取消"
+  },
+  "opt_blocked_section": {
+    "message": "已阻止的删除"
+  },
+  "opt_blocked_section_sub": {
+    "message": "另一台设备请求删除异常数量的书签，因此 Konode 将其拦截。如果这是你的本意，可以应用；否则保留它们。"
+  },
+  "opt_blocked_headline_one": {
+    "message": "$TOTAL$ 条书签中的 $COUNT$ 条",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      },
+      "total": {
+        "content": "$2",
+        "example": "49"
+      }
+    }
+  },
+  "opt_blocked_headline_other": {
+    "message": "$TOTAL$ 条书签中的 $COUNT$ 条",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "48"
+      },
+      "total": {
+        "content": "$2",
+        "example": "49"
+      }
+    }
+  },
+  "opt_blocked_count_one": {
+    "message": "$COUNT$ 条书签",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_count_other": {
+    "message": "$COUNT$ 条书签",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "48"
+      }
+    }
+  },
+  "opt_blocked_from": {
+    "message": "由 $DEVICE$ 请求。",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_blocked_from_unknown": {
+    "message": "由另一台设备请求。"
+  },
+  "opt_blocked_saved": {
+    "message": "没有删除任何内容，并已事先保存恢复点。"
+  },
+  "opt_blocked_apply": {
+    "message": "应用此删除"
+  },
+  "opt_blocked_confirm_apply": {
+    "message": "应用并删除"
+  },
+  "opt_blocked_keep": {
+    "message": "如果想保留它们，请在发出请求的设备上还原到清理之前的恢复点。这会清除该设备上的删除记录，它就不会再发送到这里。"
   },
   "opt_snapshots_section": {
     "message": "还原点"

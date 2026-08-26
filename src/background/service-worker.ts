@@ -2,7 +2,7 @@
 // Handles: alarm-based polling, bookmark listeners, message routing
 
 import type { ExtensionMessage, ExtensionResponse, SyncState } from "@/lib/types";
-import { getSettings, getState, setState, saveSettings, clearStaleSyncLock, KEYS } from "@/lib/utils/storage";
+import { getSettings, getState, setState, saveSettings, clearStaleSyncLock, setBulkDeleteApproval, KEYS } from "@/lib/utils/storage";
 import { SyncEngine } from "@/lib/sync/sync-engine";
 import { registerBookmarkListeners } from "@/lib/handlers/bookmarks-handler";
 import { createBackend } from "@/lib/backends/abstract-backend";
@@ -245,6 +245,29 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
       if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
       const removed = await syncEngine.forgetDevice(message.payload.device_id);
       return { type: "DEVICE_FORGOTTEN", payload: { removed } };
+    }
+
+    case "APPROVE_BULK_DELETE": {
+      if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
+      // Arm the latch, then sync immediately. The approval is consumed by the next
+      // bookmark merge, and making the user wait out the sync interval to see anything
+      // happen would read as a dead button. Bookmarks only: nothing else is involved.
+      const pending = message.payload?.blocked ?? 0;
+      if (!Number.isFinite(pending) || pending <= 0) {
+        return { type: "ERROR", payload: "There is no blocked deletion to apply." };
+      }
+      await setBulkDeleteApproval(pending);
+      const outcome = await syncEngine.sync(["bookmarks"]);
+      if (outcome === "no-backend") {
+        await setBulkDeleteApproval(0);
+        return { type: "ERROR", payload: "No storage backend is set up yet." };
+      }
+      // A sync already running will consume the latch on this cycle or the next one, so
+      // the approval stands rather than being thrown away with the error.
+      if (outcome === "already-running") {
+        return { type: "ERROR", payload: "A sync is already running. The deletion will be applied on this cycle." };
+      }
+      return { type: "OK" };
     }
 
     case "LIST_SNAPSHOTS": {

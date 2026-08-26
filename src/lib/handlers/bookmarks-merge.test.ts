@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { importBookmarks, exportBookmarkPayload, registerBookmarkListeners } from "@/lib/handlers/bookmarks-handler";
-import { getTombstones, setTombstones, KEYS } from "@/lib/utils/storage";
+import { getTombstones, setTombstones, getBulkDeleteApproval, setBulkDeleteApproval, KEYS } from "@/lib/utils/storage";
 import type { BookmarkPayload, SyncBookmark } from "@/lib/types";
 
 // These exercise the real merge/replace logic against the in-memory
@@ -268,30 +268,56 @@ describe("importBookmarks — mass-delete guard (configurable percent)", () => {
     expect((await localUrls()).length).toBe(30);
   });
 
+  /** The merge summary line from the Activity log, or undefined if none was kept. */
+  async function summaryLine(): Promise<string | undefined> {
+    await new Promise((r) => setTimeout(r, 0)); // logger fires appendAudit unawaited
+    const entries = ((await chrome.storage.local.get(KEYS.AUDIT_LOG))[KEYS.AUDIT_LOG] ?? []) as
+      { detail?: string }[];
+    return entries.map((e) => e.detail).reverse().find((d) => d?.startsWith("Merged "));
+  }
+
+  it("reports the deletions it APPLIED, not the ones the peer asked for", async () => {
+    await seedMany(100);
+    await importBookmarks(payload([], tombstonesFor(70)), "merge", "lww");
+
+    // Nothing was removed, so the summary must not claim 70 were. It used to print
+    // `-70` directly above the warning saying those 70 had been refused.
+    expect((await localUrls()).length).toBe(100);
+    const line = await summaryLine();
+    if (line) expect(line).toContain("-0");
+  });
+
+  it("applies a blocked deletion the user approved, and spends the approval", async () => {
+    await seedMany(100);
+    // The slider cannot reach this: 95% of 100 is a cap of 95, and 98 is over it.
+    await importBookmarks(payload([], tombstonesFor(98)), "merge", "lww", 95);
+    expect((await localUrls()).length).toBe(100);
+
+    await setBulkDeleteApproval(98);
+    await importBookmarks(payload([], tombstonesFor(98)), "merge", "lww", 95);
+    expect((await localUrls()).length).toBe(2);
+    // One incident, not a new threshold: the latch is empty again afterwards.
+    expect(await getBulkDeleteApproval()).toBe(0);
+  });
+
+  it("refuses to spend an approval on a deletion bigger than the one approved", async () => {
+    await seedMany(100);
+    // The user saw and approved 70. What turned up is 98, which nobody approved.
+    await setBulkDeleteApproval(70);
+    await importBookmarks(payload([], tombstonesFor(98)), "merge", "lww", 95);
+
+    expect((await localUrls()).length).toBe(100);
+    // Still spent, though: it belonged to an incident that no longer matches, and
+    // leaving it armed would let it cash out against something later instead.
+    expect(await getBulkDeleteApproval()).toBe(0);
+  });
+
   /** The retained log, which is what Settings → Activity shows. `info` never reaches it. */
   async function auditText(): Promise<string> {
     await new Promise((r) => setTimeout(r, 0)); // the logger fires appendAudit unawaited
     const r = await chrome.storage.local.get(KEYS.AUDIT_LOG);
     return JSON.stringify(r[KEYS.AUDIT_LOG] ?? []);
   }
-
-  it("does not report a blocked deletion as one it made", async () => {
-    // Issue #19. The summary counted what the peer ASKED for, so a blocked merge announced
-    // "-70" directly above the warning saying nothing had been deleted, and the person
-    // reading the pair could not tell which half to believe.
-    const info = vi.spyOn(console, "info").mockImplementation(() => {});
-    await seedMany(100);
-    let blocked = 0;
-
-    await importBookmarks(payload([], tombstonesFor(70)), "merge", "lww", 60, (n) => { blocked += n; });
-
-    expect((await localUrls()).length).toBe(100); // nothing was removed...
-    expect(blocked).toBe(70);                     // ...and the guard still reports what it refused
-    const summary = info.mock.calls.map((c) => c.join(" ")).find((s) => s.includes("Merged +"));
-    info.mockRestore();
-    expect(summary).toContain("-0");
-    expect(summary).not.toContain("-70");
-  });
 
   it("keeps a merge that changed nothing out of the Activity log entirely", async () => {
     // Issue #20. Both lines were retained, and the guard re-evaluates the same deletion on

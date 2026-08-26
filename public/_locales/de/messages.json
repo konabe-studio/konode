@@ -60,7 +60,7 @@
     "message": "Konode war nicht erreichbar. Zum erneuten Versuch klicken."
   },
   "popup_recovery_notice": {
-    "message": "Ein ungewöhnlicher Löschvorgang ($COUNT$ Lesezeichen) wurde verhindert und ein Wiederherstellungspunkt gespeichert. Nachzulesen unter Einstellungen → Aktivität.",
+    "message": "Ein ungewöhnlicher Löschvorgang ($COUNT$ Lesezeichen) wurde verhindert und ein Wiederherstellungspunkt gespeichert. Übernimm ihn oder behalte sie unter Einstellungen → Aktivität.",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -912,6 +912,80 @@
   },
   "opt_cancel": {
     "message": "Abbrechen"
+  },
+  "opt_blocked_section": {
+    "message": "Verhinderter Löschvorgang"
+  },
+  "opt_blocked_section_sub": {
+    "message": "Ein anderes Gerät wollte ungewöhnlich viele deiner Lesezeichen entfernen, deshalb hat Konode das zurückgehalten. Übernimm es, wenn es so gewollt war, oder behalte sie."
+  },
+  "opt_blocked_headline_one": {
+    "message": "$COUNT$ von deinen $TOTAL$ Lesezeichen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      },
+      "total": {
+        "content": "$2",
+        "example": "49"
+      }
+    }
+  },
+  "opt_blocked_headline_other": {
+    "message": "$COUNT$ von deinen $TOTAL$ Lesezeichen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "48"
+      },
+      "total": {
+        "content": "$2",
+        "example": "49"
+      }
+    }
+  },
+  "opt_blocked_count_one": {
+    "message": "$COUNT$ Lesezeichen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_count_other": {
+    "message": "$COUNT$ Lesezeichen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "48"
+      }
+    }
+  },
+  "opt_blocked_from": {
+    "message": "Angefordert von $DEVICE$.",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_blocked_from_unknown": {
+    "message": "Von einem anderen Gerät angefordert."
+  },
+  "opt_blocked_saved": {
+    "message": "Es wurde nichts entfernt, und vorher wurde ein Wiederherstellungspunkt gespeichert."
+  },
+  "opt_blocked_apply": {
+    "message": "Löschvorgang übernehmen"
+  },
+  "opt_blocked_confirm_apply": {
+    "message": "Übernehmen und löschen"
+  },
+  "opt_blocked_keep": {
+    "message": "Wenn du sie lieber behalten möchtest, stelle auf dem anfordernden Gerät einen Punkt von vor dem Aufräumen wieder her. Damit verschwindet dort der Löschvermerk, und er wird nicht mehr hierher geschickt."
   },
   "opt_snapshots_section": {
     "message": "Wiederherstellungspunkte"

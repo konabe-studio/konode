@@ -13,29 +13,27 @@ on its next scheduled pull, which is every 60 seconds by default. You can move t
 anywhere between 30 and 600 seconds under **Settings → Device → Sync interval**; 30s is the
 browser's minimum for a background check, so that's the floor, not a bug. History, open
 tabs and the extension list have no instant path at all: they travel on that same interval.
-The reason there's an interval at all: Drive, GitHub and WebDAV are ordinary file storage
-with no way to announce a change, so a device only finds out by going and looking.
 
 **Bookmarks I deleted came back / a big cleanup didn't propagate.**
-Konode won't let one sync apply deletions from another device that would remove more than a
-share of the bookmarks on this one (default **60%**). It is there so a corrupt deletion log
-can't wipe your tree, and when it stops something it saves a restore point first, so nothing
-is lost either way.
+Konode has a safety cap: a single sync won't apply peer deletions that would remove
+more than a threshold of your local bookmarks (default **60%**), to guard against a
+corrupt deletion log wiping your tree. The device receiving the deletion saves a restore
+point and shows "an unusual deletion was blocked", so nothing is lost either way.
 
-Raising **Max bulk delete from a peer** under **Settings → Device → Safety** is not the way
-to let a deletion through, and for a big cleanup it can't be: the slider stops at 95%, so
-clearing nearly every bookmark on one device stays blocked wherever you put it. It also
-lowers the guard from then on, to wave through one thing that has already happened. Two
-things do work:
+**To let the deletion through**, open **Settings → Activity** on the device showing the
+warning and use **Apply the deletion** on the card at the top. It names the device that
+is asking and how many bookmarks are involved, and the restore point is already saved
+before you decide.
 
-- **Delete them on the other device too.** A deletion the receiving device has already made
-  is nothing left to apply, so there is nothing for the guard to stop.
-- **Or undo the cleanup where you made it.** On that device open **Settings → Device →
-  Restore points** and restore the one from before it. Your bookmarks come back, and that
-  device stops asking the others to delete them.
+**To keep the bookmarks instead**, undo the deletion on the device that made it: open
+**Settings → Activity** there and restore a point from before the cleanup. That puts the
+bookmarks back and clears the deletion record, so it stops being sent to your other
+devices.
 
-Being able to approve a single deletion instead is tracked in
-[issue #18](https://github.com/konabe-studio/konode/issues/18).
+Raising **Max bulk delete from a peer** under **Settings → Device → Safety** (50-95%)
+also lets a large cleanup through, but only up to 95% of your tree, so it cannot help
+when a device asks to clear nearly everything. It is a standing setting rather than a
+one-time approval, so prefer the card above.
 
 **Nothing syncs unless I keep a DevTools window open (dev builds).**
 After rebuilding an unpacked extension you must click **↻ reload** on it

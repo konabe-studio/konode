@@ -57,7 +57,7 @@
     "message": "No se pudo contactar a Konode. Toca para reintentar."
   },
   "popup_recovery_notice": {
-    "message": "Se bloqueó una eliminación inusual ($COUNT$ marcadores) y se guardó un punto de restauración. Revísalo en Configuración → Actividad.",
+    "message": "Se bloqueó una eliminación inusual ($COUNT$ marcadores) y se guardó un punto de restauración. Aplícala o consérvalos en Configuración → Actividad.",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -841,6 +841,80 @@
   },
   "opt_cancel": {
     "message": "Cancelar"
+  },
+  "opt_blocked_section": {
+    "message": "Eliminación bloqueada"
+  },
+  "opt_blocked_section_sub": {
+    "message": "Otro dispositivo pidió quitar un número inusual de tus marcadores, así que Konode lo retuvo. Aplícalo si era lo que querías, o consérvalos."
+  },
+  "opt_blocked_headline_one": {
+    "message": "$COUNT$ de tus $TOTAL$ marcadores",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      },
+      "total": {
+        "content": "$2",
+        "example": "49"
+      }
+    }
+  },
+  "opt_blocked_headline_other": {
+    "message": "$COUNT$ de tus $TOTAL$ marcadores",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "48"
+      },
+      "total": {
+        "content": "$2",
+        "example": "49"
+      }
+    }
+  },
+  "opt_blocked_count_one": {
+    "message": "$COUNT$ marcador",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_count_other": {
+    "message": "$COUNT$ marcadores",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "48"
+      }
+    }
+  },
+  "opt_blocked_from": {
+    "message": "Lo pidió $DEVICE$.",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_blocked_from_unknown": {
+    "message": "Lo pidió otro dispositivo."
+  },
+  "opt_blocked_saved": {
+    "message": "No se quitó nada, y antes se guardó un punto de restauración."
+  },
+  "opt_blocked_apply": {
+    "message": "Aplicar la eliminación"
+  },
+  "opt_blocked_confirm_apply": {
+    "message": "Aplicar y eliminar"
+  },
+  "opt_blocked_keep": {
+    "message": "Si prefieres conservarlos, restaura en el dispositivo que lo pidió un punto anterior a la limpieza. Eso borra allí el registro de la eliminación, para que deje de enviarse aquí."
   },
   "opt_snapshots_section": {
     "message": "Puntos de restauración"

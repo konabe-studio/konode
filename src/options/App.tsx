@@ -358,6 +358,11 @@ export default function OptionsApp() {
   const [snapLoad, setSnapLoad] = useState<"loading" | "ok" | string>("loading");
   const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  // Activity tab: the blocked-deletion card. Two-step, like Restore and Delete above —
+  // applying it removes bookmarks, so it does not hang off a single click.
+  const [confirmApply, setConfirmApply] = useState(false);
+  const [applyBusy, setApplyBusy] = useState(false);
+  const [applyMsg, setApplyMsg] = useState<string | null>(null);
 
   // Activity tab data (fetched once on mount; see the effect below).
   const [syncState, setSyncState] = useState<SyncState | null>(null);
@@ -647,6 +652,26 @@ export default function OptionsApp() {
     if (res.type === "SNAPSHOT_RESTORED") setSnapMsg(plural("opt_snap_restored", res.payload.restored));
     else if (res.type === "ERROR") setSnapMsg(res.payload);
     setSnapBusy(false);
+  };
+
+  // "Yes, apply the deletion the guard blocked." The service worker arms a one-shot
+  // approval and syncs bookmarks straight away, so the result is visible here rather
+  // than a minute later. Re-reads state afterwards: a successful apply clears the
+  // recovery notice, which is what makes this card go away.
+  const applyBlockedDeletion = async () => {
+    setApplyBusy(true); setApplyMsg(null); setConfirmApply(false);
+    const res = await sendMessage({
+      type: "APPROVE_BULK_DELETE",
+      payload: { blocked: syncState?.recovery_notice?.blocked ?? 0 },
+    });
+    if (res.type === "ERROR") setApplyMsg(res.payload);
+    const after = await sendMessage({ type: "GET_STATE" });
+    if (after.type === "STATE") setSyncState(after.payload);
+    try {
+      const r = await browser.storage.local.get(KEYS.AUDIT_LOG);
+      setAudit((r[KEYS.AUDIT_LOG] as AuditEntry[]) ?? []);
+    } catch { /* the log is a nicety here, not the point of the action */ }
+    setApplyBusy(false);
   };
 
   const deleteSnapshot = async (name: string) => {
@@ -1884,6 +1909,66 @@ export default function OptionsApp() {
                     </Fragment>
                   ))}
                 </div>
+
+                {/* ── Blocked deletion ──
+                    Shown only while one is pending. The popup banner has always sent
+                    people here, but until now the only thing waiting for them was a log
+                    line: the percentage slider tops out at 95%, so a peer clearing
+                    nearly its whole tree stayed blocked at every setting and the
+                    warning never cleared (#18). This is the way through it. */}
+                {syncState?.recovery_notice && (
+                  <div className="settings-section">
+                    <div className="settings-card-head">
+                      {t("opt_blocked_section")}
+                      <span className="head-sub">{t("opt_blocked_section_sub")}</span>
+                    </div>
+                    <div className="settings-row">
+                      <div className="settings-row-left">
+                        <div>
+                          {/* "48 of your 49" is the number that decides this, and a bare
+                              48 is not: a notice from an older build has no total, so it
+                              falls back to the count it does have rather than to "of 0". */}
+                          <div className="row-label">
+                            {syncState.recovery_notice.local_total != null
+                              ? plural("opt_blocked_headline", syncState.recovery_notice.blocked,
+                                  [String(syncState.recovery_notice.blocked), String(syncState.recovery_notice.local_total)])
+                              : plural("opt_blocked_count", syncState.recovery_notice.blocked)}
+                          </div>
+                          <div className="row-desc">
+                            {syncState.recovery_notice.device_label
+                              ? t("opt_blocked_from", syncState.recovery_notice.device_label)
+                              : t("opt_blocked_from_unknown")}{" "}
+                            {t("opt_blocked_saved")}
+                          </div>
+                        </div>
+                      </div>
+                      {confirmApply ? (
+                        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                          <button className="btn-secondary" onClick={() => setConfirmApply(false)} disabled={applyBusy}>{t("opt_cancel")}</button>
+                          <button className="btn-secondary" style={{ color: "var(--danger)", borderColor: "var(--danger)" }} onClick={applyBlockedDeletion} disabled={applyBusy}>
+                            {applyBusy ? <Loader2 size={12} className="spin" /> : <Trash2 size={12} />} {t("opt_blocked_confirm_apply")}
+                          </button>
+                        </div>
+                      ) : (
+                        <button className="btn-secondary" style={{ flexShrink: 0 }} onClick={() => setConfirmApply(true)} disabled={applyBusy}>
+                          <Trash2 size={12} /> {t("opt_blocked_apply")}
+                        </button>
+                      )}
+                    </div>
+                    <div className="settings-row">
+                      <div className="settings-row-left">
+                        <div className="row-desc">{t("opt_blocked_keep")}</div>
+                      </div>
+                    </div>
+                    {applyMsg && (
+                      <div className="settings-row">
+                        <div className="settings-row-left">
+                          <div className="error-row" role="alert"><AlertTriangle size={12} /> {applyMsg}</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* ── Restore points ── */}
                 <div className="settings-section">

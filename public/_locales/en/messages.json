@@ -80,8 +80,8 @@
     "description": "The popup could not read its own state. The whole banner is a button, hence 'tap to retry'."
   },
   "popup_recovery_notice": {
-    "message": "An unusual deletion ($COUNT$ bookmarks) was blocked and a restore point was saved. Review in Settings → Activity.",
-    "description": "The mass-delete guard refused a peer's deletions. Reassuring by design: nothing was lost. 'Settings → Activity' names a tab, so it must match the tab's own translation.",
+    "message": "An unusual deletion ($COUNT$ bookmarks) was blocked and a restore point was saved. Apply it or keep them in Settings → Activity.",
+    "description": "The mass-delete guard refused a peer's deletions. Reassuring by design: nothing was lost. Said 'Review in' until there was something to decide there; now the banner leads to a real choice, so it names it. 'Settings → Activity' names a tab, so it must match the tab's own translation.",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -1026,6 +1026,65 @@
   },
   "opt_cancel": {
     "message": "Cancel"
+  },
+  "opt_blocked_section": {
+    "message": "Blocked deletion",
+    "description": "Card in Settings → Activity, shown only while the mass-delete guard is holding a peer's deletion back. This is where the popup banner sends people."
+  },
+  "opt_blocked_section_sub": {
+    "message": "Another device asked to remove an unusual number of your bookmarks, so Konode held it back. Apply it if you meant to, or keep them.",
+    "description": "Sub-heading under 'Blocked deletion'. Says what happened and that there is a choice to make."
+  },
+  "opt_blocked_headline_one": {
+    "message": "$COUNT$ of your $TOTAL$ bookmarks",
+    "description": "How big the blocked deletion is. The proportion is the whole point, so both numbers stay in the sentence.",
+    "placeholders": {
+      "count": { "content": "$1", "example": "1" },
+      "total": { "content": "$2", "example": "49" }
+    }
+  },
+  "opt_blocked_headline_other": {
+    "message": "$COUNT$ of your $TOTAL$ bookmarks",
+    "description": "Plural of opt_blocked_headline_one.",
+    "placeholders": {
+      "count": { "content": "$1", "example": "48" },
+      "total": { "content": "$2", "example": "49" }
+    }
+  },
+  "opt_blocked_count_one": {
+    "message": "$COUNT$ bookmark",
+    "description": "Fallback headline for a notice saved by an older version, which recorded the count but not the size of the tree.",
+    "placeholders": { "count": { "content": "$1", "example": "1" } }
+  },
+  "opt_blocked_count_other": {
+    "message": "$COUNT$ bookmarks",
+    "description": "Plural of opt_blocked_count_one.",
+    "placeholders": { "count": { "content": "$1", "example": "48" } }
+  },
+  "opt_blocked_from": {
+    "message": "Asked for by $DEVICE$.",
+    "description": "Names the peer device that sent the deletion. $DEVICE$ is a name the user chose.",
+    "placeholders": { "device": { "content": "$1", "example": "boxbox" } }
+  },
+  "opt_blocked_from_unknown": {
+    "message": "Asked for by another device.",
+    "description": "Used when the peer's packet carries no device name (older builds did not send one)."
+  },
+  "opt_blocked_saved": {
+    "message": "Nothing was removed, and a restore point was saved first.",
+    "description": "The reassurance. Sits right after opt_blocked_from in the same paragraph."
+  },
+  "opt_blocked_apply": {
+    "message": "Apply the deletion",
+    "description": "Button. First step of two, because applying removes bookmarks."
+  },
+  "opt_blocked_confirm_apply": {
+    "message": "Apply and delete",
+    "description": "The confirming second click. Deliberately says the word delete."
+  },
+  "opt_blocked_keep": {
+    "message": "To keep them instead, restore a point from before the cleanup on the device that asked. That clears its record of the deletion, so it stops being sent here.",
+    "description": "The other way out, which has to happen on the OTHER device. Worth stating because there is nothing on this device that can stop the asking."
   },
   "opt_snapshots_section": {
     "message": "Restore points"

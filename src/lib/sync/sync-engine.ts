@@ -4,7 +4,7 @@ import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncEx
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { normalizeRepoSlug } from "@/lib/backends/github-backend";
 import { createSnapshot as writeSnapshot, listSnapshots as readSnapshots, restoreSnapshot as applySnapshot, deleteSnapshot as dropSnapshot, type SnapshotMeta } from "@/lib/sync/snapshots";
-import { exportBookmarkPayload, importBookmarks } from "@/lib/handlers/bookmarks-handler";
+import { exportBookmarkPayload, importBookmarks, type BulkDeleteBlock } from "@/lib/handlers/bookmarks-handler";
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
 import { exportHistory, importHistory } from "@/lib/handlers/history-handler";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
@@ -152,10 +152,17 @@ export class SyncEngine {
   // even though the local checksum record says this content already went. Rebuilt every
   // sync by `findOwnMissingFiles` and consumed by `uploadIfChanged`.
   private ownFilesMissing = new Set<DataType>();
-  // Local bookmarks the mass-delete guard refused to remove this sync (recovery
-  // signal). >0 → an unusual deletion was blocked; sync() saves an auto-snapshot and
-  // flags state.recovery_notice so the popup can surface it.
-  private bulkBlockedThisSync = 0;
+  // What the mass-delete guard refused this sync, and which peer asked (recovery
+  // signal). Non-null → an unusual deletion was blocked; sync() saves an auto-snapshot
+  // and flags state.recovery_notice so the popup can surface it and Settings → Activity
+  // can offer to apply it.
+  //
+  // `blocked` accumulates across peers, because two devices can each ask on the same
+  // cycle; the rest describes the LAST block, which is the one the numbers belong to.
+  // A single peer is the ordinary case by a wide margin.
+  private bulkBlockedThisSync:
+    | (BulkDeleteBlock & { device_id?: string; device_label?: string | null })
+    | null = null;
 
   constructor(
     private settings: SyncSettings,
@@ -260,7 +267,7 @@ export class SyncEngine {
 
     this.encryptionWarnings.clear();
     this.bytesThisSync = 0;
-    this.bulkBlockedThisSync = 0;
+    this.bulkBlockedThisSync = null;
     const state = await setState({ status: "syncing", last_error: null, recovery_notice: null });
     this.onStateChange(state);
 
@@ -496,35 +503,51 @@ export class SyncEngine {
    * banner keeps showing while the situation persists.
    */
   private async recordBlockedDeletion(
-    blocked: number,
+    blocked: (BulkDeleteBlock & { device_id?: string; device_label?: string | null }) | null,
     syncedBookmarks: boolean
   ): Promise<SyncState["recovery_notice"]> {
-    if (blocked <= 0) {
+    if (!blocked) {
       if (syncedBookmarks && (await getRecoverySnapshotTaken())) {
         await setRecoverySnapshotTaken(false);
       }
       return null;
     }
-    if (!(await getRecoverySnapshotTaken())) {
+    // One read, two decisions. The latch means "this incident is already on the
+    // record", which is true of the restore point and of the Activity-log warning
+    // alike, so they belong behind the same test rather than two drifting ones.
+    const alreadyRecorded = await getRecoverySnapshotTaken();
+    if (!alreadyRecorded) {
+      // THE retained warning for a blocked deletion, written once per incident. The
+      // merge only logs to the console, because it re-evaluates the same peer
+      // deletions on every cycle and writing this from there filled the log with one
+      // identical pair a minute (#20). Naming the peer and the total is what makes it
+      // actionable rather than alarming (#18).
+      const who = blocked.device_label ? ` asked for by ${blocked.device_label}` : "";
+      logger.warn(
+        "mergeBookmarks",
+        `Blocked a deletion of ${blocked.blocked} of your ${blocked.localTotal} bookmarks` +
+          `${who} (cap ${blocked.cap}, ${blocked.pct}% of the tree). Nothing was removed and a ` +
+          "restore point was saved. Apply it or keep them in Settings → Activity."
+      );
       try {
         await this.snapshotNow();
         await setRecoverySnapshotTaken(true);
-        // The ONE retained line per incident. The merge used to write it, once per peer per
-        // cycle, which flooded the 200-entry log the popup banner tells the user to go and
-        // read: the warning evicting the warning. Here it is gated by the same latch that
-        // keeps the restore point to one per incident, so a re-evaluation of the same
-        // blocked deletion says nothing and a genuinely new one earns its own line.
-        logger.warn(
-          "SyncEngine",
-          `Kept ${blocked} bookmark(s) a peer asked to delete: more than the mass-delete guard allows in one sync. Nothing was removed and a restore point was saved. The same deletion stays blocked, without adding to this log again, until it is resolved.`
-        );
       } catch (e) {
         // Leave the latch clear so the next cycle retries the write — a failed
-        // snapshot must not count as "this incident is covered".
+        // snapshot must not count as "this incident is covered". The warning above
+        // then repeats on the retry, which is the right trade: a backend that cannot
+        // hold the restore point is worth saying twice, and it is not the steady state.
         logger.warn("SyncEngine", `Recovery snapshot failed: ${e instanceof Error ? e.message : e}`);
       }
     }
-    return { at: new Date().toISOString(), blocked };
+    return {
+      at: new Date().toISOString(),
+      blocked: blocked.blocked,
+      cap: blocked.cap,
+      local_total: blocked.localTotal,
+      device_id: blocked.device_id,
+      device_label: blocked.device_label ?? null,
+    };
   }
 
   // ─── Snapshots (restore points) ───────────────────────────────────────
@@ -1193,6 +1216,9 @@ export class SyncEngine {
     await this.applyPayload(dataType, payload, {
       device_id: packet.device_id,
       timestamp: packet.timestamp,
+      // Outside the encrypted payload, so it reads even with E2EE on. It is what the
+      // recovery notice shows instead of a truncated id when the guard blocks.
+      device_label: packet.device_label ?? null,
     }, isLocalEmpty);
   }
 
@@ -1200,7 +1226,7 @@ export class SyncEngine {
   private async applyPayload(
     dataType: DataType,
     payload: unknown,
-    meta: { device_id: string; timestamp: string },
+    meta: { device_id: string; timestamp: string; device_label?: string | null },
     isLocalEmpty: boolean
   ): Promise<void> {
     // Validate the parsed payload shape before handing untrusted remote data to
@@ -1221,7 +1247,14 @@ export class SyncEngine {
           isLocalEmpty ? "replace" : "merge",
           this.settings.conflict_strategy,
           this.settings.bulk_delete_percent,
-          (blocked) => { this.bulkBlockedThisSync += blocked; },
+          (info) => {
+            this.bulkBlockedThisSync = {
+              ...info,
+              blocked: (this.bulkBlockedThisSync?.blocked ?? 0) + info.blocked,
+              device_id: meta.device_id,
+              device_label: meta.device_label ?? null,
+            };
+          },
         );
         break;
       case "history":

@@ -7,6 +7,23 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **A blocked deletion you had no way to allow.** Konode refuses a sync that would remove
+  more than 60% of your bookmarks at once, saves a restore point, and tells you about it.
+  What it never did was give you a way to say yes. The advice was to raise **Max bulk
+  delete from a peer**, but that setting stops at 95%, so a device asking to clear nearly
+  all of its bookmarks stayed blocked at every position of the slider, and the warning
+  never went away. **Settings → Activity** now shows what is being held back, which device
+  asked for it, and how much of your tree it is, with a button that applies it. Saying yes
+  covers that one deletion and nothing after it, and the restore point is already saved
+  before you are asked. Reported by @klausbreyer.
+- **The activity log said bookmarks had been deleted when they had not.** A blocked
+  deletion was logged as "Merged +0 / -48" directly above the warning explaining that
+  those 48 had been refused. It was counting what the other device asked for rather than
+  what was removed, which was nothing. It now reports what it actually applied.
+- **A blocked deletion filled the activity log.** The guard re-checks the same deletion on
+  every sync, so it wrote the same two lines every minute for as long as the situation
+  lasted, pushing everything else out of a 200-entry log. The warning is now written once
+  per incident, the same way restore points have been saved once per incident since 1.3.0.
 - **A device's open tabs or extension list could get stuck on an old version.** The popup
   lists the tabs each of your other devices has open, and counts the extensions they have
   that this one doesn't. For one device, either of those could stop moving and stay
@@ -25,18 +42,6 @@ All notable changes to Konode. Format loosely follows
   extensions page. Konode treated withdrawing it as a failure, and reported a failed sync
   for as long as it stayed off. It now stops publishing the list and leaves what your other
   devices already have exactly where it is.
-- **A deletion Konode refused was recorded as one it had made.** When another device asks to
-  delete an unusual number of your bookmarks, Konode keeps them, says so, and saves a
-  restore point. Directly above that, the Activity log recorded the same sync as having
-  deleted the bookmarks it had just kept. Nothing had been deleted, and the log now says so
-  too. Reported by @klausbreyer in
-  [#16](https://github.com/konabe-studio/konode/issues/16).
-- **One refused deletion, and a log full of nothing else.** That refusal is re-examined on
-  every sync, because both halves of it stay true: the other device is still asking, and
-  your bookmarks are all still here. Each pass added two more entries, about two a minute,
-  to a log that keeps the last 200, so the warning the popup sends you there to read was
-  pushing itself out of the list. It is written once now, when it happens, and again only
-  for a different deletion later.
 - **The popup's numbers stood still while you watched a sync finish.** Leaving the popup
   open across a sync left the list of other devices' tabs, and the count of extensions
   missing here, showing what they held before it ran. They keep up with the sync now.
