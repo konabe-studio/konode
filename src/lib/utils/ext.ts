@@ -18,7 +18,6 @@
 import browserPolyfill from "webextension-polyfill";
 
 export const browser = browserPolyfill as unknown as typeof chrome;
-export default browser;
 
 /**
  * Which extension store this build is running in. Firefox serves extension pages

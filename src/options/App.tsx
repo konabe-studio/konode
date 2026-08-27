@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef, Fragment } from "react";
 import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, SyncExtension, SnapshotMeta, DeviceInfo } from "@/lib/types";
 import { sendMessage, request } from "@/lib/utils/messaging";
 import { t, tParts, plural } from "@/lib/utils/i18n";
-import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
+import { interactiveSignIn, isDriveAuthAvailable, clearGDriveSession } from "@/lib/backends/gdrive-oauth";
 import {
   allDataTypeAvailability, dataTypeAvailability, dataTypeApiPresent, ensurePermission,
   hasPermission, unsupportedReason,
@@ -398,13 +398,13 @@ export default function OptionsApp() {
       // regardless of access-token age (it renews silently).
       const s = r[KEYS.GDRIVE_SESSION];
       if (s) setGdriveUser({ email: s.email ?? "", displayName: s.displayName ?? "" });
-    });
+    }).catch(() => { /* no session to show is the normal case, not an error */ });
     void browser.storage.local.get(KEYS.REMOTE_EXTENSIONS).then((r) => {
       // Use the normalizer: the value is a device-keyed map now, not the legacy
       // single object — reading `.extensions` off the map returned nothing, so the
       // options "missing on this device" list stayed empty (the popup was correct).
       setRemoteExtensions(normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]));
-    });
+    }).catch(() => { /* the peer cache is a display nicety; a read failure must not blank Settings */ });
     // "management" is optional, and the `.catch()` below was built on a wrong idea of what
     // happens without it. Chrome does not hide the namespace: `chrome.management` is always
     // there, carrying only `getSelf`/`uninstallSelf` until the permission is granted. So
@@ -890,7 +890,10 @@ export default function OptionsApp() {
   };
 
   const disconnectGDrive = () => {
-    void browser.storage.local.remove(KEYS.GDRIVE_SESSION);
+    // Through the same helper sign-in uses, rather than reaching for the storage key. It
+    // is one line either way, but the key belongs to gdrive-oauth and a second place that
+    // knows its name is a second place to update when the session shape changes.
+    void clearGDriveSession().catch(() => {});
     setGdriveUser(null);
     if (settings?.active_backend === "gdrive") update({ active_backend: null });
   };

@@ -103,7 +103,16 @@ export async function decrypt(
   encryptedBase64: string,
   passphrase: string
 ): Promise<string> {
-  const combined = base64ToBuffer(encryptedBase64);
+  // Inside the try, with the decrypt. `atob` throws its own InvalidCharacterError on a
+  // truncated or non-base64 blob, and outside the try that reached the user as "Failed to
+  // execute 'atob' on 'Window'" — which says nothing about what is wrong or what to do.
+  // A corrupt file and a wrong passphrase are the same answer here: this did not decrypt.
+  let combined: Uint8Array<ArrayBuffer>;
+  try {
+    combined = base64ToBuffer(encryptedBase64);
+  } catch {
+    throw new Error("Decryption failed: wrong passphrase or corrupted data.");
+  }
   const salt = combined.slice(0, SALT_LENGTH);
   const iv = combined.slice(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
   const ciphertext = combined.slice(SALT_LENGTH + IV_LENGTH);

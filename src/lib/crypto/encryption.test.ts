@@ -46,3 +46,22 @@ describe("encryption", () => {
     expect(await verifyPassphrase("not-it", v)).toBe(false);
   });
 });
+
+describe("a corrupt blob says what a user can act on", () => {
+  it("answers a non-base64 blob with the same sentence as a wrong passphrase", async () => {
+    // `atob` throws its own InvalidCharacterError, and the decode used to sit OUTSIDE the
+    // try that produces the friendly message — so a truncated file surfaced as "Failed to
+    // execute 'atob' on 'Window': The string to be decoded is not correctly encoded",
+    // which names neither the problem nor anything to do about it.
+    await expect(decrypt("this is not base64 !!!", "correct horse battery")).rejects.toThrow(
+      /wrong passphrase or corrupted data/i
+    );
+  });
+
+  it("answers a truncated ciphertext the same way", async () => {
+    const full = await encrypt("hello", "correct horse battery");
+    await expect(decrypt(full.slice(0, 20), "correct horse battery")).rejects.toThrow(
+      /wrong passphrase or corrupted data/i
+    );
+  });
+});

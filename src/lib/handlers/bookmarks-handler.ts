@@ -1116,28 +1116,35 @@ export function registerBookmarkListeners(onChange: BookmarkChangeCallback): voi
     logger.info("BookmarkListeners", "This browser has no bookmarks API — bookmark-change listeners not registered");
     return;
   }
+  // A browser event handler is not a promise chain anybody awaits, so a rejection from
+  // one of these recorders had nowhere to go: it surfaced as an unhandled rejection in a
+  // service worker nobody has a console open on. They are all storage writes, and a
+  // storage write that fails is worth a line in the log rather than silence.
+  const swallow = (p: Promise<unknown>): void => {
+    void p.catch((err) => logger.error("BookmarkListeners", err));
+  };
   browser.bookmarks.onCreated.addListener(onChange);
   browser.bookmarks.onChanged.addListener((id, changeInfo) => {
     // A URL edit is a delete(old)+add(new) in the URL-keyed sync model — record a
     // tombstone for the replaced url so a peer doesn't resurrect it as a duplicate.
-    void recordUrlChange(id, changeInfo.url);
+    swallow(recordUrlChange(id, changeInfo.url));
     // A title edit is the other half of onChanged, and nothing was listening for it:
     // the new title rode along in the tree but the receiver had no way to know it was
     // newer than its own, so it kept the old one. Both renames land here.
-    void recordTitleChange(id, changeInfo.title);
+    swallow(recordTitleChange(id, changeInfo.title));
     onChange();
   });
   browser.bookmarks.onMoved.addListener((id, moveInfo) => {
     // Record the move (per URL, timestamped) so the new placement propagates.
-    void recordMove(id);
+    swallow(recordMove(id));
     // Also record a folder's own reposition (path-keyed) — a reordered folder has
     // no URL, so recordMove alone can't carry its new index across devices.
-    void recordFolderMove(id, moveInfo);
+    swallow(recordFolderMove(id, moveInfo));
     onChange();
   });
   browser.bookmarks.onRemoved.addListener((_id, removeInfo) => {
     // Record a tombstone so the deletion propagates instead of resurrecting.
-    void recordRemovedTombstones(removeInfo.node);
+    swallow(recordRemovedTombstones(removeInfo.node));
     onChange();
   });
   logger.info("BookmarkListeners", "Registered");

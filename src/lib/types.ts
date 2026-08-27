@@ -296,7 +296,10 @@ export interface IBackend {
   // newest-first by packet timestamp (`orderPeersByTime`), so backends may return
   // files in any order (e.g. directory-listing order).
   downloadAll(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket[]>;
-  listVersions(data_type: DataType): Promise<string[]>;
+  // `listVersions` used to sit here, returning [] from all three backends because none of
+  // them can answer it: Drive, GitHub and WebDAV expose file history in three unrelated
+  // ways and we never called it. Restore points are ordinary files we write ourselves
+  // (sync/snapshots.ts), which is what version history is actually built on here.
   testConnection(): Promise<{ ok: boolean; message: string }>;
   // ── Generic named-file ops on the Konode folder ──────────────────────────
   // Used by snapshots (restore points) — files that live alongside the per-device

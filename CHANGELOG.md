@@ -7,6 +7,22 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **History sync got slower the more devices you had.** Before storing a page from another
+  device, Konode checks whether it already holds a newer visit for it, and answering that
+  means reading your whole local history. It was reading it again for every other device,
+  so three of them meant three full passes over your history every sync, once a minute.
+  It reads it once per sync now and shares the answer. Nothing about what gets synced
+  changes; on a large history with several devices, the work behind it drops by roughly
+  the number of devices you have.
+- **A damaged encrypted file said something nobody could act on.** A restore point or
+  sync file that had been truncated or corrupted failed with a message about an internal
+  decoding function rather than about your data. It now says the same thing a wrong
+  passphrase does, because from where you are standing those are the same problem: this
+  did not decrypt.
+- **Restoring another device's tabs is bounded.** A session is a file on your storage,
+  and Konode was willing to open however many tabs one claimed to hold. The count has
+  always been shown before you click, and now it is also the most that can open: 200,
+  which is well past any real window.
 - **A blocked deletion you had no way to allow.** Konode refuses a sync that would remove
   more than 60% of your bookmarks at once, saves a restore point, and tells you about it.
   What it never did was give you a way to say yes. The advice was to raise **Max bulk

@@ -368,3 +368,26 @@ describe("snapshots — an unreadable shared index is never overwritten", () => 
     expect(list[0].count).toBeUndefined();
   });
 });
+
+describe("restoreSnapshot only accepts one of our own filenames", () => {
+  it("refuses a name that is not a restore point", async () => {
+    // `deleteSnapshot` has always checked this and `restoreSnapshot` did not, though both
+    // hand the string to the backend as a path component. Nothing can pass a bad one
+    // today, since the UI lists only names that already matched the pattern — but two
+    // functions taking the same argument to the same place should not disagree about
+    // whether it needs checking.
+    const backend = new FileFake();
+    await expect(
+      restoreSnapshot(asBackend(backend), "../../konode_settings.json", settings())
+    ).rejects.toThrow(/not a restore point/i);
+  });
+
+  it("still restores a real one", async () => {
+    const backend = new FileFake();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.example/" });
+    const meta = await createSnapshot(asBackend(backend), settings());
+    await chrome.bookmarks.removeTree("1");
+
+    expect(await restoreSnapshot(asBackend(backend), meta.name, settings())).toBeGreaterThan(0);
+  });
+});

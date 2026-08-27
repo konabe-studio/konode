@@ -6,7 +6,7 @@ import { normalizeRepoSlug } from "@/lib/backends/github-backend";
 import { createSnapshot as writeSnapshot, listSnapshots as readSnapshots, restoreSnapshot as applySnapshot, deleteSnapshot as dropSnapshot, type SnapshotMeta } from "@/lib/sync/snapshots";
 import { exportBookmarkPayload, importBookmarks, type BulkDeleteBlock } from "@/lib/handlers/bookmarks-handler";
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
-import { exportHistory, importHistory } from "@/lib/handlers/history-handler";
+import { exportHistory, importHistory, buildLocalHistoryIndex } from "@/lib/handlers/history-handler";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
 import { dataTypeAvailability, unsupportedReason } from "@/lib/utils/capabilities";
 import {
@@ -190,6 +190,10 @@ export class SyncEngine {
    * Losing an approval is recoverable in one click; leaving one armed is not.
    */
   private bulkApprovedThisSync = 0;
+  // Canonical URL -> local last-visit time, built at most once per sync and shared by
+  // every peer's history import. Null until a history import needs it, so a cycle that
+  // syncs no history never pays for it. See `buildLocalHistoryIndex`.
+  private historyIndexThisSync: Map<string, number> | null = null;
 
   constructor(
     private settings: SyncSettings,
@@ -295,6 +299,7 @@ export class SyncEngine {
     this.encryptionWarnings.clear();
     this.bytesThisSync = 0;
     this.bulkBlockedThisSync = null;
+    this.historyIndexThisSync = null;
     // Read and cleared together, before anything can fail: from here on the approval is
     // spent whatever this cycle does with it. See `bulkApprovedThisSync`.
     this.bulkApprovedThisSync = await getBulkDeleteApproval();
@@ -1306,7 +1311,13 @@ export class SyncEngine {
         );
         break;
       case "history":
-        await importHistory(payload as never);
+        // One index per SYNC, not per peer. Building it reads the whole local history
+        // (up to 100k rows) into a map, and this runs once per peer, so three other
+        // devices meant three full scans a minute at the default interval. The import
+        // writes every page it stores back into the map, so the peers folded after this
+        // one still see an accurate answer.
+        this.historyIndexThisSync ??= await buildLocalHistoryIndex();
+        await importHistory(payload as never, this.historyIndexThisSync);
         break;
       case "sessions":
         // Peer maps are keyed by device_id — refuse to upsert under an empty key,

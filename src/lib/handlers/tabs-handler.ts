@@ -51,15 +51,34 @@ export async function exportSession(label?: string): Promise<SyncSession> {
 
 // ─── Import (open tabs from a session) ────────────────────────────────────
 
+/**
+ * The most tabs one restore will open.
+ *
+ * A session is a peer's packet, and with E2EE off anyone who can write to the sync folder
+ * can put anything in one. Nothing else here bounds the list, so a packet claiming ten
+ * thousand tabs would be handed straight to the browser as ten thousand opens. The count
+ * is shown in the popup before the click, so this is not the main defence, but "the number
+ * you were shown is the number you get" should not depend on the packet being honest.
+ * Well above any real session: 200 tabs is already an unusual window.
+ */
+const MAX_RESTORE_TABS = 200;
+
 export async function importSession(session: SyncSession): Promise<void> {
   assertDataTypeApi("sessions");
   // Never open a non-web URL from a remote packet (javascript:/data:/file: are
   // an injection/exfiltration vector); only http(s) tabs are restored.
-  const openable = session.tabs.filter((t) => {
+  const safe = session.tabs.filter((t) => {
     if (isSafeContentUrl(t.url)) return true;
     logger.warn("importSession", "Skipping an unsafe tab URL");
     return false;
   });
+  const openable = safe.slice(0, MAX_RESTORE_TABS);
+  if (safe.length > openable.length) {
+    logger.warn(
+      "importSession",
+      `That session lists ${safe.length} tabs, which is more than Konode will open at once. Opening the first ${MAX_RESTORE_TABS}.`
+    );
+  }
 
   logger.event("importSession", `Opening ${openable.length} tabs from "${session.label}"`);
   if (openable.length === 0) return;

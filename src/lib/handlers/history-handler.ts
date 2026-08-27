@@ -119,7 +119,34 @@ export async function exportHistory(daysLimit = 30): Promise<SyncHistoryItem[]> 
 
 // ─── Import (merge remote history) ───────────────────────────────────────
 
-export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
+/**
+ * Canonical URL → local last-visit time, for every page this browser holds.
+ *
+ * Split out and passed in because of what it costs. It reads the WHOLE local history
+ * (up to 100k rows) and builds a map of it, and `importHistory` runs once per PEER, not
+ * once per sync: three other devices meant three full scans a minute at the default
+ * interval, each one allocating a map of every page the user has ever visited. The engine
+ * now builds this once per sync and hands the same map to every peer's import.
+ *
+ * Which is only safe because the import keeps it CURRENT: every page it stores is written
+ * back into the map, so the second peer sees what the first one added and the "is the
+ * peer's visit newer than ours" test still answers correctly. Re-reading from the browser
+ * was what used to make that true.
+ */
+export async function buildLocalHistoryIndex(): Promise<Map<string, number>> {
+  assertDataTypeApi("history");
+  const existing = await browser.history.search({ text: "", startTime: 0, maxResults: 100000 });
+  const index = new Map<string, number>();
+  for (const h of existing) {
+    if (h.url) index.set(canonicalUrlKey(h.url), h.lastVisitTime ?? 0);
+  }
+  return index;
+}
+
+export async function importHistory(
+  items: SyncHistoryItem[],
+  localIndex?: Map<string, number>
+): Promise<void> {
   assertDataTypeApi("history");
   // NOTE: on Chrome, history.addUrl records a visit only at the *current* time
   // (its API takes no visitTime), so the original lastVisitTime is lost and
@@ -133,15 +160,14 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
   // in local history — and the entry was re-added as a FRESH VISIT on every sync cycle,
   // forever, quietly inflating the visit count and the "most visited" ranking. Same
   // canonical key the bookmark merge uses for the same reason.
-  const existing = await browser.history.search({ text: "", startTime: 0, maxResults: 100000 });
   // The LAST VISIT TIME per URL, not just "do we have it". Presence alone meant a page the
   // receiver had ever opened could never receive another visit from a peer, so two devices
   // browsing the same sites synced nothing and the log read "Added 0 new history entries"
   // forever. Reported from the field as a full day of browsing that never showed up.
-  const localLastVisit = new Map<string, number>();
-  for (const h of existing) {
-    if (h.url) localLastVisit.set(canonicalUrlKey(h.url), h.lastVisitTime ?? 0);
-  }
+  //
+  // Built here only when nobody handed us one. The sync engine does, once per cycle,
+  // because this scan is the expensive part of an import and it was being paid per peer.
+  const localLastVisit = localIndex ?? (await buildLocalHistoryIndex());
 
   // One stamp for the whole batch: the moment these visits arrived here. exportHistory
   // compares against it to tell an import apart from the user's own later visit.
@@ -201,6 +227,15 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
   }
 
   // ── Write, several at a time.
+  /**
+   * Record locally what a stored page's last-visit time now is, so the shared index stays
+   * true for the peers folded after this one. Firefox keeps the visit time we sent;
+   * Chrome ignores it and stamps the moment of the call, which is `stamp` for this batch.
+   */
+  const noteStored = (job: { key: string; visitTime?: number }, sentTime: boolean): void => {
+    localLastVisit.set(job.key, sentTime && job.visitTime !== undefined ? job.visitTime : stamp);
+  };
+
   const writeOne = async (job: { url: string; key: string; visitTime?: number }): Promise<void> => {
     // Only send the visit time to a browser that takes it. Firefox keeps the page's real
     // date that way; Chrome throws on the property, so there it must not be sent at all.
@@ -213,6 +248,7 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
         visitTimeAccepted = true;
         await setVisitTimeSupport(true);
       }
+      noteStored(job, sendTime);
       importedUrls.push(job.key);
       added++;
       return;
@@ -233,6 +269,7 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
             // rather than leaving pages suppressed for a week over our own mistake.
             await clearRejectedHistoryUrls();
           }
+          noteStored(job, false);
           importedUrls.push(job.key);
           added++;
           return;
@@ -251,7 +288,19 @@ export async function importHistory(items: SyncHistoryItem[]): Promise<void> {
       if (!rejectReason) rejectReason = err instanceof Error ? err.message : String(err);
     }
   };
-  for (let i = 0; i < pending.length; i += IMPORT_CONCURRENCY) {
+  // The FIRST write goes alone while the answer is still unknown, and only then does the
+  // rest overlap. `visitTimeAccepted` is one variable read and written by every concurrent
+  // writeOne, so a batch of 16 starting against `null` had all 16 send the property, all
+  // 16 fail on Chrome, and all 16 run the fallback probe and the `clearRejectedHistoryUrls`
+  // that goes with it. Harmless, being idempotent, but it is 16 round trips and a repeated
+  // log line to learn something one call answers. One probe costs one round trip, once per
+  // browser, and the answer is persisted.
+  let start = 0;
+  if (visitTimeAccepted === null && pending.length) {
+    await writeOne(pending[0]);
+    start = 1;
+  }
+  for (let i = start; i < pending.length; i += IMPORT_CONCURRENCY) {
     await Promise.all(pending.slice(i, i + IMPORT_CONCURRENCY).map(writeOne));
   }
   // Remember WHEN these arrived, so exportHistory won't re-publish them as native visits

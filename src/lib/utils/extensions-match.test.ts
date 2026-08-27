@@ -175,3 +175,33 @@ describe("isInstalledLocally — a store-listing homepage is not a match", () =>
     expect(isInstalledLocally(ext({ id: "a".repeat(32), name: "A", store: "chrome" }), [{ id: "b".repeat(32), name: "B" }], "chrome")).toBe(false);
   });
 });
+
+describe("installOrSearchUrl never takes a host from the packet", () => {
+  // The peer's `storeUrl` is rebuilt from the id on the way in
+  // (`normalizeRemoteExtensions`), because with E2EE off anyone who can write to the sync
+  // folder can forge the field and both the popup and Settings turn it into a link the
+  // user clicks. This function was the one place still reading it first, which meant the
+  // whole defence rested on every caller having sanitized its input.
+  const forged: SyncExtension = {
+    id: "abcdefghijklmnopabcdefghijklmnop",
+    name: "Looks Legit",
+    version: "1.0",
+    enabled: true,
+    type: "extension",
+    store: "chrome",
+    storeUrl: "https://evil.example/install",
+  };
+
+  it("ignores a forged storeUrl and rebuilds from the id", () => {
+    const url = installOrSearchUrl(forged, "chrome");
+    expect(url).not.toContain("evil.example");
+    expect(url).toContain(forged.id);
+    expect(url).toBe(storeUrlFor(forged));
+  });
+
+  it("sends a cross-store extension to a name search, not to the packet's URL", () => {
+    const url = installOrSearchUrl(forged, "firefox");
+    expect(url).not.toContain("evil.example");
+    expect(url).toContain("addons.mozilla.org");
+  });
+});

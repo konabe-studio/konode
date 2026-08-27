@@ -295,3 +295,64 @@ describe("the visit time is only sent to a browser that takes it", () => {
     expect(Object.keys((r[KEYS.HIST_REJECTED] ?? {}) as object)).toEqual([]);
   });
 });
+
+describe("the local-history scan is paid once per SYNC, not once per peer", () => {
+  // `importHistory` reads the WHOLE local history into a map to answer "is the peer's
+  // visit newer than ours". That read is the expensive part of an import, and the engine
+  // calls importHistory once per PEER: three other devices meant three full scans a
+  // minute at the default interval, each allocating a map of every page ever visited.
+
+  /** Counts history.search calls, which is the scan we are trying not to repeat. */
+  function countSearches(): { n: number } {
+    const c = { n: 0 };
+    const h = chrome.history as unknown as {
+      search: (q: unknown) => Promise<chrome.history.HistoryItem[]>;
+    };
+    const real = h.search.bind(h);
+    h.search = async (q) => { c.n++; return real(q); };
+    return c;
+  }
+
+  function items(urls: string[], at = 1_700_000_000_000) {
+    return urls.map((url, i) => ({ url, title: url, lastVisitTime: at + i, visitCount: 1 }));
+  }
+
+  it("does not scan at all when it is handed an index", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const c = countSearches();
+
+    await importHistory(items(["https://one.example/"]), new Map());
+
+    expect(c.n).toBe(0);
+  });
+
+  it("still scans for a caller that hands it nothing", async () => {
+    // The engine passes one; anything else (a test, a future caller) must still work.
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const c = countSearches();
+
+    await importHistory(items(["https://two.example/"]));
+
+    expect(c.n).toBe(1);
+  });
+
+  it("keeps a shared index current, so a later peer does not re-add the same page", async () => {
+    // The scan used to be repeated per peer, and re-reading from the browser is what made
+    // the second peer see what the first one stored. Sharing the map only works if the
+    // import writes back into it — otherwise two peers listing the same page would each
+    // record a visit, which is the visit-count inflation this test suite already guards
+    // against elsewhere.
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const shared = new Map<string, number>();
+    const both = items(["https://shared.example/"]);
+
+    await importHistory(both, shared); // peer A
+    const c = countSearches();
+    await importHistory(both, shared); // peer B, same page, same visit time
+
+    expect(c.n).toBe(0);
+    expect(shared.has("https://shared.example/")).toBe(true);
+    const all = await chrome.history.search({ text: "", startTime: 0, maxResults: 100 });
+    expect(all.filter((h) => h.url === "https://shared.example/")).toHaveLength(1);
+  });
+});

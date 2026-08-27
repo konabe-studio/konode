@@ -157,7 +157,12 @@ export function storeUrlFor(ext: Pick<SyncExtension, "id" | "name" | "store">): 
  * so we let the search show whether a counterpart exists).
  */
 export function installOrSearchUrl(remote: SyncExtension, currentStore: Store): string {
-  if (inferStore(remote) === currentStore) return remote.storeUrl || storeUrlFor(remote);
+  // Always rebuilt, never `remote.storeUrl ||` first. Every caller today passes a list
+  // that came through `normalizeRemoteExtensions`, which already rebuilt the field, so
+  // this changes no link that exists — but it was the one line in the extension path
+  // still willing to read a host out of a peer's packet, which is the forged-link vector
+  // the rebuild exists to close, and the comment above already claimed it didn't.
+  if (inferStore(remote) === currentStore) return storeUrlFor(remote);
   const q = encodeURIComponent(remote.name ?? "");
   return currentStore === "firefox" ? `${AMO_SEARCH_BASE}${q}` : `${CWS_SEARCH_BASE}${q}`;
 }

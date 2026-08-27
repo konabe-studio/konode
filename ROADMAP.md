@@ -95,7 +95,10 @@ keeps the two from being confused.
 
 ## Next
 - **Backend expansion**, cheapest sign-in first. See *Platform priority* item 3 below.
-- **History sync performance**: the full-history dedup scan every import runs.
+- **History sync performance**: the full-history dedup scan. It is now built once per
+  SYNC rather than once per peer (1.3.1), which was the larger half of the cost with more
+  than one other device; what remains is that a sync which imports any history at all
+  still reads the whole local history once to answer "is the peer's visit newer".
 - **More languages.** Japanese, Italian and Estonian are open volunteer work on Weblate
   with no target date. A language joins `shipped-languages.json` once it is complete, which
   is the last step of shipping it: that one list is what both the packaging scripts and
@@ -258,7 +261,8 @@ Implement `MEGABackend implements IBackend` (`src/lib/backends/mega-backend.ts`)
   WebDAV backend has for partial writes).
 - `testConnection()`: attempt login + list the folder; map bad-credential / 2FA
   errors to friendly messages.
-- `listVersions()`: return `[]` (we don't use it; all three existing backends stub it).
+- No `listVersions()`: the `IBackend` method was removed in 1.3.1. All three backends
+    stubbed it with `[]` and nothing ever called it.
 
 ### Wiring (mirrors the other backends)
 - `types.ts`: add `"mega"` to `BackendType`; add a `mega?: { email; session?;
@@ -310,9 +314,9 @@ Apple users are served today by any WebDAV provider, and by a private GitHub rep
 Reopen this if Apple ever ships an API that writes to the user's visible iCloud Drive.
 
 ## Later / nice-to-have
-- Incremental diff for >10k bookmarks; history sync performance (the full-history dedup
-  scan every import runs is what's left, after 1.2.0 overlapped the per-page writes that
-  were the bigger part of a slow first sync).
+- Incremental diff for >10k bookmarks; history sync performance (one full-history scan
+  per sync is what's left, after 1.2.0 overlapped the per-page writes that were the
+  bigger part of a slow first sync and 1.3.1 stopped repeating the scan per peer).
 - **Diffs between restore points.** Show what actually changed between two restore
   points in the Activity tab, rather than only that a sync ran. Checked against the code
   before listing it: `sync/snapshots.ts` writes a full bookmark tree per restore point
@@ -320,8 +324,9 @@ Reopen this if Apple ever ships an API that writes to the user's visible iCloud 
   and decrypts it in order to restore it. So this is a comparison view over data that
   already exists plus a tree diff, not new plumbing, and it behaves the same on Drive,
   GitHub and WebDAV because restore points are ordinary files we write ourselves. The
-  provider-side route is *not* available for this: `listVersions()` returns `[]` on all
-  three backends. Two limits worth stating wherever this is described: bookmarks only
+  provider-side route is *not* available for this: file-version history is three
+  unrelated APIs across Drive, GitHub and WebDAV, which is why the `listVersions()` stub
+  was dropped from `IBackend` in 1.3.1 rather than filled in. Two limits worth stating wherever this is described: bookmarks only
   (`exportBookmarkPayload`), and only across the newest `MAX_SNAPSHOTS`, which is 10.
 - Optional OAuth proxy (serverless) to avoid shipping the Google client secret.
 

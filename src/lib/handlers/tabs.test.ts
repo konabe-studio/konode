@@ -194,3 +194,21 @@ describe("a session restore on an engine that allows one open per click", () => 
     expect(await getSingleTabOpenLimit()).toBe(true); // and that is why the next one works
   });
 });
+
+describe("a session restore is bounded by what Konode will open", () => {
+  it("opens at most 200 tabs, however many the packet claims", async () => {
+    // A session is a peer's packet, and nothing else here bounds the list: with E2EE off,
+    // anyone who can write to the sync folder can put ten thousand URLs in one and the
+    // whole list used to be handed to the browser. The popup shows the count before the
+    // click, so this is not the main defence — but the number shown should be the number
+    // opened whether or not the packet is honest.
+    await setSingleTabOpenLimit(false); // per-tab restore, so each open is countable
+    const before = (await chrome.tabs.query({})).length;
+    const many = Array.from({ length: 260 }, (_, i) => `https://flood${i}.example/`);
+
+    await importSession(session(many));
+
+    const opened = (await chrome.tabs.query({})).length - before;
+    expect(opened).toBe(200);
+  });
+});

@@ -232,6 +232,12 @@ export async function listSnapshots(backend: IBackend, settings: SyncSettings): 
 
 /** Restore a snapshot: re-add every bookmark it holds that's missing locally. */
 export async function restoreSnapshot(backend: IBackend, name: string, settings: SyncSettings): Promise<number> {
+  // Same guard `deleteSnapshot` has, and for the same reason: `name` reaches the backend
+  // as a path component, so it has to be one of OUR filenames rather than any string that
+  // arrived here. Nothing can currently pass a bad one, since the UI lists only names
+  // this regex already accepted, but the two functions taking the same argument to the
+  // same place should not disagree about whether it needs checking.
+  if (tsFromName(name) == null) throw new Error("Not a restore point.");
   const raw = await backend.getFile(name);
   if (!raw) throw new Error("Snapshot not found on the backend.");
   const file = JSON.parse(raw) as SnapshotFile;

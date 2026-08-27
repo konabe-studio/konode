@@ -285,7 +285,6 @@ export class WebDAVBackend implements IBackend {
     });
   }
 
-  async listVersions(_: DataType): Promise<string[]> { return []; }
 
   async testConnection(): Promise<{ ok: boolean; message: string }> {
     try {

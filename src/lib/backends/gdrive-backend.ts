@@ -1,12 +1,7 @@
 import type { IBackend, BackendConfig, DataType, SyncPacket } from "@/lib/types";
 import { withRetry, HttpError } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
-import {
-  getAccessToken,
-  interactiveSignIn,
-  getStoredGDriveUser,
-  clearGDriveSession,
-} from "./gdrive-oauth";
+import { getAccessToken, getStoredGDriveUser } from "./gdrive-oauth";
 import { clearUploadChecksums, getLastDriveFolder, setLastDriveFolder } from "@/lib/utils/storage";
 
 const DRIVE_API = "https://www.googleapis.com/drive/v3";
@@ -60,16 +55,11 @@ export class GDriveBackend implements IBackend {
     return getAccessToken(interactive);
   }
 
-  async signIn(): Promise<GDriveUserInfo> {
-    const s = await interactiveSignIn();
-    return { email: s.email, displayName: s.displayName };
-  }
-
-  async signOut(): Promise<void> {
-    this.folderId = null;
-    await clearGDriveSession();
-    logger.event("GDrive.signOut", "Signed out");
-  }
+  // signIn()/signOut() used to live here and nothing ever called them: the UI drives
+  // sign-in through `interactiveSignIn` and sign-out through `clearGDriveSession`, both
+  // from gdrive-oauth directly, because neither needs a backend instance. Two paths to
+  // one action is how they drift, and these had already drifted — signOut() wrote an
+  // Activity entry the path people actually use never wrote.
 
   async getSignedInUser(): Promise<GDriveUserInfo | null> {
     return getStoredGDriveUser();
@@ -349,7 +339,6 @@ export class GDriveBackend implements IBackend {
     });
   }
 
-  async listVersions(_data_type: DataType): Promise<string[]> { return []; }
 
   async testConnection(): Promise<{ ok: boolean; message: string }> {
     try {
