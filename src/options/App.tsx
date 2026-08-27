@@ -354,6 +354,10 @@ export default function OptionsApp() {
   const [snapshots, setSnapshots] = useState<SnapshotMeta[]>([]);
   const [snapBusy, setSnapBusy] = useState(false);
   const [snapMsg, setSnapMsg] = useState<string | null>(null);
+  // Its OWN slot. The clear-log failure used to be written into snapMsg, which renders in
+  // the Restore points card ninety lines above the button that produced it: the one place
+  // nobody who just clicked Clear log is looking.
+  const [auditMsg, setAuditMsg] = useState<string | null>(null);
   // "loading" | "ok" | an error message — so an empty list can be told apart from a
   // list we never managed to read. See the Activity effect below.
   const [snapLoad, setSnapLoad] = useState<"loading" | "ok" | string>("loading");
@@ -642,11 +646,12 @@ export default function OptionsApp() {
   };
 
   const clearAudit = async () => {
+    setAuditMsg(null);
     const sent = await request({ type: "CLEAR_AUDIT_LOG" });
     // Only claim the log is empty if it actually was cleared. Emptying the list on a
     // failed round trip tells the user their history is gone when it is still there.
     if (sent.ok) setAudit([]);
-    else setSnapMsg(sent.error);
+    else setAuditMsg(sent.error);
   };
 
   const createSnapshot = async () => {
@@ -2129,6 +2134,14 @@ export default function OptionsApp() {
                         <button className="btn-secondary" onClick={clearAudit}>
                           <Trash2 size={12} /> {t("opt_log_clear")}
                         </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {auditMsg && (
+                    <div className="settings-row">
+                      <div className="settings-row-left">
+                        <div className="error-row" role="alert"><AlertTriangle size={12} /> {auditMsg}</div>
                       </div>
                     </div>
                   )}

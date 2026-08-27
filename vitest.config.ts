@@ -13,7 +13,10 @@ export default defineConfig({
   test: {
     environment: "node", // Node 20 provides crypto.subtle / btoa / TextEncoder
     setupFiles: ["./test/setup.ts"],
-    include: ["src/**/*.test.ts"],
+    // scripts/ too: build-variant.mjs is the last gate before a zip is published, and it
+    // had no test at all while it was the thing deciding whether Konode's OAuth secret
+    // goes on a public release page.
+    include: ["src/**/*.test.ts", "scripts/**/*.test.ts"],
     // The E2EE tests derive real keys at the shipped 600k PBKDF2 iterations, which is a
     // security parameter, not a knob to turn down for the suite: lowering it in tests would
     // leave the value we actually ship untested. Several of them derive more than once (a

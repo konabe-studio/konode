@@ -18,7 +18,7 @@
 // So the tooling looks now. Every package run declares the variant it means to produce, the
 // built output is read back, and a disagreement stops the run before anything is zipped.
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 export const VARIANTS = ["store", "source"];
@@ -32,18 +32,45 @@ export const VARIANTS = ["store", "source"];
 // it under source/ for publishing. A shape match needs nothing but the artifact.
 const GOOGLE_CLIENT_SECRET = /GOCSPX-[A-Za-z0-9_-]{20,}/;
 
-/** The built file the secret would land in, if it landed anywhere. */
-function bundlePath(distDir) {
-  return join(distDir, "background.js");
+/** Every built script in the directory, background.js and the UI's hashed chunks alike. */
+function bundlePaths(distDir) {
+  const out = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, entry.name);
+      if (entry.isDirectory()) walk(p);
+      else if (entry.name.endsWith(".js")) out.push(p);
+    }
+  };
+  walk(distDir);
+  return out;
 }
 
-/** Does this built directory carry a Google OAuth client secret? */
+/**
+ * Does this built directory carry a Google OAuth client secret ANYWHERE?
+ *
+ * Every .js, not just background.js, and that is not thoroughness for its own sake: the
+ * secret really does land in two files. `gdrive-oauth.ts` reads it at module scope, and
+ * Settings and the setup wizard both import `interactiveSignIn` from there, so Vite
+ * inlines it into a UI chunk as well as into the service worker. A store build on this
+ * machine puts it in `background.js` and in `chunks/theme-<hash>.js`.
+ *
+ * Reading one of the two left the check with a blind spot pointing the wrong way. Build
+ * the worker with `--mode source` over a store `dist/` and background.js comes out clean
+ * while the UI chunk still holds the secret, and this function would have answered "no
+ * secret" and let the zip be filed under source/ for the release page. The npm scripts do
+ * not currently produce that state, because the UI build runs first and empties the
+ * directory. That is an argument about the order of two commands, which is not what a last
+ * gate before publishing should be resting on.
+ *
+ * The chunk name is content-hashed, so it cannot be listed here either. Scan them all.
+ */
 export function hasSecret(distDir) {
-  const bundle = bundlePath(distDir);
-  if (!existsSync(bundle)) {
-    throw new Error(`${bundle} not found — build before packaging.`);
+  const worker = join(distDir, "background.js");
+  if (!existsSync(worker)) {
+    throw new Error(`${worker} not found — build before packaging.`);
   }
-  return GOOGLE_CLIENT_SECRET.test(readFileSync(bundle, "utf8"));
+  return bundlePaths(distDir).some((p) => GOOGLE_CLIENT_SECRET.test(readFileSync(p, "utf8")));
 }
 
 /**
