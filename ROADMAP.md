@@ -44,7 +44,14 @@ on any Chromium browser and on Firefox.
   `.../firefox/` hold the store uploads, with Konode's OAuth secret compiled in;
   `.../source/` holds what goes on the release page, with no secret. Each package run
   declares which it means to build, reads the bundle back, and refuses to write the zip
-  when the two disagree, in either direction. See `scripts/build-variant.mjs`.
+  when the two disagree, in either direction. See `scripts/build-variant.mjs`. That check
+  reads EVERY built `.js`, not just `background.js` (1.3.1): the secret is inlined into a
+  UI chunk as well, because Settings and the wizard both import from `gdrive-oauth.ts`, so
+  reading the worker alone could certify a source build that still carried it.
+- **The tag must match `package.json`** (1.3.1), checked as the first step of the release
+  workflow. The tag names the release and `package.json` names the zips inside it, and
+  nothing tied them together: tagging before the release commit landed would have produced
+  a release titled v1.3.1 holding `konode-chrome-1.3.0.zip`.
 - **Pre-submission hardening**: a peer's extension `storeUrl` is rebuilt locally
   from the id (a forged URL was a phishing vector); onboarding requests all optional
   permissions in one call (a second request lost the user gesture); the dead
@@ -73,11 +80,26 @@ on any Chromium browser and on Firefox.
 - **A full review pass** (1.2.0): correctness fixes across the sync engine, the storage
   backends and the interface, including bookmark renames, moves and folder reorders now
   propagating. See `CHANGELOG.md`.
+- **A review pass before the tag** (1.3.1), four of them, each over what the last could not
+  see: the queued diff, then the whole source, then the code those two passes had written
+  plus the release machinery, then the tooling. Every one found something, and the
+  severity fell each time: a mass deletion that could be applied silently with no restore
+  point, then a history scan paid per peer instead of per sync, then a sync that could
+  strand its own lock, then a packaging guard reading one of the two files it had to. Three
+  of the last six findings were in code the review itself had just written, which is the
+  argument for stopping at four rather than a fifth: each pass adds code that needs a pass.
+  The stopping rule used was "no live data loss and no reachable security defect", not "no
+  findings", because the second one never arrives.
 
 ## Now live
-Konode is live on both stores. Both serve **1.3.0**, with **1.3.1 going out on top of
-it**: a release of fixes only, several of which came out of a review pass run against
-the release itself rather than against a report.
+Konode is live on both stores, and both serve **1.3.0**.
+
+**1.3.1 is on `main`, packaged, and not yet released.** It is a release of fixes only, and
+most of what is in it was never reported by anyone: four review passes were run against
+the release itself before tagging, and each found something (see *A review pass before the
+tag* above). The store zips are built and verified; what is left is running them on real
+browsers, then the tag, then the two uploads. The tag is what cuts the GitHub release, so
+it comes after the device check rather than before it.
 
 - [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/): **serving 1.3.0**
   since 2026-08-17, listed since 2026-08-04. AMO auto-approved and signed the upload, so
