@@ -14,7 +14,8 @@ All notable changes to Konode. Format loosely follows
   all of its bookmarks stayed blocked at every position of the slider, and the warning
   never went away. **Settings → Activity** now shows what is being held back, which device
   asked for it, and how much of your tree it is, with a button that applies it. Saying yes
-  covers that one deletion and nothing after it, and the restore point is already saved
+  covers the sync that follows it and nothing beyond that, so a deletion that turns up
+  later is stopped and shown to you like any other, and the restore point is already saved
   before you are asked. Reported by @klausbreyer.
 - **The activity log said bookmarks had been deleted when they had not.** A blocked
   deletion was logged as "Merged +0 / -48" directly above the warning explaining that

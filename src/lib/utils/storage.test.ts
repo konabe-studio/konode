@@ -361,6 +361,35 @@ describe("setRemoteSession / setRemoteExtensions: one peer must not overwrite an
     expect((await getRemoteSessions())[0].session.tabs).toHaveLength(4);
   });
 
+  it("keeps a timestamped entry rather than let an untimestamped one displace it", async () => {
+    // `held.timestamp >= entry.timestamp` is false whenever the right side is undefined,
+    // so a packet with no timestamp used to win every comparison. The damage outlived the
+    // one bad write: the entry left behind had no timestamp either, so nothing could be
+    // ordered against it afterwards and the stale-file case above stopped being caught for
+    // that device. A packet without a timestamp is real — the sort below coalesces one for
+    // the same reason.
+    await setRemoteSession(entry("dev-a", "2026-08-20T12:00:00.000Z", 3));
+    const undated = entry("dev-a", "2026-08-20T09:00:00.000Z", 1);
+    delete (undated as { timestamp?: string }).timestamp;
+
+    await setRemoteSession(undated);
+
+    const out = await getRemoteSessions();
+    expect(out).toHaveLength(1);
+    expect(out[0].session.tabs).toHaveLength(3);
+    expect(out[0].timestamp).toBe("2026-08-20T12:00:00.000Z");
+  });
+
+  it("still replaces a held entry that has no timestamp, so one bad packet can't pin it", async () => {
+    const undated = entry("dev-a", "2026-08-20T09:00:00.000Z", 1);
+    delete (undated as { timestamp?: string }).timestamp;
+    await setRemoteSession(undated);
+
+    await setRemoteSession(entry("dev-a", "2026-08-20T12:00:00.000Z", 4));
+
+    expect((await getRemoteSessions())[0].session.tabs).toHaveLength(4);
+  });
+
   it("replaces the legacy single-object shape instead of nesting inside it", async () => {
     await browser.storage.local.set({ [KEYS.REMOTE_SESSIONS]: entry("dev-old", "2026-08-01T10:00:00.000Z") });
 

@@ -25,6 +25,10 @@ import {
   pruneConflictPackets,
   getRecoverySnapshotTaken,
   setRecoverySnapshotTaken,
+  getBulkDeleteApproval,
+  setBulkDeleteApproval,
+  getListFailureNoted,
+  setListFailureNoted,
   acquireSyncLock,
   releaseSyncLock,
   dropRemoteDevice,
@@ -157,12 +161,35 @@ export class SyncEngine {
   // and flags state.recovery_notice so the popup can surface it and Settings → Activity
   // can offer to apply it.
   //
-  // `blocked` accumulates across peers, because two devices can each ask on the same
-  // cycle; the rest describes the LAST block, which is the one the numbers belong to.
-  // A single peer is the ordinary case by a wide margin.
+  // Two devices can each ask on the same cycle, and what is kept is the LARGEST single
+  // block, not a running sum. Summing them broke the notice both ways: `blocked` was a
+  // total while `cap` and `localTotal` came from whichever peer happened to be last, so
+  // two peers asking for 48 each out of one 49-bookmark tree read as "96 of your 49" —
+  // and the Apply button then armed an approval for 96, a ceiling larger than either
+  // deletion the user had actually been shown. One block, and the numbers describing it,
+  // always belong together.
   private bulkBlockedThisSync:
     | (BulkDeleteBlock & { device_id?: string; device_label?: string | null })
     | null = null;
+  /**
+   * The user's approval for a blocked deletion, read once per sync and cleared as it is
+   * read, then handed to every bookmark merge this sync runs.
+   *
+   * The lifetime is the point. The approval used to live in storage until a merge that
+   * went over the cap consumed it, which sounds like "one incident" and is not: a sync
+   * that never reached such a merge left it armed with nothing to spend it on. Arm it,
+   * lose the backend for that cycle, and it sat there until some unrelated peer deletion
+   * happened to fit under it — applied silently, no restore point, nothing in the log.
+   *
+   * Read-and-clear at the top of the sync gives it exactly one cycle, whatever happens
+   * inside that cycle. It also fixes the multi-peer case for free: every merge in the
+   * sync sees the same value, so two peers each asking for a deletion the user approved
+   * both go through, instead of the first one consuming the latch and the second being
+   * blocked again. If the sync then fails before the merge, the approval is spent for
+   * nothing and the user clicks again — the guard re-blocks, so the card comes back.
+   * Losing an approval is recoverable in one click; leaving one armed is not.
+   */
+  private bulkApprovedThisSync = 0;
 
   constructor(
     private settings: SyncSettings,
@@ -268,6 +295,10 @@ export class SyncEngine {
     this.encryptionWarnings.clear();
     this.bytesThisSync = 0;
     this.bulkBlockedThisSync = null;
+    // Read and cleared together, before anything can fail: from here on the approval is
+    // spent whatever this cycle does with it. See `bulkApprovedThisSync`.
+    this.bulkApprovedThisSync = await getBulkDeleteApproval();
+    if (this.bulkApprovedThisSync > 0) await setBulkDeleteApproval(0);
     const state = await setState({ status: "syncing", last_error: null, recovery_notice: null });
     this.onStateChange(state);
 
@@ -466,11 +497,25 @@ export class SyncEngine {
       // off while the Activity log showed a clean sync, so a device whose own file had been
       // deleted from the folder looked perfectly healthy for as long as the listing kept
       // failing. That is precisely the situation the check exists to end.
-      logger.warn(
-        "findOwnMissingFiles",
-        `Couldn't list the sync folder, so this sync can't tell whether our own files are still there: ${err instanceof Error ? err.message : err}`
-      );
+      //
+      // Once per incident, though, not once per cycle. The listing is re-checked every
+      // sync, so a folder that cannot be read is ONE condition however long it lasts, and
+      // `warn` is retained: a kept entry a minute turns the 200-entry log over in about
+      // three hours and evicts whatever the user was sent there to read. Same trade, and
+      // the same latch shape, as the blocked-deletion warning above (#20).
+      const detail = `Couldn't list the sync folder, so this sync can't tell whether our own files are still there: ${err instanceof Error ? err.message : err}`;
+      if (await getListFailureNoted()) logger.info("findOwnMissingFiles", detail);
+      else {
+        logger.warn("findOwnMissingFiles", detail);
+        await setListFailureNoted(true);
+      }
       return;
+    }
+    // Reading first so an ordinary sync writes nothing: the latch is clear almost always,
+    // and this runs on every cycle.
+    if (await getListFailureNoted()) {
+      await setListFailureNoted(false);
+      logger.event("findOwnMissingFiles", "The sync folder can be listed again.");
     }
     const present = new Set(names);
     for (const dataType of types) {
@@ -1247,13 +1292,16 @@ export class SyncEngine {
           isLocalEmpty ? "replace" : "merge",
           this.settings.conflict_strategy,
           this.settings.bulk_delete_percent,
+          this.bulkApprovedThisSync,
           (info) => {
-            this.bulkBlockedThisSync = {
-              ...info,
-              blocked: (this.bulkBlockedThisSync?.blocked ?? 0) + info.blocked,
-              device_id: meta.device_id,
-              device_label: meta.device_label ?? null,
-            };
+            // Largest single block wins, kept whole with the numbers that describe it.
+            if (info.blocked > (this.bulkBlockedThisSync?.blocked ?? 0)) {
+              this.bulkBlockedThisSync = {
+                ...info,
+                device_id: meta.device_id,
+                device_label: meta.device_label ?? null,
+              };
+            }
           },
         );
         break;

@@ -287,29 +287,39 @@ describe("importBookmarks — mass-delete guard (configurable percent)", () => {
     if (line) expect(line).toContain("-0");
   });
 
-  it("applies a blocked deletion the user approved, and spends the approval", async () => {
+  it("applies a blocked deletion the user approved", async () => {
     await seedMany(100);
     // The slider cannot reach this: 95% of 100 is a cap of 95, and 98 is over it.
     await importBookmarks(payload([], tombstonesFor(98)), "merge", "lww", 95);
     expect((await localUrls()).length).toBe(100);
 
-    await setBulkDeleteApproval(98);
-    await importBookmarks(payload([], tombstonesFor(98)), "merge", "lww", 95);
+    await importBookmarks(payload([], tombstonesFor(98)), "merge", "lww", 95, 98);
     expect((await localUrls()).length).toBe(2);
-    // One incident, not a new threshold: the latch is empty again afterwards.
-    expect(await getBulkDeleteApproval()).toBe(0);
   });
 
   it("refuses to spend an approval on a deletion bigger than the one approved", async () => {
     await seedMany(100);
     // The user saw and approved 70. What turned up is 98, which nobody approved.
-    await setBulkDeleteApproval(70);
+    await importBookmarks(payload([], tombstonesFor(98)), "merge", "lww", 95, 70);
+
+    expect((await localUrls()).length).toBe(100);
+  });
+
+  it("ignores the stored approval latch entirely — the engine owns its lifetime", async () => {
+    // The regression this guards: the merge used to read the latch itself, and only when
+    // it was already over the cap, so it could not clear one it never read. An approval
+    // armed for a sync that then failed before any over-cap merge stayed in storage and
+    // cashed out silently against an unrelated deletion later. The lifetime now belongs to
+    // the sync (see `bulkApprovedThisSync`), and this function must not consult storage at
+    // all — so a latch sitting there while nothing is passed in changes nothing.
+    await seedMany(100);
+    await setBulkDeleteApproval(98);
+
     await importBookmarks(payload([], tombstonesFor(98)), "merge", "lww", 95);
 
     expect((await localUrls()).length).toBe(100);
-    // Still spent, though: it belonged to an incident that no longer matches, and
-    // leaving it armed would let it cash out against something later instead.
-    expect(await getBulkDeleteApproval()).toBe(0);
+    // Untouched, not consumed: this function neither reads nor clears it any more.
+    expect(await getBulkDeleteApproval()).toBe(98);
   });
 
   /** The retained log, which is what Settings → Activity shows. `info` never reaches it. */

@@ -262,10 +262,11 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
         await setBulkDeleteApproval(0);
         return { type: "ERROR", payload: "No storage backend is set up yet." };
       }
-      // A sync already running will consume the latch on this cycle or the next one, so
-      // the approval stands rather than being thrown away with the error.
+      // A sync already in flight read the approval at ITS start, which was before this
+      // click, so it cannot see this one. The next cycle picks it up. The approval stands
+      // rather than being thrown away with the error, so say which cycle it lands on.
       if (outcome === "already-running") {
-        return { type: "ERROR", payload: "A sync is already running. The deletion will be applied on this cycle." };
+        return { type: "ERROR", payload: "A sync is already running. The deletion will be applied on the next sync." };
       }
       return { type: "OK" };
     }

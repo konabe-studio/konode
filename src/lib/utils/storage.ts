@@ -116,6 +116,7 @@ export const KEYS = {
   CONFLICT_PACKETS: "konode_conflict_packets",
   RECOVERY_SNAPSHOT: "konode_recovery_snap",
   BULK_DELETE_APPROVAL: "konode_bulk_delete_ok",
+  LIST_FAILURE_NOTED: "konode_list_fail_noted",
   SYNC_LOCK: "konode_sync_lock",
   GDRIVE_SESSION: "konode_gdrive_session",
   GDRIVE_FOLDER: "konode_gdrive_folder",
@@ -524,15 +525,21 @@ export async function setRecoverySnapshotTaken(taken: boolean): Promise<void> {
 // (#18) — and even where raising it does work, it permanently weakens the guard to wave
 // through a single event that has already happened.
 //
-// So the approval is a latch, not a threshold: set from the UI, consumed by the very
-// next merge that would otherwise block, and cleared as it is consumed. Nothing carries
-// over to the sync after it. The restore point is already on the backend before the
-// button can exist, which is what makes saying yes cheap.
+// So the approval is a latch, not a threshold: set from the UI, then read and cleared by
+// the sync engine at the top of the NEXT sync, which hands the value to every bookmark
+// merge that sync runs. One cycle, whatever that cycle manages to do with it. The restore
+// point is already on the backend before the button can exist, which is what makes saying
+// yes cheap.
 //
-// It stores the SIZE that was approved rather than a bare true, and the merge honours it
-// only for a deletion that size or smaller. A plain boolean left armed until the next
-// sync would wave through whatever arrived in the meantime, so approving "48 of your 49"
-// could have cashed out against a different and much larger deletion. 0 means none.
+// The read-and-clear belongs to the sync rather than to the merge that spends it. Letting
+// the merge clear it meant a cycle that never reached an over-cap merge left it armed with
+// nothing to spend it on, and it stayed armed until an unrelated deletion happened to fit
+// under it — applied silently, with no restore point and nothing in the log.
+//
+// It stores the SIZE that was approved rather than a bare true, and a merge honours it
+// only for a deletion that size or smaller. A plain boolean would wave through whatever
+// arrived in the meantime, so approving "48 of your 49" could have cashed out against a
+// different and much larger deletion. 0 means none.
 
 export async function getBulkDeleteApproval(): Promise<number> {
   return get<number>(KEYS.BULK_DELETE_APPROVAL, 0);
@@ -540,6 +547,24 @@ export async function getBulkDeleteApproval(): Promise<number> {
 
 export async function setBulkDeleteApproval(maxBlocked: number): Promise<void> {
   await set(KEYS.BULK_DELETE_APPROVAL, maxBlocked);
+}
+
+// Whether the Activity log already carries "couldn't list the sync folder" for the
+// failure now in progress.
+//
+// Same shape as the recovery latch above, and for the same reason. The folder listing is
+// re-checked every sync, so a listing that keeps failing is one condition, not one per
+// cycle, and `logger.warn` is retained: reporting it every time wrote a kept entry a
+// minute and turned the 200-entry ring over in about three hours, evicting the very
+// warnings the popup banner sends people to read. That is #20 in a different place.
+// Written once when the listing starts failing, cleared when it works again.
+
+export async function getListFailureNoted(): Promise<boolean> {
+  return get<boolean>(KEYS.LIST_FAILURE_NOTED, false);
+}
+
+export async function setListFailureNoted(noted: boolean): Promise<void> {
+  await set(KEYS.LIST_FAILURE_NOTED, noted);
 }
 
 // ─── Sync lock (CO-4) ─────────────────────────────────────────────────────────
@@ -666,7 +691,17 @@ function upsertRemoteEntry<T extends { device_id: string; timestamp: string }>(
   const map: Record<string, T> =
     current && typeof current === "object" && !(payloadField in current) ? { ...current } : {};
   const held: T | undefined = map[entry.device_id];
-  if (held?.timestamp && held.timestamp >= entry.timestamp) return map;
+  // A held entry that CAN be ordered is never displaced by one that cannot. Nothing
+  // validates a peer packet's timestamp — `normalizeRemoteSessions` above coalesces a
+  // missing one because a real packet arrived without it — and `held.timestamp >= entry
+  // .timestamp` is false whenever the right side is undefined, so the malformed entry
+  // used to win every time. Worse than the one bad write: the entry it left behind had no
+  // timestamp either, so from then on nothing could be ordered against it and a stale file
+  // could take that device's slot, which is the case this check exists to prevent.
+  //
+  // A held entry with no timestamp is still replaced, so one bad packet cannot pin a
+  // device's cache forever.
+  if (held?.timestamp && (!entry.timestamp || held.timestamp >= entry.timestamp)) return map;
   map[entry.device_id] = entry;
   return map;
 }

@@ -10,7 +10,6 @@ import {
   getFolderMoves, setFolderMoves, updateFolderMoves,
   getTitles, setTitles, updateTitles,
   getFolderRenames, setFolderRenames, updateFolderRenames,
-  getBulkDeleteApproval, setBulkDeleteApproval,
 } from "@/lib/utils/storage";
 import { defaultOtherRootId, matchLocalRoot, matchLocalRootEx, rootKind } from "@/lib/utils/bookmark-roots";
 import { canonicalUrlKey } from "@/lib/utils/url";
@@ -406,6 +405,11 @@ export async function importBookmarks(
   strategy: "merge" | "replace" = "merge",
   conflictStrategy: ConflictStrategy = "lww",
   deletePercent = 60,
+  // The user's approval for a blocked deletion, in bookmarks, or 0 for none. Passed in
+  // rather than read from storage here, because its LIFETIME is a property of the sync,
+  // not of one merge: the engine reads it once per sync and clears it as it reads. See
+  // the note on `bulkApprovedThisSync` in sync-engine.ts for why that matters.
+  approvedFor = 0,
   // Called when the mass-delete guard blocks a peer's deletions (recovery signal).
   onBulkBlocked?: (info: BulkDeleteBlock) => void
 ): Promise<void> {
@@ -436,7 +440,7 @@ export async function importBookmarks(
     if (strategy === "replace") {
       await clearAndImport(tree);
     } else {
-      await mergeBookmarks(tree, logs, conflictStrategy, deletePercent, onBulkBlocked);
+      await mergeBookmarks(tree, logs, conflictStrategy, deletePercent, approvedFor, onBulkBlocked);
     }
   } finally {
     importing = false;
@@ -541,6 +545,7 @@ async function mergeBookmarks(
   logs: MergeLogs,
   strategy: ConflictStrategy,
   deletePercent = 60,
+  approvedFor = 0,
   onBulkBlocked?: (info: BulkDeleteBlock) => void,
 ): Promise<void> {
   // All URL identity maps below are keyed by the CANONICAL url (canonicalUrlKey),
@@ -597,21 +602,24 @@ async function mergeBookmarks(
   // of 20 keeps small trees from tripping it, and a normal bulk cleanup up to the
   // percentage still propagates.
   //
-  // The percentage alone cannot answer every case, which is why the approval latch
-  // exists: the slider stops at 95%, so a peer clearing nearly its whole tree was
-  // blocked at every setting and the warning never cleared (#18). Reading the latch is
-  // gated on being over the cap so the ordinary merge does not pay for a storage read
-  // it will not use, and consuming it clears it — one incident, not a new threshold.
+  // The percentage alone cannot answer every case, which is why the approval exists:
+  // the slider stops at 95%, so a peer clearing nearly its whole tree was blocked at
+  // every setting and the warning never cleared (#18).
+  //
+  // `approvedFor` is a plain argument, and this function neither reads nor clears the
+  // stored latch. It used to do both, gated on being over the cap to save a storage read
+  // — and that gate was the bug. A merge that never went over the cap never cleared the
+  // latch, so an approval armed for a sync that then failed to reach an over-cap merge
+  // (the backend was down, or the peer had restored its bookmarks in the meantime) stayed
+  // armed indefinitely, and cashed out silently against an unrelated deletion weeks later,
+  // with no restore point and nothing in the log. The lifetime belongs to the sync, which
+  // is the only scope that can say when the approval has had its chance.
   const pct = deletePercent > 0 ? deletePercent : 60;
   const cap = Math.max(20, Math.floor((localFlat.length * pct) / 100));
   const overCap = toRemove.length > cap;
-  const approvedFor = overCap ? await getBulkDeleteApproval() : 0;
   // Honoured only for a deletion no larger than the one the user actually saw. Anything
   // bigger arrived after they decided, and has not been approved by anyone.
-  const approved = approvedFor > 0 && toRemove.length <= approvedFor;
-  // Spent either way: an approval that no longer matches is stale, not pending, and
-  // leaving it armed would let it cash out against some later deletion instead.
-  if (approvedFor > 0) await setBulkDeleteApproval(0);
+  const approved = overCap && approvedFor > 0 && toRemove.length <= approvedFor;
   // What the removal loop ACTUALLY did. The summary below used to report
   // `toRemove.length`, which is what the peer asked for: a blocked merge logged
   // "-48" directly above the warning saying those 48 were refused (#19). It also

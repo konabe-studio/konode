@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { SyncEngine, statusAfterSync, conflictsThatCanExist } from "@/lib/sync/sync-engine";
 import { BADGE_TEXT, BADGE_COLORS } from "@/lib/constants";
 import { createKeyVerifier } from "@/lib/crypto/encryption";
-import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState, setTombstones, acquireSyncLock, KEYS, getRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/storage";
+import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState, setTombstones, acquireSyncLock, KEYS, getRemoteSessions, normalizeRemoteExtensions, getBulkDeleteApproval, setBulkDeleteApproval, getListFailureNoted } from "@/lib/utils/storage";
 import type {
   IBackend,
   DataType,
@@ -64,7 +64,10 @@ type EnginePrivate = {
     blocked: BlockedArg,
     syncedBookmarks: boolean
   ): Promise<SyncState["recovery_notice"]>;
+  findOwnMissingFiles(backend: IBackend, types: DataType[]): Promise<void>;
   encryptionWarnings: Map<string, string>;
+  bulkBlockedThisSync: BlockedArg;
+  bulkApprovedThisSync: number;
 };
 function priv(engine: SyncEngine): EnginePrivate {
   return engine as unknown as EnginePrivate;
@@ -722,6 +725,136 @@ describe("SyncEngine — blocked mass-delete takes ONE restore point per inciden
     // Now it IS latched, so no third attempt.
     await priv(engine).recordBlockedDeletion(block(50), true);
     expect(taken()).toBe(2);
+  });
+});
+
+describe("SyncEngine — a bulk-delete approval lasts exactly one sync", () => {
+  // The approval used to live in storage until a merge that went OVER the cap consumed
+  // it, and only such a merge ever read it. A sync that never reached one therefore left
+  // it armed with nothing to spend it on — and it sat there, through every later sync,
+  // until some unrelated peer deletion happened to fit under it. That one was applied
+  // silently: no restore point, nothing in the Activity log, and no notice, because the
+  // guard never blocked it. The lifetime belongs to the sync now.
+
+  function configured(): SyncEngine {
+    return new SyncEngine(
+      {
+        ...DEFAULT_SETTINGS,
+        device_id: "me",
+        active_backend: "github",
+        backends: [{ type: "github", label: "GitHub", enabled: true, github: { token: "t", repo: "o/r" } }],
+      },
+      () => {}
+    );
+  }
+
+  it("clears the approval even when the sync never reaches a bookmark merge", async () => {
+    // The failure that opened the hole: the user clicks Apply, and that cycle cannot
+    // reach the merge at all — the backend is unreachable. sync() still returns "ran", the
+    // popup shows no error, and sync() has already cleared recovery_notice, so the card
+    // is gone and the user believes it happened.
+    await setBulkDeleteApproval(48);
+
+    await configured().sync(); // no network in the test env: connect() fails inside
+
+    expect(await getBulkDeleteApproval()).toBe(0);
+  });
+
+  it("hands the same approval to every merge in the cycle, not just the first", async () => {
+    // Two peers each asking for a deletion the user approved. The latch used to be spent
+    // by whichever merge read it first, so the second peer was blocked again and the user
+    // had to find the card and click Apply a second time for a deletion they had already
+    // agreed to.
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    for (let i = 0; i < 100; i++) {
+      await chrome.bookmarks.create({ parentId: "1", title: `S${i}`, url: `https://s${i}.com` });
+    }
+    const tombstones = Array.from({ length: 70 }, (_, i) => ({ url: `https://s${i}.com`, deletedAt: 9e15 }));
+    backend.files.set("bookmarks_a", await peerPacket(engine, "peer-a", payload([], tombstones)));
+    backend.files.set("bookmarks_b", await peerPacket(engine, "peer-b", payload([], tombstones)));
+
+    // What sync() would have read and cleared at the top of the cycle.
+    priv(engine).bulkApprovedThisSync = 70;
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    expect((await localUrls()).length).toBe(30);
+    expect(priv(engine).bulkBlockedThisSync).toBeNull();
+  });
+
+  it("keeps the LARGEST block rather than a running total across peers", async () => {
+    // Summing them made the notice describe a deletion that never happened: `blocked` was
+    // a total while cap/localTotal came from whichever peer was last, so two peers asking
+    // for 70 each out of one 100-bookmark tree read as "140 of your 100" — and Apply then
+    // armed an approval for 140, a ceiling bigger than either deletion the user saw.
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    for (let i = 0; i < 100; i++) {
+      await chrome.bookmarks.create({ parentId: "1", title: `S${i}`, url: `https://s${i}.com` });
+    }
+    const tombstones = Array.from({ length: 70 }, (_, i) => ({ url: `https://s${i}.com`, deletedAt: 9e15 }));
+    backend.files.set("bookmarks_a", await peerPacket(engine, "peer-a", payload([], tombstones)));
+    backend.files.set("bookmarks_b", await peerPacket(engine, "peer-b", payload([], tombstones)));
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    const blocked = priv(engine).bulkBlockedThisSync;
+    expect(blocked?.blocked).toBe(70);      // not 140
+    expect(blocked?.localTotal).toBe(100);  // and the pair still describes one deletion
+    expect((await localUrls()).length).toBe(100);
+  });
+});
+
+describe("SyncEngine.findOwnMissingFiles — an unreadable folder is said once, not every cycle", () => {
+  // Reporting it was right; reporting it per sync was #20 again in a different place.
+  // `logger.warn` is retained, the listing is re-checked every cycle, and a folder that
+  // cannot be read stays that way, so it wrote a kept entry a minute and turned the
+  // 200-entry ring over in about three hours — evicting whatever the user was sent to read.
+
+  async function retained(): Promise<string[]> {
+    await new Promise((r) => setTimeout(r, 0)); // logger fires appendAudit unawaited
+    const entries = ((await chrome.storage.local.get(KEYS.AUDIT_LOG))[KEYS.AUDIT_LOG] ?? []) as
+      { detail?: string; level?: string }[];
+    return entries.filter((e) => e.detail?.includes("Couldn't list the sync folder")).map((e) => e.level ?? "");
+  }
+
+  function failingBackend(): FakeBackend {
+    const backend = new FakeBackend();
+    backend.listFiles = () => Promise.reject(new Error("503 Service Unavailable"));
+    return backend;
+  }
+
+  it("writes ONE retained entry however long the listing keeps failing", async () => {
+    const engine = makeEngine();
+    const backend = failingBackend();
+
+    for (let i = 0; i < 4; i++) await priv(engine).findOwnMissingFiles(backend, ["bookmarks"]);
+
+    expect(await retained()).toHaveLength(1);
+    expect(await getListFailureNoted()).toBe(true);
+  });
+
+  it("says so again for a NEW failure, once the folder has been readable in between", async () => {
+    const engine = makeEngine();
+
+    await priv(engine).findOwnMissingFiles(failingBackend(), ["bookmarks"]);
+    // A working listing ends the incident, and is itself worth one line.
+    await priv(engine).findOwnMissingFiles(new FakeBackend(), ["bookmarks"]);
+    expect(await getListFailureNoted()).toBe(false);
+
+    await priv(engine).findOwnMissingFiles(failingBackend(), ["bookmarks"]);
+
+    expect(await retained()).toHaveLength(2);
+  });
+
+  it("keeps an ordinary sync out of the log entirely", async () => {
+    const engine = makeEngine();
+
+    await priv(engine).findOwnMissingFiles(new FakeBackend(), ["bookmarks"]);
+
+    expect(await retained()).toHaveLength(0);
+    const entries = ((await chrome.storage.local.get(KEYS.AUDIT_LOG))[KEYS.AUDIT_LOG] ?? []) as unknown[];
+    expect(entries).toHaveLength(0);
   });
 });
 
