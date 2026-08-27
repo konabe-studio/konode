@@ -39,7 +39,7 @@ on any Chromium browser and on Firefox.
   with the manifest `key` stripped (the CWS rejects `key` on a first upload) while
   `dist/` keeps it for unpacked dev; pushing a `v*` tag runs a GitHub Actions release
   that attaches both packaged zips, Chrome and Firefox (source builds, no client secret).
-  Released through v1.3.0. **One folder per destination**, because the two variants of a
+  Released through v1.3.1. **One folder per destination**, because the two variants of a
   version are otherwise indistinguishable once zipped: `web-ext-artifacts/chrome/` and
   `.../firefox/` hold the store uploads, with Konode's OAuth secret compiled in;
   `.../source/` holds what goes on the release page, with no secret. Each package run
@@ -75,14 +75,16 @@ on any Chromium browser and on Firefox.
   propagating. See `CHANGELOG.md`.
 
 ## Now live
-Konode is live on both stores, and both serve **1.3.0**.
+Konode is live on both stores. Both serve **1.3.0**, with **1.3.1 going out on top of
+it**: a release of fixes only, several of which came out of a review pass run against
+the release itself rather than against a report.
 
 - [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/): **serving 1.3.0**
   since 2026-08-17, listed since 2026-08-04. AMO auto-approved and signed the upload, so
   it went out within minutes; the source submission a bundled add-on requires is reviewed
   afterwards rather than before.
-- Chrome Web Store: **serving 1.3.0**, confirmed live 2026-08-26. First published
-  2026-07-20, item ID `mmlfiiimnpnjcjhhbldenpcmnibedkfa`.
+- Chrome Web Store: **serving 1.3.0**, confirmed live 2026-08-26, with 1.3.1 to be
+  submitted. First published 2026-07-20, item ID `mmlfiiimnpnjcjhhbldenpcmnibedkfa`.
 
 The two sat a version apart for nine days, and that is the shape of every release here
 rather than anything going wrong: AMO signs on upload and reviews the source afterwards,

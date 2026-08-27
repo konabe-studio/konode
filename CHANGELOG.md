@@ -5,6 +5,17 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-08-27
+
+A release with nothing in it but fixes, and the ones worth knowing about are the two that
+were costing people something quietly. A device asking to delete nearly all of your
+bookmarks was blocked with no way to say yes, so the warning could not be cleared at any
+setting; and a device's open tabs or extension list could get stuck on an old version
+while every sync went on reporting success. Around those, a WebDAV server that refuses
+passwords now says so instead of blaming yours, history sync stops getting slower with
+every device you add, and several things that filled the Activity log with the same line
+a minute do not any more.
+
 ### Fixed
 
 - **History sync got slower the more devices you had.** Before storing a page from another
