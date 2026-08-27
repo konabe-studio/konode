@@ -296,20 +296,28 @@ export class SyncEngine {
       return "already-running";
     }
 
+    // NOTHING may await between taking the lock above and the try below, because only the
+    // try has the `finally` that gives the lock back. `finishSync` documents the same
+    // hazard at the other end of the sync, where a throw from `disconnect()` used to
+    // strand `isSyncing` on for the worker's whole lifetime; this is the mirror of it.
+    // The per-sync fields are plain assignments, and `createBackend` is a synchronous
+    // factory over a config we just found in settings, so the window holds no await at all.
     this.encryptionWarnings.clear();
     this.bytesThisSync = 0;
     this.bulkBlockedThisSync = null;
     this.historyIndexThisSync = null;
-    // Read and cleared together, before anything can fail: from here on the approval is
-    // spent whatever this cycle does with it. See `bulkApprovedThisSync`.
-    this.bulkApprovedThisSync = await getBulkDeleteApproval();
-    if (this.bulkApprovedThisSync > 0) await setBulkDeleteApproval(0);
-    const state = await setState({ status: "syncing", last_error: null, recovery_notice: null });
-    this.onStateChange(state);
-
     const backend = createBackend(backendConfig);
 
     try {
+      // Read and cleared together, before the sync can do anything with it: from here on
+      // the approval is spent whatever this cycle makes of it. See `bulkApprovedThisSync`.
+      // Inside the try, so a storage read that fails gives the lock back like any other
+      // failure rather than holding it for the full TTL.
+      this.bulkApprovedThisSync = await getBulkDeleteApproval();
+      if (this.bulkApprovedThisSync > 0) await setBulkDeleteApproval(0);
+      const state = await setState({ status: "syncing", last_error: null, recovery_notice: null });
+      this.onStateChange(state);
+
       await backend.connect();
 
       const typesToSync = types ?? this.settings.enabled_types;

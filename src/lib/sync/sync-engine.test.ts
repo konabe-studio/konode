@@ -1729,3 +1729,49 @@ describe("conflictsThatCanExist: a leftover conflict about a peer's tab list", (
     expect(conflictsThatCanExist(list)).toEqual(list);
   });
 });
+
+describe("SyncEngine.sync — a failure while setting up must give the lock back", () => {
+  // `finishSync` hardened the other end of this: a throw from disconnect() used to leave
+  // isSyncing on for the worker's whole lifetime, every later sync answering "already
+  // running", and the persisted lock sitting there until its TTL. The same hole was open
+  // at the start, because the setup between acquireSyncLock and the try block awaited
+  // storage, and only the try has the finally that releases the lock.
+
+  function configured(): SyncEngine {
+    return new SyncEngine(
+      {
+        ...DEFAULT_SETTINGS,
+        device_id: "me",
+        active_backend: "github",
+        backends: [{ type: "github", label: "GitHub", enabled: true, github: { token: "t", repo: "o/r" } }],
+      },
+      () => {}
+    );
+  }
+
+  /** Make one storage key's write fail, the way a quota or a dead worker would. */
+  function failWritesTo(key: string): () => void {
+    const store = chrome.storage.local as unknown as { set: (o: Record<string, unknown>) => Promise<void> };
+    const real = store.set.bind(store);
+    store.set = async (o) => {
+      if (key in o) throw new Error("storage write failed");
+      return real(o);
+    };
+    return () => { store.set = real; };
+  }
+
+  it("leaves nothing holding the lock when the state write fails", async () => {
+    const restore = failWritesTo(KEYS.STATE);
+    const engine = configured();
+    try {
+      await engine.sync().catch(() => { /* the outcome is not what this test is about */ });
+    } finally {
+      restore();
+    }
+
+    expect(engine.isSyncing).toBe(false);
+    // The real proof: the lock is free, so the NEXT sync is not turned away at the door
+    // for the two minutes of its TTL.
+    expect(await acquireSyncLock(60_000)).toBe(true);
+  });
+});

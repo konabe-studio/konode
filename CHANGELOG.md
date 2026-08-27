@@ -18,6 +18,20 @@ a minute do not any more.
 
 ### Fixed
 
+- **Buttons in Settings could spin forever, and one screen could lie.** Every action on
+  the Activity tab talks to Konode's background worker, and if that conversation failed
+  outright rather than answering with an error, nothing was said: the spinner kept
+  turning and the click looked ignored. Worst of them was Clear log, which emptied the
+  list on screen whether or not anything had been cleared, on the one screen where being
+  told your history is gone is alarming. Settings itself could do the same thing on load,
+  showing a spinner that never resolved. All of them now say what went wrong, and the
+  load offers to try again.
+- **A sync file with an unreadable date beat everything else.** A file from another device
+  carries the moment it was written, and Konode compares those to decide which version of
+  something is newer. A file whose date could not be read did not lose that comparison, it
+  won it, every time; and it left the order Konode folds your other devices in unspecified,
+  which is what makes every device agree on the same answer. A file nobody can date is now
+  treated as the oldest thing there is.
 - **History sync got slower the more devices you had.** Before storing a page from another
   device, Konode checks whether it already holds a newer visit for it, and answering that
   means reading your whole local history. It was reading it again for every other device,

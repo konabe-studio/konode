@@ -100,3 +100,51 @@ describe("orderPeersByTime", () => {
     expect(orderPeersByTime([m, x, a]).map((p) => p.device_id)).toEqual(["a-dev", "m-dev", "x-dev"]);
   });
 });
+
+describe("a packet nobody can date must not win, and must not scramble the order", () => {
+  // Nothing validates a peer packet's timestamp, and one really did turn up without a
+  // usable one — the sessions normalizer coalesces for that exact reason. `new
+  // Date(undefined).getTime()` is NaN, and NaN reaches both readers of this clock.
+
+  const undated = (over: Partial<SyncPacket> = {}): SyncPacket => {
+    const p = packet({ device_id: "dev-bad", checksum: "bad", ...over });
+    delete (p as { timestamp?: string }).timestamp;
+    return p;
+  };
+
+  it("does not let an undatable REMOTE beat local under LWW", () => {
+    // `localTime >= remoteTime` is false against NaN, so the undatable peer used to win
+    // every comparison — the one outcome a packet we cannot date does not deserve.
+    const r = new ConflictResolver("lww");
+    const local = packet({ device_id: "me", timestamp: "2026-01-01T00:00:00.000Z" });
+
+    expect(r.resolve(local, undated()).winner).toBe(local);
+  });
+
+  it("still lets a genuinely newer remote win", () => {
+    const r = new ConflictResolver("lww");
+    const local = packet({ device_id: "me", timestamp: "2026-01-01T00:00:00.000Z" });
+    const remote = packet({ device_id: "peer", checksum: "bbb", timestamp: "2026-06-01T00:00:00.000Z" });
+
+    expect(r.resolve(local, remote).winner).toBe(remote);
+  });
+
+  it("sorts an undatable packet last instead of anywhere", () => {
+    const newest = packet({ device_id: "dev-new", timestamp: "2026-06-01T00:00:00.000Z" });
+    const older = packet({ device_id: "dev-old", timestamp: "2026-01-01T00:00:00.000Z" });
+
+    expect(orderPeersByTime([undated(), newest, older]).map((p) => p.device_id))
+      .toEqual(["dev-new", "dev-old", "dev-bad"]);
+  });
+
+  it("orders TWO undatable packets deterministically rather than by luck", () => {
+    // The subtraction form answered NaN for this pair (-Infinity minus -Infinity), and a
+    // comparator returning NaN leaves the order unspecified — the very thing this function
+    // exists to rule out. Both orderings of the input must give the same answer.
+    const a = undated({ device_id: "dev-a" });
+    const b = undated({ device_id: "dev-b" });
+
+    expect(orderPeersByTime([a, b]).map((p) => p.device_id)).toEqual(["dev-a", "dev-b"]);
+    expect(orderPeersByTime([b, a]).map((p) => p.device_id)).toEqual(["dev-a", "dev-b"]);
+  });
+});

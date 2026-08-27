@@ -20,6 +20,23 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      # The TAG names the release; package.json names the zips inside it, because
+      # sync-version stamps it into the manifest and the packaging scripts read it back.
+      # Nothing tied the two together, so tagging before the release commit landed would
+      # have produced a release titled v1.3.1 containing konode-chrome-1.3.0.zip: wrong in
+      # a way that is easy to miss on the release page and awkward to take back once people
+      # have downloaded it. First step, before npm ci, so a mismatch costs no CI time.
+      - name: Tag must match package.json
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$pkg" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME says $tag, package.json says $pkg. Bump the version and re-tag."
+            exit 1
+          fi
+          echo "Tag and package.json agree on $pkg"
+
       - run: npm ci --no-audit --no-fund
 
       # Tag pushes don't trigger ci.yml, so gate the release on the same checks.

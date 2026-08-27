@@ -287,6 +287,7 @@ export default function OptionsApp() {
   useEffect(() => { void allDataTypeAvailability().then(setAvailability); }, []);
 
   // Google Drive
+  const [loadError, setLoadError]             = useState<string | null>(null);
   const [gdriveUser, setGdriveUser]           = useState<{ email: string; displayName: string } | null>(null);
   const [gdriveConnecting, setGdriveConnecting] = useState(false);
   const [gdriveError, setGdriveError]         = useState<string | null>(null);
@@ -381,7 +382,14 @@ export default function OptionsApp() {
   };
 
   const load = useCallback(async () => {
-    const res = await sendMessage({ type: "GET_SETTINGS" });
+    // Through `request`, because the alternative is what the render below used to do with
+    // a rejected round trip: `settings` stayed null and Settings showed a spinner that
+    // never stopped, with nothing said. This page has been reported as "does not load"
+    // twice already (#3, #5); it should not have a third way to do it silently.
+    const sent = await request({ type: "GET_SETTINGS" });
+    if (!sent.ok) { setLoadError(sent.error); return; }
+    setLoadError(null);
+    const res = sent.res;
     if (res.type === "SETTINGS") {
       setSettings(res.payload);
       setSavedFingerprint(settingsFingerprint(res.payload));
@@ -427,8 +435,8 @@ export default function OptionsApp() {
   // peer reach (distinct peer devices + how many peer sessions are available).
   useEffect(() => {
     void (async () => {
-      const res = await sendMessage({ type: "GET_STATE" });
-      if (res.type === "STATE") setSyncState(res.payload);
+      const st = await request({ type: "GET_STATE" });
+      if (st.ok && st.res.type === "STATE") setSyncState(st.res.payload);
 
       try {
         const r = await browser.storage.local.get(KEYS.AUDIT_LOG);
@@ -634,24 +642,33 @@ export default function OptionsApp() {
   };
 
   const clearAudit = async () => {
-    await sendMessage({ type: "CLEAR_AUDIT_LOG" });
-    setAudit([]);
+    const sent = await request({ type: "CLEAR_AUDIT_LOG" });
+    // Only claim the log is empty if it actually was cleared. Emptying the list on a
+    // failed round trip tells the user their history is gone when it is still there.
+    if (sent.ok) setAudit([]);
+    else setSnapMsg(sent.error);
   };
 
   const createSnapshot = async () => {
     setSnapBusy(true); setSnapMsg(null);
-    const res = await sendMessage({ type: "CREATE_SNAPSHOT" });
-    if (res.type === "SNAPSHOTS") { setSnapshots(res.payload); setSnapMsg(t("opt_snap_saved")); }
-    else if (res.type === "ERROR") setSnapMsg(res.payload);
-    setSnapBusy(false);
+    try {
+      const sent = await request({ type: "CREATE_SNAPSHOT" });
+      if (!sent.ok) setSnapMsg(sent.error);
+      else if (sent.res.type === "SNAPSHOTS") { setSnapshots(sent.res.payload); setSnapMsg(t("opt_snap_saved")); }
+    } finally {
+      setSnapBusy(false);
+    }
   };
 
   const restoreSnapshot = async (name: string) => {
     setSnapBusy(true); setSnapMsg(null); setConfirmRestore(null);
-    const res = await sendMessage({ type: "RESTORE_SNAPSHOT", payload: { name } });
-    if (res.type === "SNAPSHOT_RESTORED") setSnapMsg(plural("opt_snap_restored", res.payload.restored));
-    else if (res.type === "ERROR") setSnapMsg(res.payload);
-    setSnapBusy(false);
+    try {
+      const sent = await request({ type: "RESTORE_SNAPSHOT", payload: { name } });
+      if (!sent.ok) setSnapMsg(sent.error);
+      else if (sent.res.type === "SNAPSHOT_RESTORED") setSnapMsg(plural("opt_snap_restored", sent.res.payload.restored));
+    } finally {
+      setSnapBusy(false);
+    }
   };
 
   // "Yes, apply the deletion the guard blocked." The service worker arms a one-shot
@@ -660,26 +677,38 @@ export default function OptionsApp() {
   // recovery notice, which is what makes this card go away.
   const applyBlockedDeletion = async () => {
     setApplyBusy(true); setApplyMsg(null); setConfirmApply(false);
-    const res = await sendMessage({
-      type: "APPROVE_BULK_DELETE",
-      payload: { blocked: syncState?.recovery_notice?.blocked ?? 0 },
-    });
-    if (res.type === "ERROR") setApplyMsg(res.payload);
-    const after = await sendMessage({ type: "GET_STATE" });
-    if (after.type === "STATE") setSyncState(after.payload);
+    // Through `request`, and inside a finally, because this button removes bookmarks and
+    // sits on the recovery screen. A rejected round trip (a cold worker, a handler that
+    // threw before answering) used to leave the spinner turning with nothing said, on the
+    // one screen where a user is already worried about their data.
     try {
-      const r = await browser.storage.local.get(KEYS.AUDIT_LOG);
-      setAudit((r[KEYS.AUDIT_LOG] as AuditEntry[]) ?? []);
-    } catch { /* the log is a nicety here, not the point of the action */ }
-    setApplyBusy(false);
+      const sent = await request({
+        type: "APPROVE_BULK_DELETE",
+        payload: { blocked: syncState?.recovery_notice?.blocked ?? 0 },
+      });
+      if (!sent.ok) setApplyMsg(sent.error);
+      // Re-read either way: the sync may have applied the deletion and cleared the notice
+      // even where the answer did not reach us.
+      const after = await request({ type: "GET_STATE" });
+      if (after.ok && after.res.type === "STATE") setSyncState(after.res.payload);
+      try {
+        const r = await browser.storage.local.get(KEYS.AUDIT_LOG);
+        setAudit((r[KEYS.AUDIT_LOG] as AuditEntry[]) ?? []);
+      } catch { /* the log is a nicety here, not the point of the action */ }
+    } finally {
+      setApplyBusy(false);
+    }
   };
 
   const deleteSnapshot = async (name: string) => {
     setSnapBusy(true); setSnapMsg(null); setConfirmDelete(null);
-    const res = await sendMessage({ type: "DELETE_SNAPSHOT", payload: { name } });
-    if (res.type === "SNAPSHOTS") { setSnapshots(res.payload); setSnapMsg(t("opt_snap_deleted")); }
-    else if (res.type === "ERROR") setSnapMsg(res.payload);
-    setSnapBusy(false);
+    try {
+      const sent = await request({ type: "DELETE_SNAPSHOT", payload: { name } });
+      if (!sent.ok) setSnapMsg(sent.error);
+      else if (sent.res.type === "SNAPSHOTS") { setSnapshots(sent.res.payload); setSnapMsg(t("opt_snap_deleted")); }
+    } finally {
+      setSnapBusy(false);
+    }
   };
 
   // http:// warning shown under any WebDAV card whose URL would send the password in the clear.
@@ -825,9 +854,13 @@ export default function OptionsApp() {
       }
     }
     setTesting(true); setTestStatus(null);
-    const res = await sendMessage({ type: "TEST_BACKEND", payload: { backend: settings.active_backend } });
-    if (res.type === "TEST_RESULT") setTestStatus(res.payload);
-    setTesting(false);
+    try {
+      const sent = await request({ type: "TEST_BACKEND", payload: { backend: settings.active_backend } });
+      if (!sent.ok) setTestStatus({ ok: false, message: sent.error });
+      else if (sent.res.type === "TEST_RESULT") setTestStatus(sent.res.payload);
+    } finally {
+      setTesting(false);
+    }
   };
 
   // history/tabs/management are optional permissions now — request them on enable
@@ -1047,7 +1080,24 @@ export default function OptionsApp() {
       <div className="settings-root">
         <style>{STYLES}</style>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", width: "100%" }}>
-          <Loader2 size={20} className="spin" style={{ color: "var(--accent)" }} />
+          {/* A spinner forever is what a failed load used to look like. `onb_err_read_settings`
+              is reused rather than a new key invented: the sentence is exactly right here, it is
+              already complete in every shipped language, and a new string would either ship
+              untranslated or need four translations no native speaker wrote. The diagnostic
+              under it stays English, following the rule for thrown errors: it is what people
+              paste into a bug report. */}
+          {loadError ? (
+            <button
+              className="btn-secondary"
+              onClick={() => { void load(); }}
+              style={{ maxWidth: 420, display: "block", textAlign: "left", padding: "12px 16px" }}
+            >
+              <AlertTriangle size={12} /> {t("onb_err_read_settings")}
+              <span style={{ display: "block", marginTop: 6, opacity: 0.7, fontSize: 12 }}>{loadError}</span>
+            </button>
+          ) : (
+            <Loader2 size={20} className="spin" style={{ color: "var(--accent)" }} />
+          )}
         </div>
       </div>
     );

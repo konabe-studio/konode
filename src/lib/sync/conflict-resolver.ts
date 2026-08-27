@@ -8,6 +8,30 @@ import { logger } from "@/lib/utils/logger";
 import { browser } from "@/lib/utils/ext";
 import { apiPresent } from "@/lib/utils/capabilities";
 
+// ─── Packet clock ─────────────────────────────────────────────────────────
+
+/**
+ * A packet's timestamp in millis, with an unreadable one treated as the OLDEST possible
+ * moment rather than as NaN.
+ *
+ * Nothing validates a peer packet's timestamp, and one really did arrive without a
+ * usable one (see `normalizeRemoteSessions`). `new Date(undefined).getTime()` is NaN, and
+ * NaN poisons both places this clock is read. In `orderPeersByTime` the comparator then
+ * returns NaN, and a comparator that returns NaN leaves the order unspecified — which
+ * defeats the entire purpose of that function, whose job is to make `peers[0]` identical
+ * on every device regardless of the order a backend listed the files in. In LWW,
+ * `localTime >= remoteTime` is FALSE against NaN, so a peer packet with an unreadable
+ * timestamp beat the local one every single time, which is the opposite of what a packet
+ * we cannot date deserves.
+ *
+ * Oldest is the safe reading: a packet whose age cannot be established should not win on
+ * age, and it sorts last instead of anywhere.
+ */
+export function packetTime(timestamp: string | undefined): number {
+  const t = new Date(timestamp ?? "").getTime();
+  return Number.isNaN(t) ? -Infinity : t;
+}
+
 // ─── Conflict Resolver ────────────────────────────────────────────────────
 
 export class ConflictResolver {
@@ -37,8 +61,8 @@ export class ConflictResolver {
 
     switch (this.strategy) {
       case "lww": {
-        const localTime = new Date(local.timestamp).getTime();
-        const remoteTime = new Date(remote.timestamp).getTime();
+        const localTime = packetTime(local.timestamp);
+        const remoteTime = packetTime(remote.timestamp);
         const winner = localTime >= remoteTime ? local : remote;
         logger.info(
           "ConflictResolver",
@@ -95,8 +119,15 @@ export class ConflictResolver {
  */
 export function orderPeersByTime(packets: SyncPacket[]): SyncPacket[] {
   return [...packets].sort((a, b) => {
-    const dt = new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-    return dt !== 0 ? dt : a.device_id.localeCompare(b.device_id);
+    // COMPARED, not subtracted. `packetTime` answers -Infinity for a packet it cannot
+    // date, and two of those subtract to NaN — which is the same unspecified ordering
+    // this function exists to rule out, just reached by a different route. Comparing
+    // sidesteps the arithmetic: equal (including both undatable) falls through to the
+    // device_id tie-break, which is what makes the order identical on every device.
+    const ta = packetTime(a.timestamp);
+    const tb = packetTime(b.timestamp);
+    if (ta !== tb) return tb > ta ? 1 : -1;
+    return a.device_id.localeCompare(b.device_id);
   });
 }
 
