@@ -5,19 +5,55 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
-## [1.3.1] - 2026-08-27
+## [1.3.1] - 2026-08-28
 
-A release with nothing in it but fixes, and the ones worth knowing about are the two that
-were costing people something quietly. A device asking to delete nearly all of your
-bookmarks was blocked with no way to say yes, so the warning could not be cleared at any
-setting; and a device's open tabs or extension list could get stuck on an old version
-while every sync went on reporting success. Around those, a WebDAV server that refuses
-passwords now says so instead of blaming yours, history sync stops getting slower with
-every device you add, and several things that filled the Activity log with the same line
-a minute do not any more.
+A release with nothing in it but fixes. If you use Firefox, the one to know about is that
+Konode can be set up there again: since 1.2.1 it never asked Firefox for the permissions
+it needed, and then told you that you had refused them. The other two were costing people
+something quietly. A device asking to delete nearly all of your bookmarks was blocked with
+no way to say yes, so the warning could not be cleared at any setting; and a device's open
+tabs or extension list could get stuck on an old version while every sync went on
+reporting success. Around those, a WebDAV server that refuses passwords now says so
+instead of blaming yours, history sync stops getting slower with every device you add, and
+several things that filled the Activity log with the same line a minute do not any more.
 
 ### Fixed
 
+- **On Firefox, Konode never asked for the permissions it needed, and then blamed you for
+  not granting them.** Pointing Konode at a WebDAV server, or turning on history, open tabs
+  or the extension list, is something Firefox has to ask you to allow. From 1.2.1 onwards
+  it never asked: no window appeared, and setup stopped on "Konode needs permission to
+  reach your WebDAV server. Please allow them to continue" with nothing on screen to allow.
+  The data type switches in Settings did the same thing, springing back with a message
+  saying the permission had not been given. Firefox shows that window only if it is asked
+  while your click is still being handled, and Konode had taken to checking something else
+  first, which is enough to be too late. It asks first now. Chromium browsers allow a few
+  seconds rather than the one moment, so nothing there ever showed this.
+- **Conflict cards outlived the setting that made them.** With conflict resolution set to
+  Manual, Konode asks which version to keep. Switch back to Last Write Wins without
+  answering, and the questions stayed on screen: the next sync merged those devices
+  itself, exactly as Last Write Wins is supposed to, while the popup went on offering a
+  choice whose outcome had already been decided. Nothing ever cleared them, so the only
+  way to be rid of the banner was to answer questions that no longer meant anything.
+  Leaving Manual now clears them on the next sync, once the merge that replaces them has
+  actually run, and the Activity log says why they went.
+- **Conflicts are now one card per device, and the card says which device.** With
+  resolution set to Manual, Konode asks about each device that disagrees with this one,
+  separately for your bookmarks and for your history. Every one of those questions looked
+  the same: the same sentence, the same two buttons, and nothing saying who was asking. Two
+  other devices made four of them, three would have made six, and they were stacked above
+  the part of the popup that scrolls, so answering them left almost no room to see anything
+  else. Each device now gets one card that names it, with a row for bookmarks and a row for
+  history inside it. The two keep their own buttons, because keeping your bookmarks while
+  taking the other device's history is a real answer, and the list has a ceiling of its own
+  now, so no number of devices can push the rest of the popup off the bottom.
+- **The Restore button on a restore point was a size nothing else on the page used.**
+  Konode gives every standalone button one height, taken from a single value, so that
+  controls next to each other line up. The ordinary secondary button never got it and came
+  out at whatever its text happened to measure, which was fine until it stood next to the
+  delete button on a restore point, which does take it: sharing a row stretched the pair to
+  a height nothing else in Settings had. Both now state their height, so the row matches
+  every other button on the page.
 - **Buttons in Settings could spin forever, and one screen could lie.** Every action on
   the Activity tab talks to Konode's background worker, and if that conversation failed
   outright rather than answering with an error, nothing was said: the spinner kept
