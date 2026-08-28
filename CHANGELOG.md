@@ -67,6 +67,14 @@ several things that filled the Activity log with the same line a minute do not a
   by the browser's brand. Sitting a few rows under a list of devices called "Windows ·
   Firefox" and "Windows · Helium", that reads as a device rather than a store, and it named
   one you may well not own. It says Chrome Web Store and Firefox Add-ons now.
+- **Answering several conflicts at once could fail on "WebDAV PUT failed: 423".** With
+  resolution set to Manual, two devices disagreeing about your bookmarks raises two
+  questions, and answering both with Keep local uploaded the same file twice in a row.
+  Some servers, Koofr among them, lock a file while a write to it is in flight and refuse
+  the second one, so the answer came back as a WebDAV error and the question stayed on
+  screen. The repeat was never doing anything, since the first upload had already put that
+  exact version on your storage, so it no longer happens. And a locked file is now treated
+  as what it is, something to come back to in a moment, rather than as a failure.
 - **Buttons in Settings could spin forever, and one screen could lie.** Every action on
   the Activity tab talks to Konode's background worker, and if that conversation failed
   outright rather than answering with an error, nothing was said: the spinner kept
