@@ -67,6 +67,12 @@ several things that filled the Activity log with the same line a minute do not a
   by the browser's brand. Sitting a few rows under a list of devices called "Windows ·
   Firefox" and "Windows · Helium", that reads as a device rather than a store, and it named
   one you may well not own. It says Chrome Web Store and Firefox Add-ons now.
+- **A conflict button gave no sign it had been pressed.** Answering a conflict is seconds
+  of real work: keeping yours reads your whole bookmark tree, unlocks your passphrase if
+  encryption is on, and uploads it; taking theirs unlocks and merges what they sent. For
+  those two or three seconds nothing on screen changed, so the press looked like a miss and
+  the natural thing to do was press again. The button you pressed now shows it is working,
+  and the others hold still until it finishes.
 - **Answering several conflicts at once could fail on "WebDAV PUT failed: 423".** With
   resolution set to Manual, two devices disagreeing about your bookmarks raises two
   questions, and answering both with Keep local uploaded the same file twice in a row.
