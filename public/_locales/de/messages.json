@@ -80,15 +80,6 @@
   "popup_setup_cta": {
     "message": "Einrichtung starten"
   },
-  "popup_conflict_title": {
-    "message": "Konflikt bei $TYPE$: Version wählen",
-    "placeholders": {
-      "type": {
-        "content": "$1",
-        "example": "Lesezeichen"
-      }
-    }
-  },
   "popup_keep_local": {
     "message": "Lokale behalten"
   },

@@ -90,6 +90,7 @@ export class ConflictResolver {
           id: crypto.randomUUID(),
           data_type: local.data_type,
           device_id: remote.device_id,
+          device_label: remote.device_label,
           timestamp: new Date().toISOString(),
           resolved: false,
         };

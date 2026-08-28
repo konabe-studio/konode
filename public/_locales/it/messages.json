@@ -68,15 +68,6 @@
   "popup_no_backend": {
     "message": "Nessun backend configurato"
   },
-  "popup_conflict_title": {
-    "message": "Conflitto in $TYPE$: scegli una versione",
-    "placeholders": {
-      "type": {
-        "content": "$1",
-        "example": "bookmarks"
-      }
-    }
-  },
   "popup_keep_local": {
     "message": "Mantieni locale"
   },

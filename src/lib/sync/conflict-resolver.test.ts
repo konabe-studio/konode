@@ -61,6 +61,24 @@ describe("ConflictResolver", () => {
     expect(JSON.stringify(conflict)).not.toContain('"b":2');
   });
 
+  it("names the peer the card is about, so three devices ask three answerable questions", () => {
+    // "Keep local or use remote" says nothing about WHICH remote. One peer you can infer;
+    // three you cannot, and a card per diverging peer is the whole design. The name rides
+    // outside the encrypted payload, so it survives a peer we cannot otherwise read.
+    const r = new ConflictResolver("manual");
+    const local = packet({ device_id: "A", checksum: "x" });
+    const remote = packet({ device_id: "B", checksum: "y", device_label: "Windows · Helium" });
+
+    expect(r.resolve(local, remote).conflict?.device_label).toBe("Windows · Helium");
+  });
+
+  it("leaves the name undefined for a peer too old to send one, rather than inventing it", () => {
+    const r = new ConflictResolver("manual");
+    const { conflict } = r.resolve(packet({ device_id: "A", checksum: "x" }), packet({ device_id: "B", checksum: "y" }));
+
+    expect(conflict?.device_label).toBeUndefined();
+  });
+
   it("queues a conflict for encrypted payloads too — it never parses them", () => {
     const r = new ConflictResolver("manual");
     const local = packet({ device_id: "A", checksum: "x", payload: "not-json-ciphertext", encrypted: true });

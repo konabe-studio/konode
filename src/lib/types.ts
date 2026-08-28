@@ -276,6 +276,16 @@ export interface ConflictItem {
   id: string;
   data_type: DataType;
   device_id: string; // the peer this conflict is against (dedupe key; correct map key on apply)
+  /**
+   * That peer's name, copied off its packet when the conflict is queued.
+   *
+   * The card asks you to choose between local and remote, and without this there is
+   * nothing on it that says WHICH remote. With one peer you can infer it; with three the
+   * question cannot be answered as asked. `device_label` rides outside the encrypted
+   * payload, so it is readable here even when everything else about the peer is not.
+   * Optional because a peer on a build older than 1.2.0 sends no name at all.
+   */
+  device_label?: string;
   local_version?: unknown;
   remote_version?: unknown;
   remote_packet?: SyncPacket;

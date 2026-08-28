@@ -105,16 +105,6 @@
     "message": "Start setup",
     "description": "Button on the first-run card. Opens the setup wizard in a new tab."
   },
-  "popup_conflict_title": {
-    "message": "Conflict in $TYPE$: choose a version",
-    "description": "A conflict is waiting for a decision. $TYPE$ is a data type name (bookmarks, history, sessions, extensions).",
-    "placeholders": {
-      "type": {
-        "content": "$1",
-        "example": "bookmarks"
-      }
-    }
-  },
   "popup_keep_local": {
     "message": "Keep local",
     "description": "Conflict resolution: keep what this device has."

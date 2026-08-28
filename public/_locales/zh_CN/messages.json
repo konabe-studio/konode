@@ -68,15 +68,6 @@
   "popup_no_backend": {
     "message": "未配置后端"
   },
-  "popup_conflict_title": {
-    "message": "在 $TYPE$ 中出现冲突：请选择一个版本",
-    "placeholders": {
-      "type": {
-        "content": "$1",
-        "example": "bookmarks"
-      }
-    }
-  },
   "popup_keep_local": {
     "message": "本地保留"
   },

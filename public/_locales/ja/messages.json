@@ -68,15 +68,6 @@
   "popup_no_backend": {
     "message": "バックエンドが設定されていません"
   },
-  "popup_conflict_title": {
-    "message": "$TYPE$ で衝突が起きています。バージョンを選んでください",
-    "placeholders": {
-      "type": {
-        "content": "$1",
-        "example": "bookmarks"
-      }
-    }
-  },
   "popup_keep_local": {
     "message": "このデバイスにのみ保存"
   },

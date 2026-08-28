@@ -7,6 +7,7 @@ import { missingLocally, installOrSearchUrl } from "@/lib/utils/extensions-match
 import { KEYS, getSettings, getState, normalizeRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/storage";
 import { STATE_UPDATE } from "@/lib/constants";
 import { streamState, streamInputFor, streamColor, streamLabelKey } from "@/popup/stream-state";
+import { groupConflictsByDevice } from "@/popup/conflict-groups";
 import { t, plural } from "@/lib/utils/i18n";
 import { dataTypeApiPresent, hasPermission } from "@/lib/utils/capabilities";
 import {
@@ -287,6 +288,7 @@ export default function PopupApp() {
     return pid ? providerById(pid).label : settings.active_backend;
   })();
   const pulsing = status === "syncing" || status === "success";
+  const conflictGroups = groupConflictsByDevice(state?.pending_conflicts ?? []);
 
   return (
     <div className="flex max-h-[600px] w-[360px] flex-col bg-sk-bg text-sk-text">
@@ -371,29 +373,55 @@ export default function PopupApp() {
             </div>
           )}
 
-          {(state?.pending_conflicts?.length ?? 0) > 0 &&
-            state!.pending_conflicts.map((c) => (
-              <div key={c.id} className="rounded-box border border-sk-hairline bg-sk-raised px-3 py-2">
-                <div className="mb-1.5 flex items-center gap-2">
-                  <GitMerge size={12} className="shrink-0 text-sk-warn" />
-                  <span className="text-[12px] text-sk-warn">{t("popup_conflict_title", t(`datatype_${c.data_type}`))}</span>
+          {/* One card per DEVICE, one row per data type inside it. These sit in the pinned
+              header, above the region that scrolls, so a card per peer per type squeezed
+              the body to nothing at four of them and would have left nothing at six. The
+              types keep separate buttons on purpose (see popup/conflict-groups), and the
+              list has its own ceiling so the count of devices can no longer decide how
+              much of the popup is left for everything else. */}
+          {conflictGroups.length > 0 && (
+            <div className="max-h-[200px] space-y-2 overflow-y-auto">
+              {conflictGroups.map((group) => (
+                <div key={group[0].device_id} className="rounded-box border border-sk-hairline bg-sk-raised px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <GitMerge size={12} className="shrink-0 text-sk-warn" />
+                    <span className="truncate text-[12px] text-sk-warn">
+                      {group[0].device_label || t("popup_unknown_device")}
+                    </span>
+                  </div>
+                  {group.map((c) => {
+                    const TypeIcon = DATA_TYPE_META[c.data_type].icon;
+                    const typeLabel = t(`datatype_${c.data_type}`);
+                    return (
+                    <div key={c.id} className="mt-1.5 flex items-center gap-1.5">
+                      {/* The type as its icon, the same one Active Streams uses for it a
+                          section below. Spelled out, this column has to hold "Könyvjelzők"
+                          and "Lesezeichen", which leaves the two buttons too narrow for
+                          "Entfernte übernehmen" and wraps them onto two lines: the row grows
+                          back exactly as much as grouping saved. The name is on the tooltip
+                          and read out to a screen reader. */}
+                      <span className="flex shrink-0 items-center" title={typeLabel} aria-label={typeLabel}>
+                        <TypeIcon size={12} className="text-sk-muted" />
+                      </span>
+                      <button
+                        onClick={() => resolveConflict(c.id, "local")}
+                        className="flex-1 rounded-box border border-sk-hairline bg-sk-surface py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text"
+                      >
+                        {t("popup_keep_local")}
+                      </button>
+                      <button
+                        onClick={() => resolveConflict(c.id, "remote")}
+                        className="flex-1 rounded-box border border-sk-hairline bg-sk-surface py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text"
+                      >
+                        {t("popup_use_remote")}
+                      </button>
+                    </div>
+                    );
+                  })}
                 </div>
-                <div className="flex gap-1.5">
-                  <button
-                    onClick={() => resolveConflict(c.id, "local")}
-                    className="flex-1 rounded-box border border-sk-hairline bg-sk-surface py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text"
-                  >
-                    {t("popup_keep_local")}
-                  </button>
-                  <button
-                    onClick={() => resolveConflict(c.id, "remote")}
-                    className="flex-1 rounded-box border border-sk-hairline bg-sk-surface py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text"
-                  >
-                    {t("popup_use_remote")}
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
 
           {showNoBackend && (
             <button
