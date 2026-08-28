@@ -54,6 +54,19 @@ several things that filled the Activity log with the same line a minute do not a
   delete button on a restore point, which does take it: sharing a row stretched the pair to
   a height nothing else in Settings had. Both now state their height, so the row matches
   every other button on the page.
+- **"Sync now" reported a sync it never ran.** Every data type can be switched off,
+  including the last one. With nothing left to sync, Konode still went out to your storage,
+  came back with nothing to report, and said "Synced", once a minute and again on every
+  press of Sync now. It says Ready now, which is what a device with nothing turned on
+  actually is, and Sync now tells you nothing is turned on rather than claiming to have
+  synced it, and that message is now the way to the screen it names rather than a mention
+  of it: clicking it opens Data Types. It also stops making that round trip, so a paused
+  device no longer talks to your storage to do nothing.
+- **A missing extension said it came "from Chrome" on devices that have no Chrome.** The
+  line under a missing extension names the store you can install it from, and it named it
+  by the browser's brand. Sitting a few rows under a list of devices called "Windows ·
+  Firefox" and "Windows · Helium", that reads as a device rather than a store, and it named
+  one you may well not own. It says Chrome Web Store and Firefox Add-ons now.
 - **Buttons in Settings could spin forever, and one screen could lie.** Every action on
   the Activity tab talks to Konode's background worker, and if that conversation failed
   outright rather than answering with an error, nothing was said: the spinner kept
