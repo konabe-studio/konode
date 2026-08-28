@@ -52,6 +52,9 @@ export default function PopupApp() {
   // `await sendMessage(...)` and drop the answer, so an ERROR response — "a sync is
   // already running", a peer whose data can't be applied — looked like a dead button.
   const [actionError, setActionError] = useState<string | null>(null);
+  // Which conflict button is in flight, as `${id}:${resolution}`: the resolution is part
+  // of the key so the spinner lands on the button that was actually pressed.
+  const [resolving, setResolving] = useState<string | null>(null);
 
   // Track animation state separately from sync state
   const animTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -240,13 +243,33 @@ export default function PopupApp() {
     });
   };
 
+  /**
+   * Resolving takes real time, so the click has to be visible while it does.
+   *
+   * Either answer is seconds of work, not a state flip: keep local exports the tree,
+   * derives a key if E2EE is on (600k PBKDF2 rounds), and PUTs it; use remote decrypts and
+   * merges. Nothing on screen said any of that was happening, so a press read as a press
+   * that missed, and the natural response is to press it again. Reported from a device at
+   * two to three seconds a click.
+   *
+   * Every button on every card is disabled while one is in flight, not just the one
+   * pressed. Answering a second card mid-flight is what put two uploads of one file on the
+   * wire at once, which is the 423 the same session hit. The UI is the right place to stop
+   * that: the second click was never going to do anything useful anyway.
+   */
   const resolveConflict = async (id: string, resolution: "local" | "remote") => {
+    if (resolving) return;
     setActionError(null);
-    // "Use remote" can legitimately fail — an encrypted peer this device can't read, or
-    // a packet that is no longer available. Silently reloading made the click look inert.
-    const r = await request({ type: "RESOLVE_CONFLICT", payload: { id, resolution } });
-    if (!r.ok) setActionError(r.error);
-    await load();
+    setResolving(`${id}:${resolution}`);
+    try {
+      // "Use remote" can legitimately fail — an encrypted peer this device can't read, or
+      // a packet that is no longer available. Silently reloading made the click look inert.
+      const r = await request({ type: "RESOLVE_CONFLICT", payload: { id, resolution } });
+      if (!r.ok) setActionError(r.error);
+      await load();
+    } finally {
+      setResolving(null);
+    }
   };
 
   const restoreSession = async (id: string) => {
@@ -426,17 +449,26 @@ export default function PopupApp() {
                       <span className="flex shrink-0 items-center" title={typeLabel} aria-label={typeLabel}>
                         <TypeIcon size={12} className="text-sk-muted" />
                       </span>
+                      {/* The spinner REPLACES the label rather than joining it: these two
+                          buttons share about 270px, and "Entfernte übernehmen" already
+                          fills one of them. */}
                       <button
                         onClick={() => resolveConflict(c.id, "local")}
-                        className="flex-1 rounded-box border border-sk-hairline bg-sk-surface py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text"
+                        disabled={resolving !== null}
+                        className="flex flex-1 items-center justify-center rounded-box border border-sk-hairline bg-sk-surface py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {t("popup_keep_local")}
+                        {resolving === `${c.id}:local`
+                          ? <Loader2 size={12} className="animate-spin" />
+                          : t("popup_keep_local")}
                       </button>
                       <button
                         onClick={() => resolveConflict(c.id, "remote")}
-                        className="flex-1 rounded-box border border-sk-hairline bg-sk-surface py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text"
+                        disabled={resolving !== null}
+                        className="flex flex-1 items-center justify-center rounded-box border border-sk-hairline bg-sk-surface py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {t("popup_use_remote")}
+                        {resolving === `${c.id}:remote`
+                          ? <Loader2 size={12} className="animate-spin" />
+                          : t("popup_use_remote")}
                       </button>
                     </div>
                     );
