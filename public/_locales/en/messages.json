@@ -749,7 +749,7 @@
   },
   "opt_ext_from": {
     "message": "· from $STORE$",
-    "description": "Which store a missing extension came from. $STORE$ is a brand name (Chrome or Firefox) and is never translated. Keep the leading middle dot, it separates this from the extension's name.",
+    "description": "Which store a missing extension can be installed from. $STORE$ is a store's brand name (Chrome Web Store or Firefox Add-ons) and is never translated. Naming the store in full is deliberate: this line sits near a list of devices, and a bare 'Chrome' was read as one. Keep the leading middle dot, it separates this from the extension's name.",
     "placeholders": {
       "store": {
         "content": "$1",

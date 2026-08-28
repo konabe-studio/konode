@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  normalizeExtName, inferStore, isInstalledLocally, missingLocally, storeUrlFor, installOrSearchUrl,
+  normalizeExtName, inferStore, isInstalledLocally, missingLocally, storeUrlFor, installOrSearchUrl, STORE_NAME,
 } from "@/lib/utils/extensions-match";
 import type { SyncExtension } from "@/lib/types";
 
@@ -10,6 +10,15 @@ function ext(p: Partial<SyncExtension>): SyncExtension {
 
 const CHROME_ID = "cjpalhdlnbpafiamejdnhcphjbkeiagm"; // 32 chars a–p (uBlock Origin on CWS)
 const FF_ID = "uBlock0@raymondhill.net";
+
+describe("STORE_NAME", () => {
+  it("names the store in full, so it cannot be read as a device", () => {
+    // "from Chrome" was reported as a bug by someone with no Chrome device: this line
+    // renders a few rows under a list of devices called "Windows · Firefox".
+    expect(STORE_NAME[inferStore({ id: "cjpalhdlnbpafiamejdnhcphjbkeiagm" })]).toBe("Chrome Web Store");
+    expect(STORE_NAME[inferStore({ id: "uBlock0@raymondhill.net" })]).toBe("Firefox Add-ons");
+  });
+});
 
 describe("inferStore", () => {
   it("uses the explicit store when present", () => {

@@ -17,6 +17,24 @@ import { CWS_DETAIL_BASE, CWS_SEARCH_BASE, AMO_SEARCH_BASE } from "@/lib/constan
 
 export type Store = "chrome" | "firefox";
 
+/**
+ * What to CALL a store on screen.
+ *
+ * Brand names, never translated. The UI used to say "from Chrome" and "from Firefox",
+ * which is the store's parent brand and also, unfortunately, the vocabulary the rest of
+ * that screen uses for DEVICES: the missing-extension list sits under a list of devices
+ * named "Windows · Firefox" and "Windows · Helium". Reported as a bug from a device that
+ * has no Chrome anywhere, because "uBlock Origin · from Chrome" reads as a claim about
+ * where the extension came from rather than where you can install it.
+ *
+ * Naming the store in full removes the collision, and it does it in the argument rather
+ * than in the sentence, so every catalogue keeps the wording it already has.
+ */
+export const STORE_NAME: Record<Store, string> = {
+  chrome: "Chrome Web Store",
+  firefox: "Firefox Add-ons",
+};
+
 /** A local extension shape we can match against (subset of chrome.management info). */
 export interface LocalExtLike {
   id: string;

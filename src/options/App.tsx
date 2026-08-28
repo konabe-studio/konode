@@ -86,7 +86,7 @@ import { KEYS, normalizeRemoteExtensions, type AuditEntry } from "@/lib/utils/st
 import { isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
 import { browser, currentStore } from "@/lib/utils/ext";
-import { missingLocally, installOrSearchUrl, storeUrlFor, inferStore, type LocalExtLike } from "@/lib/utils/extensions-match";
+import { missingLocally, installOrSearchUrl, storeUrlFor, inferStore, STORE_NAME, type LocalExtLike } from "@/lib/utils/extensions-match";
 import {
   PROVIDERS, providerById, providerFromConfig, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf,
   webdavUrlForCard,
@@ -1706,7 +1706,7 @@ export default function OptionsApp() {
                           <div>
                             <div className="row-label">
                               {ext.name}{" "}
-                              <span className="row-desc">{t("opt_ext_from", inferStore(ext) === "firefox" ? "Firefox" : "Chrome")}</span>
+                              <span className="row-desc">{t("opt_ext_from", STORE_NAME[inferStore(ext)])}</span>
                             </div>
                             {ext.description && <div className="row-desc">{ext.description.slice(0, 80)}</div>}
                           </div>
