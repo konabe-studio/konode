@@ -23,6 +23,17 @@ describe("withRetry", () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
+  it("retries a 423, because a WebDAV lock is a wait rather than a refusal", async () => {
+    // Koofr locks a file while a write to it is in flight and answers the next one 423.
+    // A burst of Keep local resolutions hit it and the user was shown "WebDAV PUT failed:
+    // 423" for a file that was about to be writable again.
+    const fn = vi.fn()
+      .mockRejectedValueOnce(new HttpError(423))
+      .mockResolvedValue("ok");
+    await expect(withRetry(fn, { baseDelayMs: 1 })).resolves.toBe("ok");
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
   it("retries network errors (TypeError)", async () => {
     const fn = vi
       .fn()

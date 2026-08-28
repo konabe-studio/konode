@@ -8,10 +8,16 @@ export class HttpError extends Error {
   }
 }
 
-/** Retry only transient failures: network errors and HTTP 408/429/5xx. */
+/** Retry only transient failures: network errors and HTTP 408/423/429/5xx. */
 export function defaultShouldRetry(err: Error): boolean {
   if (err instanceof HttpError) {
-    return err.status === 408 || err.status === 429 || err.status >= 500;
+    // 423 Locked is WebDAV's "something else is writing this right now", which is the
+    // definition of transient: the lock clears on its own. Koofr returns it when two
+    // writes to one file overlap, and it reached a user as "WebDAV PUT failed: 423" on a
+    // burst of conflict resolutions. The backend already treats a 423 from MKCOL as
+    // benign; a 423 from PUT is the same fact about the same server, and the one thing to
+    // do with it is come back in a moment.
+    return err.status === 408 || err.status === 423 || err.status === 429 || err.status >= 500;
   }
   // fetch() rejects with a TypeError on network/CORS failures — treat as transient.
   // But a bare `TypeError` is also how programming bugs surface (e.g. "x is not a

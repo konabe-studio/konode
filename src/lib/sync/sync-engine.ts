@@ -1449,21 +1449,37 @@ export class SyncEngine {
         );
       }
     } else {
-      // Keep local → re-upload current local data, overwriting remote.
+      // Keep local → make sure our version is the one on the backend.
+      //
+      // Once per CONTENT, not once per card. Manual raises a card per diverging peer, so
+      // two other devices disagreeing about bookmarks is two cards, and answering both
+      // with Keep local built the same packet twice and PUT the same file twice. Koofr
+      // locks a file while a write to it is in flight and answers the second with 423, so
+      // a burst of Keep local reached a user as "WebDAV PUT failed: 423" with the card
+      // still standing. The repeat was never doing anything: the tag says what we last
+      // put there, and if it matches, our version is already the one out there. Which is
+      // the question this upload exists to answer.
       const cfg = this.settings.backends.find((b) => b.type === this.settings.active_backend);
       if (cfg) {
-        const backend = createBackend(cfg);
-        await backend.connect();
-        try {
-          const payload = await this.buildPayload(conflict.data_type);
-          const packet = await this.buildPacket(conflict.data_type, payload);
-          await backend.upload(packet); // forced: conflict resolution overwrites remote
-          // Store the same tag uploadIfChanged writes (encryption form + destination),
-          // so the next periodic sync doesn't see a mismatch and re-upload needlessly.
-          const useE2ee = this.e2eeActive;
-          await setLastUploadChecksum(conflict.data_type, this.uploadTag(packet.checksum, useE2ee));
-        } finally {
-          await backend.disconnect();
+        const payload = await this.buildPayload(conflict.data_type);
+        const tag = this.uploadTag(await sha256(JSON.stringify(payload)), this.e2eeActive);
+        if ((await getLastUploadChecksum(conflict.data_type)) === tag) {
+          logger.info(
+            "SyncEngine",
+            `${conflict.data_type}: already published this version, so keeping local needs no upload`
+          );
+        } else {
+          const backend = createBackend(cfg);
+          await backend.connect();
+          try {
+            const packet = await this.buildPacket(conflict.data_type, payload);
+            await backend.upload(packet);
+            // The same tag uploadIfChanged writes (encryption form + destination), so the
+            // next periodic sync doesn't see a mismatch and re-upload needlessly.
+            await setLastUploadChecksum(conflict.data_type, tag);
+          } finally {
+            await backend.disconnect();
+          }
         }
       }
     }
