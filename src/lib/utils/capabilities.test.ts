@@ -167,14 +167,38 @@ describe("carrying on without an API", () => {
 });
 
 describe("obtaining a permission", () => {
-  it("never prompts for a permission that is already held", async () => {
+  it("still says granted for a permission the user granted by hand", async () => {
     // THE Fennec fix. Firefox for Android has no prompt, but it does let the user grant
-    // permissions by hand in the add-on's own settings — and the reporter had done
-    // exactly that. Asking request() about it would still answer false and send them
-    // round the same dead end again.
-    const requests = permissions({ held: true, request: () => Promise.resolve(false) });
+    // permissions by hand in the add-on's own settings, and the reporter had done exactly
+    // that. request() answers false there whatever is held, so believing it would send
+    // them round the same dead end again.
+    //
+    // This used to be answered by a contains() check ahead of request(), asserting here
+    // that nothing was asked for. That check cost Firefox the click's user gesture (see
+    // ensurePermission), so the order is reversed and what proves the fix is the outcome:
+    // asked, told no, and granted anyway because we hold it.
+    permissions({ held: true, request: () => Promise.resolve(false) });
     expect(await ensurePermission({ origins: ["https://cloud.example.com/*"] })).toBe("granted");
-    expect(requests).toEqual([]);
+  });
+
+  it("asks before it awaits anything else, or Firefox will not show the prompt", async () => {
+    // The 1.2.1 regression, in the shape Firefox actually enforces: request() has to run
+    // in the task the click is still being handled in. Any other extension API answers on
+    // a new one, and from there the call throws instead of prompting. Konode awaited
+    // contains() first, so from 1.2.1 no Firefox user was shown a permission prompt at
+    // all: WebDAV setup ended in "Konode needs permission to reach your WebDAV server"
+    // with nothing on screen to allow, and the data type toggles in Settings sprang back.
+    //
+    // Chrome's gesture is a time window rather than a task, which is why it never showed
+    // this and why the fake below has to model the rule rather than the API.
+    let spent = false;
+    replace("permissions", {
+      contains: () => { spent = true; return Promise.resolve(false); },
+      request: () => spent
+        ? Promise.reject(new Error("permissions.request may only be called from a user input handler"))
+        : Promise.resolve(true),
+    });
+    expect(await ensurePermission({ origins: ["https://cloud.example.com/*"] })).toBe("granted");
   });
 
   it("grants when the prompt is accepted", async () => {

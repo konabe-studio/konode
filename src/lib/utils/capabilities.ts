@@ -21,6 +21,7 @@
  *     mdn/browser-compat-data#13299
  */
 import { browser } from "@/lib/utils/ext";
+import { logger } from "@/lib/utils/logger";
 import type { DataType } from "@/lib/types";
 
 /**
@@ -180,29 +181,40 @@ export type PermissionOutcome = "granted" | "denied" | "cannot-prompt";
 /**
  * Make sure a permission is held, prompting only if it isn't.
  *
- * The `contains()` check FIRST is not an optimisation. On a browser whose prompt is
- * broken it is the entire fix: a user who granted the permission by hand in the add-on's
- * settings page holds it, and asking `request()` about it would still answer false and
- * send them round the same loop again.
+ * `request()` goes FIRST, before anything else is awaited. By "from a user input handler"
+ * Firefox does not mean "shortly after the click", it means the current task: the answer
+ * to any other extension API arrives on a new one, and from there `request()` throws
+ * `permissions.request may only be called from a user input handler`. A single
+ * `contains()` in front of it is enough to lose the gesture, and a `contains()` is what
+ * 1.2.1 put there. From then on Firefox showed no prompt at all, in the wizard or in
+ * Settings, so every WebDAV setup on it dead-ended in "Konode needs permission to reach
+ * your WebDAV server" with nothing to allow. Chrome went on working, because its gesture
+ * is a few-second window rather than the current task, which is why the Chromium devices
+ * and the fakes both reported this path healthy.
  *
- * MUST be called synchronously from a user gesture on browsers that do prompt — Firefox
- * rejects a `request()` that has lost its gesture, and every `await` before it risks
- * that. `contains()` runs first here, which is one await; that is safe because a request
- * only happens when contains() answered false, and in that case the click is still the
- * current task in every engine we've seen. Don't add more awaits before this call.
+ * Asking first costs nothing. A permission already held resolves `true` with no prompt on
+ * every browser that implements the call, and the `contains()` below still answers for the
+ * browser that doesn't: Firefox for Android never prompts (bugzilla 1601420), so granting
+ * by hand in the add-on's own settings is the only way to hold a permission there, and
+ * that has to keep reading as "granted" rather than as a refusal.
+ *
+ * MUST be called synchronously from a user gesture. Await nothing ahead of it, here or in
+ * the click handler that calls it.
  */
 export async function ensurePermission(req: chrome.permissions.Permissions): Promise<PermissionOutcome> {
-  if (await hasPermission(req)) return "granted";
-
   let granted = false;
   try {
     granted = await browser.permissions.request(req);
-  } catch {
+  } catch (err) {
+    // Swallowed in silence until now, which is how a thrown "may only be called from a
+    // user input handler" reached the user as "your WebDAV server refused permission".
+    // Declining resolves false rather than throwing, so a refusal never lands here.
+    logger.warn("permissions.request failed", err instanceof Error ? err.message : String(err));
     granted = false;
   }
   if (granted) return "granted";
 
-  // A false here is not proof of a refusal — see PermissionOutcome. Re-check what we
+  // A false here is not proof of a refusal, see PermissionOutcome. Re-check what we
   // actually hold before deciding which story to tell.
   if (await hasPermission(req)) return "granted";
 
