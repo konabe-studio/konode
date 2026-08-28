@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { SyncEngine, statusAfterSync, conflictsThatCanExist } from "@/lib/sync/sync-engine";
+import { SyncEngine, statusAfterSync, conflictsThatCanExist, conflictsStillOpen } from "@/lib/sync/sync-engine";
 import { BADGE_TEXT, BADGE_COLORS } from "@/lib/constants";
 import { createKeyVerifier } from "@/lib/crypto/encryption";
 import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState, setTombstones, acquireSyncLock, KEYS, getRemoteSessions, normalizeRemoteExtensions, getBulkDeleteApproval, setBulkDeleteApproval, getListFailureNoted } from "@/lib/utils/storage";
@@ -1727,6 +1727,22 @@ describe("conflictsThatCanExist: a leftover conflict about a peer's tab list", (
   it("leaves an ordinary list alone", () => {
     const list = [conflict("bookmarks", "a"), conflict("history", "c")];
     expect(conflictsThatCanExist(list)).toEqual(list);
+  });
+
+  // Switching the strategy away from Manual without answering the cards first: reported
+  // from a device on 2026-08-28, where four of them stayed on screen after the switch.
+  // The sync that follows merges those peers itself, so the cards are asking about
+  // something already decided, and nothing else would ever clear them.
+  it("drops every card once the strategy is no longer manual", () => {
+    const list = [conflict("bookmarks", "a"), conflict("history", "c")];
+    expect(conflictsStillOpen(list, "lww")).toEqual([]);
+    expect(conflictsStillOpen(list, "prefer-local")).toEqual([]);
+    expect(conflictsStillOpen(list, "prefer-remote")).toEqual([]);
+  });
+
+  it("keeps the answerable ones while manual is still the strategy", () => {
+    const list = [conflict("bookmarks", "a"), conflict("sessions", "b"), conflict("history", "c")];
+    expect(conflictsStillOpen(list, "manual").map((c) => c.id)).toEqual(["a", "c"]);
   });
 });
 

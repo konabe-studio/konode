@@ -72,6 +72,25 @@ export function conflictsThatCanExist(list: ConflictItem[]): ConflictItem[] {
 }
 
 /**
+ * The queued conflicts still worth asking about, which is the above plus the strategy.
+ *
+ * Only `manual` asks. Every other strategy answers in the merge itself, so a card left
+ * over from a spell on `manual` is putting a question the engine has stopped putting: the
+ * sync that just ran already folded those peers in. The cards outlive the setting that
+ * made them, and nothing else clears them, so the popup would go on offering a choice
+ * whose outcome was decided a minute ago.
+ *
+ * Applied at the END of a sync rather than when the setting is saved, so a conflict only
+ * disappears once the merge that replaces it has actually run.
+ */
+export function conflictsStillOpen(
+  list: ConflictItem[],
+  strategy: SyncSettings["conflict_strategy"]
+): ConflictItem[] {
+  return strategy === "manual" ? conflictsThatCanExist(list) : [];
+}
+
+/**
  * A peer's encrypted data can't be read with this device's passphrase — the
  * passphrases don't match (or none is set). Thrown so the sync surfaces a clear,
  * user-visible error instead of silently skipping the peer and diverging forever.
@@ -344,13 +363,19 @@ export class SyncEngine {
       // would ever re-queue or clear those now, so the banner would ask the user to choose
       // between two devices' tab lists for good. Cleared on the first sync after the
       // upgrade instead, along with any packet parked behind them.
-      const conflicts = conflictsThatCanExist(prevState.pending_conflicts);
+      // The other way to be left holding one is to leave `manual`: every other strategy
+      // answers in the merge, so this very sync folded those peers in and the cards are
+      // now asking about something already decided. See conflictsStillOpen.
+      const manual = this.settings.conflict_strategy === "manual";
+      const conflicts = conflictsStillOpen(prevState.pending_conflicts, this.settings.conflict_strategy);
       const stale = prevState.pending_conflicts.length - conflicts.length;
       if (stale > 0) {
         await pruneConflictPackets(conflicts.map((c) => c.id));
         logger.event(
           "SyncEngine",
-          `Dropped ${stale} pending conflict(s) for a data type that can't have one (sessions and extensions are per-device lists, not competing versions)`
+          manual
+            ? `Dropped ${stale} pending conflict(s) for a data type that can't have one (sessions and extensions are per-device lists, not competing versions)`
+            : `Dropped ${stale} pending conflict(s): conflict resolution is no longer set to Manual, so this sync resolved them itself`
         );
       }
       const newState = await setState({
