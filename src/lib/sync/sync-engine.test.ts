@@ -1076,6 +1076,54 @@ describe("SyncEngine.sync — reports whether it actually ran", () => {
     expect(await engine.sync()).toBe("no-backend");
   });
 
+  it("does not report a sync it never ran when every data type is switched off", async () => {
+    // Reported from a device: turn all four off in Settings, press Sync now, and the popup
+    // answered "Synced". The loop had an empty list to run over, finished with nothing to
+    // report, and success is what no problems used to mean.
+    const engine = new SyncEngine(
+      {
+        ...DEFAULT_SETTINGS,
+        device_id: "me",
+        active_backend: "github",
+        backends: [{ type: "github", label: "GitHub", enabled: true, github: { token: "t", repo: "o/r" } }],
+        enabled_types: [],
+      },
+      () => {}
+    );
+
+    expect(await engine.sync()).toBe("nothing-enabled");
+    const st = await getState();
+    expect(st.status).toBe("idle");       // "Ready": configured, nothing to do
+    expect(st.last_sync).toBeNull();      // and no sync to date-stamp
+    expect(engine.isSyncing).toBe(false);
+  });
+
+  it("keeps a pending conflict visible rather than calling the device idle", async () => {
+    await setState({
+      pending_conflicts: [{ id: "c1", data_type: "bookmarks", device_id: "peer1", timestamp: "2026-08-28T08:00:00.000Z", resolved: false }],
+    });
+    const engine = new SyncEngine(
+      {
+        ...DEFAULT_SETTINGS,
+        device_id: "me",
+        active_backend: "github",
+        backends: [{ type: "github", label: "GitHub", enabled: true, github: { token: "t", repo: "o/r" } }],
+        enabled_types: [],
+      },
+      () => {}
+    );
+
+    expect(await engine.sync()).toBe("nothing-enabled");
+    expect((await getState()).status).toBe("conflict");
+  });
+
+  it("still runs for an explicitly named type, which is how the approval path syncs", async () => {
+    // sync(["bookmarks"]) is not the empty case even with everything switched off: the
+    // caller named the type. Only an empty list returns early.
+    const engine = configured();
+    expect(await engine.sync(["bookmarks"])).not.toBe("nothing-enabled");
+  });
+
   it("reports already-running when a lock is held", async () => {
     expect(await acquireSyncLock(60_000)).toBe(true); // e.g. stranded by a dead worker
     expect(await configured().sync()).toBe("already-running");

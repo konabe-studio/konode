@@ -228,6 +228,9 @@ export default function PopupApp() {
   const openActivityLog = () =>
     void browser.tabs.create({ url: browser.runtime.getURL("options.html#activity") });
 
+  const openDataTypes = () =>
+    void browser.tabs.create({ url: browser.runtime.getURL("options.html#data") });
+
   const openAllMissing = () => {
     const here = currentStore();
     missingExtensions.forEach((ext) => {
@@ -289,6 +292,10 @@ export default function PopupApp() {
   })();
   const pulsing = status === "syncing" || status === "success";
   const conflictGroups = groupConflictsByDevice(state?.pending_conflicts ?? []);
+  // Settings loaded and every data type switched off. `settingsLoaded` matters: before the
+  // read lands, enabled_types is undefined and an empty list would be indistinguishable
+  // from "we don't know yet".
+  const nothingEnabled = settingsLoaded && (settings?.enabled_types?.length ?? 0) === 0;
 
   return (
     <div className="flex max-h-[600px] w-[360px] flex-col bg-sk-bg text-sk-text">
@@ -339,12 +346,28 @@ export default function PopupApp() {
       {/* ── Banners ── */}
       {(loadError || actionError || state?.last_error || state?.recovery_notice || (state?.pending_conflicts?.length ?? 0) > 0 || showNoBackend) && (
         <div className="mt-3 space-y-2">
-          {actionError && (
+          {/* With nothing turned on, the error the button gives back ends by telling you to
+              turn one on in Data Types, and the popup cannot get you there. So the banner
+              becomes the way there, the same shape the no-backend one already uses, rather
+              than a sentence naming a screen you then have to go and find. Decided on the
+              settings rather than on the text of the error: nothing else can fail while
+              every data type is off, since the sync returns before it reaches the backend,
+              and "go turn something on" is the right next step for any of it anyway. */}
+          {actionError && (nothingEnabled ? (
+            <button
+              onClick={openDataTypes}
+              className="flex w-full items-start gap-2 rounded-box border border-sk-hairline bg-sk-raised px-3 py-2 text-left transition-colors hover:bg-sk-tint"
+            >
+              <AlertCircle size={12} className="mt-0.5 shrink-0 text-sk-danger" />
+              <span className="flex-1 text-[12px] text-sk-danger">{actionError}</span>
+              <ChevronRight size={12} className="mt-0.5 shrink-0 text-sk-danger" />
+            </button>
+          ) : (
             <div className="flex items-start gap-2 rounded-box border border-sk-hairline bg-sk-raised px-3 py-2" role="alert">
               <AlertCircle size={12} className="mt-0.5 shrink-0 text-sk-danger" />
               <span className="text-[12px] text-sk-danger">{actionError}</span>
             </div>
-          )}
+          ))}
           {state?.recovery_notice && (
             <button
               onClick={openActivityLog}

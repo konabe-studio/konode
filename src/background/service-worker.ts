@@ -167,6 +167,11 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
       if (outcome === "already-running") {
         return { type: "ERROR", payload: "A sync is already running — try again in a moment." };
       }
+      // Every data type switched off. Saying OK here is what let the popup answer "Synced"
+      // to a button press that synced nothing.
+      if (outcome === "nothing-enabled") {
+        return { type: "ERROR", payload: "No data types are turned on, so there is nothing to sync. Turn one on in Data Types." };
+      }
       return { type: "OK" };
     }
 

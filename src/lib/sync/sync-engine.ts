@@ -127,7 +127,7 @@ export class EncryptionMismatchError extends Error {
  * `ran` covers a sync that failed too: the failure is recorded in the state, which is a
  * different thing from never having started.
  */
-export type SyncOutcome = "ran" | "no-backend" | "already-running";
+export type SyncOutcome = "ran" | "no-backend" | "already-running" | "nothing-enabled";
 
 /**
  * The status a finished sync should report. `sync()` used to hard-code
@@ -305,6 +305,31 @@ export class SyncEngine {
       return "no-backend";
     }
 
+    // Every data type can be switched off, including the last one, and with none left the
+    // loop below ran over an empty list and finished with no problems to report. So the
+    // sync reported SUCCESS and the popup said "Synced" while Konode moved nothing at all,
+    // once a minute, after a round trip to the user's storage to accomplish it. Reported
+    // from a device on 2026-08-28, and the same shape as the other three "reported success
+    // while it happened" bugs in this release.
+    //
+    // Not an error: nothing turned on is a setting, not a fault. "Ready" is the honest
+    // word for configured with nothing to do, and a pending conflict keeps the status it
+    // earned, since it stays answerable whatever is switched on.
+    //
+    // Returned BEFORE the lock and before createBackend, so an install with everything off
+    // makes no network request at all.
+    const typesToSync = types ?? this.settings.enabled_types;
+    if (typesToSync.length === 0) {
+      logger.info("SyncEngine", "No data types are turned on, so there is nothing to sync");
+      const prev = await getState();
+      const newState = await setState({
+        status: prev.pending_conflicts.length > 0 ? "conflict" : "idle",
+      });
+      this.onStateChange(newState);
+      this.isSyncing = false;
+      return "nothing-enabled";
+    }
+
     // Cross-instance guard (CO-4): a persisted TTL lock so a sync interrupted by an
     // MV3 worker suspension can't have a later wake double-run. A stale lock is
     // ignored, so a crashed sync self-heals. isSyncing (above) guards within one
@@ -339,7 +364,6 @@ export class SyncEngine {
 
       await backend.connect();
 
-      const typesToSync = types ?? this.settings.enabled_types;
       const typeErrors = await this.syncAllTypes(typesToSync, backend, state);
 
       // A device that disagrees on encryption isn't a hard failure — we still synced
