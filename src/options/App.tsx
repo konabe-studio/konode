@@ -1095,7 +1095,9 @@ export default function OptionsApp() {
             <button
               className="btn-secondary"
               onClick={() => { void load(); }}
-              style={{ maxWidth: 420, display: "block", textAlign: "left", padding: "12px 16px" }}
+              /* The one secondary button that is two lines, so it opts out of the fixed
+                 height the rest of them now take from --control-h-sm. */
+              style={{ maxWidth: 420, display: "block", height: "auto", textAlign: "left", padding: "12px 16px" }}
             >
               <AlertTriangle size={12} /> {t("onb_err_read_settings")}
               <span style={{ display: "block", marginTop: 6, opacity: 0.7, fontSize: 12 }}>{loadError}</span>
@@ -1510,7 +1512,7 @@ export default function OptionsApp() {
                         {boldUnencrypted("opt_e2ee_disable_confirm")}
                       </div>
                     </div>
-                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                       <button className="btn-secondary" type="button" onClick={() => setConfirmDisableEnc(false)}>
                         {t("opt_cancel")}
                       </button>
@@ -1955,7 +1957,7 @@ export default function OptionsApp() {
                               {plural("opt_forget_confirm", d.types.length, [String(d.types.length), d.types.join(", ")])}
                             </div>
                           </div>
-                          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                             <button className="btn-secondary" onClick={() => setConfirmForget(null)}>{t("opt_cancel")}</button>
                             <button className="btn-secondary" style={{ color: "var(--danger)" }}
                               onClick={() => void forgetDevice(d.device_id, d.label ?? t("opt_that_device"))}>
@@ -2001,7 +2003,7 @@ export default function OptionsApp() {
                         </div>
                       </div>
                       {confirmApply ? (
-                        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                           <button className="btn-secondary" onClick={() => setConfirmApply(false)} disabled={applyBusy}>{t("opt_cancel")}</button>
                           <button className="btn-secondary" style={{ color: "var(--danger)", borderColor: "var(--danger)" }} onClick={applyBlockedDeletion} disabled={applyBusy}>
                             {applyBusy ? <Loader2 size={12} className="spin" /> : <Trash2 size={12} />} {t("opt_blocked_confirm_apply")}
@@ -2079,21 +2081,21 @@ export default function OptionsApp() {
                         </div>
                       </div>
                       {confirmRestore === s.name ? (
-                        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                           <button className="btn-secondary" onClick={() => setConfirmRestore(null)} disabled={snapBusy}>{t("opt_cancel")}</button>
                           <button className="btn-secondary" style={{ color: "var(--accent)", borderColor: "var(--accent)" }} onClick={() => restoreSnapshot(s.name)} disabled={snapBusy}>
                             {snapBusy ? <Loader2 size={12} className="spin" /> : <RotateCcw size={12} />} {t("opt_snap_confirm_restore")}
                           </button>
                         </div>
                       ) : confirmDelete === s.name ? (
-                        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                           <button className="btn-secondary" onClick={() => setConfirmDelete(null)} disabled={snapBusy}>{t("opt_cancel")}</button>
                           <button className="btn-secondary" style={{ color: "var(--danger)", borderColor: "var(--danger)" }} onClick={() => deleteSnapshot(s.name)} disabled={snapBusy}>
                             {snapBusy ? <Loader2 size={12} className="spin" /> : <Trash2 size={12} />} {t("opt_snap_confirm_delete")}
                           </button>
                         </div>
                       ) : (
-                        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                           <button className="btn-secondary" onClick={() => setConfirmRestore(s.name)} disabled={snapBusy}>
                             <RotateCcw size={12} /> {t("popup_restore")}
                           </button>
@@ -2510,13 +2512,16 @@ const STYLES = `
 
   /* Sized by padding, like .btn-install, instead of a fixed control height. Ben wanted
      the Activity and Advanced actions to match the Install buttons next to them. */
-  .btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-xs); padding: var(--sp-sm) var(--sp-xl); border-radius: var(--r-md); border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; font-family: var(--font); font-size: var(--fs-sm); color: var(--text-secondary); transition: background .1s, border-color .1s, color .1s; white-space: nowrap; }
+  /* Height from the token, not from the padding: without it this was the one standalone
+     button style with no stated height, so it came out around 36px on its own and 48 next
+     to the icon-only Restore-point button, which shares a stretch row with it. */
+  .btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-xs); height: var(--control-h-sm); padding: 0 var(--sp-xl); border-radius: var(--r-md); border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; font-family: var(--font); font-size: var(--fs-sm); color: var(--text-secondary); transition: background .1s, border-color .1s, color .1s; white-space: nowrap; }
   .btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--accent); }
   .btn-secondary:disabled { opacity: .5; cursor: not-allowed; }
   /* Icon-only: square by construction — one token drives both width and height, and
      flex-basis is pinned so a tight row can't squash it into a rectangle. A
      destructive action stays quiet until hover, so it's never the easiest hit. */
-  .btn-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: var(--control-h); height: var(--control-h); padding: 0; border-radius: var(--r-md); border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; color: var(--text-secondary); transition: background .1s, border-color .1s, color .1s; }
+  .btn-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: var(--control-h-sm); height: var(--control-h-sm); padding: 0; border-radius: var(--r-md); border: 1px solid var(--border-input); background: var(--bg-card); cursor: pointer; color: var(--text-secondary); transition: background .1s, border-color .1s, color .1s; }
   .btn-icon:hover { background: var(--bg-hover); color: var(--danger); border-color: var(--danger); }
   .btn-icon:disabled { opacity: .5; cursor: not-allowed; }
   /* Borderless, so padding alone left it 2px shorter than the bordered Test

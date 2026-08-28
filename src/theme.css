@@ -16,6 +16,13 @@
      per button (text vs icon-only) and per platform. Icon-only buttons use this for
      width too, which is what keeps them square. */
   --control-h: 3rem; /* 48px at the default root size */
+  /* The same rule one step down, for buttons that sit in a settings row rather than beside
+     an input. Inputs and Save are --control-h; everything secondary, including the
+     icon-only ones, is this. `.btn-secondary` carried no height at all until now, so it
+     rendered at whatever its line box came to, and stretched to 48 wherever it shared a
+     flex row with an icon-only button: the same button was two sizes on one page. Two
+     heights, both stated, beats one stated and one accidental. */
+  --control-h-sm: 2.25rem; /* 36px */
 
   /* ─── Scale ────────────────────────────────────────────────────────────────
      Every value divisible by 2 or 4. Half-steps are where "it looks slightly off
