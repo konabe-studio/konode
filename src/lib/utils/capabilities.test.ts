@@ -122,6 +122,22 @@ describe("whether a data type can sync here", () => {
     expect(await dataTypeAvailability("history")).toEqual({ state: "needs-permission", permission: "history" });
   });
 
+  it("reports a revoked permission even when the API survives it (Sessions)", async () => {
+    // Firefox, from the device: revoking `tabs` in about:addons leaves browser.tabs.query
+    // callable, it just returns tabs with no url. An API-presence check therefore called
+    // Sessions ready while nothing it produced was usable, and the row said nothing while
+    // History and Extensions both reported the same revocation on the same screen. The
+    // data was never at risk, `isPayloadEmpty` refuses to publish a tab-less session; what
+    // was missing is that anyone was told.
+    permissions({ held: false });
+    expect(await dataTypeAvailability("sessions")).toEqual({ state: "needs-permission", permission: "tabs" });
+  });
+
+  it("is ready for Sessions once that permission is held", async () => {
+    permissions({ held: true });
+    expect(await dataTypeAvailability("sessions")).toEqual({ state: "ready" });
+  });
+
   it("answers for all four types at once", async () => {
     replace("bookmarks", undefined);
     replace("management", undefined);

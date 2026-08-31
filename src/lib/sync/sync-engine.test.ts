@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { SyncEngine, statusAfterSync, conflictsThatCanExist, conflictsStillOpen } from "@/lib/sync/sync-engine";
+import { SyncEngine, statusAfterSync, conflictsThatCanExist, conflictsStillOpen, explainSyncFailure, backendOrigins } from "@/lib/sync/sync-engine";
+import { HttpError } from "@/lib/utils/retry";
 import { BADGE_TEXT, BADGE_COLORS } from "@/lib/constants";
 import { createKeyVerifier } from "@/lib/crypto/encryption";
 import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState, setTombstones, acquireSyncLock, KEYS, getRemoteSessions, normalizeRemoteExtensions, getBulkDeleteApproval, setBulkDeleteApproval, getListFailureNoted } from "@/lib/utils/storage";
@@ -1746,6 +1747,58 @@ describe("SyncEngine.syncType: `manual` is about bookmarks and history, not the 
     await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
 
     expect((await getState()).pending_conflicts.map((c) => c.device_id)).toEqual(["peer1"]);
+  });
+});
+
+describe("explainSyncFailure: a request that never left the browser", () => {
+  // Reported from Firefox, where every host toggle sits in about:addons under the data
+  // type ones. With the WebDAV host revoked, the popup said "NetworkError when attempting
+  // to fetch resource" and nothing else, while the History and Extensions rows on the same
+  // screen both said their permission was gone.
+  const webdav = {
+    type: "webdav" as const, label: "Koofr", enabled: true,
+    webdav: { url: "https://app.koofr.net/dav/Koofr", username: "u", password: "p" },
+  };
+
+  function permissionsHeld(held: boolean) {
+    (chrome as unknown as Record<string, unknown>).permissions = {
+      contains: () => Promise.resolve(held),
+      request: () => Promise.resolve(held),
+    };
+  }
+
+  it("names the host and the reason when the origin is not held", async () => {
+    permissionsHeld(false);
+    const msg = await explainSyncFailure(new TypeError("NetworkError when attempting to fetch resource"), webdav);
+
+    expect(msg).toContain("app.koofr.net");
+    expect(msg).toContain("permission");
+    // The original is kept: it is what gets pasted into a bug report.
+    expect(msg).toContain("NetworkError");
+  });
+
+  it("leaves the message alone when the permission IS held", async () => {
+    // Then the network really is the problem, and blaming a permission would send the user
+    // to the wrong screen.
+    permissionsHeld(true);
+    const msg = await explainSyncFailure(new TypeError("NetworkError when attempting to fetch resource"), webdav);
+
+    expect(msg).toBe("NetworkError when attempting to fetch resource");
+  });
+
+  it("leaves an HTTP failure alone, permission or not", async () => {
+    // A status code means the request DID leave, so the host permission is not the story.
+    permissionsHeld(false);
+    const msg = await explainSyncFailure(new HttpError(401, "WebDAV PUT failed: 401"), webdav);
+
+    expect(msg).toBe("WebDAV PUT failed: 401");
+  });
+
+  it("knows which origins each backend needs", () => {
+    expect(backendOrigins(webdav)).toEqual(["https://app.koofr.net/*"]);
+    expect(backendOrigins({ type: "gdrive", label: "Google Drive", enabled: true })).toContain("https://www.googleapis.com/*");
+    expect(backendOrigins({ type: "github", label: "GitHub", enabled: true })).toEqual(["https://api.github.com/*"]);
+    expect(backendOrigins(undefined)).toEqual([]);
   });
 });
 

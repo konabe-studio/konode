@@ -8,7 +8,8 @@ import { exportBookmarkPayload, importBookmarks, type BulkDeleteBlock } from "@/
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
 import { exportHistory, importHistory, buildLocalHistoryIndex } from "@/lib/handlers/history-handler";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
-import { dataTypeAvailability, unsupportedReason } from "@/lib/utils/capabilities";
+import { dataTypeAvailability, unsupportedReason, hasPermission } from "@/lib/utils/capabilities";
+import { HttpError } from "@/lib/utils/retry";
 import {
   getState,
   setState,
@@ -137,6 +138,58 @@ export type SyncOutcome = "ran" | "no-backend" | "already-running" | "nothing-en
  *
  * Errors outrank conflicts: an error may mean nothing synced at all.
  */
+/**
+ * The origins a backend has to be able to reach.
+ *
+ * Mirrors `host_permissions` / `optional_host_permissions` in the manifest, per backend,
+ * because a device only needs the ones its OWN backend uses: requiring GitHub's host of a
+ * Drive user would be wrong in the other direction. WebDAV's is the user's own server, so
+ * it comes from the config rather than from the manifest.
+ */
+export function backendOrigins(cfg: BackendConfig | undefined): string[] {
+  if (!cfg) return [];
+  switch (cfg.type) {
+    case "webdav": {
+      if (!cfg.webdav?.url) return [];
+      try { return [new URL(cfg.webdav.url).origin + "/*"]; } catch { return []; }
+    }
+    case "gdrive":
+      return ["https://www.googleapis.com/*", "https://oauth2.googleapis.com/*"];
+    case "github":
+      return ["https://api.github.com/*"];
+    default:
+      return [];
+  }
+}
+
+/**
+ * Say why a sync failed, when a bare failure does not.
+ *
+ * "NetworkError when attempting to fetch resource" is what a withdrawn HOST permission
+ * looks like from inside a fetch: the request never leaves the browser, so there is no
+ * status code and nothing that names the server. On Firefox those toggles sit in
+ * about:addons directly under the data type ones, a couple of clicks from anyone reading
+ * about what an add-on can see, and the data types say when theirs is gone while the
+ * storage said only this. Reported from a device that had just turned them all off.
+ *
+ * Asked only AFTER a failure, never before it. A permission model read wrongly can then
+ * only make an error message worse; it can never stop a sync that would have worked.
+ */
+export async function explainSyncFailure(err: unknown, cfg: BackendConfig | undefined): Promise<string> {
+  const msg = err instanceof Error ? err.message : "Unknown error";
+  // Only for the failure shape a blocked request actually has. An HttpError carries a
+  // status, which means the request did leave and the permission is not the story.
+  if (err instanceof HttpError || !/network|failed to fetch|load failed/i.test(msg)) return msg;
+
+  const origins = backendOrigins(cfg);
+  if (!origins.length || (await hasPermission({ origins }))) return msg;
+
+  const where = cfg?.type === "webdav" && cfg.webdav?.url
+    ? (() => { try { return new URL(cfg.webdav!.url).host; } catch { return "your storage"; } })()
+    : "your storage provider";
+  return `Konode no longer has permission to reach ${where}, so the request never left the browser. Grant it again from Settings (open Storage and press Save), or in your browser's own extension settings. The original failure was: ${msg}`;
+}
+
 export function statusAfterSync(problems: number, pendingConflicts: number): SyncState["status"] {
   if (problems > 0) return "error";
   if (pendingConflicts > 0) return "conflict";
@@ -415,7 +468,7 @@ export class SyncEngine {
       logger.info("SyncEngine", problems.length ? `Sync complete with ${problems.length} problem(s)` : "Sync complete");
 
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
+      const msg = await explainSyncFailure(err, backendConfig);
       const newState = await setState({ status: "error", last_error: msg });
       this.onStateChange(newState);
       logger.error("SyncEngine.sync", err);

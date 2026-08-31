@@ -104,17 +104,28 @@ export type Availability =
   | { state: "unsupported" };
 
 export async function dataTypeAvailability(type: DataType): Promise<Availability> {
+  const permission = PERMISSION_FOR_TYPE[type];
+
+  // Ask about the PERMISSION first, whether or not the API is still standing.
+  //
+  // For history and management the two answers agree, because revoking the permission
+  // takes the API object with it. `tabs` does not work that way: `browser.tabs.query`
+  // stays callable without the `tabs` permission and simply returns tabs with no url, so
+  // an API-presence check calls Sessions ready while nothing it produces is usable. Seen
+  // on Firefox, where these toggles sit in about:addons and are easy to turn off: History
+  // and Extensions said the permission was gone, Sessions said nothing at all.
+  //
+  // The data was never at risk (`isPayloadEmpty` refuses to publish a tab-less session
+  // over a good one, and says why). What was missing is that anyone was told.
+  if (permission && !(await hasPermission({ permissions: [permission] }))) {
+    return { state: "needs-permission", permission };
+  }
+
   if (dataTypeApiPresent(type)) return { state: "ready" };
 
-  const permission = PERMISSION_FOR_TYPE[type];
-  // No optional permission gates it (bookmarks), so the permission is already held and
-  // the API is still not there. Nothing left to ask for.
-  if (!permission) return { state: "unsupported" };
-
-  // Permission held, API still absent → the browser doesn't implement it.
-  if (await hasPermission({ permissions: [permission] })) return { state: "unsupported" };
-
-  return { state: "needs-permission", permission };
+  // No API, and either no permission gates it (bookmarks) or the permission IS held:
+  // either way this browser doesn't implement it and there is nothing to ask for.
+  return { state: "unsupported" };
 }
 
 /** Availability for every data type at once, for a UI that renders all four. */
