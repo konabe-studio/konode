@@ -54,6 +54,13 @@ several things that filled the Activity log with the same line a minute do not a
   delete button on a restore point, which does take it: sharing a row stretched the pair to
   a height nothing else in Settings had. Both now state their height, so the row matches
   every other button on the page.
+- **Updates could sit downloaded for weeks without being installed.** Your browser holds an
+  update back while an extension is running and installs it the next time it finds a quiet
+  moment, which for anyone who rarely restarts their browser can be a long wait. Konode now
+  takes the update as soon as it is offered, or the moment a sync in progress has finished,
+  so a fix reaches you in about a minute rather than whenever you next close your browser.
+  This one only helps from this version onwards, since it has to be the installed version
+  that does the asking.
 - **Giving a permission back left Settings still complaining about it.** Konode reads what
   it is allowed to do when the page opens, and never looked again. So after granting a
   permission from the browser's own extensions page, the rows went on saying it was missing:
