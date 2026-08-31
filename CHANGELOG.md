@@ -54,6 +54,21 @@ several things that filled the Activity log with the same line a minute do not a
   delete button on a restore point, which does take it: sharing a row stretched the pair to
   a height nothing else in Settings had. Both now state their height, so the row matches
   every other button on the page.
+- **Taking a permission back said so for some data types and not others.** Every optional
+  permission can be withdrawn from the browser's own extensions page, and Konode tells you
+  when one it needs has gone. History and the extension list did. Open tabs did not, and
+  the difference was invisible from the outside: those two lose their whole API when the
+  permission goes, while the tabs API stays and simply stops telling Konode any addresses.
+  So the row looked healthy while nothing it produced was usable. Your other devices were
+  never at risk, since a session with no tabs in it is never published over a good one, but
+  nothing said why the tabs had stopped travelling. Now it says the same thing the other
+  two say.
+- **A withdrawn storage permission read as a network error.** The permission to reach your
+  storage can be taken back the same way, and it is the one on that screen that stops
+  everything at once. Konode reported it as "NetworkError when attempting to fetch
+  resource", which names neither your server nor the reason, and reads like the storage is
+  down. It now says the permission is missing, names the server, and says where to grant it
+  again, while still carrying the original message for anyone reporting a bug.
 - **"Sync now" reported a sync it never ran.** Every data type can be switched off,
   including the last one. With nothing left to sync, Konode still went out to your storage,
   came back with nothing to report, and said "Synced", once a minute and again on every
