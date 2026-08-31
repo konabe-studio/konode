@@ -5,7 +5,7 @@ import { t, tParts, plural } from "@/lib/utils/i18n";
 import { interactiveSignIn, isDriveAuthAvailable, clearGDriveSession } from "@/lib/backends/gdrive-oauth";
 import {
   allDataTypeAvailability, dataTypeAvailability, dataTypeApiPresent, ensurePermission,
-  hasPermission, unsupportedReason,
+  hasPermission, unsupportedReason, eventPresent,
   PERMISSION_FOR_TYPE, type Availability, type PermissionOutcome,
 } from "@/lib/utils/capabilities";
 
@@ -280,7 +280,44 @@ export default function OptionsApp() {
   const [availability, setAvailability] = useState<Partial<Record<DataType, Availability>>>({});
   const [typeError, setTypeError] = useState<{ type: DataType; message: string } | null>(null);
 
-  useEffect(() => { void allDataTypeAvailability().then(setAvailability); }, []);
+  /**
+   * Read on mount, and again whenever a permission changes.
+   *
+   * Read once, this went stale the moment anything granted or revoked a permission from
+   * OUTSIDE the page, which on Firefox is a couple of clicks away: about:addons lists every
+   * optional toggle. Reported from a device that granted them all back, watched the sync
+   * recover, and still had three rows insisting the permission was gone. Switching tabs did
+   * not help, because the tabs are this same component; only F5 did.
+   *
+   * `permissions.onAdded` / `onRemoved` fire for a change made anywhere, including the
+   * browser's own screen and Konode's own request. Gated on the events existing, so a
+   * browser without them behaves exactly as it did before rather than throwing at mount.
+   */
+  useEffect(() => {
+    const refresh = () => {
+      void allDataTypeAvailability().then((next) => {
+        setAvailability(next);
+        // The red row a refused toggle left behind is the same staleness one level down:
+        // it outlives the refusal it was about. Cleared only for a type that is now ready,
+        // so an "this browser doesn't implement it" message is left where it belongs.
+        setTypeError((prev) => (prev && next[prev.type]?.state === "ready" ? null : prev));
+      });
+    };
+    refresh();
+    if (!eventPresent("permissions", "onAdded")) return;
+    // `@types/chrome` declares these events without `removeListener`, which they do have.
+    // Same shape of gap as the one apiPresent exists for: the type is a promise about the
+    // API surface, not a description of it.
+    type PermissionEvent = { addListener(cb: () => void): void; removeListener(cb: () => void): void };
+    const added = browser.permissions.onAdded as unknown as PermissionEvent;
+    const removed = browser.permissions.onRemoved as unknown as PermissionEvent;
+    added.addListener(refresh);
+    removed.addListener(refresh);
+    return () => {
+      added.removeListener(refresh);
+      removed.removeListener(refresh);
+    };
+  }, []);
 
   // Google Drive
   const [loadError, setLoadError]             = useState<string | null>(null);
