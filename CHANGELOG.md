@@ -54,6 +54,13 @@ several things that filled the Activity log with the same line a minute do not a
   delete button on a restore point, which does take it: sharing a row stretched the pair to
   a height nothing else in Settings had. Both now state their height, so the row matches
   every other button on the page.
+- **Giving a permission back left Settings still complaining about it.** Konode reads what
+  it is allowed to do when the page opens, and never looked again. So after granting a
+  permission from the browser's own extensions page, the rows went on saying it was missing:
+  syncing had recovered, the storage was connected, and three rows still told you it had
+  not. Switching between the tabs in Settings did not help, because they are one page.
+  Reloading was the only way. It now notices a permission being granted or taken away while
+  it is open, wherever that happens, and the rows follow.
 - **Taking a permission back said so for some data types and not others.** Every optional
   permission can be withdrawn from the browser's own extensions page, and Konode tells you
   when one it needs has gone. History and the extension list did. Open tabs did not, and
