@@ -13,6 +13,7 @@ import type {
   Tombstone,
 } from "@/lib/types";
 import { browser } from "@/lib/utils/ext";
+import { BACKEND_LABEL } from "@/lib/constants";
 import { inferStore, storeUrlFor } from "@/lib/utils/extensions-match";
 import { canonicalUrlKey } from "@/lib/utils/url";
 
@@ -180,17 +181,46 @@ export function updateKey<T>(key: string, mutate: (current: T) => T, fallback: T
  * Minted through the serialized `updateKey`, so two contexts reading at the same moment
  * cannot mint two different ids.
  */
+/**
+ * An active backend with no config row cannot be reached by anything.
+ *
+ * `active_backend` names the backend; `backends` holds the row that says how to talk to
+ * it. The engine looks the row up by that name, and with no row it answers "no backend
+ * configured" on every cycle, forever, while the Storage tab shows the provider as ACTIVE
+ * and signed in. Reported from a device that switched from Koofr to Google Drive: the
+ * OAuth consent succeeded, the refresh token was stored, and every sync after it logged
+ * "Active backend config not found".
+ *
+ * The Storage tab was creating that row only for WebDAV providers, because those have
+ * fields to fill in and the row came along with the first one. Drive has no fields at all
+ * beyond an optional folder id, so nothing ever created it. That is fixed where it
+ * happened, and repaired here as well, for two reasons: a profile already in this state
+ * cannot fix itself, and the row carries no user data, so filling in a missing one is
+ * the same thing the setup wizard does rather than a guess.
+ *
+ * Pure, and applied on read rather than written back, so it costs one array lookup and
+ * persists on the next save like any other change.
+ */
+export function ensureActiveBackendConfig(settings: SyncSettings): SyncSettings {
+  const type = settings.active_backend;
+  if (!type || settings.backends.some((b) => b.type === type)) return settings;
+  return {
+    ...settings,
+    backends: [...settings.backends, { type, label: BACKEND_LABEL[type], enabled: true }],
+  };
+}
+
 export async function getSettings(): Promise<SyncSettings> {
   // Fallback `{}`, NOT DEFAULT_SETTINGS: "nothing stored" has to be distinguishable so we
   // know to mint an identity, and the defaults get merged over it either way.
   const stored = await get<Partial<SyncSettings>>(KEYS.SETTINGS, {});
-  if (stored.device_id) return { ...DEFAULT_SETTINGS, ...stored };
+  if (stored.device_id) return ensureActiveBackendConfig({ ...DEFAULT_SETTINGS, ...stored });
   const settled = await updateKey<Partial<SyncSettings>>(
     KEYS.SETTINGS,
     (cur) => (cur.device_id ? cur : { ...cur, device_id: crypto.randomUUID() }),
     {}
   );
-  return { ...DEFAULT_SETTINGS, ...settled };
+  return ensureActiveBackendConfig({ ...DEFAULT_SETTINGS, ...settled });
 }
 
 export async function saveSettings(partial: Partial<SyncSettings>): Promise<SyncSettings> {

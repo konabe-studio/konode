@@ -87,6 +87,7 @@ import { isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl, storeUrlFor, inferStore, STORE_NAME, type LocalExtLike } from "@/lib/utils/extensions-match";
+import { BACKEND_LABEL } from "@/lib/constants";
 import {
   PROVIDERS, providerById, providerFromConfig, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf,
   webdavUrlForCard,
@@ -250,11 +251,6 @@ const formatBytes = (n: number): string => {
 
 // Backend label stamped on a newly created BackendConfig. The user-facing card
 // copy and icons live in the shared storage-providers module.
-const BACKEND_LABEL: Record<BackendType, string> = {
-  gdrive: "Google Drive",
-  webdav: "WebDAV",
-  github: "GitHub", // GitHub only — see the provider card note in storage-providers.ts
-};
 
 // Label and description are `datatype_<type>` and `datatype_<type>_desc`, shared with the
 // setup wizard so the two screens cannot describe the same toggle differently again.
@@ -570,7 +566,16 @@ export default function OptionsApp() {
     }
 
     const p = providerById(id);
-    if (p.backend !== "webdav") { update({ active_backend: p.backend }); return; }
+    if (p.backend !== "webdav") {
+      // The config row, not just the name. Picking a WebDAV card creates it as a side
+      // effect of filling in the fields below; Drive has no fields to fill, so nothing
+      // created one and `active_backend: "gdrive"` pointed at a row that did not exist.
+      // The card then showed ACTIVE and signed in while every sync answered "no backend
+      // configured". `updateBackend` leaves an existing row alone.
+      updateBackend(p.backend, {});
+      update({ active_backend: p.backend });
+      return;
+    }
 
     // Restore this card's own values (empty on a first visit) — never the other
     // card's account, which is a different login.
@@ -919,6 +924,9 @@ export default function OptionsApp() {
       // background sync renews silently afterwards. See lib/backends/gdrive-oauth.
       const s = await interactiveSignIn();
       setGdriveUser({ email: s.email, displayName: s.displayName });
+      // Signing in is the clearest statement that this is the backend you want, so it
+      // makes sure the row exists too rather than trusting that picking the card did.
+      updateBackend("gdrive", {});
       update({ active_backend: "gdrive" });
     } catch (err) {
       setGdriveError(err instanceof Error ? err.message : t("opt_gdrive_connect_failed"));

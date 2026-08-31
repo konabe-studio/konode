@@ -2,7 +2,7 @@
 // Cross-cutting values that were previously hardcoded in more than one place.
 // Storage keys live in `storage.ts` (exported as KEYS); this file holds the rest.
 
-import type { SyncStatus } from "@/lib/types";
+import type { SyncStatus, BackendType } from "@/lib/types";
 
 /** Broadcast from the service worker to any open popup/options view on state change.
  *  Not part of the ExtensionMessage/Response unions (it's a one-way push), so it's
@@ -41,4 +41,17 @@ export const BADGE_COLORS: Record<SyncStatus, string> = {
   success: "#34d399",
   error: "#f87171",
   conflict: "#fb923c",
+};
+
+/**
+ * The name a backend gets when its config row is created.
+ *
+ * Shared because two places create that row and they must not disagree: the Storage tab
+ * when you pick a provider, and `ensureActiveBackendConfig` when it repairs a settings
+ * object that names an active backend it has no row for.
+ */
+export const BACKEND_LABEL: Record<BackendType, string> = {
+  gdrive: "Google Drive",
+  webdav: "WebDAV",
+  github: "GitHub", // GitHub only — see the provider card note in storage-providers.ts
 };

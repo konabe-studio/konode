@@ -4,7 +4,7 @@ import {
   acquireSyncLock, releaseSyncLock, clearStaleSyncLock,
   getImportedHistoryStamps, recordImportedHistory, releaseImportedHistory,
   updateKey, appendAudit, KEYS,
-  getSettings, saveSettings, DEFAULT_SETTINGS,
+  getSettings, saveSettings, DEFAULT_SETTINGS, ensureActiveBackendConfig,
   setRemoteSession, setRemoteExtensions, getRemoteSessions,
 } from "@/lib/utils/storage";
 import { browser } from "@/lib/utils/ext";
@@ -26,6 +26,42 @@ function entry(device: string, ts: string, tabCount = 1): RemoteSessionEntry {
     },
   };
 }
+
+describe("ensureActiveBackendConfig", () => {
+  // Reported from a device: Koofr → Google Drive in Settings, OAuth consent succeeded,
+  // refresh token stored, and every sync afterwards logged "Active backend config not
+  // found" while the card showed ACTIVE. The Storage tab created the row as a side effect
+  // of filling in WebDAV fields, and Drive has none to fill.
+  const base = { ...DEFAULT_SETTINGS, device_id: "me" };
+
+  it("gives an active backend the row that lets anything reach it", () => {
+    const fixed = ensureActiveBackendConfig({ ...base, active_backend: "gdrive", backends: [] });
+
+    expect(fixed.backends).toEqual([{ type: "gdrive", label: "Google Drive", enabled: true }]);
+  });
+
+  it("leaves a row that already exists exactly as it is", () => {
+    // The row carries credentials for WebDAV. Rebuilding one would wipe them.
+    const webdav = { type: "webdav" as const, label: "pCloud", enabled: true, webdav: { url: "https://x", username: "u", password: "p" } };
+    const settings = { ...base, active_backend: "webdav" as const, backends: [webdav] };
+
+    expect(ensureActiveBackendConfig(settings)).toBe(settings);
+  });
+
+  it("keeps the other backends' rows, so switching back still has their credentials", () => {
+    const webdav = { type: "webdav" as const, label: "Koofr", enabled: true, webdav: { url: "https://k", username: "u", password: "p" } };
+    const fixed = ensureActiveBackendConfig({ ...base, active_backend: "gdrive", backends: [webdav] });
+
+    expect(fixed.backends).toHaveLength(2);
+    expect(fixed.backends[0]).toBe(webdav);
+  });
+
+  it("does nothing when no backend is active yet", () => {
+    const settings = { ...base, active_backend: null, backends: [] };
+
+    expect(ensureActiveBackendConfig(settings)).toBe(settings);
+  });
+});
 
 describe("normalizeRemoteSessions", () => {
   it("returns [] for empty/undefined/non-object input", () => {
