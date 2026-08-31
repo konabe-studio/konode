@@ -3,7 +3,7 @@
 
 import type { ExtensionMessage, ExtensionResponse, SyncState } from "@/lib/types";
 import { getSettings, getState, setState, saveSettings, clearStaleSyncLock, setBulkDeleteApproval, KEYS } from "@/lib/utils/storage";
-import { SyncEngine } from "@/lib/sync/sync-engine";
+import { SyncEngine, explainSyncFailure } from "@/lib/sync/sync-engine";
 import { registerBookmarkListeners } from "@/lib/handlers/bookmarks-handler";
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { logger, setLoggerDebug } from "@/lib/utils/logger";
@@ -142,10 +142,31 @@ function onBookmarkChange(): void {
 // Return a Promise for the async response. The polyfill (and Firefox natively)
 // resolve the sender's sendMessage promise with the value this resolves to —
 // unlike raw Chrome's sendResponse + `return true`, which the polyfill ignores.
+/**
+ * The sentence a failed handler answers with.
+ *
+ * Every handler's failure arrives here, which makes it the one place that can name a
+ * request that never left the browser. Settings showed the bare "NetworkError when
+ * attempting to fetch resource" for the device list AND for the restore points, on the one
+ * screen someone opens when something is wrong, and told them to check the connection when
+ * the connection was fine and the host permission was gone. See explainSyncFailure.
+ *
+ * Reading the settings can itself fail, and losing the real error to a diagnostic that
+ * could not be produced would be worse than the raw message.
+ */
+async function describeFailure(err: unknown): Promise<string> {
+  try {
+    const s = await getSettings();
+    return await explainSyncFailure(err, s.backends.find((b) => b.type === s.active_backend));
+  } catch {
+    return err instanceof Error ? err.message : "Unknown error";
+  }
+}
+
 browser.runtime.onMessage.addListener(((message: ExtensionMessage): Promise<ExtensionResponse> =>
-  handleMessage(message).catch((err): ExtensionResponse => ({
+  handleMessage(message).catch(async (err): Promise<ExtensionResponse> => ({
     type: "ERROR",
-    payload: err instanceof Error ? err.message : "Unknown error",
+    payload: await describeFailure(err),
   }))) as Parameters<typeof browser.runtime.onMessage.addListener>[0]);
 
 async function handleMessage(message: ExtensionMessage): Promise<ExtensionResponse> {

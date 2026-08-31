@@ -187,7 +187,9 @@ export async function explainSyncFailure(err: unknown, cfg: BackendConfig | unde
   const where = cfg?.type === "webdav" && cfg.webdav?.url
     ? (() => { try { return new URL(cfg.webdav!.url).host; } catch { return "your storage"; } })()
     : "your storage provider";
-  return `Konode no longer has permission to reach ${where}, so the request never left the browser. Grant it again from Settings (open Storage and press Save), or in your browser's own extension settings. The original failure was: ${msg}`;
+  // Cause and cure FIRST, original last. The popup clamps this to two lines, and it was
+  // clamping away the half that says what to do about it.
+  return `Konode no longer has permission to reach ${where}. Open Settings → Storage and press Save to grant it again. The request never left the browser: ${msg}`;
 }
 
 export function statusAfterSync(problems: number, pendingConflicts: number): SyncState["status"] {
@@ -471,7 +473,10 @@ export class SyncEngine {
       const msg = await explainSyncFailure(err, backendConfig);
       const newState = await setState({ status: "error", last_error: msg });
       this.onStateChange(newState);
-      logger.error("SyncEngine.sync", err);
+      // The EXPLAINED message, not the raw error. The Activity log is where someone goes
+      // to find out what happened, and it was the one place still showing a bare
+      // "NetworkError when attempting to fetch resource" once per minute.
+      logger.error("SyncEngine.sync", msg);
     } finally {
       await this.finishSync(backend);
     }
