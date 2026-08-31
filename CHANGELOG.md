@@ -67,8 +67,10 @@ several things that filled the Activity log with the same line a minute do not a
   storage can be taken back the same way, and it is the one on that screen that stops
   everything at once. Konode reported it as "NetworkError when attempting to fetch
   resource", which names neither your server nor the reason, and reads like the storage is
-  down. It now says the permission is missing, names the server, and says where to grant it
-  again, while still carrying the original message for anyone reporting a bug.
+  down. Your device list and your restore points said the same thing, and then told you to
+  check a connection that was fine. All of them now say the permission is missing, name the
+  server, and say where to grant it again, while still carrying the original message for
+  anyone reporting a bug.
 - **"Sync now" reported a sync it never ran.** Every data type can be switched off,
   including the last one. With nothing left to sync, Konode still went out to your storage,
   came back with nothing to report, and said "Synced", once a minute and again on every
