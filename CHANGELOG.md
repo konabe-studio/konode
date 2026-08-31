@@ -67,6 +67,14 @@ several things that filled the Activity log with the same line a minute do not a
   by the browser's brand. Sitting a few rows under a list of devices called "Windows ·
   Firefox" and "Windows · Helium", that reads as a device rather than a store, and it named
   one you may well not own. It says Chrome Web Store and Firefox Add-ons now.
+- **Switching to Google Drive in Settings left Konode with nowhere to sync.** The Storage
+  tab records two things about your provider: which one is active, and the settings for
+  reaching it. Picking one of the WebDAV cards wrote both, because the second comes along
+  with the server address you type in. Google Drive has nothing to type, so only the first
+  was written. The card said ACTIVE and showed you signed in, the sign-in really had
+  worked, and every sync from then on did nothing and reported that no storage was set up.
+  Both are written now, and a device already left in that state repairs itself the next
+  time it starts, without going near the Storage tab again.
 - **A conflict button gave no sign it had been pressed.** Answering a conflict is seconds
   of real work: keeping yours reads your whole bookmark tree, unlocks your passphrase if
   encryption is on, and uploads it; taking theirs unlocks and merges what they sent. For
