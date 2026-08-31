@@ -348,6 +348,9 @@ function on(ns: string, event: string, register: () => void): void {
 }
 
 on("alarms", "onAlarm", () => browser.alarms.onAlarm.addListener(async (alarm) => {
+  // Before anything else: an update that has been waiting for a sync to end. This is the
+  // idle moment it was waiting for, and taking it here bounds the wait to one interval.
+  if (applyPendingUpdate()) return;
   await ensureInit();
   if (!syncEngine) return;
   if (alarm.name === SYNC_ALARM) {
@@ -363,6 +366,47 @@ on("alarms", "onAlarm", () => browser.alarms.onAlarm.addListener(async (alarm) =
       logger.info("Alarm", "Bookmark-change sync triggered");
       await syncEngine.sync(["bookmarks"]);
     }
+  }
+}));
+
+// ─── Updates ──────────────────────────────────────────────────────────────
+
+/**
+ * A downloaded update that is waiting for a sync to finish.
+ *
+ * Chrome holds an update back while the extension is running and fires
+ * `runtime.onUpdateAvailable` to say so; `runtime.reload()` is how an extension answers
+ * "go ahead now". Without that answer the update waits for whenever the browser is next
+ * restarted, which for someone who never closes it is a long time. That is the shape of
+ * the version spread in the Web Store stats: no permission changed between 1.1.0 and here,
+ * so nothing is being held for approval, people are simply still running what they had.
+ *
+ * A worker-local flag on purpose. If the worker is suspended before the sync ends, the
+ * flag goes with it, and the update lands the way it would have anyway. Nothing is lost
+ * by forgetting it.
+ */
+let updateWaiting = false;
+
+/**
+ * Apply a pending update if this is a safe moment, and say whether it was taken.
+ *
+ * Never mid-sync: `reload()` tears the worker down, and a sync killed between taking the
+ * persisted lock and releasing it strands that lock for its whole TTL, which turns every
+ * sync on this device away in the meantime. One interval of waiting is cheaper than that.
+ */
+function applyPendingUpdate(): boolean {
+  if (!updateWaiting || syncEngine?.isSyncing) return false;
+  logger.event("Update", "Applying the update that was downloaded earlier");
+  browser.runtime.reload();
+  return true;
+}
+
+on("runtime", "onUpdateAvailable", () => browser.runtime.onUpdateAvailable.addListener((details) => {
+  updateWaiting = true;
+  logger.event("Update", `Version ${details?.version ?? "unknown"} is ready to install`);
+  // Straight away when nothing is in flight; otherwise the next alarm takes it.
+  if (!applyPendingUpdate()) {
+    logger.info("Update", "A sync is running, so the update waits for it to finish");
   }
 }));
 
