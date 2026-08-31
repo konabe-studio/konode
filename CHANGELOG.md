@@ -5,7 +5,7 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
-## [1.3.1] - 2026-08-28
+## [1.3.1] - 2026-08-31
 
 A release with nothing in it but fixes. If you use Firefox, the one to know about is that
 Konode can be set up there again: since 1.2.1 it never asked Firefox for the permissions
