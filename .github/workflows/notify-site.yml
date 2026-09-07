@@ -1,10 +1,12 @@
 # Tells konode-site that the documents it renders have moved.
 #
 # roadmap.html on the site is a rendering of ROADMAP.md and CHANGELOG.md in this
-# repository, and it has drifted from them before: the site told Firefox users to
-# build from source for months after the add-on went live on AMO. The site already
-# checks daily on its own; this only makes it check now, while whoever changed the
-# document is still holding the context.
+# repository, and privacy.html is a rendering of PRIVACY.md. Both have drifted from
+# their source before: the site told Firefox users to build from source for months
+# after the add-on went live on AMO, and the two privacy renderings sat a month apart
+# on their own "Last updated" dates. The site already checks daily on its own; this
+# only makes it check now, while whoever changed the document is still holding the
+# context.
 #
 # The site repo decides what to do about it. All this does is knock.
 #
@@ -23,6 +25,7 @@ on:
     paths:
       - ROADMAP.md
       - CHANGELOG.md
+      - PRIVACY.md
   release:
     types: [published]
   # So the wiring can be tested without editing a document.
