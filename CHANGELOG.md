@@ -5,6 +5,22 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+### Changed
+
+- **The privacy policy no longer claims we run no servers at all.** It said "we do not run
+  any servers, we do not have a database", which konode.org disproves by existing: it is a
+  server, and it is ours. The site's own copy of the policy had already been narrowed to
+  "no sync servers, no database of your synced data" while this one had not, so the two
+  renderings of one policy sat a month apart saying different things. The claim that
+  actually matters — that no server of ours is ever in the path of your data — is the
+  narrower one, and it is the one the policy makes now. A new section covers the website
+  itself: static files, no cookies, no analytics, and no third-party request of any kind,
+  with the fonts served from the domain rather than from Google Fonts and a
+  `connect-src 'none'` policy that makes your browser refuse an outbound request from those
+  pages whether we ask for one or not. It also says the part no website can avoid: a host
+  has to process your IP address and user-agent to answer the request at all. Nothing about
+  the extension changed.
+
 ## [1.3.1] - 2026-08-28
 
 A release with nothing in it but fixes. If you use Firefox, the one to know about is that
