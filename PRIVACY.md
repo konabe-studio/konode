@@ -1,12 +1,12 @@
 # Konode Privacy Policy
 
-_Last updated: August 7, 2026_
+_Last updated: September 7, 2026_
 
 ## The short version
 
 Konode is a browser extension that syncs your own browser data to storage **you
-control**. We do not run any servers, we do not have a database, and we never
-receive your data. Everything you sync goes directly from your browser to the
+control**. We run no sync servers, we hold no database of your synced data, and we
+never receive it. Everything you sync goes directly from your browser to the
 storage backend **you** choose and sign in to (Google Drive, GitHub, or a WebDAV
 server). We don't track you, show ads, or use analytics.
 
@@ -139,6 +139,24 @@ do not use it for advertising or any purpose other than providing the sync featu
 - We do **not** use tracking, advertising, or fingerprinting.
 - We do **not** sell, rent, or share your data with anyone.
 
+## The Konode website
+
+Separately from the extension, a note on **konode.org**: it is made of static files with
+**no cookies, no analytics, and no third-party requests of any kind**. Even the fonts are
+served from that domain rather than from Google Fonts. It loads one small script, also
+from that domain, which swaps the install button to whichever browser you are using and
+does nothing else: no network request, no cookie, nothing stored. The site sends
+`connect-src 'none'` in its Content-Security-Policy, so your browser refuses any outbound
+request from those pages whether we ask for one or not. Nothing you do there is tracked,
+and no profile of you is built.
+
+Like any website, it has to be served by a host, and a host necessarily processes the
+standard technical information involved in delivering a page (such as your IP address and
+browser user-agent) in order to respond to the request at all. We do not use that
+information, combine it with anything else, or connect it to your use of the extension.
+It is not linkable to your synced data, because your synced data never comes near the
+website.
+
 ## Data retention and deletion
 
 Because Konode stores nothing on its own infrastructure, **you control retention**:
@@ -184,6 +202,8 @@ issue** on the Konode repository:
 For privacy-specific questions you can also email **konabe@proton.me**.
 
 _This policy is published at
-**https://github.com/konabe-studio/konode/blob/main/PRIVACY.md** and applies to every
-build of Konode: the Chrome Web Store listing, the Firefox Add-ons listing, and builds
-you make yourself from source. It is also linked from the Google OAuth consent screen._
+**https://github.com/konabe-studio/konode/blob/main/PRIVACY.md**, rendered for reading at
+**https://konode.org/privacy.html**, and applies to every build of Konode: the Chrome Web
+Store listing, the Firefox Add-ons listing, and builds you make yourself from source. It is
+also linked from the Google OAuth consent screen. The two renderings are one policy; where
+they disagree, the narrower of the two is the one we mean._
