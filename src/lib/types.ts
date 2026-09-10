@@ -50,6 +50,21 @@ export interface SyncBookmark {
 export interface Tombstone {
   url: string;
   deletedAt: number; // epoch ms
+  // Did THIS device record the deletion? Local-only bookkeeping: it is stripped by
+  // exportBookmarkPayload and never reaches the wire.
+  //
+  // A merge folds every peer's log into ours, which is load-bearing (it is what keeps a
+  // deletion applied when a stale peer still advertises the bookmark). Publishing the
+  // result was not: every device reads every peer's file, so nothing needs relaying, and
+  // relaying turned one refused deletion into a request every device kept making of every
+  // other one, forever, for bookmarks all of them still had.
+  //
+  // `undefined` means own. Records written before 1.3.2 carry no flag, and a device
+  // cannot tell in hindsight which of them it recorded itself — reading them as foreign
+  // would silently drop deletions that have not reached every peer yet. The poisoned ones
+  // among them are caught on the way out instead, by the rule that we never publish a
+  // tombstone for a URL we still hold.
+  own?: boolean;
 }
 
 // A move marker: a URL was last (re)placed into its folder at `at`. Lets bookmark

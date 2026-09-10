@@ -374,9 +374,12 @@ describe("empty folders are not synced", () => {
   it("merge does not resurrect a folder whose only bookmark was deleted", async () => {
     await seed("X", "https://x.com", "1"); // local X lives in the bar
     const future = Date.now() + 60_000;
-    // Peer still has a "Gone" folder containing X, but X is tombstoned.
+    // The peer deleted X, so its tree no longer lists it — what it still carries is the
+    // emptied "Gone" shell (a peer from before empty folders were pruned on the way out).
+    // A peer that BOTH tombstones X and still advertises it is the shape Step A now
+    // refuses to act on, so a payload built that way would test the guard, not the folder.
     await importBookmarks(
-      payload([folder("Gone", [link("X", "https://x.com")])], [{ url: "https://x.com", deletedAt: future }]),
+      payload([folder("Gone", [])], [{ url: "https://x.com", deletedAt: future }]),
       "merge",
       "lww"
     );

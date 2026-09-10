@@ -27,6 +27,7 @@ import {
   getRecoverySnapshotTaken,
   setRecoverySnapshotTaken,
   getBulkDeleteApproval,
+  getTombstones,
   setBulkDeleteApproval,
   getListFailureNoted,
   setListFailureNoted,
@@ -969,7 +970,7 @@ export class SyncEngine {
 
       // 2. Build local payload
       const localPayload = await this.buildPayload(dataType);
-      const isEmpty = this.isPayloadEmpty(dataType, localPayload);
+      const isEmpty = await this.isPayloadEmpty(dataType, localPayload);
 
       // Verbose troubleshooting line (only emitted when Debug mode is on).
       logger.debug("SyncEngine", `${dataType}: ${peers.length} peer(s), local ${isEmpty ? "empty" : "non-empty"}, strategy ${this.settings.conflict_strategy}`);
@@ -1093,7 +1094,7 @@ export class SyncEngine {
           }
         }
         const merged = await this.buildPayload(dataType);
-        if (!this.isPayloadEmpty(dataType, merged)) {
+        if (!(await this.isPayloadEmpty(dataType, merged))) {
           await this.uploadIfChanged(backend, dataType, merged);
         }
       }
@@ -1125,8 +1126,14 @@ export class SyncEngine {
    * the deletion propagated to nobody, and our own stale remote file kept advertising
    * the entire old tree to every peer. Once the local tombstones aged out (90 days),
    * the whole tree came back.
+   *
+   * Which is why the deletion question is asked of the LOG WE HOLD and not of the payload:
+   * since 1.3.2 a device publishes only the deletions it made itself, so a device whose
+   * last bookmark was removed by a PEER's deletion has an empty tree and an empty
+   * tombstone list to send, and skipping that upload leaves our old file advertising the
+   * very tree that was just deleted. The empty payload is the retraction.
    */
-  private isPayloadEmpty(dataType: DataType, payload: unknown): boolean {
+  private async isPayloadEmpty(dataType: DataType, payload: unknown): Promise<boolean> {
     if (!payload) return true;
     switch (dataType) {
       case "bookmarks": {
@@ -1135,9 +1142,9 @@ export class SyncEngine {
         const tree = bare ? payload : ((payload as { tree?: unknown[] }).tree ?? []);
         const flat = this.flattenBookmarks(tree as Array<{ children?: unknown[]; url?: string }>);
         if (flat.some((n) => n.url)) return false;
-        // No bookmarks left — but a deletion still has to reach the peers.
-        const tombstones = bare ? [] : ((payload as { tombstones?: unknown[] }).tombstones ?? []);
-        return tombstones.length === 0;
+        // No bookmarks left — but a deletion still has to reach the peers, and a device
+        // that knows of one has something to say even when it publishes none of it.
+        return (await getTombstones()).length === 0;
       }
       case "history":
         return !Array.isArray(payload) || payload.length === 0;

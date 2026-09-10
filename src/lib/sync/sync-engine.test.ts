@@ -561,10 +561,34 @@ describe("SyncEngine.syncType — a stale peer must not resurrect a deleted book
     // fresh stamp then beat the older tombstone — so it survived AND got republished.
     expect(await localUrls()).toEqual([]);
 
-    // And we must not advertise X to the rest of the mesh either.
+    // And we must not advertise X to the rest of the mesh either. We publish no tombstone
+    // for it: the deletion is the fresh peer's and it publishes it itself, to a folder
+    // every device reads in full. Repeating someone else's deletion in our own file is
+    // what let one refused deletion become a demand from every device at once (#31).
     const sent = JSON.parse(backend.uploads[backend.uploads.length - 1].payload) as BookmarkPayload;
     expect(flatUrls(sent.tree)).toEqual([]);
-    expect(sent.tombstones.map((t) => t.url)).toEqual(["https://x.com"]);
+    expect(sent.tombstones).toEqual([]);
+  });
+
+  it("still publishes an emptied tree, so our own file stops advertising it", async () => {
+    // Since a device publishes only the deletions it made itself, the one whose last
+    // bookmark was removed by a PEER's deletion has nothing left to say: empty tree,
+    // nothing to ask of anyone. Skipping that upload would leave our previous file
+    // advertising X to every device that reads it, and they would hand it back. The
+    // empty payload IS the statement, so the emptiness test asks the log we HOLD.
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "X", url: "https://x.com" });
+    backend.files.set("bookmarks_peer",
+      await peerPacket(engine, "peer", payload([], [{ url: "https://x.com", deletedAt: Date.now() }])));
+
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    expect(await localUrls()).toEqual([]); // the peer's deletion applied (under the cap)
+    expect(backend.uploads.length).toBeGreaterThan(0);
+    const sent = JSON.parse(backend.uploads[backend.uploads.length - 1].payload) as BookmarkPayload;
+    expect(flatUrls(sent.tree)).toEqual([]);
+    expect(sent.tombstones).toEqual([]); // theirs to publish, not ours
   });
 
   it("still adds a bookmark from an older peer when nobody deleted it", async () => {

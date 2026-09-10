@@ -57,14 +57,32 @@ export function toDeletedMap(list: Tombstone[]): Map<string, number> {
   return m;
 }
 
+/** Did this device record the deletion? See `Tombstone.own` — an unflagged record is
+ *  a pre-1.3.2 one and counts as ours. */
+export function isOwnTombstone(t: Tombstone): boolean {
+  return t.own !== false;
+}
+
+/** Re-stamp a peer's log as NOT ours, so folding it in can never make this device a
+ *  source of a deletion it did not make. */
+export function asForeignTombstones(list: Tombstone[]): Tombstone[] {
+  return list.map((t) => ({ url: t.url, deletedAt: t.deletedAt, own: false }));
+}
+
 export function gcTombstones(list: Tombstone[]): Tombstone[] {
   const cutoff = Date.now() - TOMBSTONE_TTL_MS;
-  const byUrl = new Map<string, number>();
+  const byUrl = new Map<string, { deletedAt: number; own: boolean }>();
   for (const t of list) {
     if (t.deletedAt < cutoff) continue;
-    byUrl.set(t.url, Math.max(byUrl.get(t.url) ?? 0, t.deletedAt));
+    const held = byUrl.get(t.url);
+    // Newest time wins, and ownership is sticky: our own deletion of a URL a peer also
+    // deleted stays ours, whichever copy carries the later timestamp.
+    byUrl.set(t.url, {
+      deletedAt: Math.max(held?.deletedAt ?? 0, t.deletedAt),
+      own: (held?.own ?? false) || isOwnTombstone(t),
+    });
   }
-  return [...byUrl].map(([url, deletedAt]) => ({ url, deletedAt }));
+  return [...byUrl].map(([url, { deletedAt, own }]) => ({ url, deletedAt, own }));
 }
 
 export function mergeTombstoneLists(a: Tombstone[], b: Tombstone[]): Tombstone[] {
@@ -202,7 +220,7 @@ async function recordRemovedTombstones(node: BookmarkNode): Promise<void> {
   // and overwrite each other — only one deletion was recorded and the rest came back
   // from a peer on the next merge.
   await updateTombstones((current) =>
-    mergeTombstoneLists(current, gone.map((url) => ({ url, deletedAt: now })))
+    mergeTombstoneLists(current, gone.map((url) => ({ url, deletedAt: now, own: true })))
   );
   logger.event("Tombstones", `Recorded ${gone.length} deletion(s)`);
 }
@@ -225,7 +243,7 @@ async function recordUrlChange(id: string, newUrl: string | undefined): Promise<
   // still holds it (editing one of several identical-URL copies).
   if ((await localUrlSet()).has(oldUrl)) return;
   const now = Date.now();
-  await updateTombstones((current) => mergeTombstoneLists(current, [{ url: oldUrl, deletedAt: now }]));
+  await updateTombstones((current) => mergeTombstoneLists(current, [{ url: oldUrl, deletedAt: now, own: true }]));
   logger.event("Tombstones", "Recorded a URL-change deletion");
 }
 
@@ -361,9 +379,38 @@ export async function exportBookmarkPayload(): Promise<BookmarkPayload> {
   // Don't sync empty folders — a folder carries no tombstone, so leaving empty
   // folders in the payload is what made a deleted folder resurrect from a peer.
   return {
-    tree: pruneEmptyFolders(tree), tombstones: gced, moves: gcedMoves,
+    tree: pruneEmptyFolders(tree), tombstones: publishableTombstones(gced, tree), moves: gcedMoves,
     folderMoves: gcedFolderMoves, titles: gcedTitles, folderRenames: gcedRenames,
   };
+}
+
+/**
+ * Which deletions this device is entitled to ask of the others.
+ *
+ * Two rules, and the second one is what a device already carrying a poisoned log needs.
+ *
+ * 1. Only deletions WE made. A merge folds every peer's log into ours so a stale peer
+ *    can't resurrect what someone deleted; that belongs in local storage, not in our
+ *    file. Every device reads every peer's file directly, so a relay was never needed
+ *    for a deletion to arrive — all it added was a second device saying the same thing.
+ *
+ * 2. Never a URL we still hold. A packet that advertises a bookmark and asks for its
+ *    deletion in the same breath is self-contradictory, and the receiver believed the
+ *    deletion. This is the rule that catches the pre-1.3.2 records, which carry no
+ *    provenance and are otherwise indistinguishable from our own (#31).
+ *
+ * The stored log keeps everything either way: it is what suppresses a re-add from a peer
+ * that hasn't caught up yet, and that is a question about OUR tree, not about theirs.
+ */
+function publishableTombstones(tombstones: Tombstone[], tree: SyncBookmark[]): Tombstone[] {
+  const held = new Set(
+    flattenNodes(tree).filter((n) => n.url).map((n) => canonicalUrlKey(n.url as string))
+  );
+  return tombstones
+    .filter((t) => isOwnTombstone(t) && !held.has(canonicalUrlKey(t.url)))
+    // `own` is local bookkeeping. Sending it would let a peer read our provenance as
+    // theirs when they fold the list in, which is precisely the confusion it exists to end.
+    .map((t) => ({ url: t.url, deletedAt: t.deletedAt }));
 }
 
 /** Normalize a parsed bookmark payload (supports the legacy bare-array format). */
@@ -431,7 +478,12 @@ export async function importBookmarks(
       titles: { local: await getTitles(), remote: remoteTitles },
       folderRenames: { local: await getFolderRenames(), remote: remoteFolderRenames },
     };
-    await setTombstones(mergeTombstoneLists(logs.tombstones.local, logs.tombstones.remote));
+    // Folded in as the PEER's, never as ours. Keeping them is what stops a stale peer
+    // resurrecting a bookmark someone else deleted; claiming them is what turned a single
+    // refused deletion into every device demanding it of every other one (#31).
+    await setTombstones(
+      mergeTombstoneLists(logs.tombstones.local, asForeignTombstones(logs.tombstones.remote))
+    );
     await setMoves(mergeMoveLists(logs.moves.local, logs.moves.remote));
     await setFolderMoves(mergeFolderMoveLists(logs.folderMoves.local, logs.folderMoves.remote));
     await setTitles(mergeTitleLists(logs.titles.local, logs.titles.remote));
@@ -594,6 +646,12 @@ async function mergeBookmarks(
     for (const [url, dAt] of remoteDel) {
       const loc = localByUrl.get(url);
       if (!loc) continue;
+      // The peer is asking us to delete something its own tree still advertises. Whatever
+      // that is, it is not a deletion: either they re-added it, or they are relaying a log
+      // they picked up from someone else (which is what every pre-1.3.2 device does). We
+      // can see the contradiction in the packet in front of us, so we don't need them to
+      // be fixed first — this is the half of #31 that protects a device on its own.
+      if (remoteAdd.has(url)) continue;
       if (loc.dateAdded <= dAt) toRemove.push(...loc.ids);
     }
   }
