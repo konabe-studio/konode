@@ -5,6 +5,36 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-09-10
+
+One fix, for the worst thing Konode has done to anyone's bookmarks. If you have been
+seeing "an unusual deletion was blocked" come back every minute for bookmarks that are
+still sitting there on every one of your devices, this is that. Nothing was ever lost:
+the guard that refused the deletion did its job every single time. What it could not do
+was stop being asked.
+
+### Fixed
+
+- **Your devices could end up demanding that each other delete bookmarks none of them had
+  deleted.** When one device refused an unusual deletion, it filed the request away and
+  then published it again under its own name on the next sync. The device that read it did
+  the same. Within a few cycles every device was asking every other device to delete
+  bookmarks that all of them still had, and each one refused, saved a restore point, and
+  passed the request on. That is why the warning never cleared no matter what you set, why
+  it named a different device each time, and why the counts kept changing: they were not
+  one deletion but everyone's, added together and going round. Nothing you could do on one
+  device ended it, including restoring from a restore point, because the request was no
+  longer coming from anywhere in particular.
+
+  A device now only ever asks for the deletions it made itself. It never asks you to delete
+  a bookmark it is advertising to you in the same breath, which is what the old files were
+  doing. And it ignores that request when another device makes it, so the warning should
+  stop on the first sync after you update, even while your other devices are still on the
+  old version. Update them too and they will stop making the request at all.
+
+  If you had a device set to Prefer Local to keep this at bay, you can put it back to Last
+  Write Wins.
+
 ## [1.3.1] - 2026-09-10
 
 A release with nothing in it but fixes. If you use Firefox, the one to know about is that
