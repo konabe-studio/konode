@@ -174,7 +174,14 @@ async function fetchUserInfo(accessToken: string): Promise<{ email: string; disp
 
 export async function interactiveSignIn(): Promise<GDriveSession> {
   if (!isDriveAuthAvailable()) throw new Error(DRIVE_UNSUPPORTED_MSG);
-  await clearGDriveSession();
+  // Whatever session is already stored survives until this flow SUCCEEDS. It used to be
+  // cleared up front, which made closing the consent window destructive: the refresh token
+  // was already gone, so a cancelled attempt left a device that had been syncing a moment
+  // earlier unable to sync at all, while Settings went on showing the account as connected
+  // (it only drops what it displays on an explicit disconnect). Nothing needed the early
+  // clear: `prompt=consent` asks Google for fresh consent regardless of what is stored
+  // here, and a flow that reaches the end overwrites the session below.
+  const previous = await loadGDriveSession();
   const verifier = randomVerifier();
   const challenge = await codeChallenge(verifier);
   const authUrl =
@@ -220,9 +227,15 @@ export async function interactiveSignIn(): Promise<GDriveSession> {
     code_verifier: verifier,
   });
   const user = await fetchUserInfo(tok.access_token);
+  // Google returns a refresh token for `access_type=offline&prompt=consent`, but if it
+  // ever omits one, the token we already hold beats no token: losing it is precisely what
+  // forces the re-consent that just happened. Only for the SAME account though, and only
+  // when we can name it, because inheriting another account's refresh token would quietly
+  // renew us into the wrong Drive.
+  const sameAccount = !!user.email && previous?.email === user.email;
   const session: GDriveSession = {
     access_token: tok.access_token,
-    refresh_token: tok.refresh_token,
+    refresh_token: tok.refresh_token ?? (sameAccount ? previous?.refresh_token : undefined),
     expires_at: Date.now() + (tok.expires_in ?? 3600) * 1000,
     email: user.email,
     displayName: user.displayName,
@@ -231,10 +244,12 @@ export async function interactiveSignIn(): Promise<GDriveSession> {
   await saveGDriveSession(session);
   // Don't persist the account email in the audit log (PR-L2) — the signed-in
   // account is already shown in the UI; the log just needs the outcome.
-  logger.event(
-    "GDrive.oauth",
-    `Signed in. Refresh token ${tok.refresh_token ? "stored" : "MISSING (re-consent needed)"}`
-  );
+  const tokenNote = tok.refresh_token
+    ? "stored"
+    : session.refresh_token
+      ? "not returned, kept the one we had"
+      : "MISSING (re-consent needed)";
+  logger.event("GDrive.oauth", `Signed in. Refresh token ${tokenNote}`);
   return session;
 }
 
