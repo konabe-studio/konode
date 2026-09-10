@@ -92,8 +92,19 @@ on any Chromium browser and on Firefox.
   findings", because the second one never arrives.
 
 ## Now live
-Konode is live on both stores. **Firefox Add-ons serves 1.3.1; the Chrome Web Store still
-serves 1.3.0** while 1.3.1 is in review.
+Konode is live on both stores. **Firefox Add-ons serves 1.3.2; the Chrome Web Store still
+serves 1.3.0** while 1.3.2 is in review, and 1.3.1 was withdrawn before it ever cleared.
+
+**1.3.2 shipped on 2026-09-10**, tagged `v1.3.2` at `7e2ae38`, an hour and a half after
+1.3.1 and for one fix. A device that refused a peer's bookmark deletion absorbed the request
+and republished it as its own, so one blocked deletion became a demand every device made of
+every other one, for bookmarks all of them still had, unkillable from any single device.
+Nothing was ever lost: the guard refused it every time, and what it could not do was stop
+being asked. Half the fix works one-sided, and that is what made shipping it alone worth a
+fresh review queue rather than waiting: one updated device stops being asked even while the
+rest of the group is still on the old build. **The 1.3.1 Web Store submission was withdrawn
+in favour of it**, which cost a few hours of queue position and bought the fix a place in
+the same review instead of one a full review cycle behind it.
 
 **1.3.1 shipped on 2026-09-10**, tagged `v1.3.1` at `d7e1ac5`. A release of fixes only, and
 most of what is in it was never reported by anyone: four review passes were run against
@@ -102,14 +113,18 @@ tag* above). Three of the fixes did come from a report, #16, filed by someone wh
 stuck on the same blocked deletion for weeks; the comment on that thread when 1.3.1 went
 out says which half of his problem the release solves and which half it does not.
 
-- [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/): **serving 1.3.1**
-  since 2026-09-10, listed since 2026-08-04. AMO auto-approved and signed the upload, so
-  it went out within minutes; the source submission a bundled add-on requires is reviewed
-  afterwards rather than before.
-- Chrome Web Store: **serving 1.3.0**, with 1.3.1 submitted 2026-09-10 and in review.
+- [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/): **serving 1.3.2**
+  since 2026-09-10, listed since 2026-08-04. 1.3.1 went out the same morning and was
+  superseded within two hours. AMO auto-approved and signed the upload, so it went out
+  within minutes; the source submission a bundled add-on requires is reviewed afterwards
+  rather than before.
+- Chrome Web Store: **serving 1.3.0**, with 1.3.2 submitted 2026-09-10 and in review. 1.3.1
+  was submitted that morning and withdrawn the same day in favour of 1.3.2, so it never
+  reaches the store at all: Chromium goes from 1.3.0 straight to 1.3.2, carrying both
+  releases' fixes.
   First published 2026-07-20, item ID `mmlfiiimnpnjcjhhbldenpcmnibedkfa`.
 
-The two sit a version apart again, and that is the shape of every release here
+The two sit apart again, two versions this time, and that is the shape of every release here
 rather than anything going wrong: AMO signs on upload and reviews the source afterwards,
 the Web Store reviews first. It is worth planning around, because it is also how long a
 mistake in a Chrome build stays out there. Both store uploads are built by hand with
@@ -386,17 +401,19 @@ fails on that shape, so it surfaces as a red CI on the Weblate pull request rath
 a translation nobody can read.
 
 **Firefox Add-ons.** Live at <https://addons.mozilla.org/firefox/addon/konode/> since
-**2026-08-04**, first listed with 1.2.0, then 1.2.1, **serving 1.3.0 since 2026-08-17**.
+**2026-08-04**, first listed with 1.2.0, then 1.2.1, then 1.3.0 from 2026-08-17, **serving
+1.3.2 since 2026-09-10** (1.3.1 the same morning, superseded within two hours).
 An update to an add-on that is already listed is auto-approved and signed on upload, and
 the source review happens afterwards, which is why 1.3.0 reached users while its version
 notes were still being filled in. The source archive must be the commit the upload was
 BUILT from, not necessarily the tag: 1.3.0 was built from `efd6eb0`, two commits past
 `v1.3.0`, and an archive of the tag would have rebuilt into a package with eight locale
 directories and the old Chinese name against an upload with five and the new one. AMO
-diffs that rebuild and requires no differences. Packaged with
-`npm run package:firefox` and checked with `npm run lint:firefox`. AMO requires a source
-submission, since the build is bundled and minified, and the reviewer rebuilds and diffs
-it.
+diffs that rebuild and requires no differences. For 1.3.2 the two coincide: it was built
+from `7e2ae38`, which is `v1.3.2` itself, so an archive of the tag was the right one.
+Packaged with `npm run package:firefox` and checked with `npm run lint:firefox`. AMO
+requires a source submission, since the build is bundled and minified, and the reviewer
+rebuilds and diffs it.
 
 Done for the Chrome Web Store: keyless store package (`npm run package:chrome`), $5
 developer registration,
