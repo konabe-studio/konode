@@ -68,6 +68,33 @@ jobs:
           --title "$GITHUB_REF_NAME"
           --generate-notes
 
+      # The site renders a strip of store version numbers, and it has to be told to go and
+      # look again. The obvious place for that was a `release: published` trigger in
+      # notify-site.yml, and it never once fired: the release above is created by
+      # github.token, and GitHub does not start workflows from events that token created.
+      # So the one moment a version number actually changes was the one moment nothing
+      # knocked. Knocking from inside the job that published is the only version of this
+      # that runs.
+      #
+      # Soft on purpose. A missing or expired token must not turn a release that already
+      # succeeded into a red run, and the site polls daily anyway, so a failed knock costs
+      # latency rather than the update. Same event type the docs pushes send, because on
+      # the site side it means "go re-read the stores" either way.
+      #
+      # This cannot make the site lead the stores. AMO serves a new version within minutes
+      # of its upload, the Chrome Web Store only after a review that takes days, and both
+      # uploads are manual steps that happen after this workflow has finished. So the knock
+      # refreshes whatever is live at that moment, and the daily poll is still what
+      # eventually catches Chrome.
+      - name: Tell the site a release went out
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.SITE_DISPATCH_TOKEN }}
+        run: |
+          gh api repos/benstone326/konode-site/dispatches \
+            --method POST \
+            -f event_type=upstream-docs-changed
+
 # `--generate-notes` only produces a "Full Changelog" compare link, which is not enough on
 # its own: a visitor cannot tell the two zips apart, and cannot know that Drive needs their
 # own OAuth client in these builds. Replace the body by hand after the run: which download

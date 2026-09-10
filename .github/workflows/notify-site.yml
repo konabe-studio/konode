@@ -23,8 +23,11 @@ on:
     paths:
       - ROADMAP.md
       - CHANGELOG.md
-  release:
-    types: [published]
+  # No `release: published` here. There was, and it never fired once: release.yml creates
+  # the release with github.token, and GitHub does not start workflows from events that
+  # token created. It read as covered while doing nothing. The release knock now happens as
+  # the last step of release.yml itself, in the job that published.
+
   # So the wiring can be tested without editing a document.
   workflow_dispatch:
 
