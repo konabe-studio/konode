@@ -92,23 +92,24 @@ on any Chromium browser and on Firefox.
   findings", because the second one never arrives.
 
 ## Now live
-Konode is live on both stores, and both serve **1.3.0**.
+Konode is live on both stores. **Firefox Add-ons serves 1.3.1; the Chrome Web Store still
+serves 1.3.0** while 1.3.1 is in review.
 
-**1.3.1 is on `main`, packaged, and not yet released.** It is a release of fixes only, and
+**1.3.1 shipped on 2026-09-10**, tagged `v1.3.1` at `d7e1ac5`. A release of fixes only, and
 most of what is in it was never reported by anyone: four review passes were run against
 the release itself before tagging, and each found something (see *A review pass before the
-tag* above). The store zips are built and verified; what is left is running them on real
-browsers, then the tag, then the two uploads. The tag is what cuts the GitHub release, so
-it comes after the device check rather than before it.
+tag* above). Three of the fixes did come from a report, #16, filed by someone who had been
+stuck on the same blocked deletion for weeks; the comment on that thread when 1.3.1 went
+out says which half of his problem the release solves and which half it does not.
 
-- [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/): **serving 1.3.0**
-  since 2026-08-17, listed since 2026-08-04. AMO auto-approved and signed the upload, so
+- [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/): **serving 1.3.1**
+  since 2026-09-10, listed since 2026-08-04. AMO auto-approved and signed the upload, so
   it went out within minutes; the source submission a bundled add-on requires is reviewed
   afterwards rather than before.
-- Chrome Web Store: **serving 1.3.0**, confirmed live 2026-08-26, with 1.3.1 to be
-  submitted. First published 2026-07-20, item ID `mmlfiiimnpnjcjhhbldenpcmnibedkfa`.
+- Chrome Web Store: **serving 1.3.0**, with 1.3.1 submitted 2026-09-10 and in review.
+  First published 2026-07-20, item ID `mmlfiiimnpnjcjhhbldenpcmnibedkfa`.
 
-The two sat a version apart for nine days, and that is the shape of every release here
+The two sit a version apart again, and that is the shape of every release here
 rather than anything going wrong: AMO signs on upload and reviews the source afterwards,
 the Web Store reviews first. It is worth planning around, because it is also how long a
 mistake in a Chrome build stays out there. Both store uploads are built by hand with
