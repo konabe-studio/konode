@@ -5,6 +5,17 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Cancelling Google Drive sign-in signed you out of Drive.** Pressing the Google
+  button in Settings and then closing the consent window left the device with no Drive
+  session at all, while Settings went on showing the account as connected. Sign-in used
+  to clear the stored session before it opened the window, so a cancel took the refresh
+  token with it and every sync from then on asked you to sign in again. Your session now
+  survives anything short of a sign-in that actually completes. And if Google hands back
+  no refresh token on a repeat consent, the one already stored is kept, unless you signed
+  in as a different account.
+
 ## [1.3.2] - 2026-09-10
 
 One fix, for the worst thing Konode has done to anyone's bookmarks. If you have been
