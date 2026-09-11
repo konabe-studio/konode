@@ -28,6 +28,12 @@ All notable changes to Konode. Format loosely follows
   not changed by merging, so the second read produced exactly the same thing at twice the
   cost. If it had anything to warn about, that warning also landed twice per sync in the
   Activity log, which filled the log with duplicates.
+- **One missing permission made every sync stream look broken.** When a data type lost the
+  permission it needs, the popup turned all four Active Streams red and their tooltips said
+  the data was stale, including the streams that had just synced successfully in that same
+  cycle. The colors now follow the data type the problem actually belongs to. A failure that
+  is nobody's type in particular, such as a storage backend Konode cannot reach, still marks
+  every stream, because then every one of them really has stopped.
 
 ## [1.3.2] - 2026-09-10
 

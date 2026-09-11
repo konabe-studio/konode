@@ -246,6 +246,16 @@ export class SyncEngine {
   // type. Non-fatal: we skip merging that peer but still upload our own file, so the
   // group self-heals once every device uses the same E2EE setting + passphrase.
   private encryptionWarnings = new Map<string, string>();
+  /**
+   * The data types behind this cycle's problems, for the popup's stream colours.
+   *
+   * Every problem the engine can attribute to a type adds itself here: a permission that
+   * is gone, a `syncType` that threw, a peer we could not decrypt. What stays out is a
+   * failure with no type to blame (the backend refused the connection, the setup is
+   * incomplete), and the popup reads an empty set as "all of them", which is what that
+   * kind of failure actually means.
+   */
+  private failedTypes = new Set<DataType>();
   // Bytes moved over the wire this sync (peer payloads pulled + our packets pushed),
   // accumulated across data types and folded into the cumulative `bytes_transferred`
   // stat at the end. Reset per sync so it's a per-run tally, not a running double-count.
@@ -426,6 +436,7 @@ export class SyncEngine {
     // The per-sync fields are plain assignments, and `createBackend` is a synchronous
     // factory over a config we just found in settings, so the window holds no await at all.
     this.encryptionWarnings.clear();
+    this.failedTypes.clear();
     this.bytesThisSync = 0;
     this.bulkBlockedThisSync = null;
     this.historyIndexThisSync = null;
@@ -486,6 +497,7 @@ export class SyncEngine {
         status: statusAfterSync(problems.length, conflicts.length),
         last_sync: new Date().toISOString(),
         last_error: problems.length ? problems.join(" ") : null,
+        failed_types: [...this.failedTypes],
         bytes_transferred: prevState.bytes_transferred + this.bytesThisSync,
         recovery_notice: recovery,
         ...(stale > 0 ? { pending_conflicts: conflicts } : {}),
@@ -495,7 +507,10 @@ export class SyncEngine {
 
     } catch (err) {
       const msg = await explainSyncFailure(err, backendConfig);
-      const newState = await setState({ status: "error", last_error: msg });
+      // No `failed_types` here on purpose, cleared rather than collected: a sync that died
+      // before or around the per-type loop (the backend refused, the config is gone) has
+      // stalled every stream, and that is exactly what an empty list tells the popup.
+      const newState = await setState({ status: "error", last_error: msg, failed_types: [] });
       this.onStateChange(newState);
       // The EXPLAINED message, not the raw error. The Activity log is where someone goes
       // to find out what happened, and it was the one place still showing a bare
@@ -582,6 +597,7 @@ export class SyncEngine {
         const msg = `${t}: Konode doesn't have the "${state.permission}" permission any more, so this can't sync. Open Settings, Data Types, and switch it off and on again to restore it.`;
         logger.warn("SyncEngine", msg);
         errors.push(msg);
+        this.failedTypes.add(t);
       }
     }
 
@@ -592,6 +608,7 @@ export class SyncEngine {
       } catch (err) {
         // syncType already logged it — just collect the message.
         errors.push(`${dataType}: ${err instanceof Error ? err.message : String(err)}`);
+        this.failedTypes.add(dataType);
       }
     }
     return errors;
@@ -1105,6 +1122,7 @@ export class SyncEngine {
             // the rest, and let sync() upload our own file + surface the warning.
             if (err instanceof PassphraseError || err instanceof EncryptionMismatchError) {
               this.encryptionWarnings.set(peer.device_id, err.message);
+              this.failedTypes.add(dataType);
               logger.warn("SyncEngine", `Encryption mismatch, skipping peer ${peer.device_id}: ${err.message}`);
               continue;
             }

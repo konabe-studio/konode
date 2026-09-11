@@ -67,6 +67,7 @@ type EnginePrivate = {
   ): Promise<SyncState["recovery_notice"]>;
   findOwnMissingFiles(backend: IBackend, types: DataType[]): Promise<void>;
   encryptionWarnings: Map<string, string>;
+  failedTypes: Set<DataType>;
   bulkBlockedThisSync: BlockedArg;
   bulkApprovedThisSync: number;
 };
@@ -444,12 +445,26 @@ describe("SyncEngine — one data type's failure must not abort the others", () 
     expect(backend.uploads.map((u) => u.data_type)).toEqual(["bookmarks"]);
   });
 
+  it("names the failing type, so the popup can redden only that stream", async () => {
+    // The popup had nothing but the global status to colour by, so one revoked permission
+    // painted all four Active Streams red and labelled them stale, three of them while
+    // they had just synced in that same cycle.
+    const engine = makeEngine();
+    const backend = new FailingBackend(["history"]);
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+
+    await priv(engine).syncAllTypes(["history", "bookmarks"], backend, DEFAULT_STATE);
+
+    expect([...priv(engine).failedTypes]).toEqual(["history"]);
+  });
+
   it("reports nothing when every type succeeds", async () => {
     const engine = makeEngine();
     const backend = new FakeBackend();
     await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
 
     expect(await priv(engine).syncAllTypes(["bookmarks"], backend, DEFAULT_STATE)).toEqual([]);
+    expect([...priv(engine).failedTypes]).toEqual([]);
   });
 
   it("REPORTS a type whose optional permission is gone, rather than skipping it quietly", async () => {
