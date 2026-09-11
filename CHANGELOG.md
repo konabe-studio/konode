@@ -15,6 +15,12 @@ All notable changes to Konode. Format loosely follows
   survives anything short of a sign-in that actually completes. And if Google hands back
   no refresh token on a repeat consent, the one already stored is kept, unless you signed
   in as a different account.
+- **One missing permission made every sync stream look broken.** When a data type lost the
+  permission it needs, the popup turned all four Active Streams red and their tooltips said
+  the data was stale, including the streams that had just synced successfully in that same
+  cycle. The colors now follow the data type the problem actually belongs to. A failure that
+  is nobody's type in particular, such as a storage backend Konode cannot reach, still marks
+  every stream, because then every one of them really has stopped.
 
 ## [1.3.2] - 2026-09-10
 

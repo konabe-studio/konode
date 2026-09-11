@@ -254,6 +254,18 @@ export interface SyncState {
   status: SyncStatus;
   last_sync: string | null; // ISO-8601
   last_error: string | null;
+  /**
+   * Which data types are behind `last_error`, when that can be said at all.
+   *
+   * A missing `management` permission is one type's problem; the other three sync in the
+   * same cycle and are perfectly current. Without this the popup had only the global
+   * status to colour by, so one revoked permission painted all four Active Streams red and
+   * called them stale. Absent or empty means NOT attributable (the backend is unreachable,
+   * the setup is incomplete), which really is every type's problem, and the popup falls
+   * back to reddening all of them. Optional because a state written by an older build does
+   * not carry it.
+   */
+  failed_types?: DataType[];
   pending_conflicts: ConflictItem[];
   sync_counts: Record<DataType, number>;
   bytes_transferred: number;

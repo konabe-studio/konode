@@ -48,13 +48,20 @@ export function streamInputFor(
   }
 ): StreamInput {
   const status = opts.state?.status ?? "idle";
+  // Which types the error is ABOUT, when the engine could say. One revoked permission is
+  // one type's problem: the other three sync in the same cycle and are current, so
+  // coloring them from the global status alone turned all four circles red and labelled
+  // three of them stale while they were up to date. An absent or empty list is the
+  // unattributable case (the backend is unreachable, there is no backend), where every
+  // stream really has stalled, so it keeps the old all-of-them answer.
+  const failed = opts.state?.failed_types;
   return {
     enabled: opts.enabledTypes?.includes(type) ?? false,
     syncing: status === "syncing",
     current: opts.syncingType === type,
     done: opts.syncedTypes.has(type),
     syncedCount: opts.state?.sync_counts?.[type] ?? 0,
-    lastFailed: status === "error",
+    lastFailed: status === "error" && (!failed?.length || failed.includes(type)),
   };
 }
 

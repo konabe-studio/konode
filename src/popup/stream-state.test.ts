@@ -73,4 +73,50 @@ describe("streamInputFor", () => {
     });
     expect(streamState(input)).toBe("never");
   });
+
+  describe("an error that belongs to ONE data type", () => {
+    // Seen with `management` revoked: the sync reported Error, and all four circles went
+    // red with a "stale" tooltip, including bookmarks and history, which had just synced
+    // in that very cycle. The engine knows which type it was; this is the popup using it.
+    const counts = { bookmarks: 5, history: 5, sessions: 5, extensions: 5 };
+    const errored = (failed_types: SyncState["failed_types"]): SyncState =>
+      state({ status: "error", sync_counts: counts, failed_types });
+    const read = (type: Parameters<typeof streamInputFor>[0], st: SyncState) =>
+      streamState(streamInputFor(type, {
+        state: st,
+        enabledTypes: ["bookmarks", "history", "sessions", "extensions"],
+        syncingType: null,
+        syncedTypes: new Set(),
+      }));
+
+    it("reddens the type that failed and leaves the rest alone", () => {
+      const st = errored(["extensions"]);
+      expect(read("extensions", st)).toBe("stale");
+      expect(read("bookmarks", st)).toBe("synced");
+      expect(read("history", st)).toBe("synced");
+      expect(read("sessions", st)).toBe("synced");
+    });
+
+    it("reddens every type named, not just the first", () => {
+      const st = errored(["history", "extensions"]);
+      expect(read("history", st)).toBe("stale");
+      expect(read("extensions", st)).toBe("stale");
+      expect(read("bookmarks", st)).toBe("synced");
+    });
+
+    it("still reddens everything when the failure names no type", () => {
+      // The backend refused, or there is none: that is every stream's problem, and the
+      // empty list is how the engine says so. Same for a state written before the field
+      // existed, which carries no list at all.
+      for (const st of [errored([]), state({ status: "error", sync_counts: counts })]) {
+        expect(read("bookmarks", st)).toBe("stale");
+        expect(read("extensions", st)).toBe("stale");
+      }
+    });
+
+    it("says nothing about a type while the sync is still running", () => {
+      const st = state({ status: "syncing", sync_counts: counts, failed_types: ["extensions"] });
+      expect(read("extensions", st)).toBe("pending");
+    });
+  });
 });

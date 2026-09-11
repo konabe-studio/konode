@@ -80,6 +80,7 @@ export const DEFAULT_STATE: SyncState = {
   status: "idle",
   last_sync: null,
   last_error: null,
+  failed_types: [],
   pending_conflicts: [],
   sync_counts: { bookmarks: 0, history: 0, sessions: 0, extensions: 0 },
   bytes_transferred: 0,
