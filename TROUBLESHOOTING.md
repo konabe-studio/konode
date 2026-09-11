@@ -67,6 +67,19 @@ turn E2EE off everywhere or back on everywhere (with the same passphrase).
 
 ## Google Drive
 
+**"redirect_uri_mismatch" on Orion or Quetta (installed from a store).**
+Try Drive sign-in again first: this was fixed on our side in September 2026, and there's
+nothing to update or reinstall. Those browsers implement `identity.getRedirectURL("gdrive")`
+but drop the path, so they hand back the bare `https://<extension-id>.chromiumapp.org/`
+instead of `.../gdrive`, and that form had to be registered with the OAuth client
+separately. The extension ID in the request is the right one, which is what makes this look
+like a Konode bug rather than a missing redirect. If it still fails, read the
+`Request details: redirect_uri=...` line on Google's own error page: a different extension
+ID there means the browser assigned its own ID to Konode, which can't be registered ahead
+of time, and GitHub or WebDAV are the backends to use on that browser. The Activity log
+won't tell you which case it is, because a mismatch looks like a closed window from
+Konode's side and is logged as a cancelled sign-in.
+
 **"Connected as ()" / Drive sync fails (building from source).**
 Your own Google Cloud project needs the **Google Drive API enabled**
 (APIs & Services → Library → Google Drive API → Enable). The OAuth sign-in can succeed
