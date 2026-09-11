@@ -15,6 +15,12 @@ All notable changes to Konode. Format loosely follows
   survives anything short of a sign-in that actually completes. And if Google hands back
   no refresh token on a repeat consent, the one already stored is kept, unless you signed
   in as a different account.
+- **Every sync read your open tabs and your extension list twice.** Konode reads what it is
+  about to publish once before merging your other devices in and once after. That is right
+  for bookmarks and history, which merging changes, but open tabs and the extension list are
+  not changed by merging, so the second read produced exactly the same thing at twice the
+  cost. If it had anything to warn about, that warning also landed twice per sync in the
+  Activity log, which filled the log with duplicates.
 
 ## [1.3.2] - 2026-09-10
 
