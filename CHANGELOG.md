@@ -15,6 +15,13 @@ All notable changes to Konode. Format loosely follows
   survives anything short of a sign-in that actually completes. And if Google hands back
   no refresh token on a repeat consent, the one already stored is kept, unless you signed
   in as a different account.
+- **Settings could list extensions you already have as missing.** When Konode loses the
+  permission it needs to read your extension list, taken away from your browser's own
+  extensions screen for example, it has no way to tell what is installed on this device.
+  Settings answered that by treating everything your other devices have as missing here,
+  with Install buttons for extensions sitting right there in the toolbar. It now shows
+  nothing at all while it cannot tell, the way the popup already did, and fills the list
+  back in as soon as the permission returns, with no reload.
 
 ## [1.3.2] - 2026-09-10
 

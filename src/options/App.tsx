@@ -450,22 +450,43 @@ export default function OptionsApp() {
       // options "missing on this device" list stayed empty (the popup was correct).
       setRemoteExtensions(normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]));
     }).catch(() => { /* the peer cache is a display nicety; a read failure must not blank Settings */ });
-    // "management" is optional, and the `.catch()` below was built on a wrong idea of what
-    // happens without it. Chrome does not hide the namespace: `chrome.management` is always
-    // there, carrying only `getSelf`/`uninstallSelf` until the permission is granted. So
-    // `getAll` is not a function, and the call throws SYNCHRONOUSLY, before any promise
-    // exists for `.catch()` to catch. Thrown from inside an effect, that unmounts the tree,
-    // and the whole Settings page renders blank.
-    //
-    // That is the default state of a fresh install: 1.2.0 made `management` optional, and
-    // the wizard only asks for it if you switch extension sync on. Reported twice (#5, and
-    // again with the exact "g.management.getAll is not a function" stack).
-    if (dataTypeApiPresent("extensions")) {
-      void browser.management.getAll()
-        .then((exts) => setLocalExts(exts.map((e) => ({ id: e.id, name: e.name, homepageUrl: e.homepageUrl }))))
-        .catch(() => {});
-    }
   }, [load]);
+
+  // Keyed on the availability the permission listener already refreshes rather than on the
+  // mount, because the permission can come and go while Settings is open: read once, this
+  // list outlived the answer it was about.
+  const extApiState = availability.extensions?.state;
+
+  /**
+   * This browser's own extension list, for the "missing on this device" comparison.
+   *
+   * Re-read whenever `management` arrives or leaves, because an empty `localExts` is not a
+   * neutral "don't know" here: every peer extension then reads as missing on this device.
+   * Revoked mid-session, the card went from a true 4 to all 13 and offered Install buttons
+   * for extensions installed on this very machine (2026-09-10). Cleared on the way out for
+   * the same reason, so the stale answer cannot outlive the permission either.
+   *
+   * `management` is optional, and a `.catch()` is not enough on its own. Chrome does not
+   * hide the namespace: `chrome.management` is always there, carrying only
+   * `getSelf`/`uninstallSelf` until the permission is granted. So `getAll` is not a
+   * function, and the call throws SYNCHRONOUSLY, before any promise exists for `.catch()`
+   * to catch. Thrown from inside an effect, that unmounts the tree, and the whole Settings
+   * page renders blank. That is the default state of a fresh install: 1.2.0 made
+   * `management` optional, and the wizard only asks for it if you switch extension sync
+   * on. Reported twice (#5, and again with the exact "g.management.getAll is not a
+   * function" stack). `state === "ready"` already means the API is there; the presence
+   * check stays as the guard against acting on an availability read a revocation has just
+   * overtaken.
+   */
+  useEffect(() => {
+    if (extApiState !== "ready" || !dataTypeApiPresent("extensions")) {
+      setLocalExts([]);
+      return;
+    }
+    void browser.management.getAll()
+      .then((exts) => setLocalExts(exts.map((e) => ({ id: e.id, name: e.name, homepageUrl: e.homepageUrl }))))
+      .catch(() => {});
+  }, [extApiState]);
 
   // Load Statistics data once on mount: sync state (last sync, counts, bytes), a live
   // local bookmark count, open-tab count (only if the tabs permission is granted), and
@@ -1155,7 +1176,12 @@ export default function OptionsApp() {
     );
   }
 
-  const missingExtensions = remoteExtensions
+  // Three ways to arrive at "we cannot say what is missing here", and all three must clear
+  // the list rather than answer from an empty local one: no peer cache, no API, or the
+  // permission not granted. `extApiState` folds the last two together. The popup has done
+  // this since 1.3.1; Settings kept computing, and with `management` revoked it published
+  // the whole peer union as missing, directly under the row saying the type isn't syncing.
+  const missingExtensions = remoteExtensions && extApiState === "ready"
     ? missingLocally(remoteExtensions, localExts, currentStore())
     : [];
 
