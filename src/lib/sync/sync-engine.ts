@@ -61,6 +61,29 @@ const SYNC_LOCK_TTL_MS = 2 * 60 * 1000;
 const CONFLICTABLE_TYPES = new Set<DataType>(["bookmarks", "history"]);
 
 /**
+ * The data types whose IMPORT writes to the local store, and so the only ones whose payload
+ * has to be read a second time after the merge.
+ *
+ * `syncType` builds the payload twice: once before the fold to decide the flow, once after
+ * it to publish what the fold produced. For bookmarks and history that second read is the
+ * whole point, since `importBookmarks` rewrites the tree and `importHistory` adds visits,
+ * which makes the pre-merge payload stale the moment a peer is folded in. Sessions and
+ * extensions do not work that way: `applyRemote` files the peer's copy in a device-keyed
+ * cache for the popup and nothing local moves, so rebuilding spends a second
+ * `management.getAll()` or tab query to produce a byte-identical payload.
+ *
+ * Found with `management` revoked, where the doubling was audible: the "extension list
+ * isn't published this sync" warning arrived TWICE per cycle, filling a 200-entry log in
+ * about 100 minutes at the default interval.
+ *
+ * Deliberately its own set rather than a reuse of CONFLICTABLE_TYPES, which holds the same
+ * two members today for an unrelated reason. One asks "can two versions of this compete",
+ * the other "does folding a peer in change what we hold"; a future data type could easily
+ * answer them differently.
+ */
+const MERGE_MUTATES_LOCAL = new Set<DataType>(["bookmarks", "history"]);
+
+/**
  * The queued conflicts that can still exist, given the gate above.
  *
  * Pure and exported for the same reason `statusAfterSync` is: it decides what the user
@@ -1093,8 +1116,15 @@ export class SyncEngine {
             );
           }
         }
-        const merged = await this.buildPayload(dataType);
-        if (!(await this.isPayloadEmpty(dataType, merged))) {
+        // Re-read only what the fold can have changed. For the rest `localPayload` IS
+        // what a rebuild would return, and `isEmpty` its answer: `isPayloadEmpty` reads
+        // storage only for bookmarks (the tombstone log), so reusing it for sessions and
+        // extensions is the same computation, not an approximation. See
+        // MERGE_MUTATES_LOCAL.
+        const rebuild = MERGE_MUTATES_LOCAL.has(dataType);
+        const merged = rebuild ? await this.buildPayload(dataType) : localPayload;
+        const mergedEmpty = rebuild ? await this.isPayloadEmpty(dataType, merged) : isEmpty;
+        if (!mergedEmpty) {
           await this.uploadIfChanged(backend, dataType, merged);
         }
       }

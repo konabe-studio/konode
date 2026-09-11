@@ -22,6 +22,12 @@ All notable changes to Konode. Format loosely follows
   with Install buttons for extensions sitting right there in the toolbar. It now shows
   nothing at all while it cannot tell, the way the popup already did, and fills the list
   back in as soon as the permission returns, with no reload.
+- **Every sync read your open tabs and your extension list twice.** Konode reads what it is
+  about to publish once before merging your other devices in and once after. That is right
+  for bookmarks and history, which merging changes, but open tabs and the extension list are
+  not changed by merging, so the second read produced exactly the same thing at twice the
+  cost. If it had anything to warn about, that warning also landed twice per sync in the
+  Activity log, which filled the log with duplicates.
 
 ## [1.3.2] - 2026-09-10
 

@@ -1916,3 +1916,72 @@ describe("SyncEngine.sync — a failure while setting up must give the lock back
     expect(await acquireSyncLock(60_000)).toBe(true);
   });
 });
+
+describe("SyncEngine.syncType — the payload is rebuilt only where the merge can change it", () => {
+  // `syncType` reads the local payload twice: once before the fold, to decide the flow, and
+  // once after it, to publish what the fold produced. Bookmarks and history need that
+  // second read and the merge tests above prove it ("merges a peer's bookmarks into local
+  // and uploads the merged result" fails without it). Sessions and extensions do not:
+  // applyRemote files the peer's copy in a device-keyed cache for the popup, nothing local
+  // moves, and the rebuild spent another management.getAll() to produce a byte-identical
+  // payload. Audible on a device with `management` revoked, where the "extension list isn't
+  // published this sync" warning arrived TWICE per cycle and filled the 200-entry Activity
+  // log in about 100 minutes.
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const realManagement = (globalThis as any).chrome.management;
+  afterEach(() => { (globalThis as any).chrome.management = realManagement; });
+
+  /** One extension installed here, counting how often the engine asks for the list. */
+  function countingManagement(): () => number {
+    let calls = 0;
+    (globalThis as any).chrome.management = {
+      getAll: () => {
+        calls += 1;
+        return Promise.resolve([
+          { id: "local-ext", name: "Local", version: "1.0", enabled: true, type: "extension", installType: "normal" },
+        ]);
+      },
+    };
+    return () => calls;
+  }
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+
+  it("reads the extension list ONCE per sync, with a peer to fold in", async () => {
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    const packet = await priv(engine).buildPacket("extensions", [
+      { id: "peer-ext", name: "Peer only", version: "2.0", enabled: true, storeUrl: "", type: "extension" },
+    ]);
+    packet.device_id = "peer1";
+    backend.files.set("extensions_peer1", packet);
+    const calls = countingManagement();
+
+    await priv(engine).syncType("extensions", backend, DEFAULT_STATE);
+
+    expect(calls()).toBe(1);
+    // Not by skipping the work: the peer is still folded into the display cache, and this
+    // device still published its own list.
+    const raw = (await chrome.storage.local.get(KEYS.REMOTE_EXTENSIONS))[KEYS.REMOTE_EXTENSIONS];
+    expect(normalizeRemoteExtensions(raw).map((e) => e.id)).toEqual(["peer-ext"]);
+    expect(backend.uploads.map((u) => u.device_id)).toEqual(["me"]);
+  });
+
+  it("publishes the same list the single read produced", async () => {
+    // The reused payload has to be the one that gets uploaded, not an empty stand-in.
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    const packet = await priv(engine).buildPacket("extensions", [
+      { id: "peer-ext", name: "Peer only", version: "2.0", enabled: true, storeUrl: "", type: "extension" },
+    ]);
+    packet.device_id = "peer1";
+    backend.files.set("extensions_peer1", packet);
+    countingManagement();
+
+    await priv(engine).syncType("extensions", backend, DEFAULT_STATE);
+
+    const sent = JSON.parse(backend.uploads[backend.uploads.length - 1].payload) as Array<{ id: string }>;
+    expect(sent.map((e) => e.id)).toEqual(["local-ext"]);
+  });
+});
+
