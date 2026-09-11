@@ -95,6 +95,12 @@ on any Chromium browser and on Firefox.
 Konode is live on both stores. **Firefox Add-ons serves 1.3.2; the Chrome Web Store still
 serves 1.3.0** while 1.3.2 is in review, and 1.3.1 was withdrawn before it ever cleared.
 
+**The four fixes merged on 2026-09-11 are NOT in that submission.** The package in the queue
+was built before them, so the options list, the single payload build, the stream colouring
+and the Drive redirect note all wait for the next version. None is a data-loss fix, and
+pulling the submission to add them would put the deletion-relay fix that 1.3.2 exists for
+back at the end of the queue, so it stays where it is.
+
 **1.3.2 shipped on 2026-09-10**, tagged `v1.3.2` at `7e2ae38`, an hour and a half after
 1.3.1 and for one fix. A device that refused a peer's bookmark deletion absorbed the request
 and republished it as its own, so one blocked deletion became a demand every device made of
@@ -118,11 +124,18 @@ out says which half of his problem the release solves and which half it does not
   superseded within two hours. AMO auto-approved and signed the upload, so it went out
   within minutes; the source submission a bundled add-on requires is reviewed afterwards
   rather than before.
-- Chrome Web Store: **serving 1.3.0**, with 1.3.2 submitted 2026-09-10 and in review. 1.3.1
-  was submitted that morning and withdrawn the same day in favour of 1.3.2, so it never
-  reaches the store at all: Chromium goes from 1.3.0 straight to 1.3.2, carrying both
-  releases' fixes.
+- Chrome Web Store: **serving 1.3.0**, with 1.3.2 in review a second time. 1.3.1 was
+  submitted on 2026-09-10 and withdrawn the same day in favour of 1.3.2, so it never reaches
+  the store at all: Chromium goes from 1.3.0 straight to 1.3.2, carrying both releases'
+  fixes.
   First published 2026-07-20, item ID `mmlfiiimnpnjcjhhbldenpcmnibedkfa`.
+  - **The listing copy was rewritten on 2026-09-11** and the item went back in the queue
+    the same day. The Web Store reads a run of brand names in a description as keyword
+    stuffing, so the "Choose your storage" section named seven storage providers where it
+    now names the three backends and nothing else. Metadata only: the package never
+    changed. The copy used to live in the dashboard and nowhere else, which is why it could
+    not be reviewed here before it went out; it now lives in `store-listing/`, one file per
+    language per field, and `store-listing.test.ts` holds it to the rules that matter.
 
 The two sit apart again, two versions this time, and that is the shape of every release here
 rather than anything going wrong: AMO signs on upload and reviews the source afterwards,
