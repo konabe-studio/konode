@@ -1,0 +1,17 @@
+{
+  "datatype_bookmarks": {
+    "message": "書籤"
+  },
+  "datatype_history": {
+    "message": "瀏覽記錄"
+  },
+  "datatype_sessions": {
+    "message": "分頁"
+  },
+  "datatype_extensions": {
+    "message": "擴充功能"
+  },
+  "popup_sync_now": {
+    "message": "立即同步"
+  }
+}
