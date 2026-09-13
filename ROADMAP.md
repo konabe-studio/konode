@@ -92,14 +92,14 @@ on any Chromium browser and on Firefox.
   findings", because the second one never arrives.
 
 ## Now live
-Konode is live on both stores. **Firefox Add-ons serves 1.3.2; the Chrome Web Store still
-serves 1.3.0** while 1.3.2 is in review, and 1.3.1 was withdrawn before it ever cleared.
+Konode is live on both stores, **both serving 1.3.2** as of 2026-09-13, and 1.3.1 was
+withdrawn before it ever cleared.
 
-**The four fixes merged on 2026-09-11 are NOT in that submission.** The package in the queue
-was built before them, so the options list, the single payload build, the stream colouring
-and the Drive redirect note all wait for the next version. None is a data-loss fix, and
-pulling the submission to add them would put the deletion-relay fix that 1.3.2 exists for
-back at the end of the queue, so it stays where it is.
+**The four fixes merged on 2026-09-11 are NOT in what either store serves.** The package was
+built before them, so the options list, the single payload build, the stream colouring and
+the Drive redirect note all wait for the next version. None is a data-loss fix, and pulling
+the submission to add them would have put the deletion-relay fix that 1.3.2 exists for back
+at the end of the queue, so it went out without them.
 
 **1.3.2 shipped on 2026-09-10**, tagged `v1.3.2` at `7e2ae38`, an hour and a half after
 1.3.1 and for one fix. A device that refused a peer's bookmark deletion absorbed the request
@@ -124,9 +124,9 @@ out says which half of his problem the release solves and which half it does not
   superseded within two hours. AMO auto-approved and signed the upload, so it went out
   within minutes; the source submission a bundled add-on requires is reviewed afterwards
   rather than before.
-- Chrome Web Store: **serving 1.3.0**, with 1.3.2 in review a second time. 1.3.1 was
-  submitted on 2026-09-10 and withdrawn the same day in favour of 1.3.2, so it never reaches
-  the store at all: Chromium goes from 1.3.0 straight to 1.3.2, carrying both releases'
+- Chrome Web Store: **serving 1.3.2** since 2026-09-13, after a second review. 1.3.1 was
+  submitted on 2026-09-10 and withdrawn the same day in favour of 1.3.2, so it never reached
+  the store at all: Chromium went from 1.3.0 straight to 1.3.2, carrying both releases'
   fixes.
   First published 2026-07-20, item ID `mmlfiiimnpnjcjhhbldenpcmnibedkfa`.
   - **The listing copy was rewritten on 2026-09-11** and the item went back in the queue
@@ -136,12 +136,18 @@ out says which half of his problem the release solves and which half it does not
     changed. The copy used to live in the dashboard and nowhere else, which is why it could
     not be reviewed here before it went out; it now lives in `store-listing/`, one file per
     language per field, and `store-listing.test.ts` holds it to the rules that matter.
+  - **The screenshots and the onboarding video were replaced in the same pass**, which is the
+    half of #32 that could be fixed. A store screenshot was still advertising Gitea and
+    GitLab long after the text inside the extension stopped, and someone installed Konode on
+    the strength of it and filed the issue. Screenshots are the part of a listing no test can
+    read, so a backend claim changing means checking them by eye.
 
-The two sit apart again, two versions this time, and that is the shape of every release here
-rather than anything going wrong: AMO signs on upload and reviews the source afterwards,
-the Web Store reviews first. It is worth planning around, because it is also how long a
-mistake in a Chrome build stays out there. Both store uploads are built by hand with
-Konode's own OAuth client compiled in and live in `web-ext-artifacts/chrome/` and
+The two ran three days and two versions apart before the Web Store caught up, and that is
+the shape of every release here rather than anything going wrong: AMO signs on upload and
+reviews the source afterwards, the Web Store reviews first. It is worth planning around,
+because it is also how long a mistake in a Chrome build stays out there. Both store uploads
+are built by hand with Konode's own OAuth client compiled in and live in
+`web-ext-artifacts/chrome/` and
 `.../firefox/`; the zips attached to the GitHub release are source builds without it, from
 `.../source/`. See the packaging note under *Store packaging + releases* above for what
 keeps the two from being confused.
@@ -159,7 +165,7 @@ keeps the two from being confused.
   drift apart. Completeness is the whole bar: the translators
   are native speakers and Weblate is where their work gets reviewed, so a language no
   maintainer here reads is not thereby held back.
-- **Scoped in the tracker, not here.** Three issues carry design work that belongs on this
+- **Scoped in the tracker, not here.** Five issues carry design work that belongs on this
   list, with the API checks and the reasoning written out where contributors can read them
   rather than in a local file. No dates and no version targets, the same as everything else
   under *Next*: #11 and #10 were gated on the translations release, which shipped
@@ -186,6 +192,25 @@ keeps the two from being confused.
     containers reach extensions is unverified rather than settled. Needs `cookies` and
     `contextualIdentities`, both as optional permissions, which `capabilities.ts` is
     already the right place to gate.
+  - [#34 Manual asks about every pair of devices on the first sync](https://github.com/konabe-studio/konode/issues/34)
+    is filed as a bug and is one, but the fix is a decision rather than a correction.
+    `manual` compares the transport checksum, and for bookmarks that covers this device's
+    own IDs, its `dateAdded` values and its deletion, move and rename logs, so two devices
+    never match even when the trees on screen are identical. What it needs is a **content
+    identity** for bookmarks — canonical URL, title, structural position — cheap enough to
+    compute every sync, and it must NOT replace the transport checksum, which
+    `uploadIfChanged` and the E2EE dedup both need over the exact bytes. Until then the
+    setting asks whether two files are byte-identical while the screen says it is asking
+    whether two devices disagree.
+  - [#35 A conflict card asks which version to keep without showing what differs](https://github.com/konabe-studio/konode/issues/35),
+    from #33. Both buttons are whole-tree operations and neither says what it would change,
+    which leaves the user guessing. The data is already at hand where the question is asked,
+    since the peer's full packet is parked in storage for "Use remote" to decrypt. The design
+    half is where it goes: the popup is 360px wide and 1.3.1 had to cap the conflict list at
+    200px to stop it pushing the rest off the bottom, so this is a Resolve button and a full
+    tab in Settings — next to the held-back deletion card from #23, which asks the user to
+    approve something they cannot see in the same way. Worth taking after #34, which shrinks
+    the job.
 
 ## Not supported, but closer than it was: iOS / WebKit
 
