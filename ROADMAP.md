@@ -248,8 +248,11 @@ What is still genuinely missing:
 
 - **Google Drive sign-in fails** inside the browser's own API bridge
   (`identity.launchWebAuthFlow` is not reliably implemented on iOS WebKit web extensions).
-  Feature-gated, with a message pointing at GitHub or WebDAV. WebDAV is verified there;
-  GitHub is untested.
+  Feature-gated, with a message pointing at GitHub or WebDAV. WebDAV is verified there, and
+  GitHub is no longer untested: the person who filed #9 came back on #24 from Orion RC to say
+  they had switched to GitHub and it was working. That is one user's report rather than a
+  session here, the same bar the three fixes above sit at, but it is enough to stop calling
+  the fallback untried. Both backends the message points at are now known to work there.
 
 A real iOS/WebKit target is still its own scoped effort, and the honest blocker is now
 verification rather than code: three fixes are written and none has been run on the device.
