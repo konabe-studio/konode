@@ -13,5 +13,8 @@
   },
   "popup_sync_now": {
     "message": "立即同步"
+  },
+  "extension_name": {
+    "message": "Konode | 私人書籤與分頁同步"
   }
 }
