@@ -209,6 +209,12 @@
   "provider_fastmail_note": {
     "message": "Felhasználónévként a teljes Fastmail e-mail címedet add meg, jelszóként pedig egy olyan alkalmazásjelszót, amely rendelkezik Files (WebDAV) jogosultsággal."
   },
+  "provider_jianguoyun_desc": {
+    "message": "Nutstore (坚果云) felhőtárhely, Kínában széles körben használt."
+  },
+  "provider_jianguoyun_note": {
+    "message": "Felhasználónévként a Nutstore e-mail címedet add meg, jelszóként pedig egy harmadik féltől származó alkalmazásjelszót. Ingyenes fióknál három eszköztől emeld a Szinkronizálási időköz értékét legalább 120 másodpercre: a Nutstore 30 percenként 600 WebDAV-kérést enged."
+  },
   "provider_github_desc": {
     "message": "A szinkronizált adatok egy privát GitHub-repóban tárolódnak, amelyhez Personal Access Tokennel fér hozzá a Konode."
   },

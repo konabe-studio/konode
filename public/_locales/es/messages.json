@@ -197,6 +197,12 @@
   "provider_fastmail_note": {
     "message": "Usa tu dirección completa de Fastmail como nombre de usuario y una contraseña de aplicación que tenga acceso a archivos (WebDAV)."
   },
+  "provider_jianguoyun_desc": {
+    "message": "Almacenamiento en la nube de Nutstore, muy usado en China continental."
+  },
+  "provider_jianguoyun_note": {
+    "message": "Usa tu correo de Nutstore como nombre de usuario y una contraseña de aplicación de terceros como contraseña. En una cuenta gratuita, sube el Intervalo de sincronización a 120 segundos o más a partir de tres dispositivos: Nutstore permite 600 peticiones WebDAV cada 30 minutos."
+  },
   "provider_github_desc": {
     "message": "Tus datos sincronizados se almacenan en un repositorio privado de GitHub, al que Konode accede mediante un token de acceso personal."
   },

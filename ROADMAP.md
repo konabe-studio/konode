@@ -306,8 +306,15 @@ the crypto.
   key derivation and file encryption. That's the "own crypto SDK to bundle" cost.
 
 ### The library
-- **[`megajs`](https://mega.js.org)** (npm `megajs`, MIT) is the maintained,
-  browser-capable JS SDK. It handles MEGA's auth, key handling, encryption, folder
+- **[`megajs`](https://mega.js.org)** (npm `megajs`, MIT) is the maintained JS SDK, and two
+  things about it were overstated here before they were checked (2026-09). It is
+  **unofficial**, a community project rather than MEGA's own, which for a library that would
+  hold a user's storage credentials is worth weighing rather than discovering later. And
+  "browser-capable" is doing work it has not earned: the package declares no `browser` field
+  and its two dependencies, `pumpify` and `stream-skip`, are Node stream utilities, so
+  946 KB unpacked into a service worker under `script-src 'self'` is a bundling exercise
+  before it is an integration. It is genuinely maintained (175 releases since 2017, a build
+  in April 2026). It handles MEGA's auth, key handling, encryption, folder
   handling, and networking. It deliberately does **no** file I/O. It works on
   buffers/streams, which suits us fine (our payloads are already JSON strings in
   memory).
@@ -409,19 +416,23 @@ Reopen this if Apple ever ships an API that writes to the user's visible iCloud 
   unrelated APIs across Drive, GitHub and WebDAV, which is why the `listVersions()` stub
   was dropped from `IBackend` in 1.3.1 rather than filled in. Two limits worth stating wherever this is described: bookmarks only
   (`exportBookmarkPayload`), and only across the newest `MAX_SNAPSHOTS`, which is 10.
-- **Filen, behind MEGA rather than beside it.** Asked for on Reddit, and deliberately not
-  scheduled. MEGA is the backend that has design notes written down; Filen comes after it
-  if what MEGA costs turns out to carry over, and not at all if it does not. It will not be
-  forced in ahead of that. What is established so far: Filen is zero-knowledge and encrypts
-  on the device, its CLI can serve a drive over WebDAV **or S3** locally, and there is no
-  hosted WebDAV address, so it cannot become one more preset on the WebDAV card. Unlike the
-  MEGA write-up above, this is *not* a choice between a library and nothing: `filen-sdk-ts`
-  is official and supports browsers. Whether to take that library or carry Filen's crypto
-  ourselves is precisely the question nobody has answered, which is why there is nothing
-  here to schedule. The CLI's local WebDAV server is the same arrangement as MEGAcmd, which
-  the MEGA notes call useless to build on, and that judgement has not changed: it is worth
-  mentioning to someone already running the CLI, because the generic WebDAV card takes a
-  local address, but a server the user runs is not a backend. Nobody has reported trying it.
+- **Filen: blocked on a licence, not on effort.** `@filen/sdk` is **AGPLv3**. Konode is
+  **MPL-2.0**. Bundling it and distributing the result through the Web Store puts the
+  combined work under AGPL terms, and MPL's larger-work allowance does not reach far enough
+  to relicense somebody else's AGPL code back down. That is a question for a lawyer, not for
+  this file, and it has to be answered *before* any of the engineering below matters. Until
+  it is, Filen is not scheduled and not promised.
+  The rest, for whenever that answer arrives: the SDK is official and does support browsers,
+  so a route exists; it is 2.96 MB unpacked across 15 dependencies (`axios`, `fs-extra`,
+  `crypto-js`, `node-forge`, `@noble/hashes` among them) against a 776 KB extension with
+  four runtime dependencies. Writing it by hand instead means reproducing Filen's own
+  encryption, which is the category of code where a subtle error is silent and costs the
+  user their data. Filen is zero-knowledge, and offers no hosted WebDAV address, so it can
+  never be one more preset on the WebDAV card. Its CLI can serve a drive over WebDAV **or
+  S3** locally, which is the same arrangement as MEGAcmd and gets the same judgement the
+  MEGA notes give that: worth mentioning to someone already running the CLI, because the
+  generic WebDAV card takes a local address, but a server the user runs is not a backend.
+  Nobody has reported trying it.
 - Optional OAuth proxy (serverless) to avoid shipping the Google client secret.
 
 ## Publishing
