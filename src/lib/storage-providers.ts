@@ -8,7 +8,7 @@
 import type { BackendType } from "@/lib/types";
 
 export type ProviderId =
-  | "gdrive" | "koofr" | "pcloud" | "nextcloud" | "fastmail" | "webdav" | "github";
+  | "gdrive" | "koofr" | "pcloud" | "nextcloud" | "fastmail" | "jianguoyun" | "webdav" | "github";
 
 export interface ProviderDef {
   id: ProviderId;
@@ -25,8 +25,8 @@ export interface ProviderDef {
 }
 
 // Endpoints verified against each provider's own docs (2026-07): Koofr, pCloud EU/US,
-// Fastmail (myfiles.* roots straight into the user's files — no domain path). Box was
-// dropped (discontinued WebDAV in 2023). Nextcloud/ownCloud/Synology need a per-user
+// Fastmail (myfiles.* roots straight into the user's files — no domain path), and
+// Nutstore / 坚果云 (2026-09). Box was dropped (discontinued WebDAV in 2023). Nextcloud/ownCloud/Synology need a per-user
 // host, so they take a host field (Nextcloud) or a full custom URL (WebDAV) instead.
 // Card order (2026-07): Google Drive leads (most familiar entry point), then the
 // privacy-friendly own-storage options, GitHub, and the generic WebDAV catch-all last.
@@ -58,6 +58,22 @@ export const PROVIDERS: ProviderDef[] = [
     id: "fastmail", backend: "webdav", label: "Fastmail", fixedUrl: "https://myfiles.fastmail.com",
     descKey: "provider_fastmail_desc",
     noteKey: "provider_fastmail_note",
+  },
+  {
+    // Nutstore / 坚果云. The dominant hosted-WebDAV provider in mainland China, and the
+    // only realistic backend for users there: Google Drive is unreachable from the
+    // mainland, which makes the card Konode leads with useless to that entire audience.
+    //
+    // The note carries an interval warning the other presets don't need. Nutstore caps
+    // WebDAV at 600 requests per 30 minutes on a free account (1500 on a paid one), and
+    // a sync cycle costs `types x (1 + peers)` requests plus uploads: at the default 60s
+    // interval that is ~480-600 per half hour with four devices, which is the ceiling.
+    // Raising the interval is the fix and it already exists as a setting, so the card
+    // says so rather than letting the user find out as intermittent failures.
+    id: "jianguoyun", backend: "webdav", label: "Nutstore / 坚果云",
+    fixedUrl: "https://dav.jianguoyun.com/dav/",
+    descKey: "provider_jianguoyun_desc",
+    noteKey: "provider_jianguoyun_note",
   },
   {
     // GitHub ONLY. The backend hardcodes api.github.com and BackendConfig.github has

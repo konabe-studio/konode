@@ -209,6 +209,12 @@
   "provider_fastmail_note": {
     "message": "Verwende deine vollständige Fastmail-Adresse als Benutzernamen und ein App-Passwort mit Files-(WebDAV-)Zugriff."
   },
+  "provider_jianguoyun_desc": {
+    "message": "Nutstore-Cloud-Speicher, in Festlandchina weit verbreitet."
+  },
+  "provider_jianguoyun_note": {
+    "message": "Verwende deine Nutstore-E-Mail-Adresse als Benutzernamen und ein Anwendungspasswort für Drittanbieter als Passwort. Erhöhe bei einem kostenlosen Konto ab drei Geräten das Synchronisierungsintervall auf mindestens 120 Sekunden: Nutstore erlaubt 600 WebDAV-Anfragen pro 30 Minuten."
+  },
   "provider_github_desc": {
     "message": "Deine Sync-Daten liegen in einem privaten GitHub-Repository, auf das Konode mit einem Personal Access Token zugreift."
   },

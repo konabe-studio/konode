@@ -257,6 +257,12 @@
   "provider_fastmail_note": {
     "message": "Use your full Fastmail address as the username, and an app password that has Files (WebDAV) access."
   },
+  "provider_jianguoyun_desc": {
+    "message": "Nutstore cloud storage, widely used in mainland China."
+  },
+  "provider_jianguoyun_note": {
+    "message": "Use your Nutstore email as the username, and a third-party app password as the password. On a free account, raise Sync interval to 120 seconds or more once you have three devices: Nutstore allows 600 WebDAV requests every 30 minutes."
+  },
   "provider_github_desc": {
     "message": "Your synced data lives in a private GitHub repository, which Konode reaches with a Personal Access Token."
   },

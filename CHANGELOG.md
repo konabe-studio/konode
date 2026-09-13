@@ -5,6 +5,20 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+
+- **Nutstore (坚果云) has a storage card.** The dominant hosted-WebDAV provider in mainland
+  China, and the one that matters most there for a reason that has nothing to do with
+  Nutstore: Google Drive cannot be reached from the mainland, so the backend Konode's setup
+  leads with is unusable for that whole audience, and WebDAV against a domestic provider is
+  the only route that works. Pick the card, sign in with your Nutstore email and a
+  third-party app password, and there is nothing else to configure.
+  One thing the card tells you that the others do not need to. Nutstore allows 600 WebDAV
+  requests every 30 minutes on a free account, and a sync costs roughly one request per data
+  type plus one per other device, so four devices at the default one-minute interval sit
+  right on that ceiling. Raise **Sync interval** to 120 seconds or more once you have three
+  devices and it stays well clear. A paid Nutstore account allows 1500 and does not need it.
+
 ### Fixed
 
 - **Cancelling Google Drive sign-in signed you out of Drive.** Pressing the Google
