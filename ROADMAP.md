@@ -409,6 +409,19 @@ Reopen this if Apple ever ships an API that writes to the user's visible iCloud 
   unrelated APIs across Drive, GitHub and WebDAV, which is why the `listVersions()` stub
   was dropped from `IBackend` in 1.3.1 rather than filled in. Two limits worth stating wherever this is described: bookmarks only
   (`exportBookmarkPayload`), and only across the newest `MAX_SNAPSHOTS`, which is 10.
+- **Filen, behind MEGA rather than beside it.** Asked for on Reddit, and deliberately not
+  scheduled. MEGA is the backend that has design notes written down; Filen comes after it
+  if what MEGA costs turns out to carry over, and not at all if it does not. It will not be
+  forced in ahead of that. What is established so far: Filen is zero-knowledge and encrypts
+  on the device, its CLI can serve a drive over WebDAV **or S3** locally, and there is no
+  hosted WebDAV address, so it cannot become one more preset on the WebDAV card. Unlike the
+  MEGA write-up above, this is *not* a choice between a library and nothing: `filen-sdk-ts`
+  is official and supports browsers. Whether to take that library or carry Filen's crypto
+  ourselves is precisely the question nobody has answered, which is why there is nothing
+  here to schedule. The CLI's local WebDAV server is the same arrangement as MEGAcmd, which
+  the MEGA notes call useless to build on, and that judgement has not changed: it is worth
+  mentioning to someone already running the CLI, because the generic WebDAV card takes a
+  local address, but a server the user runs is not a backend. Nobody has reported trying it.
 - Optional OAuth proxy (serverless) to avoid shipping the Google client secret.
 
 ## Publishing
