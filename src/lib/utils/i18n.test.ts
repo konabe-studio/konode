@@ -138,6 +138,9 @@ describe("the English catalogue is the contract", () => {
       "datatype_bookmarks_desc", "datatype_sessions_desc", "datatype_history_desc", "datatype_extensions_desc",
       // Read through tParts(), which takes the key as an argument rather than a literal.
       "provider_syncing_to", "onb_plaintext_note", "onb_done_subtitle",
+      // Asked for by applyDocumentLanguage(), which lives in i18n.ts, the one file
+      // sourceFiles() skips, so no scan can ever see this call.
+      "locale_bcp47",
     ];
     // Looser than the check above on purpose: this one hunts DEAD strings, so a key counts
     // as alive if it is named in a t()/plural() call (which expands `_one`/`_other`, since
@@ -174,6 +177,38 @@ describe("the locale directory names", () => {
     // `Latn`, `Cyrl` — and that is exactly what Chrome drops on the floor.
     const chromeShaped = /^[a-z]{2,3}(_([A-Z]{2}|419))?$/;
     expect(languages.filter((l) => !chromeShaped.test(l))).toEqual([]);
+  });
+});
+
+describe("locale_bcp47", () => {
+  it("is the BCP 47 form of the directory it sits in", () => {
+    // This key is not a sentence, it is the value written into <html lang>, and it is the
+    // only string in the catalogue whose CONTENT has to match the folder around it.
+    //
+    // It exists because the browser's own answer is the wrong one. i18n.getUILanguage()
+    // reports the BROWSER's language, not the catalogue that answered: set to French, it
+    // says "fr" while chrome.i18n serves English per message and the user reads English.
+    // Labelling that page "fr" is how you invite Chrome to machine-translate it, which is
+    // the failure this whole mechanism exists to prevent (#36). Reading the tag from the
+    // catalogue means it can only ever name the language actually on screen.
+    //
+    // Which puts the weight on the translator, and it is the one string where a faithful
+    // translation is a bug: "en" copied along with the file, "zh-Hans" for the script
+    // rather than the region, or the word itself rendered into the language. Every one of
+    // those mislabels the page and none of them looks wrong in Weblate. The directory name
+    // already holds the right answer, in Chrome's underscore spelling. This is the same
+    // identity in BCP 47's hyphenated one, so the folder is what it gets checked against.
+    //
+    // A language that hasn't reached the key yet is skipped, like everywhere else: the
+    // English fallback is "en", which is exactly what a mostly-English page should say.
+    const wrong: string[] = [];
+    for (const lang of languages) {
+      const declared = catalogue(lang).locale_bcp47?.message;
+      if (declared === undefined) continue;
+      const want = lang.replace("_", "-");
+      if (declared !== want) wrong.push(`${lang}: says "${declared}", should be "${want}"`);
+    }
+    expect(wrong).toEqual([]);
   });
 });
 

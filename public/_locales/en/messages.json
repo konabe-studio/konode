@@ -1,4 +1,8 @@
 {
+  "locale_bcp47": {
+    "message": "en",
+    "description": "NOT a sentence: the BCP 47 tag for THIS catalogue, written into <html lang> so the browser and screen readers know what language the page is in. Replace it with your own tag and nothing else, lowercase language and uppercase region: de, es, pt-BR, zh-CN. Do not translate the word."
+  },
   "extension_name": {
     "message": "Konode | Private Bookmark & Tab Sync",
     "description": "The extension's name. This IS the Chrome Web Store listing title, so it carries the search terms people actually type: bookmark, tab, sync. Keep 'Konode' first and keep the whole thing under 45 characters. Translate the part after the bar into what someone would search for in your language; leave 'Konode' alone, it is the product name."

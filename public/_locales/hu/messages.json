@@ -1,4 +1,7 @@
 {
+  "locale_bcp47": {
+    "message": "hu"
+  },
   "extension_name": {
     "message": "Konode | Privát könyvjelző- és lapszinkron"
   },

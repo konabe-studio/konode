@@ -1,4 +1,7 @@
 {
+  "locale_bcp47": {
+    "message": "de"
+  },
   "extension_name": {
     "message": "Konode | Privater Lesezeichen- und Tab-Sync"
   },
