@@ -1,4 +1,7 @@
 {
+  "locale_bcp47": {
+    "message": "es"
+  },
   "extension_description": {
     "message": "Sincronización del navegador que prioriza la privacidad con tu propio almacenamiento: Google Drive, WebDAV, GitHub."
   },

@@ -21,6 +21,14 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **Konode's own pages could fail to draw if your browser is not set to English.** They
+  declared themselves English while showing your language, so Chrome treated them as pages
+  worth translating, and anyone who has told it to always translate English got that done
+  silently, with no prompt. Machine translation rewrites a page while Konode is still
+  drawing it, and the setup wizard is where the two collided most often: clicking "Sign in
+  with Google" left you looking at "Konode couldn't show this screen" instead. Your synced
+  data and your storage were never part of this. Every Konode page now declares the
+  language it is actually in, and asks the browser not to translate it.
 - **Cancelling Google Drive sign-in signed you out of Drive.** Pressing the Google
   button in Settings and then closing the consent window left the device with no Drive
   session at all, while Settings went on showing the account as connected. Sign-in used

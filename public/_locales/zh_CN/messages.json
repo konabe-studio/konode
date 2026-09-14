@@ -1,4 +1,7 @@
 {
+  "locale_bcp47": {
+    "message": "zh-CN"
+  },
   "extension_description": {
     "message": "隐私优先的浏览器同步，支持同步至个人存储空间：Google Drive、WebDAV、GitHub。"
   },
