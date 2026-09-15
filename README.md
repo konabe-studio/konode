@@ -85,6 +85,17 @@ Chrome's built-in sync encrypts passwords by default and the rest once you set a
 passphrase, with some categories left out; Firefox Sync is end-to-end encrypted by
 default.
 
+**Running Konode alongside your browser's own sync.** You can, and people do, but it is
+untested rather than known to work, so here is what to expect. The concern isn't that the
+two will fight over your data. It's churn. The bookmarks API tells an extension that a
+bookmark appeared, changed or was removed, and never who did it, so a bookmark that Chrome
+Sync or Brave Sync has just brought in looks exactly like one you added yourself. Konode
+publishes it, the other system carries it to its own devices, and the same change travels
+twice. If both systems cover the same devices, you end up where you would have with either
+one alone, just with more writes to your storage along the way. If they cover different
+sets of devices, they bridge those sets together, deletions included, which may not be what
+you had in mind. Picking one system for bookmarks is the simple answer.
+
 ## Privacy & security
 
 - **No Konode servers exist.** Your data goes only to the backend you configure, and
