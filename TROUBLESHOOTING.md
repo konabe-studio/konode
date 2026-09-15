@@ -80,6 +80,21 @@ of time, and GitHub or WebDAV are the backends to use on that browser. The Activ
 won't tell you which case it is, because a mismatch looks like a closed window from
 Konode's side and is logged as a cancelled sign-in.
 
+**Google sign-in is approved, but Konode returns to the start of setup (Quetta for Android).**
+Look at the address the sign-in window ended on. If it starts with
+`https://<extension-id>.chromiumapp.org/` and contains `code=`, then Google accepted
+everything and the sign-in itself worked. That address is not a real website. It is a
+signal meaning "the sign-in is finished", and the browser is supposed to recognize it,
+close the window and hand the result to the extension. Quetta doesn't recognize it, so it
+tries to load the address as an ordinary page, which is why you get an error page. Konode
+never receives the result, reads the silence as a cancelled sign-in, and the setup wizard
+starts over. Nothing is wrong with your Google account or your Drive, and there is nothing
+to reinstall. Konode can't work around this, because the step that fails happens in the
+browser before any Konode code runs. Use GitHub or WebDAV on that browser instead: neither
+needs Google sign-in, and both sync exactly the same data. If you were partway through
+setup, you will need to enter your answers again, because the wizard doesn't yet keep them
+across a reload.
+
 **"Connected as ()" / Drive sync fails (building from source).**
 Your own Google Cloud project needs the **Google Drive API enabled**
 (APIs & Services → Library → Google Drive API → Enable). The OAuth sign-in can succeed
