@@ -201,7 +201,7 @@
     "message": "使用您的 Fastmail 完整邮箱地址作为用户名，并使用具备文件（WebDAV）访问权限的应用专用密码。"
   },
   "provider_jianguoyun_desc": {
-    "message": "坚果云云端存储。"
+    "message": "坚果云云端存储,在中国大陆广泛使用。"
   },
   "provider_jianguoyun_note": {
     "message": "使用您的坚果云账号邮箱作为用户名，并使用在安全选项中生成的第三方应用密码作为密码。免费账户在三台及以上设备时，请将同步间隔调高到 120 秒以上：坚果云每 30 分钟允许 600 次 WebDAV 请求。"
