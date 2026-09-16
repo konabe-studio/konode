@@ -7,6 +7,18 @@ All notable changes to Konode. Format loosely follows
 
 ### Added
 
+- **Konode speaks Traditional Chinese.** All 322 strings, so a browser set to 正體中文 reads
+  Konode in its own language. It did not before: Konode had no `zh_TW` catalogue and
+  `default_locale` is `en`, so Taiwan and Hong Kong never fell back to the Simplified
+  catalogue sitting right next to it. They fell back to English, and the English build is
+  what those users installed, because nothing else was on offer.
+  Translated from the Simplified catalogue rather than converted from it, which is a
+  different job. A character converter turns 扩展 into 擴展 and 会话 into 會話, and those are
+  the mainland words wearing Traditional glyphs: Taiwan reads 擴充功能 and 分頁. The
+  terminology follows Chrome's own Traditional Chinese interface throughout, down to 通關密語
+  for the encryption passphrase and 瀏覽記錄 for history, so the words Konode uses are the
+  words the browser around it already uses.
+
 - **Nutstore (坚果云) has a storage card.** The dominant hosted-WebDAV provider in mainland
   China, and the one that matters most there for a reason that has nothing to do with
   Nutstore: Google Drive cannot be reached from the mainland, so the backend Konode's setup

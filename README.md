@@ -131,9 +131,9 @@ you had in mind. Picking one system for bookmarks is the simple answer.
 
 ## Translations
 
-Konode speaks **English, Hungarian, German, Spanish and Chinese (Simplified)**, and
-follows your browser's language. Every screen is translated: the popup, the setup wizard,
-and Settings. Dates and numbers follow your browser's locale everywhere.
+Konode speaks **English, Hungarian, German, Spanish, Chinese (Simplified) and Chinese
+(Traditional)**, and follows your browser's language. Every screen is translated: the popup,
+the setup wizard, and Settings. Dates and numbers follow your browser's locale everywhere.
 
 **Japanese**, **Italian** and **Estonian** have been started. A language reaches a release
 once it is complete, because a screen that is half translated reads worse than an English
@@ -244,7 +244,8 @@ use a dedicated manager like [Bitwarden](https://bitwarden.com),
   GitHub + WebDAV · WebDAV provider presets · multi-device merge · per-item conflict
   resolution · opt-in E2EE · Drive OAuth refresh (PKCE) · cross-browser extension
   matching · **Chrome Web Store listing** · **Firefox Add-ons listing** · **translated
-  interface** (English, Hungarian, German, Spanish, Chinese (Simplified)).
+  interface** (English, Hungarian, German, Spanish, Chinese in both Simplified and
+  Traditional).
 - **Next**: more backends, cheapest sign-in first (Dropbox token and S3-compatible, then
   Dropbox OAuth and OneDrive) · faster history sync · more languages (Japanese, Italian,
   Estonian).

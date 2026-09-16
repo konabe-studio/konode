@@ -158,24 +158,27 @@ keeps the two from being confused.
   SYNC rather than once per peer (1.3.1), which was the larger half of the cost with more
   than one other device; what remains is that a sync which imports any history at all
   still reads the whole local history once to answer "is the peer's visit newer".
-- **More languages.** Traditional Chinese (`zh_TW`), Japanese, Italian and Estonian are open
-  volunteer work on Weblate with no target date. A language joins `shipped-languages.json`
+- **More languages.** Japanese, Italian and Estonian are open volunteer work on Weblate
+  with no target date. A language joins `shipped-languages.json`
   once it is complete, which is the last step of shipping it: that one list is what both the
   packaging scripts and `i18n.test.ts` read, so what we ship and what we hold to a
   completeness check cannot drift apart. Completeness is the whole bar: the translators
   are native speakers and Weblate is where their work gets reviewed, so a language no
   maintainer here reads is not thereby held back.
 
-  **Traditional Chinese is the one worth chasing** (opened 2026-09-13, after a Taiwanese user
-  said so on Reddit). Konode had no `zh_TW` catalogue and `default_locale` is `en`, so a
+  **Traditional Chinese shipped**, complete at 322 strings (opened 2026-09-13, after a
+  Taiwanese user said so on Reddit). Konode had no `zh_TW` catalogue and `default_locale` is `en`, so a
   browser set to 正體中文 did not fall back to the Simplified catalogue. It fell back to
   English, and those users installed the English build because nothing else was on offer. The
   audience is measurable and it is new: Taiwan went 0 to 21 weekly users and Hong Kong 0 to
   20 in the week of 2026-09-11, and AMO lists 正體中文 separately.
 
-  Two notes for whoever touches this. **A character converter is not a shortcut**: 擴充功能
-  against 扩展, and 分頁 against 会话, are different words rather than different glyphs, and a
-  converted catalogue reads as mainland Chinese in Traditional characters. And **the directory
+  Two notes for whoever touches the languages still open. **A character converter is not a
+  shortcut**: 擴充功能 against 扩展, and 分頁 against 会话, are different words rather than
+  different glyphs, and a converted catalogue reads as mainland Chinese in Traditional
+  characters. The catalogue was translated from the Simplified one string by string, with the
+  terminology taken from Chrome's own Traditional Chinese interface: 通關密語 for the
+  encryption passphrase, 瀏覽記錄 for history, 匯入 and 匯出 rather than 導入 and 導出. And **the directory
   must be `zh_TW`**: Chrome reads exactly two Chinese locale directories, `zh_CN` and `zh_TW`,
   while Weblate's picker offers only its canonical `zh_Hant`, which would have produced a
   folder Chrome ignores. The directory is seeded in the repo so Weblate adopts that name
