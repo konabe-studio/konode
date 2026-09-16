@@ -57,7 +57,7 @@
     "message": "Impossibile raggiungere Konode. Tocca per riprovare."
   },
   "popup_recovery_notice": {
-    "message": "È stata bloccata un'eliminazione insolita ($COUNT$ segnalibri) ed è stato salvato un punto di ripristino. Controlla in Impostazioni → Attività.",
+    "message": "Un'eliminazione insolita ($COUNT$ segnalibri) è stata bloccata ed è stato salvato un punto di ripristino. Applicala o mantienili in Impostazioni → Attività.",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -235,5 +235,8 @@
   },
   "onb_feature_instant": {
     "message": "Sincronizza ogni modifica quando avviene."
+  },
+  "onb_feature_browsers": {
+    "message": "Funziona nei browser basati su Chromium e Firefox."
   }
 }
