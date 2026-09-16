@@ -177,7 +177,7 @@
     "message": "端對端加密"
   },
   "common_generate_key": {
-    "message": "產生一把強式金鑰"
+    "message": "產生高強度金鑰"
   },
   "provider_gdrive_desc": {
     "message": "直接同步到你自己的 Google Drive。透過 OAuth，存取權杖只會留在這台裝置上。"
@@ -219,7 +219,7 @@
     "message": "使用者名稱請填你的堅果雲電子郵件，密碼請用第三方應用程式密碼。免費帳戶接到第三台裝置之後，請把同步間隔調到 120 秒以上：堅果雲每 30 分鐘只允許 600 次 WebDAV 請求。"
   },
   "provider_github_desc": {
-    "message": "你的同步資料放在一個私人的 GitHub 存放庫裡，Konode 透過個人存取權杖存取它。"
+    "message": "你的同步資料放在一個私人的 GitHub 儲存庫裡，Konode 透過個人存取權杖存取它。"
   },
   "provider_webdav_desc": {
     "message": "Synology、kDrive，或任何其他 WebDAV 伺服器。"
@@ -291,7 +291,7 @@
     "message": "驗證中…"
   },
   "onb_github_401": {
-    "message": "GitHub 拒絕了這個權杖。請確認它沒有過期，而且你貼上了完整內容。"
+    "message": "GitHub 拒絕了這個權杖。請確認它沒有過期，且是否為完整內容。"
   },
   "onb_github_http": {
     "message": "GitHub 無法驗證這個權杖（HTTP $STATUS$）。",
@@ -309,7 +309,7 @@
     "message": "分支（預設：main）"
   },
   "onb_github_token_link": {
-    "message": "建立精細權限權杖（只限這個存放庫） →"
+    "message": "建立精細權限權杖（只限這個儲存庫） →"
   },
   "onb_data_title": {
     "message": "要同步哪些東西？"
@@ -342,7 +342,7 @@
     "message": "請輸入通關密語，或產生一把金鑰。"
   },
   "onb_pass_too_short": {
-    "message": "至少 $MIN$ 個字元。同步過的資料可能被離線破解，太短的通關密語猜得出來。",
+    "message": "至少 $MIN$ 個字元。同步過的資料可能被離線破解，太短的通關密語會被破解出來。",
     "placeholders": {
       "min": {
         "example": "12",
@@ -357,7 +357,7 @@
     "message": "請確認你的通關密語。"
   },
   "onb_pass_mismatch": {
-    "message": "兩組通關密語還不一樣。"
+    "message": "兩組通關密語尚未一致。"
   },
   "onb_save_passphrase_lead": {
     "message": "請保存好這組通關密語。"
@@ -429,7 +429,7 @@
     "message": "仍要完成"
   },
   "onb_done_title": {
-    "message": "都設定好了！"
+    "message": "已設定完成！"
   },
   "onb_done_subtitle": {
     "message": "Konode 現在會把你的瀏覽器資料同步到 $BACKEND$。第一次同步已經在背景執行了。",
@@ -531,7 +531,7 @@
     "message": "沒有取得存取 WebDAV 伺服器的權限。"
   },
   "opt_err_pass_too_short": {
-    "message": "請至少用 $MIN$ 個字元。同步過的資料可能被離線破解，太短的通關密語猜得出來。越長越好，或是產生一把金鑰。",
+    "message": "請至少用 $MIN$ 個字元。同步過的資料可能被離線破解，太短的通關密語會被破解出來。越長越好，或是產生一把金鑰。",
     "placeholders": {
       "min": {
         "content": "$1",
@@ -540,7 +540,7 @@
     }
   },
   "opt_err_pass_mismatch": {
-    "message": "兩組通關密語不一樣。請重新輸入確認後再儲存。"
+    "message": "兩組通關密語尚不一致。請重新輸入確認後再儲存。"
   },
   "opt_saving": {
     "message": "儲存中…"
@@ -615,7 +615,7 @@
     "message": "個人存取權杖"
   },
   "opt_github_repo_label": {
-    "message": "存放庫"
+    "message": "儲存庫"
   },
   "opt_github_branch_label": {
     "message": "分支"
@@ -735,7 +735,7 @@
     "message": "自動同步"
   },
   "opt_auto_sync_desc": {
-    "message": "另外也依固定排程同步。瀏覽記錄、開啟中的分頁和擴充功能清單只會走這條路。"
+    "message": "另外也依固定排程同步。歷史記錄、開啟的分頁與擴充功能清單僅透過此方式傳輸。"
   },
   "opt_notifications_label": {
     "message": "通知"
@@ -783,7 +783,7 @@
     "message": "手動"
   },
   "opt_conflict_manual_desc": {
-    "message": "每次衝突都在彈出視窗裡問我。"
+    "message": "請在對話方塊中手動解決每一個衝突。"
   },
   "opt_safety_section": {
     "message": "安全防護"
@@ -914,7 +914,7 @@
     "message": "取消"
   },
   "opt_blocked_section": {
-    "message": "被攔下的刪除"
+    "message": "已阻止刪除"
   },
   "opt_blocked_section_sub": {
     "message": "另一台裝置要求刪掉異常多的書籤，所以 Konode 把它擋了下來。如果那本來就是你的本意，可以套用；不然就保留它們。"
@@ -1135,7 +1135,7 @@
     "message": "用來推導出加密金鑰。只存在這台裝置上，永遠不會上傳。"
   },
   "opt_passphrase_placeholder": {
-    "message": "設定一組夠強的通關密語"
+    "message": "設定一組高強度的通關密語"
   },
   "opt_passphrase_confirm_placeholder": {
     "message": "確認通關密語"
