@@ -134,8 +134,9 @@ out says which half of his problem the release solves and which half it does not
     stuffing, so the "Choose your storage" section named seven storage providers where it
     now names the three backends and nothing else. Metadata only: the package never
     changed. The copy used to live in the dashboard and nowhere else, which is why it could
-    not be reviewed here before it went out; it now lives in `store-listing/`, one file per
-    language per field, and `store-listing.test.ts` holds it to the rules that matter.
+    not be reviewed here before it went out; it now lives in `internal/store-listing/`, one
+    file per language per field, and `store-listing.test.ts` holds it to the rules that
+    matter.
   - **The screenshots and the onboarding video were replaced in the same pass**, which is the
     half of #32 that could be fixed. A store screenshot was still advertising Gitea and
     GitLab long after the text inside the extension stopped, and someone installed Konode on
