@@ -6,7 +6,7 @@
     "message": "Konode | 私人書籤與分頁同步"
   },
   "extension_description": {
-    "message": "隱私優先的瀏覽器同步，資料存放在你自己的空間：Google 雲端硬碟、WebDAV、GitHub。"
+    "message": "隱私優先的瀏覽器同步，資料存放在你自己的空間：Google Drive、WebDAV、GitHub。"
   },
   "datatype_bookmarks": {
     "message": "書籤"
@@ -180,7 +180,7 @@
     "message": "產生一把強式金鑰"
   },
   "provider_gdrive_desc": {
-    "message": "直接同步到你自己的 Google 雲端硬碟。透過 OAuth，存取權杖只會留在這台裝置上。"
+    "message": "直接同步到你自己的 Google Drive。透過 OAuth，存取權杖只會留在這台裝置上。"
   },
   "provider_nextcloud_desc": {
     "message": "你自己的 Nextcloud 或 ownCloud 伺服器。"
