@@ -300,6 +300,13 @@ Sequenced by where our value prop is strongest, not by raw browser size:
    - *Presets over the existing WebDAV backend*: **done in 1.1.0.** Nextcloud / ownCloud
      (host field), pCloud (EU or US), Koofr and Fastmail (fixed endpoints) each have a
      card; Synology, kDrive and anything else go through the generic WebDAV card.
+     **Nutstore (坚果云) joined them on 2026-09-13**, unreleased so far, and it is the one
+     of these that changes who can use Konode at all: Google Drive cannot be reached from
+     mainland China, so the backend the wizard leads with is unusable for that whole
+     audience, and WebDAV against a domestic provider is the only route left. Its card
+     carries an interval warning the others do not need, because a free account allows 600
+     WebDAV requests per 30 minutes, and four devices at the default interval sit on that
+     ceiling.
    - *Token / basic-auth backends* (Dropbox token, S3-compatible, Backblaze B2):
      WebDAV/GitHub-class, ~0.5-1.5 d each, and they port to Firefox trivially.
    - *OAuth (PKCE) backends* (Dropbox OAuth, OneDrive/Graph): ~2-4 d each (provider
