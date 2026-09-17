@@ -774,11 +774,12 @@ export class SyncEngine {
   /**
    * Every device with files in the sync folder.
    *
-   * Deliberately cheap. The inventory comes from the file NAMES, and then ONE file per
-   * device is fetched for its name and its timestamp — the smallest type that device has,
-   * because a history packet can be megabytes and a device list has no business downloading
-   * it. Both fields sit outside the encrypted payload, so this works with E2EE on and
-   * without the passphrase.
+   * Deliberately cheap. The inventory comes from the file listing, and then ONE file per
+   * device is fetched for its name: the smallest type that device has, because a history
+   * packet can be megabytes and a device list has no business downloading it. The last upload
+   * comes from the listing's modification times where the backend has them, and from that
+   * one packet's timestamp where it does not (GitHub). The name and the timestamp sit outside
+   * the encrypted payload, so this works with E2EE on and without the passphrase.
    *
    * An unreadable file costs that device its name, not the whole list: the same rule as
    * downloadAll, and for the same reason.
@@ -787,9 +788,16 @@ export class SyncEngine {
     const cfg = this.activeBackendConfig();
     if (!cfg) return [];
     return this.withBackend(async (b) => {
-      const names = await b.listFiles("konode_");
+      // Where the listing carries modification times, a device's last upload is the newest of
+      // them across its files (#30). The packet read below still names the device, but its
+      // timestamp is only the date of whichever file was cheapest to read, and an extension
+      // list unchanged for days froze the row of a device that uploads bookmarks every minute.
+      const listed = b.listFilesWithTimes
+        ? await b.listFilesWithTimes("konode_")
+        : (await b.listFiles("konode_")).map((name) => ({ name, modified: null }));
       const types = new Map<string, Set<DataType>>();
-      for (const name of names) {
+      const newestUpload = new Map<string, number>();
+      for (const { name, modified } of listed) {
         // konode_snap_* files live alongside these and are not per-device, so match the
         // four data types by name rather than accepting anything with an id in it.
         const m = /^konode_(bookmarks|history|sessions|extensions)_(.+)\.json$/.exec(name);
@@ -797,6 +805,7 @@ export class SyncEngine {
         const set = types.get(m[2]) ?? new Set<DataType>();
         set.add(m[1] as DataType);
         types.set(m[2], set);
+        if (modified !== null) newestUpload.set(m[2], Math.max(newestUpload.get(m[2]) ?? 0, modified));
       }
 
       // Smallest first: an extension list is a few KB, a session a few more, a bookmark
@@ -828,6 +837,8 @@ export class SyncEngine {
             logger.warn("listDevices", `Couldn't read ${name} (${err instanceof Error ? err.message : err}), so that device has no name here`);
           }
         }
+        const uploadedAt = newestUpload.get(device_id);
+        if (uploadedAt !== undefined) lastSeen = new Date(uploadedAt).toISOString();
         out.push({
           device_id, label, lastSeen,
           types: [...set].sort(),
