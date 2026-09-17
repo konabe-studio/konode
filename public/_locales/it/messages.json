@@ -841,7 +841,7 @@
     }
   },
   "opt_dismiss": {
-    "message": "Rescindere"
+    "message": "Chiudi"
   },
   "opt_devices_error": {
     "message": "Impossibile leggere i tuoi dispositivi: $ERROR$. Questo non significa che tu non ne abbia. Controlla la connessione in Archiviazione e riapri questa scheda.",
@@ -1227,7 +1227,7 @@
     "message": "Errore"
   },
   "opt_feedback_section": {
-    "message": "Commenti"
+    "message": "Feedback"
   },
   "opt_feedback_section_sub": {
     "message": "Nulla viene inviato automaticamente. Questi link si aprono solo quando ci fai clic."
