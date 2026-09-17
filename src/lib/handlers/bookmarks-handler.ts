@@ -1268,6 +1268,49 @@ function pruneEmptyFolders(tree: SyncBookmark[]): SyncBookmark[] {
 
 // ─── Snapshot restore ──────────────────────────────────────────────────────
 
+/** A sibling's identity for restore placement: a folder by title, a bookmark by its CANONICAL
+ *  url. A restore point is shared by every device, and a browser that keeps a bare origin
+ *  without its trailing slash would otherwise never find its neighbour in one that adds it. */
+function restoreKey(n: { url?: string; title: string }): string {
+  return n.url ? `u:${canonicalUrlKey(n.url)}` : `f:${n.title}`;
+}
+
+/**
+ * Where a restored node goes among its parent's current `children` (#29): next to the
+ * neighbours it had in the snapshot.
+ *
+ * Right after the node that preceded it, else right before the one that followed it, since
+ * both were adjacent to it; failing those, after the nearest earlier neighbour that is here,
+ * then before the nearest later one. Only with no neighbour here at all does the snapshot's
+ * own index decide, clamped to the parent.
+ *
+ * A neighbour can be absent although the snapshot has it, and never because it was deleted:
+ * a deleted one is in the snapshot too, so the restore has already put it back. It is absent
+ * when the restore does not put it back into THIS parent: a folder renamed since (nothing in
+ * it is missing, so no folder by the old name is made), a bookmark moved to another folder or
+ * also held in one, a restore point taken on a device laid out differently, or a create the
+ * browser refused.
+ */
+function restorePlacement(
+  children: Array<{ url?: string; title: string }>, siblings: SyncBookmark[], i: number,
+): number {
+  const here = children.map(restoreKey);
+  const find = (j: number): number => (j >= 0 && j < siblings.length ? here.indexOf(restoreKey(siblings[j])) : -1);
+  const prev = find(i - 1);
+  if (prev >= 0) return prev + 1;
+  const next = find(i + 1);
+  if (next >= 0) return next;
+  for (let j = i - 2; j >= 0; j--) {
+    const p = find(j);
+    if (p >= 0) return p + 1;
+  }
+  for (let j = i + 2; j < siblings.length; j++) {
+    const n = find(j);
+    if (n >= 0) return n;
+  }
+  return Math.min(Math.max(0, i), children.length);
+}
+
 /** Restore bookmarks from a snapshot tree: re-create every URL that isn't currently
  *  present locally, into its folder path, IGNORING tombstones — the whole point of a
  *  restore point is to bring back deleted bookmarks. Fresh creates get a current
@@ -1298,18 +1341,18 @@ export async function restoreBookmarks(tree: SyncBookmark[]): Promise<number> {
     // Every create is placed, not appended (#29). A restore is additive, so the parent it
     // fills usually still holds some of its old children, and appending put everything that
     // came back after everything that had survived: a folder that was last on the bar ended
-    // up ahead of bookmarks that used to precede it. Each restored node goes right after its
-    // previous sibling in the snapshot, the same anchor the merge places by, because the
-    // snapshot's raw index cannot know about children this parent has gained since.
+    // up ahead of bookmarks that used to precede it. Each restored node goes next to its
+    // neighbours in the snapshot (see restorePlacement), because the snapshot's raw index
+    // cannot know about children this parent has gained since.
     const walk = async (
-      node: SyncBookmark, ensureParent: () => Promise<string>, index: number, prevKey: string | undefined,
+      node: SyncBookmark, ensureParent: () => Promise<string>, siblings: SyncBookmark[], i: number,
     ): Promise<void> => {
       if (node.url) {
         const key = canonicalUrlKey(node.url);
         if (present.has(key)) return;
         try {
           const parentId = await ensureParent();
-          const at = placementIndex(await browser.bookmarks.getChildren(parentId), prevKey, index);
+          const at = restorePlacement(await browser.bookmarks.getChildren(parentId), siblings, i);
           await browser.bookmarks.create({ parentId, index: at, title: node.title, url: node.url });
           present.add(key);
           added++;
@@ -1324,15 +1367,13 @@ export async function restoreBookmarks(tree: SyncBookmark[]): Promise<number> {
         const existing = children.find((c) => !c.url && c.title === node.title);
         folderId = existing
           ? existing.id
-          : (await browser.bookmarks.create({ parentId, index: placementIndex(children, prevKey, index), title: node.title })).id;
+          : (await browser.bookmarks.create({ parentId, index: restorePlacement(children, siblings, i), title: node.title })).id;
         return folderId;
       };
       await walkChildren(node.children ?? [], ensureThis);
     };
     const walkChildren = async (kids: SyncBookmark[], ensureParent: () => Promise<string>): Promise<void> => {
-      for (let i = 0; i < kids.length; i++) {
-        await walk(kids[i], ensureParent, i, i > 0 ? siblingKey(kids[i - 1]) : undefined);
-      }
+      for (let i = 0; i < kids.length; i++) await walk(kids[i], ensureParent, kids, i);
     };
 
     const roots = tree[0]?.children ?? tree;
