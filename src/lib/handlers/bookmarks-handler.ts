@@ -1295,13 +1295,22 @@ export async function restoreBookmarks(tree: SyncBookmark[]): Promise<number> {
     );
     let added = 0;
 
-    const walk = async (node: SyncBookmark, ensureParent: () => Promise<string>): Promise<void> => {
+    // Every create is placed, not appended (#29). A restore is additive, so the parent it
+    // fills usually still holds some of its old children, and appending put everything that
+    // came back after everything that had survived: a folder that was last on the bar ended
+    // up ahead of bookmarks that used to precede it. Each restored node goes right after its
+    // previous sibling in the snapshot, the same anchor the merge places by, because the
+    // snapshot's raw index cannot know about children this parent has gained since.
+    const walk = async (
+      node: SyncBookmark, ensureParent: () => Promise<string>, index: number, prevKey: string | undefined,
+    ): Promise<void> => {
       if (node.url) {
         const key = canonicalUrlKey(node.url);
         if (present.has(key)) return;
         try {
           const parentId = await ensureParent();
-          await browser.bookmarks.create({ parentId, title: node.title, url: node.url });
+          const at = placementIndex(await browser.bookmarks.getChildren(parentId), prevKey, index);
+          await browser.bookmarks.create({ parentId, index: at, title: node.title, url: node.url });
           present.add(key);
           added++;
         } catch { /* skip invalid url */ }
@@ -1313,10 +1322,17 @@ export async function restoreBookmarks(tree: SyncBookmark[]): Promise<number> {
         const parentId = await ensureParent();
         const children = await browser.bookmarks.getChildren(parentId);
         const existing = children.find((c) => !c.url && c.title === node.title);
-        folderId = existing ? existing.id : (await browser.bookmarks.create({ parentId, title: node.title })).id;
+        folderId = existing
+          ? existing.id
+          : (await browser.bookmarks.create({ parentId, index: placementIndex(children, prevKey, index), title: node.title })).id;
         return folderId;
       };
-      for (const kid of node.children ?? []) await walk(kid, ensureThis);
+      await walkChildren(node.children ?? [], ensureThis);
+    };
+    const walkChildren = async (kids: SyncBookmark[], ensureParent: () => Promise<string>): Promise<void> => {
+      for (let i = 0; i < kids.length; i++) {
+        await walk(kids[i], ensureParent, i, i > 0 ? siblingKey(kids[i - 1]) : undefined);
+      }
     };
 
     const roots = tree[0]?.children ?? tree;
@@ -1324,7 +1340,7 @@ export async function restoreBookmarks(tree: SyncBookmark[]): Promise<number> {
       const root = roots[r];
       if (!root) continue;
       const targetRootId = matchLocalRoot(root, localRoots, r) ?? otherId;
-      for (const kid of root.children ?? []) await walk(kid, () => Promise.resolve(targetRootId));
+      await walkChildren(root.children ?? [], () => Promise.resolve(targetRootId));
     }
     logger.event("Snapshots", `Restored ${added} bookmark(s)`);
     return added;
