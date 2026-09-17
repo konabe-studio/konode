@@ -77,6 +77,11 @@ on any Chromium browser and on Firefox.
 - **Translation opened to volunteers** on
   [Hosted Weblate](https://hosted.weblate.org/projects/konode/), which is where Spanish,
   Chinese (Simplified), Italian and Estonian came from.
+- **Italian, Russian and Traditional Chinese** (2026-09-17), complete at 322 strings and
+  approved on Weblate. Each was finished as one full file uploaded to Weblate for review:
+  Traditional Chinese was corrected there by a native speaker, Italian finished what a
+  volunteer had started, and Russian was added because it ranks among the most common
+  browser languages in the Firefox Add-ons statistics.
 - **A full review pass** (1.2.0): correctness fixes across the sync engine, the storage
   backends and the interface, including bookmark renames, moves and folder reorders now
   propagating. See `CHANGELOG.md`.
@@ -159,7 +164,7 @@ keeps the two from being confused.
   SYNC rather than once per peer (1.3.1), which was the larger half of the cost with more
   than one other device; what remains is that a sync which imports any history at all
   still reads the whole local history once to answer "is the peer's visit newer".
-- **More languages.** Traditional Chinese (`zh_TW`), Japanese, Italian and Estonian are open
+- **More languages.** Japanese and Estonian are open
   volunteer work on Weblate with no target date. A language joins `shipped-languages.json`
   once it is complete, which is the last step of shipping it: that one list is what both the
   packaging scripts and `i18n.test.ts` read, so what we ship and what we hold to a
@@ -167,8 +172,9 @@ keeps the two from being confused.
   are native speakers and Weblate is where their work gets reviewed, so a language no
   maintainer here reads is not thereby held back.
 
-  **Traditional Chinese is the one worth chasing** (opened 2026-09-13, after a Taiwanese user
-  said so on Reddit). Konode had no `zh_TW` catalogue and `default_locale` is `en`, so a
+  **Traditional Chinese was the one worth chasing** (opened 2026-09-13, after a Taiwanese user
+  said so on Reddit, and shipped complete on 2026-09-17). Konode had no `zh_TW` catalogue
+  and `default_locale` is `en`, so a
   browser set to 正體中文 did not fall back to the Simplified catalogue. It fell back to
   English, and those users installed the English build because nothing else was on offer. The
   audience is measurable and it is new: Taiwan went 0 to 21 weekly users and Hong Kong 0 to

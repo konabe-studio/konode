@@ -7,6 +7,11 @@ All notable changes to Konode. Format loosely follows
 
 ### Added
 
+- **Konode now speaks Italian, Russian and Traditional Chinese.** Every screen is translated,
+  and Konode picks the language your browser is set to, as it already did for English,
+  Hungarian, German, Spanish and Simplified Chinese. Traditional Chinese is its own
+  translation, with the words used in Taiwan, rather than Simplified Chinese converted
+  character by character, and a native speaker reviewed it.
 - **Nutstore (坚果云) has a storage card.** The dominant hosted-WebDAV provider in mainland
   China, and the one that matters most there for a reason that has nothing to do with
   Nutstore: Google Drive cannot be reached from the mainland, so the backend Konode's setup
@@ -21,6 +26,10 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **Several Spanish labels said something other than what they do.** A restore point whose
+  bookmark count could not be read was labelled with the verb "mark", a snapshot was called
+  an "imagen", and the bulk-delete limit read as a number of items when it is a share of
+  your bookmarks. The Spanish text is corrected throughout.
 - **Konode's own pages could fail to draw if your browser is not set to English.** They
   declared themselves English while showing your language, so Chrome treated them as pages
   worth translating, and anyone who has told it to always translate English got that done
