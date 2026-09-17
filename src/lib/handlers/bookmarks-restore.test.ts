@@ -79,6 +79,83 @@ describe("restoreBookmarks keeps the snapshot's order (#29)", () => {
     expect(await titles()).toEqual(["A", "B", "Local", "C"]);
   });
 
+  describe("when the bookmark that preceded it in the snapshot is not here", () => {
+    // Deleting that neighbour cannot cause this: it is in the snapshot too, so the restore
+    // brings it back first. What can is a neighbour the snapshot has that the restore does not
+    // put back into the same folder. The previous placement then fell to the snapshot's raw
+    // index, and any child the folder had gained since pushed that off.
+
+    it("goes before the bookmark that followed it, when a folder has been renamed since", async () => {
+      // Nothing in "Work" is missing, so the restore never recreates a folder by that name,
+      // and the bookmark after it has no previous neighbour to find. "New" arrived at the
+      // front of the bar after the snapshot, which is what threw the raw index off.
+      await seedLink("New");
+      await seedLink("A");
+      const job = await chrome.bookmarks.create({ parentId: "1", title: "Job" });
+      await seedLink("W", job.id);
+      await seedLink("C");
+
+      await restoreBookmarks(snapshot([link("A"), folder("Work", [link("W")]), link("N"), link("C")]));
+
+      expect(await titles()).toEqual(["New", "A", "Job", "N", "C"]);
+    });
+
+    it("goes between its neighbours when the one before it now lives in another folder", async () => {
+      // The same happens when that URL is also bookmarked in another folder: the restore finds
+      // it present, so it does not put it back here.
+      await seedLink("A");
+      await seedLink("C");
+      await seedLink("P", "2");
+
+      await restoreBookmarks(snapshot([link("A"), link("P"), link("N"), link("C")]));
+
+      expect(await titles()).toEqual(["A", "N", "C"]);
+    });
+
+    it("goes after the nearest earlier neighbour that is here, when nothing followed it", async () => {
+      await seedLink("X");
+      await seedLink("Y");
+      await seedLink("Z");
+      await seedLink("A");
+      await seedLink("P", "2");
+
+      await restoreBookmarks(snapshot([link("A"), link("P"), link("N")]));
+
+      expect(await titles()).toEqual(["X", "Y", "Z", "A", "N"]);
+    });
+
+    it("keeps its place when the browser refuses to recreate the one before it", async () => {
+      // A restore point taken in one browser can hold a link another will not create, a
+      // chrome:// page on Firefox for one.
+      const realCreate = chrome.bookmarks.create.bind(chrome.bookmarks);
+      chrome.bookmarks.create = ((props: Parameters<typeof realCreate>[0]) =>
+        props.url === "https://p.com"
+          ? Promise.reject(new Error("Invalid URL"))
+          : realCreate(props)) as typeof chrome.bookmarks.create;
+      try {
+        await seedLink("A");
+        await seedLink("C");
+
+        await restoreBookmarks(snapshot([link("A"), link("P"), link("N"), link("C")]));
+
+        expect(await titles()).toEqual(["A", "N", "C"]);
+      } finally {
+        chrome.bookmarks.create = realCreate;
+      }
+    });
+
+    it("recognises its neighbour when one browser stored the address with a trailing slash", async () => {
+      // Orion keeps a bare origin without the slash that Chromium and Firefox add, and a restore
+      // point is shared by every device, so the snapshot and this tree can disagree on it.
+      await seedLink("X");
+      await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com/" });
+
+      await restoreBookmarks(snapshot([link("A"), link("N")]));
+
+      expect(await titles()).toEqual(["X", "A", "N"]);
+    });
+  });
+
   it("still adds only what is missing, and still clears this device's tombstones for it", async () => {
     await seedLink("A");
     await setTombstones([{ url: "https://b.com", deletedAt: Date.now() - 60_000, own: true }]);
