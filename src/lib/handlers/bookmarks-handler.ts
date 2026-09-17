@@ -1,6 +1,6 @@
 import type {
   SyncBookmark, Tombstone, MoveRecord, FolderMoveRecord, TitleRecord, FolderRenameRecord,
-  BookmarkPayload, ConflictStrategy,
+  FolderDeleteRecord, BookmarkPayload, ConflictStrategy,
 } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import {
@@ -10,6 +10,7 @@ import {
   getFolderMoves, setFolderMoves, updateFolderMoves,
   getTitles, setTitles, updateTitles,
   getFolderRenames, setFolderRenames, updateFolderRenames,
+  updateFolderDeletes,
 } from "@/lib/utils/storage";
 import { defaultOtherRootId, matchLocalRoot, matchLocalRootEx, rootKind } from "@/lib/utils/bookmark-roots";
 import { canonicalUrlKey } from "@/lib/utils/url";
@@ -192,6 +193,34 @@ export function mergeFolderRenameLists(
   return gcFolderRenames([...a, ...b]);
 }
 
+// ─── Folder deletions (path-keyed, same TTL as the tombstones they accompany) ──
+
+export function gcFolderDeletes(list: FolderDeleteRecord[]): FolderDeleteRecord[] {
+  const cutoff = Date.now() - TOMBSTONE_TTL_MS;
+  const byPath = new Map<string, FolderDeleteRecord>();
+  for (const r of list) {
+    if (r.at < cutoff) continue;
+    const k = folderPathKey(r.path);
+    const held = byPath.get(k);
+    // Newest time wins and ownership is sticky, exactly as for tombstones.
+    byPath.set(k, {
+      path: r.path,
+      at: Math.max(held?.at ?? 0, r.at),
+      own: (held?.own ?? false) || r.own !== false,
+    });
+  }
+  return [...byPath.values()];
+}
+
+export function mergeFolderDeleteLists(a: FolderDeleteRecord[], b: FolderDeleteRecord[]): FolderDeleteRecord[] {
+  return gcFolderDeletes([...a, ...b]);
+}
+
+/** Is `path` the deleted folder itself, or somewhere inside it? */
+function pathWithin(path: string[], deleted: string[]): boolean {
+  return deleted.length <= path.length && deleted.every((segment, i) => segment === path[i]);
+}
+
 /** URLs present anywhere in the CURRENT local tree (called after a mutation). */
 async function localUrlSet(): Promise<Set<string>> {
   return new Set(flattenNodes(await exportBookmarks()).filter((n) => n.url).map((n) => n.url as string));
@@ -223,6 +252,29 @@ async function recordRemovedTombstones(node: BookmarkNode): Promise<void> {
     mergeTombstoneLists(current, gone.map((url) => ({ url, deletedAt: now, own: true })))
   );
   logger.event("Tombstones", `Recorded ${gone.length} deletion(s)`);
+}
+
+/**
+ * Record that a FOLDER was deleted, so a device that loses its bookmarks loses the folder
+ * too (#26).
+ *
+ * The tombstones recorded alongside this say the bookmarks went. Nothing said the folder
+ * did, so every receiver removed the bookmarks and kept the folder as an empty shell, and
+ * since empty folders are never synced, nothing could ever clean one up. The path is built
+ * from the PARENT: by the time this runs the folder itself is gone.
+ */
+async function recordRemovedFolder(parentId: string, node: BookmarkNode): Promise<void> {
+  if (importing || node.url) return;
+  const parentPath = await folderPath(parentId);
+  if (!parentPath) return;
+  const path = [...parentPath, node.title];
+  // Deleting one of two same-named folders leaves a folder at this path, and publishing the
+  // deletion would take the survivor from every peer whose copy of it ends up empty.
+  const localRoots = (await browser.bookmarks.getTree())[0]?.children ?? [];
+  if (await resolveFolderPath(path, localRoots)) return;
+  const now = Date.now();
+  await updateFolderDeletes((current) => mergeFolderDeleteLists(current, [{ path, at: now, own: true }]));
+  logger.info("Tombstones", "Recorded a folder deletion");
 }
 
 /** Editing a bookmark's URL fires onChanged (NOT onRemoved), so no tombstone is
@@ -365,13 +417,14 @@ export async function exportBookmarkPayload(): Promise<BookmarkPayload> {
   // either undoing the prune or dropping the event's own record, depending on which
   // write happened to land last. Nothing here is exempt from the burst just because it
   // runs inside a sync: `importing` only suppresses the recorders during an IMPORT.
-  const [tree, gced, gcedMoves, gcedFolderMoves, gcedTitles, gcedRenames] = await Promise.all([
+  const [tree, gced, gcedMoves, gcedFolderMoves, gcedTitles, gcedRenames, gcedFolderDeletes] = await Promise.all([
     exportBookmarks(),
     updateTombstones(gcTombstones),
     updateMoves(gcMoves),
     updateFolderMoves(gcFolderMoves),
     updateTitles(gcTitles),
     updateFolderRenames(gcFolderRenames),
+    updateFolderDeletes(gcFolderDeletes),
   ]);
   // Snapshot the current (full) tree so a later URL edit can find the replaced
   // url by id and tombstone it (see recordUrlChange). This is the state peers hold.
@@ -381,7 +434,32 @@ export async function exportBookmarkPayload(): Promise<BookmarkPayload> {
   return {
     tree: pruneEmptyFolders(tree), tombstones: publishableTombstones(gced, tree), moves: gcedMoves,
     folderMoves: gcedFolderMoves, titles: gcedTitles, folderRenames: gcedRenames,
+    folderDeletes: publishableFolderDeletes(gcedFolderDeletes, tree),
   };
+}
+
+/**
+ * The folder deletions this device may ask of the others, by the same two rules as
+ * `publishableTombstones`: only our own, and never a folder our tree still has, because a
+ * folder the user has since recreated was not deleted as far as anyone else should hear.
+ */
+function publishableFolderDeletes(records: FolderDeleteRecord[], tree: SyncBookmark[]): FolderDeleteRecord[] {
+  const held = new Set<string>();
+  const walk = (nodes: SyncBookmark[], path: string[]): void => {
+    for (const n of nodes) {
+      if (n.url) continue;
+      const here = [...path, n.title];
+      held.add(folderPathKey(here));
+      walk(n.children ?? [], here);
+    }
+  };
+  for (const root of tree[0]?.children ?? []) {
+    const kind = rootKind(root.id);
+    if (kind) walk(root.children ?? [], [kind]);
+  }
+  return records
+    .filter((r) => r.own !== false && !held.has(folderPathKey(r.path)))
+    .map((r) => ({ path: r.path, at: r.at }));
 }
 
 /**
@@ -415,7 +493,7 @@ function publishableTombstones(tombstones: Tombstone[], tree: SyncBookmark[]): T
 
 /** Normalize a parsed bookmark payload (supports the legacy bare-array format). */
 export function normalizePayload(payload: unknown): BookmarkPayload {
-  const empty = { tombstones: [], moves: [], folderMoves: [], titles: [], folderRenames: [] };
+  const empty = { tombstones: [], moves: [], folderMoves: [], titles: [], folderRenames: [], folderDeletes: [] };
   if (Array.isArray(payload)) return { tree: payload as SyncBookmark[], ...empty };
   const p = (payload ?? {}) as Partial<BookmarkPayload>;
   // Every log is optional: a peer on an older build sends none of them, and must
@@ -423,6 +501,7 @@ export function normalizePayload(payload: unknown): BookmarkPayload {
   return {
     tree: p.tree ?? [], tombstones: p.tombstones ?? [], moves: p.moves ?? [],
     folderMoves: p.folderMoves ?? [], titles: p.titles ?? [], folderRenames: p.folderRenames ?? [],
+    folderDeletes: p.folderDeletes ?? [],
   };
 }
 
@@ -464,7 +543,7 @@ export async function importBookmarks(
   const {
     tree, tombstones: remoteTombstones, moves: remoteMoves = [],
     folderMoves: remoteFolderMoves = [], titles: remoteTitles = [],
-    folderRenames: remoteFolderRenames = [],
+    folderRenames: remoteFolderRenames = [], folderDeletes: remoteFolderDeletes = [],
   } = normalizePayload(payload);
   importing = true;
   try {
@@ -477,6 +556,7 @@ export async function importBookmarks(
       folderMoves: { local: await getFolderMoves(), remote: remoteFolderMoves },
       titles: { local: await getTitles(), remote: remoteTitles },
       folderRenames: { local: await getFolderRenames(), remote: remoteFolderRenames },
+      folderDeletes: { remote: remoteFolderDeletes },
     };
     // Folded in as the PEER's, never as ours. Keeping them is what stops a stale peer
     // resurrecting a bookmark someone else deleted; claiming them is what turned a single
@@ -590,6 +670,9 @@ interface MergeLogs {
   folderMoves: { local: FolderMoveRecord[]; remote: FolderMoveRecord[] };
   titles: { local: TitleRecord[]; remote: TitleRecord[] };
   folderRenames: { local: FolderRenameRecord[]; remote: FolderRenameRecord[] };
+  // No `local` side: the only question these answer is whether the peer whose tombstones
+  // just emptied a folder meant the folder to go too, and that is in the peer's packet.
+  folderDeletes: { remote: FolderDeleteRecord[] };
 }
 
 async function mergeBookmarks(
@@ -683,6 +766,10 @@ async function mergeBookmarks(
   // "-48" directly above the warning saying those 48 were refused (#19). It also
   // counts a remove() that threw, which the old number quietly included.
   let removed = 0;
+  // The folder each removed bookmark sat in. A folder this loop empties is a candidate shell
+  // for Step D, which decides whether the folder itself was meant to go (#26).
+  const parentOf = new Map(localFlat.map((n) => [n.id, n.parentId]));
+  const emptiedByDeletion = new Set<string>();
   if (overCap && !approved) {
     // Console only, on every cycle. The RETAINED warning is written once per incident
     // by the sync engine (recordBlockedDeletion), because the guard re-evaluates the
@@ -692,7 +779,14 @@ async function mergeBookmarks(
     onBulkBlocked?.({ blocked: toRemove.length, cap, localTotal: localFlat.length, pct });
   } else {
     for (const id of toRemove) {
-      try { await browser.bookmarks.remove(id); removed++; } catch (err) { logger.error("Bookmark delete (tombstone)", err); }
+      try {
+        await browser.bookmarks.remove(id);
+        removed++;
+        const parent = parentOf.get(id);
+        if (parent && !rootKind(parent)) emptiedByDeletion.add(parent);
+      } catch (err) {
+        logger.error("Bookmark delete (tombstone)", err);
+      }
     }
     if (approved) {
       logger.event("mergeBookmarks", `Applied ${removed} bookmark deletions you approved (over the ${pct}% guard).`);
@@ -962,24 +1056,42 @@ async function mergeBookmarks(
     }
   }
 
-  // ── Step D: prune shells left by a cross-parent folder move (see emptiedParents).
-  //    Bottom-up: removing an empty folder can empty its parent, so re-queue it. ──
+  // ── Step D: prune the shells this merge left. Two kinds, on different evidence:
+  //    - a folder a cross-parent MOVE emptied (see emptiedParents): its bookmarks went
+  //      somewhere else, so what stays behind is a shell by construction;
+  //    - a folder the peer's DELETIONS emptied (#26), which goes only when something says
+  //      the folder itself was meant to: the peer recorded deleting it (or a folder above
+  //      it), or the user approved this deletion. Without either, the peer may have kept
+  //      the folder on purpose, and emptying it is not the same thing as deleting it.
+  //    Bottom-up: removing an empty folder can empty its parent, so the parent is queued
+  //    with the same reason and has to meet the same test. ──
+  const peerDeletedFolder = async (id: string, dateAdded: number | undefined): Promise<boolean> => {
+    if (!logs.folderDeletes.remote.length) return false;
+    const path = await folderPath(id);
+    if (!path) return false;
+    // A folder created here after the peer's deletion is a different folder that happens to
+    // share the path, and it stays.
+    return logs.folderDeletes.remote.some((r) => pathWithin(path, r.path) && (dateAdded ?? 0) <= r.at);
+  };
   let shells = 0;
-  const queue = [...emptiedParents];
-  const seen = new Set<string>();
+  const queue: Array<{ id: string; reason: "move" | "delete" }> = [
+    ...[...emptiedParents].map((id) => ({ id, reason: "move" as const })),
+    ...[...emptiedByDeletion].map((id) => ({ id, reason: "delete" as const })),
+  ];
+  // No "seen" set: a folder that still had a child when it came up must be looked at again
+  // once that child is pruned, and the queue only grows on a removal, so it always ends.
   while (queue.length) {
-    const id = queue.shift()!;
-    if (seen.has(id) || rootKind(id)) continue; // never remove a root
-    seen.add(id);
+    const { id, reason } = queue.shift()!;
+    if (rootKind(id)) continue; // never remove a root
     try {
       const [node] = await browser.bookmarks.get(id);
       if (!node || node.url) continue; // gone already, or not a folder
       const children = await browser.bookmarks.getChildren(id);
-      if (children.length === 0) {
-        await browser.bookmarks.remove(id);
-        shells++;
-        if (node.parentId) queue.push(node.parentId);
-      }
+      if (children.length > 0) continue;
+      if (reason === "delete" && !approved && !(await peerDeletedFolder(id, node.dateAdded))) continue;
+      await browser.bookmarks.remove(id);
+      shells++;
+      if (node.parentId) queue.push({ id: node.parentId, reason });
     } catch { /* concurrently removed — ignore */ }
   }
 
@@ -1203,6 +1315,8 @@ export function registerBookmarkListeners(onChange: BookmarkChangeCallback): voi
   browser.bookmarks.onRemoved.addListener((_id, removeInfo) => {
     // Record a tombstone so the deletion propagates instead of resurrecting.
     swallow(recordRemovedTombstones(removeInfo.node));
+    // And, for a folder, that the folder went too, or its shell outlives it everywhere else.
+    swallow(recordRemovedFolder(removeInfo.parentId, removeInfo.node));
     onChange();
   });
   logger.info("BookmarkListeners", "Registered");

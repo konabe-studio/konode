@@ -1,6 +1,7 @@
 import type {
   DataType,
   SyncPacket,
+  FolderDeleteRecord,
   FolderMoveRecord,
   FolderRenameRecord,
   MoveRecord,
@@ -103,6 +104,7 @@ export const KEYS = {
   BOOKMARK_FOLDER_MOVES: "konode_bm_folder_moves",
   BOOKMARK_TITLES: "konode_bm_titles",
   BOOKMARK_FOLDER_RENAMES: "konode_bm_folder_renames",
+  BOOKMARK_FOLDER_DELETES: "konode_bm_folder_deletes",
   // Superseded by the backend-side `konode_snap_index.json`, which every device can
   // read. Kept only so the one-time migration in sync/snapshots.ts can drain the
   // counts this device recorded before dropping the key.
@@ -356,6 +358,18 @@ export function updateFolderRenames(
   mutate: (current: FolderRenameRecord[]) => FolderRenameRecord[]
 ): Promise<FolderRenameRecord[]> {
   return updateKey<FolderRenameRecord[]>(KEYS.BOOKMARK_FOLDER_RENAMES, mutate, []);
+}
+
+// Folders THIS device deleted, path-keyed (see FolderDeleteRecord). Only our own are kept:
+// a peer's arrive in its packet and are read from there, because the one question they
+// answer is whether that peer meant to delete the folder its tombstones just emptied.
+export async function getFolderDeletes(): Promise<FolderDeleteRecord[]> {
+  return get<FolderDeleteRecord[]>(KEYS.BOOKMARK_FOLDER_DELETES, []);
+}
+export function updateFolderDeletes(
+  mutate: (current: FolderDeleteRecord[]) => FolderDeleteRecord[]
+): Promise<FolderDeleteRecord[]> {
+  return updateKey<FolderDeleteRecord[]>(KEYS.BOOKMARK_FOLDER_DELETES, mutate, []);
 }
 
 // ─── Imported history (CO-6) ─────────────────────────────────────────────────

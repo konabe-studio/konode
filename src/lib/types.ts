@@ -124,6 +124,22 @@ export interface FolderMoveRecord {
   next?: string;   // sibling key immediately after the folder (undefined = it's last)
 }
 
+/**
+ * A folder was deleted on the device that published this (#26).
+ *
+ * A tombstone is URL-keyed, so it can say that a folder's bookmarks went but never that the
+ * folder did, and every device that applied the tombstones kept the folder as an empty shell.
+ * A folder has no cross-device id, so this is keyed the way FolderMoveRecord is:
+ * `path` = `[rootKind, …ancestorTitles, folderTitle]`.
+ */
+export interface FolderDeleteRecord {
+  path: string[];
+  at: number; // epoch ms
+  // Local bookkeeping, as on Tombstone: set on a deletion this device made, stripped before
+  // publishing. Only a device's own folder deletions ever leave it.
+  own?: boolean;
+}
+
 // Bookmark sync payload: the live tree plus the device's deletion log.
 // (Older packets are a bare SyncBookmark[] — handled for backward compatibility.)
 export interface BookmarkPayload {
@@ -132,6 +148,7 @@ export interface BookmarkPayload {
   moves?: MoveRecord[]; // optional for back-compat with packets written before move-sync
   folderMoves?: FolderMoveRecord[]; // optional for back-compat (added with folder-reorder sync)
   titles?: TitleRecord[]; // optional for back-compat (added with rename sync)
+  folderDeletes?: FolderDeleteRecord[]; // optional for back-compat (added with folder-deletion sync)
   folderRenames?: FolderRenameRecord[]; // optional for back-compat (added with rename sync)
 }
 
