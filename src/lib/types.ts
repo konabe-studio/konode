@@ -125,6 +125,19 @@ export interface FolderMoveRecord {
 }
 
 /**
+ * When a bookmark appeared on THIS device, for the case where `dateAdded` says otherwise (#27).
+ *
+ * The merge decides "is this bookmark newer than that deletion" from `dateAdded`, which is
+ * right until an import sets it: a browser restoring a bookmark export honours the saved
+ * ADD_DATE, so the restored bookmark reads as months old and an older deletion undid the
+ * restore. Local-only; what peers need of it travels as the exported `dateAdded`.
+ */
+export interface AppearedRecord {
+  url: string;
+  at: number; // epoch ms
+}
+
+/**
  * A folder was deleted on the device that published this (#26).
  *
  * A tombstone is URL-keyed, so it can say that a folder's bookmarks went but never that the

@@ -1,6 +1,6 @@
 import type {
   SyncBookmark, Tombstone, MoveRecord, FolderMoveRecord, TitleRecord, FolderRenameRecord,
-  FolderDeleteRecord, BookmarkPayload, ConflictStrategy,
+  FolderDeleteRecord, AppearedRecord, BookmarkPayload, ConflictStrategy,
 } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import {
@@ -11,6 +11,7 @@ import {
   getTitles, setTitles, updateTitles,
   getFolderRenames, setFolderRenames, updateFolderRenames,
   updateFolderDeletes,
+  getAppeared, updateAppeared,
 } from "@/lib/utils/storage";
 import { defaultOtherRootId, matchLocalRoot, matchLocalRootEx, rootKind } from "@/lib/utils/bookmark-roots";
 import { canonicalUrlKey } from "@/lib/utils/url";
@@ -221,6 +222,45 @@ function pathWithin(path: string[], deleted: string[]): boolean {
   return deleted.length <= path.length && deleted.every((segment, i) => segment === path[i]);
 }
 
+// ─── Appearances (when a bookmark really arrived here, see AppearedRecord) ──
+
+// A bookmark the user creates is stamped "now", so its dateAdded already says when it
+// appeared and there is nothing to record. One stamped more than this far in the past came
+// from an import that kept its original date.
+const APPEARED_SLACK_MS = 60_000;
+
+export function gcAppeared(list: AppearedRecord[]): AppearedRecord[] {
+  const cutoff = Date.now() - TOMBSTONE_TTL_MS;
+  const byUrl = new Map<string, AppearedRecord>();
+  for (const r of list) {
+    if (r.at < cutoff) continue;
+    const k = canonicalUrlKey(r.url);
+    const held = byUrl.get(k);
+    if (!held || r.at > held.at) byUrl.set(k, r);
+  }
+  return [...byUrl.values()];
+}
+
+/** canonical url → when it last appeared here. */
+function toAppearedMap(list: AppearedRecord[]): Map<string, number> {
+  return new Map(gcAppeared(list).map((r) => [canonicalUrlKey(r.url), r.at]));
+}
+
+/** The tree as peers should read it: a bookmark's `dateAdded` is no older than the moment
+ *  it appeared on this device. That is the number a peer holding a deletion compares
+ *  against before it takes the bookmark back. */
+function withAppearance(tree: SyncBookmark[], appeared: Map<string, number>): SyncBookmark[] {
+  if (!appeared.size) return tree;
+  const walk = (n: SyncBookmark): SyncBookmark => {
+    if (n.url) {
+      const at = appeared.get(canonicalUrlKey(n.url));
+      return at !== undefined && at > n.dateAdded ? { ...n, dateAdded: at } : n;
+    }
+    return n.children ? { ...n, children: n.children.map(walk) } : n;
+  };
+  return tree.map(walk);
+}
+
 /** URLs present anywhere in the CURRENT local tree (called after a mutation). */
 async function localUrlSet(): Promise<Set<string>> {
   return new Set(flattenNodes(await exportBookmarks()).filter((n) => n.url).map((n) => n.url as string));
@@ -252,6 +292,21 @@ async function recordRemovedTombstones(node: BookmarkNode): Promise<void> {
     mergeTombstoneLists(current, gone.map((url) => ({ url, deletedAt: now, own: true })))
   );
   logger.event("Tombstones", `Recorded ${gone.length} deletion(s)`);
+}
+
+/**
+ * Record that a bookmark appeared here with an older date than now (#27).
+ *
+ * Restoring from the browser's own bookmark export brings bookmarks back with the date they
+ * were first created, months before the deletion being undone, so the next merge read them
+ * as older than the tombstone and deleted them again, for as long as the tombstone lived.
+ */
+async function recordAppeared(node: BookmarkNode): Promise<void> {
+  if (importing || !node.url) return;
+  const now = Date.now();
+  if (now - (node.dateAdded ?? now) < APPEARED_SLACK_MS) return;
+  const url = node.url;
+  await updateAppeared((current) => gcAppeared([...current, { url, at: now }]));
 }
 
 /**
@@ -417,7 +472,7 @@ export async function exportBookmarkPayload(): Promise<BookmarkPayload> {
   // either undoing the prune or dropping the event's own record, depending on which
   // write happened to land last. Nothing here is exempt from the burst just because it
   // runs inside a sync: `importing` only suppresses the recorders during an IMPORT.
-  const [tree, gced, gcedMoves, gcedFolderMoves, gcedTitles, gcedRenames, gcedFolderDeletes] = await Promise.all([
+  const [tree, gced, gcedMoves, gcedFolderMoves, gcedTitles, gcedRenames, gcedFolderDeletes, gcedAppeared] = await Promise.all([
     exportBookmarks(),
     updateTombstones(gcTombstones),
     updateMoves(gcMoves),
@@ -425,6 +480,7 @@ export async function exportBookmarkPayload(): Promise<BookmarkPayload> {
     updateTitles(gcTitles),
     updateFolderRenames(gcFolderRenames),
     updateFolderDeletes(gcFolderDeletes),
+    updateAppeared(gcAppeared),
   ]);
   // Snapshot the current (full) tree so a later URL edit can find the replaced
   // url by id and tombstone it (see recordUrlChange). This is the state peers hold.
@@ -432,7 +488,8 @@ export async function exportBookmarkPayload(): Promise<BookmarkPayload> {
   // Don't sync empty folders — a folder carries no tombstone, so leaving empty
   // folders in the payload is what made a deleted folder resurrect from a peer.
   return {
-    tree: pruneEmptyFolders(tree), tombstones: publishableTombstones(gced, tree), moves: gcedMoves,
+    tree: withAppearance(pruneEmptyFolders(tree), toAppearedMap(gcedAppeared)),
+    tombstones: publishableTombstones(gced, tree), moves: gcedMoves,
     folderMoves: gcedFolderMoves, titles: gcedTitles, folderRenames: gcedRenames,
     folderDeletes: publishableFolderDeletes(gcedFolderDeletes, tree),
   };
@@ -695,13 +752,17 @@ async function mergeBookmarks(
     return out;
   };
 
-  // Index local URL bookmarks (ids + newest dateAdded per canonical URL).
+  // Index local URL bookmarks (ids + when each canonical URL last appeared here). That is
+  // the newest dateAdded, or later if an import kept an older date than the moment the
+  // bookmark actually arrived (#27): a restore from a browser backup is the user's newest
+  // intent however old the dates it brings back.
   const localFlat = flattenNodes(await exportBookmarks()).filter((n) => n.url);
+  const appeared = toAppearedMap(await getAppeared());
   const localByUrl = new Map<string, { ids: string[]; dateAdded: number }>();
   for (const n of localFlat) {
     if (!n.url) continue;
     const key = canonicalUrlKey(n.url);
-    const e = localByUrl.get(key) ?? { ids: [], dateAdded: 0 };
+    const e = localByUrl.get(key) ?? { ids: [], dateAdded: appeared.get(key) ?? 0 };
     e.ids.push(n.id);
     e.dateAdded = Math.max(e.dateAdded, n.dateAdded ?? 0);
     localByUrl.set(key, e);
@@ -1293,7 +1354,12 @@ export function registerBookmarkListeners(onChange: BookmarkChangeCallback): voi
   const swallow = (p: Promise<unknown>): void => {
     void p.catch((err) => logger.error("BookmarkListeners", err));
   };
-  browser.bookmarks.onCreated.addListener(onChange);
+  browser.bookmarks.onCreated.addListener((_id, node) => {
+    // An import that keeps each bookmark's original date would otherwise read as months old
+    // to the next merge, and a peer's older deletion would undo it (#27).
+    swallow(recordAppeared(node));
+    onChange();
+  });
   browser.bookmarks.onChanged.addListener((id, changeInfo) => {
     // A URL edit is a delete(old)+add(new) in the URL-keyed sync model — record a
     // tombstone for the replaced url so a peer doesn't resurrect it as a duplicate.
