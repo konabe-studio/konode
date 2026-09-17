@@ -16,5 +16,1259 @@
   },
   "extension_name": {
     "message": "Konode | 私人書籤與分頁同步"
+  },
+  "extension_description": {
+    "message": "隱私優先的瀏覽器同步，資料存放在你自己的空間：Google Drive、WebDAV、GitHub。"
+  },
+  "status_idle": {
+    "message": "就緒"
+  },
+  "status_syncing": {
+    "message": "同步中…"
+  },
+  "status_success": {
+    "message": "已同步"
+  },
+  "status_error": {
+    "message": "錯誤"
+  },
+  "status_conflict": {
+    "message": "衝突"
+  },
+  "stream_off": {
+    "message": "已關閉"
+  },
+  "stream_syncing": {
+    "message": "同步中…"
+  },
+  "stream_pending": {
+    "message": "等待中"
+  },
+  "stream_never": {
+    "message": "尚未同步"
+  },
+  "stream_stale": {
+    "message": "上次同步失敗"
+  },
+  "stream_synced": {
+    "message": "已同步"
+  },
+  "popup_settings_aria": {
+    "message": "設定"
+  },
+  "popup_load_error": {
+    "message": "無法連線至 Konode。點一下重試。"
+  },
+  "popup_recovery_notice": {
+    "message": "已攔下一次異常刪除（$COUNT$ 個書籤），並先儲存了還原點。可以在「設定 → 活動」中套用或保留它們。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "popup_no_backend": {
+    "message": "尚未設定後端"
+  },
+  "locale_bcp47": {
+    "message": "zh-TW"
+  },
+  "popup_setup_title": {
+    "message": "完成 Konode 的設定"
+  },
+  "popup_setup_body": {
+    "message": "選擇你的資料要存放在哪裡。在你選好之前，不會同步或上傳任何東西。"
+  },
+  "popup_setup_cta": {
+    "message": "開始設定"
+  },
+  "popup_keep_local": {
+    "message": "保留本機"
+  },
+  "popup_use_remote": {
+    "message": "使用遠端"
+  },
+  "popup_active_streams": {
+    "message": "使用中的資料流"
+  },
+  "popup_missing_extensions_one": {
+    "message": "$COUNT$ 個缺少的擴充功能",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_missing_extensions_other": {
+    "message": "$COUNT$ 個缺少的擴充功能",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "7"
+      }
+    }
+  },
+  "popup_open_all": {
+    "message": "全部開啟"
+  },
+  "popup_sessions_head": {
+    "message": "其他裝置的分頁"
+  },
+  "popup_unknown_device": {
+    "message": "不明裝置"
+  },
+  "popup_tabs_one": {
+    "message": "$COUNT$ 個分頁",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_tabs_other": {
+    "message": "$COUNT$ 個分頁",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "23"
+      }
+    }
+  },
+  "popup_restore": {
+    "message": "還原"
+  },
+  "popup_backend_label": {
+    "message": "後端"
+  },
+  "popup_backend_none": {
+    "message": "無"
+  },
+  "popup_device_label": {
+    "message": "裝置"
+  },
+  "popup_configure": {
+    "message": "設定 →"
+  },
+  "popup_activity_log": {
+    "message": "活動紀錄 →"
+  },
+  "common_back": {
+    "message": "返回"
+  },
+  "common_continue": {
+    "message": "繼續"
+  },
+  "common_open_settings": {
+    "message": "開啟設定"
+  },
+  "common_close": {
+    "message": "關閉"
+  },
+  "common_show": {
+    "message": "顯示"
+  },
+  "common_hide": {
+    "message": "隱藏"
+  },
+  "common_e2ee": {
+    "message": "端對端加密"
+  },
+  "common_generate_key": {
+    "message": "產生高強度金鑰"
+  },
+  "provider_gdrive_desc": {
+    "message": "直接同步到你自己的 Google Drive。透過 OAuth，存取權杖只會留在這台裝置上。"
+  },
+  "provider_nextcloud_desc": {
+    "message": "你自己的 Nextcloud 或 ownCloud 伺服器。"
+  },
+  "provider_nextcloud_note": {
+    "message": "只要輸入你的伺服器主機位址；請使用應用程式密碼（設定 → 安全性）。"
+  },
+  "provider_pcloud_desc": {
+    "message": "pCloud 儲存空間。需要付費的 pCloud 方案。"
+  },
+  "provider_pcloud_note": {
+    "message": "如果你的 pCloud 帳戶在 $REGION$ 地區，請選擇 $REGION$ 地區。",
+    "placeholders": {
+      "region": {
+        "content": "$1",
+        "example": "EU"
+      }
+    }
+  },
+  "provider_koofr_desc": {
+    "message": "Koofr 雲端儲存空間。"
+  },
+  "provider_koofr_note": {
+    "message": "使用者名稱請填你的 Koofr 電子郵件，密碼請用 Koofr 應用程式密碼。"
+  },
+  "provider_fastmail_desc": {
+    "message": "Fastmail 檔案儲存空間。"
+  },
+  "provider_fastmail_note": {
+    "message": "使用者名稱請填你完整的 Fastmail 位址，密碼請用具備檔案（WebDAV）存取權的應用程式密碼。"
+  },
+  "provider_jianguoyun_desc": {
+    "message": "堅果雲雲端儲存空間，在中國大陸相當普及。"
+  },
+  "provider_jianguoyun_note": {
+    "message": "使用者名稱請填你的堅果雲電子郵件，密碼請用第三方應用程式密碼。免費帳戶接到第三台裝置之後，請把同步間隔調到 120 秒以上：堅果雲每 30 分鐘只允許 600 次 WebDAV 請求。"
+  },
+  "provider_github_desc": {
+    "message": "你的同步資料放在一個私人的 GitHub 儲存庫裡，Konode 透過個人存取權杖存取它。"
+  },
+  "provider_webdav_desc": {
+    "message": "Synology、kDrive，或任何其他 WebDAV 伺服器。"
+  },
+  "provider_syncing_to": {
+    "message": "正在同步到 $URL$。",
+    "placeholders": {
+      "url": {
+        "example": "https://app.koofr.net/dav/Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_welcome_title": {
+    "message": "歡迎使用 Konode"
+  },
+  "onb_welcome_subtitle": {
+    "message": "瀏覽器同步，而你的資料真的還是你的。書籤、分頁和擴充功能直接進到你自己的儲存空間。中間沒有伺服器。"
+  },
+  "onb_feature_storage": {
+    "message": "你的資料始終放在你自己的儲存空間。"
+  },
+  "onb_feature_instant": {
+    "message": "每一次變更都即時同步。"
+  },
+  "onb_feature_browsers": {
+    "message": "支援 Chromium 和 Firefox 系列的瀏覽器。"
+  },
+  "onb_feature_providers": {
+    "message": "資料放在哪裡由你決定。"
+  },
+  "onb_get_started": {
+    "message": "開始使用"
+  },
+  "onb_backend_title": {
+    "message": "選擇你的儲存空間"
+  },
+  "onb_backend_subtitle": {
+    "message": "Konode 要把你的資料放在哪裡？"
+  },
+  "onb_use_provider": {
+    "message": "使用 $PROVIDER$",
+    "placeholders": {
+      "provider": {
+        "example": "Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_drive_unavailable": {
+    "message": "這個瀏覽器無法使用 Google 登入。請選擇其他選項。"
+  },
+  "onb_connecting": {
+    "message": "連線中…"
+  },
+  "onb_sign_in_google": {
+    "message": "使用 Google 登入"
+  },
+  "onb_signin_failed": {
+    "message": "登入失敗。"
+  },
+  "onb_webdav_user_placeholder": {
+    "message": "使用者名稱"
+  },
+  "onb_webdav_pass_placeholder": {
+    "message": "密碼 / 應用程式權杖"
+  },
+  "onb_verifying": {
+    "message": "驗證中…"
+  },
+  "onb_github_401": {
+    "message": "GitHub 拒絕了這個權杖。請確認它沒有過期，且是否為完整內容。"
+  },
+  "onb_github_http": {
+    "message": "GitHub 無法驗證這個權杖（HTTP $STATUS$）。",
+    "placeholders": {
+      "status": {
+        "example": "500",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_github_unreachable": {
+    "message": "無法連線到 GitHub。請檢查你的網路連線後再試一次。"
+  },
+  "onb_github_branch_placeholder": {
+    "message": "分支（預設：main）"
+  },
+  "onb_github_token_link": {
+    "message": "建立精細權限權杖（只限這個儲存庫） →"
+  },
+  "onb_data_title": {
+    "message": "要同步哪些東西？"
+  },
+  "onb_data_subtitle": {
+    "message": "你隨時可以在設定裡更改。"
+  },
+  "onb_device_name_label": {
+    "message": "為這台裝置命名"
+  },
+  "onb_device_name_desc": {
+    "message": "它在你其他裝置的分頁清單中顯示的名稱。"
+  },
+  "onb_device_name_placeholder": {
+    "message": "工作用筆電"
+  },
+  "onb_encrypt_title": {
+    "message": "要加密你的資料嗎？"
+  },
+  "onb_encrypt_subtitle": {
+    "message": "如果開啟加密，你的資料會在上傳前先在這台裝置上加密。連你的儲存空間供應商都讀不到裡面是什麼。"
+  },
+  "onb_e2ee_desc": {
+    "message": "AES-256-GCM。建議開啟。"
+  },
+  "onb_pass_placeholder": {
+    "message": "設定一組通關密語，或產生一把加密金鑰"
+  },
+  "onb_pass_missing": {
+    "message": "請輸入通關密語，或產生一把金鑰。"
+  },
+  "onb_pass_too_short": {
+    "message": "至少 $MIN$ 個字元。同步過的資料可能被離線破解，太短的通關密語會被破解出來。",
+    "placeholders": {
+      "min": {
+        "example": "12",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_pass_confirm_placeholder": {
+    "message": "確認通關密語"
+  },
+  "onb_pass_confirm_missing": {
+    "message": "請確認你的通關密語。"
+  },
+  "onb_pass_mismatch": {
+    "message": "兩組通關密語尚未一致。"
+  },
+  "onb_save_passphrase_lead": {
+    "message": "請保存好這組通關密語。"
+  },
+  "onb_save_passphrase_rest": {
+    "message": "它永遠不會離開這台裝置，弄丟了也救不回來。每一台裝置都要輸入同一組通關密語。之後可以在設定裡複製它。"
+  },
+  "onb_plaintext_note": {
+    "message": "不加密的話，你的資料會$WORD$送到你自己的儲存空間。如果你完全信任你的儲存空間供應商，這也可以是正確的選擇。你隨時可以之後在設定裡開啟加密。",
+    "placeholders": {
+      "word": {
+        "example": "unencrypted",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_plaintext_word": {
+    "message": "以可讀的形式"
+  },
+  "onb_setting_up": {
+    "message": "設定中…"
+  },
+  "onb_finish_sync": {
+    "message": "完成並同步"
+  },
+  "onb_err_bad_webdav_url": {
+    "message": "那個 WebDAV 位址看起來不是有效的網址。"
+  },
+  "onb_err_perms_webdav": {
+    "message": "Konode 需要權限才能連到你的 WebDAV 伺服器和你選的資料類型。請允許之後再繼續。"
+  },
+  "onb_err_perms_no_prompt": {
+    "message": "這個瀏覽器沒辦法顯示權限提示，所以 Konode 無法請求它需要的存取權。請到瀏覽器擴充功能設定裡 Konode 的權限頁面授予，然後再按一次「完成」。"
+  },
+  "onb_err_perms_types": {
+    "message": "有些權限被拒絕了。請授予這些權限，或關掉那些資料類型，才能繼續。"
+  },
+  "onb_err_read_settings": {
+    "message": "無法讀取你目前的設定。請再試一次。"
+  },
+  "onb_err_save": {
+    "message": "無法儲存你的設定：$ERROR$",
+    "placeholders": {
+      "error": {
+        "example": "HTTP 403",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_sync_title": {
+    "message": "正在同步你的資料…"
+  },
+  "onb_sync_subtitle": {
+    "message": "Konode 正在進行第一次同步。這件事也會在背景執行，所以你不用在這裡等。"
+  },
+  "onb_sync_error_title": {
+    "message": "第一次同步沒能完成"
+  },
+  "onb_sync_error_subtitle": {
+    "message": "你的設定已經儲存了。可以開啟設定處理這個問題，或是直接完成，讓 Konode 在背景重試。"
+  },
+  "onb_sync_timeout": {
+    "message": "這次比平常久。瀏覽記錄很多的時候會這樣。同步會繼續在背景執行，所以你現在就可以完成。"
+  },
+  "onb_finish": {
+    "message": "完成"
+  },
+  "onb_finish_anyway": {
+    "message": "仍要完成"
+  },
+  "onb_done_title": {
+    "message": "已設定完成！"
+  },
+  "onb_done_subtitle": {
+    "message": "Konode 現在會把你的瀏覽器資料同步到 $BACKEND$。第一次同步已經在背景執行了。",
+    "placeholders": {
+      "backend": {
+        "example": "Google Drive",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_done_backend": {
+    "message": "儲存空間已成功連線"
+  },
+  "onb_done_autosync": {
+    "message": "同步會在背景自動執行"
+  },
+  "onb_done_adjust": {
+    "message": "你隨時可以更改設定"
+  },
+  "datatype_bookmarks_desc": {
+    "message": "完整的書籤樹，含資料夾和排序。"
+  },
+  "datatype_sessions_desc": {
+    "message": "已命名的分頁組合，可以在任何地方還原。"
+  },
+  "datatype_history_desc": {
+    "message": "瀏覽記錄，範圍受天數設定限制。"
+  },
+  "datatype_extensions_desc": {
+    "message": "擴充功能清單，會列出缺少的項目和安裝連結。"
+  },
+  "opt_secret_copy": {
+    "message": "複製"
+  },
+  "opt_secret_copied": {
+    "message": "已複製"
+  },
+  "opt_secret_replace": {
+    "message": "取代"
+  },
+  "opt_webdav_user_label": {
+    "message": "使用者名稱"
+  },
+  "opt_webdav_user_placeholder": {
+    "message": "使用者名稱"
+  },
+  "opt_webdav_pass_label": {
+    "message": "密碼 / 應用程式權杖"
+  },
+  "opt_webdav_http_warn": {
+    "message": "這是 $SCHEME$ 網址，你的密碼會以未加密的方式送出。",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "http://"
+      }
+    }
+  },
+  "opt_webdav_http_use": {
+    "message": "請改用 $SCHEME$。",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "https://"
+      }
+    }
+  },
+  "opt_snap_saved": {
+    "message": "已儲存快照。"
+  },
+  "opt_snap_restored_one": {
+    "message": "已還原 $COUNT$ 個書籤。正在同步到你的其他裝置…",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_snap_restored_other": {
+    "message": "已還原 $COUNT$ 個書籤。正在同步到你的其他裝置…",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "opt_snap_deleted": {
+    "message": "已刪除還原點。"
+  },
+  "opt_err_perms_no_prompt": {
+    "message": "這個瀏覽器沒辦法顯示權限提示，所以 Konode 無法請求連到你 WebDAV 伺服器的存取權。請到瀏覽器擴充功能設定裡 Konode 的權限頁面授予，然後再試一次。"
+  },
+  "opt_err_perms_bad_url": {
+    "message": "Konode 沒有可用的 WebDAV 位址可以請求存取權。請檢查上面的伺服器網址。"
+  },
+  "opt_err_perms_denied": {
+    "message": "沒有取得存取 WebDAV 伺服器的權限。"
+  },
+  "opt_err_pass_too_short": {
+    "message": "請至少用 $MIN$ 個字元。同步過的資料可能被離線破解，太短的通關密語會被破解出來。越長越好，或是產生一把金鑰。",
+    "placeholders": {
+      "min": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "opt_err_pass_mismatch": {
+    "message": "兩組通關密語尚不一致。請重新輸入確認後再儲存。"
+  },
+  "opt_saving": {
+    "message": "儲存中…"
+  },
+  "opt_saved": {
+    "message": "已儲存"
+  },
+  "opt_save_changes": {
+    "message": "儲存變更"
+  },
+  "opt_nav_backend": {
+    "message": "儲存空間"
+  },
+  "opt_nav_data": {
+    "message": "資料類型"
+  },
+  "opt_nav_device": {
+    "message": "裝置"
+  },
+  "opt_nav_activity": {
+    "message": "活動"
+  },
+  "opt_nav_advanced": {
+    "message": "進階"
+  },
+  "opt_setup_title": {
+    "message": "完成 Konode 的設定"
+  },
+  "opt_setup_step_storage": {
+    "message": "選擇資料存放的位置"
+  },
+  "opt_setup_step_types": {
+    "message": "選擇要同步的內容"
+  },
+  "opt_backend_head": {
+    "message": "儲存空間"
+  },
+  "opt_backend_head_sub": {
+    "message": "選擇你的同步資料存放在哪裡。你的資料絕不會經過我們的伺服器。"
+  },
+  "opt_gdrive_connect_failed": {
+    "message": "連線失敗"
+  },
+  "opt_gdrive_scope_hint": {
+    "message": "只有 $SCOPE$ 範圍，所以 Konode 只能存取它自己建立的檔案。",
+    "placeholders": {
+      "scope": {
+        "content": "$1",
+        "example": "drive.file"
+      }
+    }
+  },
+  "opt_drive_folder_label": {
+    "message": "雲端硬碟資料夾 ID"
+  },
+  "opt_optional": {
+    "message": "（選填）"
+  },
+  "opt_drive_folder_placeholder": {
+    "message": "留空會自動建立一個「Konode」資料夾"
+  },
+  "opt_region_label": {
+    "message": "地區"
+  },
+  "opt_webdav_host_label": {
+    "message": "伺服器主機"
+  },
+  "opt_webdav_url_label": {
+    "message": "伺服器網址"
+  },
+  "opt_github_token_label": {
+    "message": "個人存取權杖"
+  },
+  "opt_github_repo_label": {
+    "message": "儲存庫"
+  },
+  "opt_github_branch_label": {
+    "message": "分支"
+  },
+  "opt_stat_never": {
+    "message": "從未"
+  },
+  "opt_setup_sub": {
+    "message": "Konode 會把你的瀏覽器同步到你自己的儲存空間。沒有 Konode 伺服器。兩個步驟就好。（如果設定精靈沒有在你的瀏覽器裡開啟，在這裡也能把全部設定做完。）"
+  },
+  "opt_data_head": {
+    "message": "資料類型"
+  },
+  "opt_data_head_sub": {
+    "message": "選擇哪些東西要在你的裝置之間同步。"
+  },
+  "opt_data_section": {
+    "message": "要同步的資料"
+  },
+  "opt_data_permission_lost": {
+    "message": "Konode 已經沒有這項功能需要的權限，所以它沒有在同步。把它關掉再重新開啟就會恢復。"
+  },
+  "opt_history_days_label": {
+    "message": "同步天數"
+  },
+  "opt_history_days_desc": {
+    "message": "建議：30 天。"
+  },
+  "opt_history_days_value": {
+    "message": "$COUNT$ 天",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
+  "opt_history_hint": {
+    "message": "來自其他裝置的網頁，是用送達的時間加進來的，不是你第一次造訪的時間，所以在 Chromium 系列的瀏覽器上，它們會出現在「今天」，而不是你當初瀏覽的那一天。Firefox 則會保留原本的日期。"
+  },
+  "opt_missing_ext_head": {
+    "message": "缺少的擴充功能（$COUNT$）",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "6"
+      }
+    }
+  },
+  "opt_ext_from": {
+    "message": "· 來自 $STORE$",
+    "placeholders": {
+      "store": {
+        "content": "$1",
+        "example": "Firefox"
+      }
+    }
+  },
+  "opt_ext_install": {
+    "message": "安裝"
+  },
+  "opt_ext_find": {
+    "message": "尋找"
+  },
+  "opt_no_password_title": {
+    "message": "無法同步密碼。"
+  },
+  "opt_no_password_body": {
+    "message": "瀏覽器擴充功能無法存取系統本身的密碼儲存區。"
+  },
+  "opt_no_password_use": {
+    "message": "自行架設的密碼同步請用 $MANAGERS$。",
+    "placeholders": {
+      "managers": {
+        "content": "$1",
+        "example": "Bitwarden or Proton Pass"
+      }
+    }
+  },
+  "opt_or": {
+    "message": "或"
+  },
+  "opt_device_head": {
+    "message": "裝置"
+  },
+  "opt_device_head_sub": {
+    "message": "在同步網路中標示這台裝置。"
+  },
+  "opt_identity_section": {
+    "message": "身分"
+  },
+  "opt_device_name_label": {
+    "message": "裝置名稱"
+  },
+  "opt_device_name_desc": {
+    "message": "這台裝置在同步紀錄中顯示的名稱。"
+  },
+  "opt_device_name_placeholder": {
+    "message": "我的筆電"
+  },
+  "opt_device_id_label": {
+    "message": "裝置 ID"
+  },
+  "opt_device_id_desc": {
+    "message": "自動產生。請勿更改。"
+  },
+  "opt_behavior_section": {
+    "message": "同步行為"
+  },
+  "opt_sync_on_change_label": {
+    "message": "變更時同步"
+  },
+  "opt_sync_on_change_desc": {
+    "message": "書籤一有變更就立刻同步。建議開啟。"
+  },
+  "opt_auto_sync_label": {
+    "message": "自動同步"
+  },
+  "opt_auto_sync_desc": {
+    "message": "另外也依固定排程同步。歷史記錄、開啟的分頁與擴充功能清單僅透過此方式傳輸。"
+  },
+  "opt_notifications_label": {
+    "message": "通知"
+  },
+  "opt_notifications_desc": {
+    "message": "同步狀態和衝突提醒。"
+  },
+  "opt_interval_label": {
+    "message": "同步間隔"
+  },
+  "opt_interval_desc": {
+    "message": "這台裝置多久去取一次遠端的變更。30 秒是瀏覽器背景檢查的下限。你自己的變更幾乎會立刻上傳。"
+  },
+  "opt_interval_value": {
+    "message": "$COUNT$ 秒",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
+  "opt_conflict_section": {
+    "message": "衝突處理"
+  },
+  "opt_conflict_lww": {
+    "message": "以最後寫入為準"
+  },
+  "opt_conflict_lww_desc": {
+    "message": "永遠以最新的變更為準。"
+  },
+  "opt_conflict_local": {
+    "message": "本機優先"
+  },
+  "opt_conflict_local_desc": {
+    "message": "本機的變更會蓋過遠端。"
+  },
+  "opt_conflict_remote": {
+    "message": "遠端優先"
+  },
+  "opt_conflict_remote_desc": {
+    "message": "遠端的變更會蓋過本機。"
+  },
+  "opt_conflict_manual": {
+    "message": "手動"
+  },
+  "opt_conflict_manual_desc": {
+    "message": "請在對話方塊中手動解決每一個衝突。"
+  },
+  "opt_safety_section": {
+    "message": "安全防護"
+  },
+  "opt_bulk_delete_label": {
+    "message": "其他裝置大量刪除的上限"
+  },
+  "opt_bulk_delete_desc": {
+    "message": "一道安全防線：如果某台裝置要刪掉的書籤超過你本機書籤的這個比例，合併時就會跳過它們（避免一次壞掉的同步清空你的書籤樹）。如果你本來就常常大量刪除，可以調高。"
+  },
+  "opt_activity_head": {
+    "message": "活動"
+  },
+  "opt_activity_head_sub": {
+    "message": "Konode 在這台裝置上做過什麼，以及它手上有什麼。全部都在本機算出來：數字、還原點和最近 200 筆紀錄都只在本機，這個頁面上的任何東西都不會被上傳。"
+  },
+  "opt_sync_activity_section": {
+    "message": "同步活動"
+  },
+  "opt_stat_transferred": {
+    "message": "已傳輸的資料"
+  },
+  "opt_stat_runs": {
+    "message": "同步次數"
+  },
+  "opt_stat_last_sync": {
+    "message": "上次同步"
+  },
+  "opt_devices_section": {
+    "message": "裝置"
+  },
+  "opt_devices_section_sub": {
+    "message": "所有在你同步資料夾裡有檔案的裝置，以及每一台最後上傳了什麼。移除某台裝置會從你的儲存空間刪掉它的檔案，不會從任何瀏覽器刪掉書籤。"
+  },
+  "opt_forget_result_one": {
+    "message": "已刪除屬於 $LABEL$ 的一個檔案。如果那個瀏覽器還在執行，它會在一分鐘內再上傳一次，又出現在這裡。這不是故障：要讓一台裝置不再出現，請先在那邊關掉 Konode，再回到這裡移除它。",
+    "placeholders": {
+      "label": {
+        "content": "$2",
+        "example": "Work laptop"
+      }
+    }
+  },
+  "opt_forget_result_other": {
+    "message": "已刪除屬於 $LABEL$ 的 $COUNT$ 個檔案。如果那個瀏覽器還在執行，它會在一分鐘內再上傳一次，又出現在這裡。這不是故障：要讓一台裝置不再出現，請先在那邊關掉 Konode，再回到這裡移除它。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      },
+      "label": {
+        "content": "$2",
+        "example": "Work laptop"
+      }
+    }
+  },
+  "opt_dismiss": {
+    "message": "關閉"
+  },
+  "opt_devices_error": {
+    "message": "無法讀取你的裝置：$ERROR$。這不代表你沒有裝置。請檢查「儲存空間」裡的連線，然後重新開啟這個分頁。",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "404 Not Found"
+      }
+    }
+  },
+  "opt_devices_loading": {
+    "message": "正在讀取你的同步資料夾…"
+  },
+  "opt_devices_empty": {
+    "message": "資料夾裡還沒有東西。執行一次同步，這台裝置就會出現。"
+  },
+  "opt_device_unnamed": {
+    "message": "未命名的裝置（$ID$）",
+    "placeholders": {
+      "id": {
+        "content": "$1",
+        "example": "a1b2c3d4"
+      }
+    }
+  },
+  "opt_this_device": {
+    "message": "這台裝置"
+  },
+  "opt_last_upload": {
+    "message": "· 最後上傳 $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "8/9/2026, 10:20:45 AM"
+      }
+    }
+  },
+  "opt_forget": {
+    "message": "移除"
+  },
+  "opt_forget_it": {
+    "message": "移除它"
+  },
+  "opt_forget_confirm_one": {
+    "message": "刪除這台裝置在你儲存空間裡的那一個檔案（$TYPES$）。不會從任何瀏覽器刪掉書籤，這邊那邊都不會。如果那個瀏覽器還在執行，它會再上傳一次又出現；要讓它不再出現，請先在那邊關掉 Konode。",
+    "placeholders": {
+      "types": {
+        "content": "$2",
+        "example": "Bookmarks, Sessions"
+      }
+    }
+  },
+  "opt_forget_confirm_other": {
+    "message": "刪除這台裝置在你儲存空間裡的 $COUNT$ 個檔案（$TYPES$）。不會從任何瀏覽器刪掉書籤，這邊那邊都不會。如果那個瀏覽器還在執行，它會再上傳一次又出現；要讓它不再出現，請先在那邊關掉 Konode。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      },
+      "types": {
+        "content": "$2",
+        "example": "Bookmarks, Sessions"
+      }
+    }
+  },
+  "opt_that_device": {
+    "message": "那台裝置"
+  },
+  "opt_cancel": {
+    "message": "取消"
+  },
+  "opt_blocked_section": {
+    "message": "已阻止刪除"
+  },
+  "opt_blocked_section_sub": {
+    "message": "另一台裝置要求刪掉異常多的書籤，所以 Konode 把它擋了下來。如果那本來就是你的本意，可以套用；不然就保留它們。"
+  },
+  "opt_blocked_headline_one": {
+    "message": "你 $TOTAL$ 個書籤中的 $COUNT$ 個",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      },
+      "total": {
+        "content": "$2",
+        "example": "49"
+      }
+    }
+  },
+  "opt_blocked_headline_other": {
+    "message": "你 $TOTAL$ 個書籤中的 $COUNT$ 個",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "48"
+      },
+      "total": {
+        "content": "$2",
+        "example": "49"
+      }
+    }
+  },
+  "opt_blocked_count_one": {
+    "message": "$COUNT$ 個書籤",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_count_other": {
+    "message": "$COUNT$ 個書籤",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "48"
+      }
+    }
+  },
+  "opt_blocked_from": {
+    "message": "由 $DEVICE$ 提出。",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_blocked_from_unknown": {
+    "message": "由另一台裝置提出。"
+  },
+  "opt_blocked_saved": {
+    "message": "沒有刪掉任何東西，而且事先儲存了一個還原點。"
+  },
+  "opt_blocked_apply": {
+    "message": "套用這次刪除"
+  },
+  "opt_blocked_confirm_apply": {
+    "message": "套用並刪除"
+  },
+  "opt_blocked_keep": {
+    "message": "如果你想留著它們，請到提出要求的那台裝置上，還原到清理之前的還原點。那會清掉它對這次刪除的記錄，就不會再送到這裡來。"
+  },
+  "opt_snapshots_section": {
+    "message": "還原點"
+  },
+  "opt_snapshots_section_sub": {
+    "message": "存在後端、帶時間戳記的書籤副本，你所有裝置共用。還原會把這台裝置上缺少的書籤補回來（永遠不會刪除）。只保留最新的 10 個，比較舊的會自動移除，你也可以在這裡刪掉其中任何一個。"
+  },
+  "opt_snap_now_label": {
+    "message": "立即儲存快照"
+  },
+  "opt_snap_now_desc": {
+    "message": "目前書籤樹的還原點。"
+  },
+  "opt_snap_create": {
+    "message": "建立快照"
+  },
+  "opt_snap_loading": {
+    "message": "正在載入還原點…"
+  },
+  "opt_snap_error": {
+    "message": "無法讀取你的還原點：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "404 Not Found"
+      }
+    }
+  },
+  "opt_snap_error_desc": {
+    "message": "這不代表你沒有還原點。它們存在你的儲存空間裡，只是剛才列不出來。請檢查「儲存空間」裡的連線，然後重新開啟這個分頁。"
+  },
+  "opt_snap_empty": {
+    "message": "還沒有任何還原點。可以在上面建立一個，或是在異常刪除被攔下時自動儲存一個。"
+  },
+  "opt_snap_count_one": {
+    "message": "$COUNT$ 個書籤",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_snap_count_other": {
+    "message": "$COUNT$ 個書籤",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "opt_snap_unknown": {
+    "message": "書籤還原點"
+  },
+  "opt_snap_confirm_restore": {
+    "message": "確認還原"
+  },
+  "opt_snap_confirm_delete": {
+    "message": "確認刪除"
+  },
+  "opt_snap_delete_aria": {
+    "message": "刪除這個還原點"
+  },
+  "opt_log_section": {
+    "message": "紀錄"
+  },
+  "opt_log_empty_sub": {
+    "message": "還沒有任何項目。"
+  },
+  "opt_log_count_one": {
+    "message": "$COUNT$ 筆",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_log_count_other": {
+    "message": "$COUNT$ 筆",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "opt_log_errors": {
+    "message": " · $COUNT$ 筆有錯誤",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_log_skipped": {
+    "message": " · 已跳過 $COUNT$ 筆",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "opt_log_errors_only_label": {
+    "message": "只顯示錯誤"
+  },
+  "opt_log_errors_only_desc": {
+    "message": "隱藏成功的項目。"
+  },
+  "opt_log_clear": {
+    "message": "清除紀錄"
+  },
+  "opt_log_nothing": {
+    "message": "還沒有任何紀錄。執行一次同步就會出現在這裡。"
+  },
+  "opt_log_no_errors": {
+    "message": "沒有任何錯誤紀錄。很好。"
+  },
+  "opt_encryption_section": {
+    "message": "加密"
+  },
+  "opt_e2ee_desc": {
+    "message": "AES-256-GCM。資料在離開這台裝置之前，會先用你的通關密語加密，所以儲存空間供應商永遠讀不到它。請保管好通關密語：沒有它就救不回加密過的資料，而且每一台裝置都必須用同一組。"
+  },
+  "opt_e2ee_disable_confirm": {
+    "message": "要關閉加密嗎？從下一次同步開始，你的同步資料會以 $UNENCRYPTED$ 的形式存在後端。之後每一台裝置也都必須把它關掉。",
+    "placeholders": {
+      "unencrypted": {
+        "content": "$1",
+        "example": "unencrypted"
+      }
+    }
+  },
+  "opt_unencrypted": {
+    "message": "未加密"
+  },
+  "opt_e2ee_turn_off": {
+    "message": "關閉"
+  },
+  "opt_passphrase_label": {
+    "message": "通關密語"
+  },
+  "opt_passphrase_desc": {
+    "message": "用來推導出加密金鑰。只存在這台裝置上，永遠不會上傳。"
+  },
+  "opt_passphrase_placeholder": {
+    "message": "設定一組高強度的通關密語"
+  },
+  "opt_passphrase_confirm_placeholder": {
+    "message": "確認通關密語"
+  },
+  "opt_passphrase_match": {
+    "message": "通關密語一致。"
+  },
+  "opt_genkey_saved_warning": {
+    "message": "請現在就保存起來。萬一你忘了，這是唯一能救回資料的方法。請在你其他裝置上輸入同一把金鑰。"
+  },
+  "opt_e2ee_no_passphrase": {
+    "message": "加密已開啟，但還沒有設定通關密語，所以在你設定一組之前，同步會持續上傳未加密的內容。"
+  },
+  "opt_e2ee_off_warning": {
+    "message": "加密已關閉，所以你的同步資料（書籤、瀏覽記錄、分頁、擴充功能）會以 $UNENCRYPTED$ 的形式存在後端。開啟它，資料離開這台裝置之前就會先加密。",
+    "placeholders": {
+      "unencrypted": {
+        "content": "$1",
+        "example": "unencrypted"
+      }
+    }
+  },
+  "opt_advanced_head": {
+    "message": "進階"
+  },
+  "opt_advanced_head_sub": {
+    "message": "備份、意見回饋和開發者選項。"
+  },
+  "opt_impexp_section": {
+    "message": "匯入 / 匯出"
+  },
+  "opt_export_label": {
+    "message": "匯出備份"
+  },
+  "opt_export_desc": {
+    "message": "把書籤、瀏覽記錄和擴充功能下載成一個 JSON 檔。不需要雲端。"
+  },
+  "opt_export": {
+    "message": "匯出"
+  },
+  "opt_exported": {
+    "message": "已匯出"
+  },
+  "opt_export_failed": {
+    "message": "失敗"
+  },
+  "opt_import_label": {
+    "message": "匯入備份"
+  },
+  "opt_import_desc": {
+    "message": "從 Konode 的 JSON 備份還原。書籤會加到一個新資料夾裡。"
+  },
+  "opt_import_bad_file": {
+    "message": "檔案格式無效或不支援。"
+  },
+  "opt_import_ok_one": {
+    "message": "✓ 已把 $COUNT$ 個書籤匯入到「$FOLDER$」資料夾。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      },
+      "folder": {
+        "content": "$2",
+        "example": "Konode Import"
+      }
+    }
+  },
+  "opt_import_ok_other": {
+    "message": "✓ 已把 $COUNT$ 個書籤匯入到「$FOLDER$」資料夾。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      },
+      "folder": {
+        "content": "$2",
+        "example": "Konode Import"
+      }
+    }
+  },
+  "opt_import": {
+    "message": "匯入"
+  },
+  "opt_import_done": {
+    "message": "完成"
+  },
+  "opt_import_error": {
+    "message": "錯誤"
+  },
+  "opt_feedback_section": {
+    "message": "意見回饋"
+  },
+  "opt_feedback_section_sub": {
+    "message": "不會自動送出任何東西。這些只有在你點下去的時候才會開啟。"
+  },
+  "opt_report_label": {
+    "message": "回報問題或提出新功能"
+  },
+  "opt_report_desc": {
+    "message": "會開啟專案的 GitHub Issues（公開，而且會連到你的 GitHub 帳號）。"
+  },
+  "opt_open_issues": {
+    "message": "開啟 Issues"
+  },
+  "opt_email_label": {
+    "message": "寄信給我們"
+  },
+  "opt_email_desc": {
+    "message": "任何你不想公開張貼的事情。"
+  },
+  "opt_developer_section": {
+    "message": "開發者"
+  },
+  "opt_debug_label": {
+    "message": "偵錯模式"
+  },
+  "opt_debug_desc": {
+    "message": "詳細紀錄，輸出到瀏覽器主控台和「活動」，方便你分享。用完請把它關掉。"
+  },
+  "opt_about_section": {
+    "message": "關於"
+  },
+  "opt_version_label": {
+    "message": "版本"
+  },
+  "opt_source_label": {
+    "message": "原始碼"
+  },
+  "opt_source_desc": {
+    "message": "沒有遙測。沒有外部伺服器。"
+  },
+  "opt_devices_bad_reply": {
+    "message": "無法讀取裝置清單。"
   }
 }
