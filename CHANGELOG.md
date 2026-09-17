@@ -26,6 +26,31 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **A folder deleted on another device no longer stays behind, empty.** Deleting a folder
+  together with its bookmarks removed the bookmarks everywhere and left the folder standing
+  on every other device, for good. Approving a blocked deletion did the same, so saying yes
+  to deleting 80 bookmarks left their ten folders behind with nothing in them. Konode now
+  records the folder deletion too, and a device removes a folder the deletion emptied when
+  the other device deleted that folder, or when you approved the deletion. A folder the other
+  device only emptied and kept stays, and so does one you created here afterwards. For a
+  deleted folder to follow, the device you delete it on needs this version; approving a
+  blocked deletion clears the folders whatever version the other device runs.
+- **Restoring bookmarks from your browser's own backup is no longer undone.** Import an
+  exported bookmarks file after deleting some of them, and the next sync deleted them again,
+  without asking, for up to 90 days. The import keeps each bookmark's original date, so
+  Konode took the restored bookmarks for older than the deletion. It now notes when a
+  bookmark actually arrived on the device, and the restore reaches your other devices too
+  instead of stopping on this one.
+- **Restoring a restore point puts bookmarks back where they were.** The bookmarks it brought
+  back were added at the end of their folder, so wherever something had survived they came
+  back out of order: a folder that used to be last on the bookmarks bar ended up ahead of
+  bookmarks that used to come before it. Each one now goes back right after the bookmark it
+  used to follow.
+- **The device list shows when each device really uploaded last.** Settings → Activity could
+  say a device last uploaded days ago while it synced every minute, because the date came
+  from its extension list, which is only uploaded when it changes. On Google Drive and WebDAV
+  the date is now the newest upload across all of that device's files, and the list is
+  ordered by it. A GitHub folder has no cheap way to tell, so it shows what it did before.
 - **Several Spanish labels said something other than what they do.** A restore point whose
   bookmark count could not be read was labelled with the verb "mark", a snapshot was called
   an "imagen", and the bulk-delete limit read as a number of items when it is a share of
