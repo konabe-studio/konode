@@ -1,4 +1,5 @@
 import type {
+  AppearedRecord,
   DataType,
   SyncPacket,
   FolderDeleteRecord,
@@ -105,6 +106,7 @@ export const KEYS = {
   BOOKMARK_TITLES: "konode_bm_titles",
   BOOKMARK_FOLDER_RENAMES: "konode_bm_folder_renames",
   BOOKMARK_FOLDER_DELETES: "konode_bm_folder_deletes",
+  BOOKMARK_APPEARED: "konode_bm_appeared",
   // Superseded by the backend-side `konode_snap_index.json`, which every device can
   // read. Kept only so the one-time migration in sync/snapshots.ts can drain the
   // counts this device recorded before dropping the key.
@@ -370,6 +372,17 @@ export function updateFolderDeletes(
   mutate: (current: FolderDeleteRecord[]) => FolderDeleteRecord[]
 ): Promise<FolderDeleteRecord[]> {
   return updateKey<FolderDeleteRecord[]>(KEYS.BOOKMARK_FOLDER_DELETES, mutate, []);
+}
+
+// Bookmarks that arrived here carrying an older `dateAdded` than the moment they appeared,
+// which is what a browser's own bookmark import does (see AppearedRecord). Local-only.
+export async function getAppeared(): Promise<AppearedRecord[]> {
+  return get<AppearedRecord[]>(KEYS.BOOKMARK_APPEARED, []);
+}
+export function updateAppeared(
+  mutate: (current: AppearedRecord[]) => AppearedRecord[]
+): Promise<AppearedRecord[]> {
+  return updateKey<AppearedRecord[]>(KEYS.BOOKMARK_APPEARED, mutate, []);
 }
 
 // ─── Imported history (CO-6) ─────────────────────────────────────────────────
