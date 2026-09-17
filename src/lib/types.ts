@@ -376,7 +376,18 @@ export interface IBackend {
   putFile(name: string, content: string): Promise<void>;
   getFile(name: string): Promise<string | null>;
   listFiles(prefix: string): Promise<string[]>;
+  // The same listing with each file's modification time, where the backend's listing
+  // already carries one: Drive's `modifiedTime`, WebDAV's `getlastmodified`. The GitHub
+  // contents API has no such field, and one commits query per file is not "for free", so
+  // that backend leaves this out and callers fall back to what they did before (#30).
+  listFilesWithTimes?(prefix: string): Promise<ListedFile[]>;
   deleteFile(name: string): Promise<void>;
+}
+
+export interface ListedFile {
+  name: string;
+  /** epoch ms, or null when the listing gave no parseable time for this file */
+  modified: number | null;
 }
 
 // ─── Snapshots (bookmark restore points) ────────────────────────────────────
@@ -422,7 +433,11 @@ export interface DeviceInfo {
   device_id: string;
   /** null when every packet we could read came from a build that didn't carry a name. */
   label: string | null;
-  /** ISO-8601 of the newest packet we read for this device, or null if none was readable. */
+  /**
+   * ISO-8601 of this device's last upload: the newest modification time among its files when
+   * the backend's listing reports them, else the timestamp of the one packet we read for its
+   * name. null if neither was available.
+   */
   lastSeen: string | null;
   types: DataType[];
   isSelf: boolean;

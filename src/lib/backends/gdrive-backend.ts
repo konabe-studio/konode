@@ -1,4 +1,4 @@
-import type { IBackend, BackendConfig, DataType, SyncPacket } from "@/lib/types";
+import type { IBackend, BackendConfig, DataType, ListedFile, SyncPacket } from "@/lib/types";
 import { withRetry, HttpError } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 import { getAccessToken, getStoredGDriveUser } from "./gdrive-oauth";
@@ -325,6 +325,23 @@ export class GDriveBackend implements IBackend {
       if (!res.ok) throw new HttpError(res.status, `Drive list failed: ${res.status}`);
       const { files } = await res.json();
       return ((files ?? []) as Array<{ name: string }>).map(f => f.name).filter(n => n.startsWith(prefix));
+    });
+  }
+
+  async listFilesWithTimes(prefix: string): Promise<ListedFile[]> {
+    return withRetry(async () => {
+      const folderId = this.folderId ?? (await this.ensureFolder());
+      const h = await this.authHeaders();
+      const q = encodeURIComponent(`name contains '${prefix}' and '${folderId}' in parents and trashed=false`);
+      const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(name,modifiedTime)`, { headers: h, cache: "no-store" });
+      if (!res.ok) throw new HttpError(res.status, `Drive list failed: ${res.status}`);
+      const { files } = await res.json();
+      return ((files ?? []) as Array<{ name: string; modifiedTime?: string }>)
+        .filter(f => f.name.startsWith(prefix))
+        .map(f => {
+          const t = f.modifiedTime ? Date.parse(f.modifiedTime) : NaN;
+          return { name: f.name, modified: Number.isNaN(t) ? null : t };
+        });
     });
   }
 

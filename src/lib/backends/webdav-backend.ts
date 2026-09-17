@@ -1,4 +1,4 @@
-import type { IBackend, BackendConfig, DataType, SyncPacket } from "@/lib/types";
+import type { IBackend, BackendConfig, DataType, ListedFile, SyncPacket } from "@/lib/types";
 import { withRetry, HttpError } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 import { isSecureBackendUrl } from "@/lib/utils/url";
@@ -6,6 +6,30 @@ import { utf8ToBase64 } from "@/lib/utils/base64";
 
 const INSECURE_URL_MSG =
   "WebDAV over plain http:// is not allowed. Your username and password would be sent unencrypted on every request. Use an https:// URL (http is permitted only for localhost).";
+
+/** The last path segment of a PROPFIND href, decoded when it can be. */
+function hrefBasename(href: string): string {
+  try { return decodeURIComponent(href).split("/").pop() ?? ""; }
+  catch { return href.split("/").pop() ?? ""; }
+}
+
+/**
+ * The files in a PROPFIND multistatus, each with its `getlastmodified` where the server sent
+ * one. Servers disagree on the namespace prefix (`d:`, `D:`, `lp1:` on Apache, none at all),
+ * so every element is matched with any prefix. The collection itself comes back as an href
+ * ending in `/`, whose basename is empty, and callers filter it out by prefix.
+ */
+export function parsePropfindListing(xml: string): ListedFile[] {
+  const out: ListedFile[] = [];
+  for (const block of xml.matchAll(/<(?:[a-z0-9]+:)?response\b[^>]*>([\s\S]*?)<\/(?:[a-z0-9]+:)?response>/gi)) {
+    const href = /<(?:[a-z0-9]+:)?href>([^<]+)<\/(?:[a-z0-9]+:)?href>/i.exec(block[1]);
+    if (!href) continue;
+    const stamp = /<(?:[a-z0-9]+:)?getlastmodified[^>]*>([^<]+)<\/(?:[a-z0-9]+:)?getlastmodified>/i.exec(block[1]);
+    const t = stamp ? Date.parse(stamp[1].trim()) : NaN;
+    out.push({ name: hrefBasename(href[1].trim()), modified: Number.isNaN(t) ? null : t });
+  }
+  return out;
+}
 
 export class WebDAVBackend implements IBackend {
   readonly type = "webdav" as const;
@@ -268,13 +292,23 @@ export class WebDAVBackend implements IBackend {
       if (res.status === 404) return [];
       if (!res.ok) throw new HttpError(res.status, `WebDAV list failed: ${res.status}`);
       const xml = await res.text();
-      const basename = (h: string): string => {
-        try { return decodeURIComponent(h).split("/").pop() ?? ""; }
-        catch { return h.split("/").pop() ?? ""; }
-      };
       return [...xml.matchAll(/<(?:[a-z0-9]+:)?href>([^<]+)<\/(?:[a-z0-9]+:)?href>/gi)]
-        .map(m => basename(m[1]))
+        .map(m => hrefBasename(m[1]))
         .filter(name => name.startsWith(prefix));
+    });
+  }
+
+  async listFilesWithTimes(prefix: string): Promise<ListedFile[]> {
+    return withRetry(async () => {
+      const res = await fetch(this.baseUrl + "/", {
+        method: "PROPFIND",
+        headers: { ...this.headers(), Depth: "1" },
+        body: `<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/><d:getlastmodified/></d:prop></d:propfind>`,
+        cache: "no-store",
+      });
+      if (res.status === 404) return [];
+      if (!res.ok) throw new HttpError(res.status, `WebDAV list failed: ${res.status}`);
+      return parsePropfindListing(await res.text()).filter(f => f.name.startsWith(prefix));
     });
   }
 
