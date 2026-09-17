@@ -1,1 +1,1274 @@
-{}
+{
+  "locale_bcp47": {
+    "message": "ru"
+  },
+  "extension_name": {
+    "message": "Konode | Синхронизация закладок и вкладок"
+  },
+  "extension_description": {
+    "message": "Приватная синхронизация браузера с вашим собственным хранилищем: Google Drive, WebDAV, GitHub."
+  },
+  "datatype_bookmarks": {
+    "message": "Закладки"
+  },
+  "datatype_history": {
+    "message": "История"
+  },
+  "datatype_sessions": {
+    "message": "Сессии"
+  },
+  "datatype_extensions": {
+    "message": "Расширения"
+  },
+  "status_idle": {
+    "message": "Готов к работе"
+  },
+  "status_syncing": {
+    "message": "Синхронизация…"
+  },
+  "status_success": {
+    "message": "Синхронизировано"
+  },
+  "status_error": {
+    "message": "Ошибка"
+  },
+  "status_conflict": {
+    "message": "Конфликт"
+  },
+  "stream_off": {
+    "message": "выключено"
+  },
+  "stream_syncing": {
+    "message": "синхронизация…"
+  },
+  "stream_pending": {
+    "message": "в очереди"
+  },
+  "stream_never": {
+    "message": "ещё не синхронизировано"
+  },
+  "stream_stale": {
+    "message": "последняя синхронизация не удалась"
+  },
+  "stream_synced": {
+    "message": "синхронизировано"
+  },
+  "popup_settings_aria": {
+    "message": "Настройки"
+  },
+  "popup_sync_now": {
+    "message": "Синхронизировать"
+  },
+  "popup_load_error": {
+    "message": "Не удалось связаться с Konode. Нажмите, чтобы повторить."
+  },
+  "popup_recovery_notice": {
+    "message": "Необычное удаление заблокировано (закладок: $COUNT$), точка восстановления сохранена. Примените удаление или оставьте закладки в разделе «Настройки → Активность».",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "popup_no_backend": {
+    "message": "Хранилище не настроено"
+  },
+  "popup_setup_title": {
+    "message": "Завершите настройку Konode"
+  },
+  "popup_setup_body": {
+    "message": "Выберите, где хранить данные. Пока вы этого не сделаете, ничего не синхронизируется и не отправляется."
+  },
+  "popup_setup_cta": {
+    "message": "Начать настройку"
+  },
+  "popup_keep_local": {
+    "message": "Оставить локальную"
+  },
+  "popup_use_remote": {
+    "message": "Взять удалённую"
+  },
+  "popup_active_streams": {
+    "message": "Активные потоки"
+  },
+  "popup_missing_extensions_one": {
+    "message": "$COUNT$ расширение не установлено",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_missing_extensions_other": {
+    "message": "Не установлено расширений: $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "7"
+      }
+    }
+  },
+  "popup_open_all": {
+    "message": "Открыть все"
+  },
+  "popup_sessions_head": {
+    "message": "Сессии с других устройств"
+  },
+  "popup_unknown_device": {
+    "message": "Неизвестное устройство"
+  },
+  "popup_tabs_one": {
+    "message": "$COUNT$ вкладка",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_tabs_other": {
+    "message": "Вкладок: $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "23"
+      }
+    }
+  },
+  "popup_restore": {
+    "message": "Восстановить"
+  },
+  "popup_backend_label": {
+    "message": "Хранилище"
+  },
+  "popup_backend_none": {
+    "message": "Не выбрано"
+  },
+  "popup_device_label": {
+    "message": "Устройство"
+  },
+  "popup_configure": {
+    "message": "Настроить →"
+  },
+  "popup_activity_log": {
+    "message": "Журнал активности →"
+  },
+  "common_back": {
+    "message": "Назад"
+  },
+  "common_continue": {
+    "message": "Продолжить"
+  },
+  "common_open_settings": {
+    "message": "Открыть настройки"
+  },
+  "common_close": {
+    "message": "Закрыть"
+  },
+  "common_show": {
+    "message": "Показать"
+  },
+  "common_hide": {
+    "message": "Скрыть"
+  },
+  "common_e2ee": {
+    "message": "Сквозное шифрование"
+  },
+  "common_generate_key": {
+    "message": "Сгенерировать надёжный ключ"
+  },
+  "provider_gdrive_desc": {
+    "message": "Синхронизация напрямую с вашим Google Drive. Благодаря OAuth токен доступа хранится только на этом устройстве."
+  },
+  "provider_nextcloud_desc": {
+    "message": "Ваш собственный сервер Nextcloud или ownCloud."
+  },
+  "provider_nextcloud_note": {
+    "message": "Укажите только имя хоста сервера; используйте пароль приложения (Настройки → Безопасность)."
+  },
+  "provider_pcloud_desc": {
+    "message": "Хранилище pCloud. Нужен платный тариф pCloud."
+  },
+  "provider_pcloud_note": {
+    "message": "Выберите регион $REGION$, если ваш аккаунт pCloud находится там.",
+    "placeholders": {
+      "region": {
+        "content": "$1",
+        "example": "EU"
+      }
+    }
+  },
+  "provider_koofr_desc": {
+    "message": "Облачное хранилище Koofr."
+  },
+  "provider_koofr_note": {
+    "message": "Имя пользователя: ваш email в Koofr. Пароль: пароль приложения Koofr."
+  },
+  "provider_fastmail_desc": {
+    "message": "Файловое хранилище Fastmail."
+  },
+  "provider_fastmail_note": {
+    "message": "Имя пользователя: ваш полный адрес Fastmail. Пароль: пароль приложения с доступом к Files (WebDAV)."
+  },
+  "provider_jianguoyun_desc": {
+    "message": "Облачное хранилище Nutstore, популярное в материковом Китае."
+  },
+  "provider_jianguoyun_note": {
+    "message": "Имя пользователя: ваш email в Nutstore. Пароль: пароль стороннего приложения. На бесплатном аккаунте, если у вас от трёх устройств, увеличьте «Интервал синхронизации» хотя бы до 120 секунд: Nutstore разрешает 600 запросов WebDAV за 30 минут."
+  },
+  "provider_github_desc": {
+    "message": "Синхронизированные данные хранятся в приватном репозитории GitHub, к которому Konode получает доступ с помощью Personal Access Token."
+  },
+  "provider_webdav_desc": {
+    "message": "Synology, kDrive или любой другой сервер WebDAV."
+  },
+  "provider_syncing_to": {
+    "message": "Синхронизация с $URL$.",
+    "placeholders": {
+      "url": {
+        "example": "https://app.koofr.net/dav/Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_welcome_title": {
+    "message": "Добро пожаловать в Konode"
+  },
+  "onb_welcome_subtitle": {
+    "message": "Синхронизация браузера, при которой ваши данные действительно остаются вашими. Закладки, сессии и расширения отправляются прямо в ваше собственное хранилище. Без серверов посередине."
+  },
+  "onb_feature_storage": {
+    "message": "Ваши данные всегда остаются в вашем собственном хранилище."
+  },
+  "onb_feature_instant": {
+    "message": "Синхронизирует каждое изменение в момент, когда оно происходит."
+  },
+  "onb_feature_browsers": {
+    "message": "Работает в браузерах на базе Chromium и Firefox."
+  },
+  "onb_feature_providers": {
+    "message": "Вы сами решаете, где хранить данные."
+  },
+  "onb_get_started": {
+    "message": "Начать"
+  },
+  "onb_backend_title": {
+    "message": "Выберите хранилище"
+  },
+  "onb_backend_subtitle": {
+    "message": "Где Konode будет хранить ваши данные?"
+  },
+  "onb_use_provider": {
+    "message": "Использовать $PROVIDER$",
+    "placeholders": {
+      "provider": {
+        "example": "Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_drive_unavailable": {
+    "message": "Вход через Google в этом браузере недоступен. Выберите другой вариант."
+  },
+  "onb_connecting": {
+    "message": "Подключение…"
+  },
+  "onb_sign_in_google": {
+    "message": "Войти через Google"
+  },
+  "onb_signin_failed": {
+    "message": "Не удалось войти."
+  },
+  "onb_webdav_user_placeholder": {
+    "message": "Имя пользователя"
+  },
+  "onb_webdav_pass_placeholder": {
+    "message": "Пароль / токен приложения"
+  },
+  "onb_verifying": {
+    "message": "Проверка…"
+  },
+  "onb_github_401": {
+    "message": "GitHub отклонил этот токен. Проверьте, не истёк ли его срок действия и скопировали ли вы его целиком."
+  },
+  "onb_github_http": {
+    "message": "GitHub не смог проверить токен (HTTP $STATUS$).",
+    "placeholders": {
+      "status": {
+        "example": "500",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_github_unreachable": {
+    "message": "Не удалось связаться с GitHub. Проверьте подключение и повторите попытку."
+  },
+  "onb_github_branch_placeholder": {
+    "message": "Ветка (по умолчанию: main)"
+  },
+  "onb_github_token_link": {
+    "message": "Создать fine-grained токен (только для этого репозитория) →"
+  },
+  "onb_data_title": {
+    "message": "Что синхронизировать?"
+  },
+  "onb_data_subtitle": {
+    "message": "Это можно изменить в любой момент в настройках."
+  },
+  "onb_device_name_label": {
+    "message": "Назовите это устройство"
+  },
+  "onb_device_name_desc": {
+    "message": "Так оно будет отображаться в списке сессий на других ваших устройствах."
+  },
+  "onb_device_name_placeholder": {
+    "message": "Рабочий ноутбук"
+  },
+  "onb_encrypt_title": {
+    "message": "Зашифровать данные?"
+  },
+  "onb_encrypt_subtitle": {
+    "message": "Если включить шифрование, данные шифруются на этом устройстве перед отправкой. Даже ваш сервис хранения не сможет прочитать их содержимое."
+  },
+  "onb_e2ee_desc": {
+    "message": "AES-256-GCM. Рекомендуется."
+  },
+  "onb_pass_placeholder": {
+    "message": "Придумайте парольную фразу или сгенерируйте ключ шифрования"
+  },
+  "onb_pass_missing": {
+    "message": "Введите парольную фразу или сгенерируйте ключ."
+  },
+  "onb_pass_too_short": {
+    "message": "Не менее $MIN$ символов. Синхронизированные данные можно атаковать офлайн, поэтому короткую парольную фразу можно подобрать.",
+    "placeholders": {
+      "min": {
+        "example": "12",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_pass_confirm_placeholder": {
+    "message": "Подтвердите парольную фразу"
+  },
+  "onb_pass_confirm_missing": {
+    "message": "Подтвердите парольную фразу."
+  },
+  "onb_pass_mismatch": {
+    "message": "Парольные фразы пока не совпадают."
+  },
+  "onb_save_passphrase_lead": {
+    "message": "Сохраните эту парольную фразу."
+  },
+  "onb_save_passphrase_rest": {
+    "message": "Она никогда не покидает это устройство, и если вы её потеряете, восстановить её будет невозможно. На каждом устройстве нужно вводить одну и ту же парольную фразу. Позже её можно скопировать в настройках."
+  },
+  "onb_plaintext_note": {
+    "message": "Без шифрования ваши данные попадают в ваше собственное хранилище $WORD$. Это может быть правильным выбором, если вы полностью доверяете своему сервису хранения. Шифрование можно включить позже в настройках в любой момент.",
+    "placeholders": {
+      "word": {
+        "example": "unencrypted",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_plaintext_word": {
+    "message": "в открытом виде"
+  },
+  "onb_setting_up": {
+    "message": "Настройка…"
+  },
+  "onb_finish_sync": {
+    "message": "Завершить и синхронизировать"
+  },
+  "onb_err_bad_webdav_url": {
+    "message": "Этот адрес WebDAV не похож на корректный URL."
+  },
+  "onb_err_perms_webdav": {
+    "message": "Konode нужно разрешение на доступ к вашему серверу WebDAV и к выбранным типам данных. Разрешите доступ, чтобы продолжить."
+  },
+  "onb_err_perms_no_prompt": {
+    "message": "Этот браузер не умеет показывать запросы разрешений, поэтому Konode не смог запросить нужный доступ. Предоставьте его на странице разрешений Konode в настройках расширений браузера, а затем снова нажмите «Завершить и синхронизировать»."
+  },
+  "onb_err_perms_types": {
+    "message": "Некоторые разрешения были отклонены. Предоставьте их или отключите эти типы данных, чтобы продолжить."
+  },
+  "onb_err_read_settings": {
+    "message": "Не удалось прочитать текущие настройки. Попробуйте ещё раз."
+  },
+  "onb_err_save": {
+    "message": "Не удалось сохранить настройку: $ERROR$",
+    "placeholders": {
+      "error": {
+        "example": "HTTP 403",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_sync_title": {
+    "message": "Синхронизация данных…"
+  },
+  "onb_sync_subtitle": {
+    "message": "Konode выполняет первую синхронизацию. Она продолжится и в фоновом режиме, так что ждать здесь не обязательно."
+  },
+  "onb_sync_error_title": {
+    "message": "Не удалось завершить первую синхронизацию"
+  },
+  "onb_sync_error_subtitle": {
+    "message": "Настройки сохранены. Откройте настройки, чтобы исправить проблему, или завершите, и Konode повторит попытку в фоновом режиме."
+  },
+  "onb_sync_timeout": {
+    "message": "Это занимает больше времени, чем обычно. Так бывает при большой истории. Синхронизация продолжается в фоновом режиме, так что можно завершить прямо сейчас."
+  },
+  "onb_finish": {
+    "message": "Завершить"
+  },
+  "onb_finish_anyway": {
+    "message": "Всё равно завершить"
+  },
+  "onb_done_title": {
+    "message": "Всё готово!"
+  },
+  "onb_done_subtitle": {
+    "message": "Konode синхронизирует данные вашего браузера с $BACKEND$. Первая синхронизация уже идёт в фоновом режиме.",
+    "placeholders": {
+      "backend": {
+        "example": "Google Drive",
+        "content": "$1"
+      }
+    }
+  },
+  "onb_done_backend": {
+    "message": "Хранилище успешно подключено"
+  },
+  "onb_done_autosync": {
+    "message": "Синхронизация выполняется автоматически в фоновом режиме"
+  },
+  "onb_done_adjust": {
+    "message": "Настройки можно изменить в любой момент"
+  },
+  "datatype_bookmarks_desc": {
+    "message": "Всё дерево закладок с папками и порядком."
+  },
+  "datatype_sessions_desc": {
+    "message": "Именованные сессии вкладок, которые можно восстановить где угодно."
+  },
+  "datatype_history_desc": {
+    "message": "История посещений, ограниченная заданным числом дней."
+  },
+  "datatype_extensions_desc": {
+    "message": "Список расширений с отметкой недостающих и ссылками на установку."
+  },
+  "opt_secret_copy": {
+    "message": "Копировать"
+  },
+  "opt_secret_copied": {
+    "message": "Скопировано"
+  },
+  "opt_secret_replace": {
+    "message": "Заменить"
+  },
+  "opt_webdav_user_label": {
+    "message": "Имя пользователя"
+  },
+  "opt_webdav_user_placeholder": {
+    "message": "имя пользователя"
+  },
+  "opt_webdav_pass_label": {
+    "message": "Пароль / токен приложения"
+  },
+  "opt_webdav_http_warn": {
+    "message": "Это адрес $SCHEME$, поэтому пароль будет отправлен без шифрования.",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "http://"
+      }
+    }
+  },
+  "opt_webdav_http_use": {
+    "message": "Используйте $SCHEME$.",
+    "placeholders": {
+      "scheme": {
+        "content": "$1",
+        "example": "https://"
+      }
+    }
+  },
+  "opt_snap_saved": {
+    "message": "Снимок сохранён."
+  },
+  "opt_snap_restored_one": {
+    "message": "Восстановлена $COUNT$ закладка. Синхронизация с другими вашими устройствами…",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_snap_restored_other": {
+    "message": "Восстановлено закладок: $COUNT$. Синхронизация с другими вашими устройствами…",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "opt_snap_deleted": {
+    "message": "Точка восстановления удалена."
+  },
+  "opt_err_perms_no_prompt": {
+    "message": "Этот браузер не умеет показывать запросы разрешений, поэтому Konode не смог запросить доступ к вашему серверу WebDAV. Предоставьте его на странице разрешений Konode в настройках расширений браузера, а затем повторите попытку."
+  },
+  "opt_err_perms_bad_url": {
+    "message": "У Konode нет пригодного адреса WebDAV, для которого можно запросить доступ. Проверьте URL сервера выше."
+  },
+  "opt_err_perms_denied": {
+    "message": "Разрешение на доступ к серверу WebDAV не предоставлено."
+  },
+  "opt_err_pass_too_short": {
+    "message": "Используйте не менее $MIN$ символов. Синхронизированные данные можно атаковать офлайн, поэтому короткую парольную фразу можно подобрать. Чем длиннее, тем лучше, или сгенерируйте ключ.",
+    "placeholders": {
+      "min": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "opt_err_pass_mismatch": {
+    "message": "Парольные фразы не совпадают. Введите их ещё раз перед сохранением."
+  },
+  "opt_saving": {
+    "message": "Сохранение…"
+  },
+  "opt_saved": {
+    "message": "Сохранено"
+  },
+  "opt_save_changes": {
+    "message": "Сохранить изменения"
+  },
+  "opt_nav_backend": {
+    "message": "Хранилище"
+  },
+  "opt_nav_data": {
+    "message": "Типы данных"
+  },
+  "opt_nav_device": {
+    "message": "Устройство"
+  },
+  "opt_nav_activity": {
+    "message": "Активность"
+  },
+  "opt_nav_advanced": {
+    "message": "Дополнительно"
+  },
+  "opt_setup_title": {
+    "message": "Завершите настройку Konode"
+  },
+  "opt_setup_step_storage": {
+    "message": "Выберите, где хранить данные"
+  },
+  "opt_setup_step_types": {
+    "message": "Выберите, что синхронизировать"
+  },
+  "opt_backend_head": {
+    "message": "Хранилище"
+  },
+  "opt_backend_head_sub": {
+    "message": "Выберите, где хранить данные синхронизации. Ваши данные никогда не проходят через наши серверы."
+  },
+  "opt_gdrive_connect_failed": {
+    "message": "Не удалось подключиться"
+  },
+  "opt_gdrive_scope_hint": {
+    "message": "Только область доступа $SCOPE$, поэтому Konode видит лишь созданные им файлы.",
+    "placeholders": {
+      "scope": {
+        "content": "$1",
+        "example": "drive.file"
+      }
+    }
+  },
+  "opt_drive_folder_label": {
+    "message": "ID папки на Drive"
+  },
+  "opt_optional": {
+    "message": "(необязательно)"
+  },
+  "opt_drive_folder_placeholder": {
+    "message": "Оставьте пустым, чтобы автоматически создать папку «Konode»"
+  },
+  "opt_region_label": {
+    "message": "Регион"
+  },
+  "opt_webdav_host_label": {
+    "message": "Хост сервера"
+  },
+  "opt_webdav_url_label": {
+    "message": "URL сервера"
+  },
+  "opt_github_token_label": {
+    "message": "Personal Access Token"
+  },
+  "opt_github_repo_label": {
+    "message": "Репозиторий"
+  },
+  "opt_github_branch_label": {
+    "message": "Ветка"
+  },
+  "opt_stat_never": {
+    "message": "Никогда"
+  },
+  "opt_setup_sub": {
+    "message": "Konode синхронизирует ваш браузер с вашим собственным хранилищем. Никакого сервера Konode нет. Два быстрых шага, и готово. (Если мастер настройки так и не открылся в вашем браузере, всё можно сделать прямо здесь.)"
+  },
+  "opt_data_head": {
+    "message": "Типы данных"
+  },
+  "opt_data_head_sub": {
+    "message": "Выберите, что синхронизировать между вашими устройствами."
+  },
+  "opt_data_section": {
+    "message": "Данные для синхронизации"
+  },
+  "opt_data_permission_lost": {
+    "message": "У Konode больше нет нужного для этого разрешения, поэтому этот тип данных не синхронизируется. Выключите и снова включите его, чтобы вернуть разрешение."
+  },
+  "opt_history_days_label": {
+    "message": "Сколько дней синхронизировать"
+  },
+  "opt_history_days_desc": {
+    "message": "Рекомендуется: 30 дней."
+  },
+  "opt_history_days_value": {
+    "message": "$COUNT$ дн.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
+  "opt_history_hint": {
+    "message": "Страницы с других ваших устройств добавляются со временем их получения, а не первого посещения, поэтому в браузерах на базе Chromium они отображаются в разделе за сегодня, а не за тот день, когда вы их открывали. Firefox сохраняет исходную дату."
+  },
+  "opt_missing_ext_head": {
+    "message": "Отсутствующие расширения ($COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "6"
+      }
+    }
+  },
+  "opt_ext_from": {
+    "message": "· из $STORE$",
+    "placeholders": {
+      "store": {
+        "content": "$1",
+        "example": "Firefox"
+      }
+    }
+  },
+  "opt_ext_install": {
+    "message": "Установить"
+  },
+  "opt_ext_find": {
+    "message": "Найти"
+  },
+  "opt_no_password_title": {
+    "message": "Синхронизация паролей недоступна."
+  },
+  "opt_no_password_body": {
+    "message": "Расширения браузера не имеют доступа к встроенному хранилищу паролей."
+  },
+  "opt_no_password_use": {
+    "message": "Для синхронизации паролей на своём сервере используйте $MANAGERS$.",
+    "placeholders": {
+      "managers": {
+        "content": "$1",
+        "example": "Bitwarden or Proton Pass"
+      }
+    }
+  },
+  "opt_or": {
+    "message": "или"
+  },
+  "opt_device_head": {
+    "message": "Устройство"
+  },
+  "opt_device_head_sub": {
+    "message": "Идентификация этого устройства в сети синхронизации."
+  },
+  "opt_identity_section": {
+    "message": "Идентификация"
+  },
+  "opt_device_name_label": {
+    "message": "Название устройства"
+  },
+  "opt_device_name_desc": {
+    "message": "Так это устройство отображается в журналах синхронизации."
+  },
+  "opt_device_name_placeholder": {
+    "message": "Мой ноутбук"
+  },
+  "opt_device_id_label": {
+    "message": "ID устройства"
+  },
+  "opt_device_id_desc": {
+    "message": "Создаётся автоматически. Не изменяйте."
+  },
+  "opt_behavior_section": {
+    "message": "Поведение синхронизации"
+  },
+  "opt_sync_on_change_label": {
+    "message": "Синхронизировать при изменении"
+  },
+  "opt_sync_on_change_desc": {
+    "message": "Мгновенно синхронизировать закладки при их изменении. Рекомендуется."
+  },
+  "opt_auto_sync_label": {
+    "message": "Автосинхронизация"
+  },
+  "opt_auto_sync_desc": {
+    "message": "Также синхронизировать по расписанию. История, открытые вкладки и список расширений передаются только так."
+  },
+  "opt_notifications_label": {
+    "message": "Уведомления"
+  },
+  "opt_notifications_desc": {
+    "message": "Статус синхронизации и оповещения о конфликтах."
+  },
+  "opt_interval_label": {
+    "message": "Интервал синхронизации"
+  },
+  "opt_interval_desc": {
+    "message": "Как часто это устройство получает удалённые изменения. Браузер не разрешает фоновые проверки чаще, чем раз в 30 секунд. Ваши собственные изменения отправляются почти мгновенно."
+  },
+  "opt_interval_value": {
+    "message": "$COUNT$ с",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
+  "opt_conflict_section": {
+    "message": "Разрешение конфликтов"
+  },
+  "opt_conflict_lww": {
+    "message": "Побеждает последнее изменение"
+  },
+  "opt_conflict_lww_desc": {
+    "message": "Всегда побеждает самое свежее изменение."
+  },
+  "opt_conflict_local": {
+    "message": "Приоритет локальных"
+  },
+  "opt_conflict_local_desc": {
+    "message": "Локальные изменения имеют приоритет над удалёнными."
+  },
+  "opt_conflict_remote": {
+    "message": "Приоритет удалённых"
+  },
+  "opt_conflict_remote_desc": {
+    "message": "Удалённые изменения имеют приоритет над локальными."
+  },
+  "opt_conflict_manual": {
+    "message": "Вручную"
+  },
+  "opt_conflict_manual_desc": {
+    "message": "Разрешать каждый конфликт вручную во всплывающем окне."
+  },
+  "opt_safety_section": {
+    "message": "Безопасность"
+  },
+  "opt_bulk_delete_label": {
+    "message": "Предел массового удаления с другого устройства"
+  },
+  "opt_bulk_delete_desc": {
+    "message": "Страховка: если удаления с другого устройства убрали бы больше этой доли ваших локальных закладок, слияние их пропускает (защита от повреждённой синхронизации, которая стёрла бы всё дерево). Увеличьте значение, если вы регулярно удаляете закладки массово."
+  },
+  "opt_activity_head": {
+    "message": "Активность"
+  },
+  "opt_activity_head_sub": {
+    "message": "Что Konode сделал на этом устройстве и с чем он работает. Всё вычисляется здесь: цифры, точки восстановления и последние 200 записей журнала хранятся локально, и ничто на этой странице никуда не отправляется."
+  },
+  "opt_sync_activity_section": {
+    "message": "Активность синхронизации"
+  },
+  "opt_stat_transferred": {
+    "message": "Передано данных"
+  },
+  "opt_stat_runs": {
+    "message": "Запусков синхронизации"
+  },
+  "opt_stat_last_sync": {
+    "message": "Последняя синхронизация"
+  },
+  "opt_devices_section": {
+    "message": "Устройства"
+  },
+  "opt_devices_section_sub": {
+    "message": "Все устройства, у которых есть файлы в вашей папке синхронизации, и что каждое из них отправило последним. Если забыть устройство, его файлы удаляются из вашего хранилища. Ни одна закладка ни в одном браузере при этом не удаляется."
+  },
+  "opt_forget_result_one": {
+    "message": "Удалён один файл устройства $LABEL$. Если тот браузер ещё запущен, в течение минуты он снова отправит свои данные и появится здесь. Это не сбой: чтобы исключить устройство, сначала отключите на нём Konode, а затем забудьте его здесь.",
+    "placeholders": {
+      "label": {
+        "content": "$2",
+        "example": "Work laptop"
+      }
+    }
+  },
+  "opt_forget_result_other": {
+    "message": "Удалено файлов устройства $LABEL$: $COUNT$. Если тот браузер ещё запущен, в течение минуты он снова отправит свои данные и появится здесь. Это не сбой: чтобы исключить устройство, сначала отключите на нём Konode, а затем забудьте его здесь.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      },
+      "label": {
+        "content": "$2",
+        "example": "Work laptop"
+      }
+    }
+  },
+  "opt_dismiss": {
+    "message": "Закрыть"
+  },
+  "opt_devices_error": {
+    "message": "Не удалось получить список устройств: $ERROR$. Это не значит, что их нет. Проверьте подключение в разделе «Хранилище» и снова откройте эту вкладку.",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "404 Not Found"
+      }
+    }
+  },
+  "opt_devices_loading": {
+    "message": "Чтение папки синхронизации…"
+  },
+  "opt_devices_empty": {
+    "message": "В папке пока ничего нет. Запустите синхронизацию, и это устройство появится."
+  },
+  "opt_device_unnamed": {
+    "message": "Устройство без названия ($ID$)",
+    "placeholders": {
+      "id": {
+        "content": "$1",
+        "example": "a1b2c3d4"
+      }
+    }
+  },
+  "opt_this_device": {
+    "message": "ЭТО УСТРОЙСТВО"
+  },
+  "opt_last_upload": {
+    "message": "· последняя отправка: $WHEN$",
+    "placeholders": {
+      "when": {
+        "content": "$1",
+        "example": "8/9/2026, 10:20:45 AM"
+      }
+    }
+  },
+  "opt_forget": {
+    "message": "Забыть"
+  },
+  "opt_forget_it": {
+    "message": "Да, забыть"
+  },
+  "opt_forget_confirm_one": {
+    "message": "Будет удалён единственный файл этого устройства в вашем хранилище ($TYPES$). Закладки не удаляются ни в одном браузере, ни здесь, ни там. Если тот браузер ещё запущен, он снова отправит свои данные и появится; чтобы этого не было, сначала отключите на нём Konode.",
+    "placeholders": {
+      "types": {
+        "content": "$2",
+        "example": "Bookmarks, Sessions"
+      }
+    }
+  },
+  "opt_forget_confirm_other": {
+    "message": "Будут удалены файлы этого устройства в вашем хранилище (файлов: $COUNT$; $TYPES$). Закладки не удаляются ни в одном браузере, ни здесь, ни там. Если тот браузер ещё запущен, он снова отправит свои данные и появится; чтобы этого не было, сначала отключите на нём Konode.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      },
+      "types": {
+        "content": "$2",
+        "example": "Bookmarks, Sessions"
+      }
+    }
+  },
+  "opt_that_device": {
+    "message": "без названия"
+  },
+  "opt_cancel": {
+    "message": "Отмена"
+  },
+  "opt_blocked_section": {
+    "message": "Заблокированное удаление"
+  },
+  "opt_blocked_section_sub": {
+    "message": "Другое устройство запросило удаление необычно большого числа ваших закладок, поэтому Konode его задержал. Примените удаление, если так и задумано, или оставьте закладки."
+  },
+  "opt_blocked_headline_one": {
+    "message": "Закладок: $COUNT$ из $TOTAL$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      },
+      "total": {
+        "content": "$2",
+        "example": "49"
+      }
+    }
+  },
+  "opt_blocked_headline_other": {
+    "message": "Закладок: $COUNT$ из $TOTAL$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "48"
+      },
+      "total": {
+        "content": "$2",
+        "example": "49"
+      }
+    }
+  },
+  "opt_blocked_count_one": {
+    "message": "$COUNT$ закладка",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_count_other": {
+    "message": "Закладок: $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "48"
+      }
+    }
+  },
+  "opt_blocked_from": {
+    "message": "Запрошено устройством $DEVICE$.",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_blocked_from_unknown": {
+    "message": "Запрошено другим устройством."
+  },
+  "opt_blocked_saved": {
+    "message": "Ничего не удалено, а перед этим сохранена точка восстановления."
+  },
+  "opt_blocked_apply": {
+    "message": "Применить удаление"
+  },
+  "opt_blocked_confirm_apply": {
+    "message": "Применить и удалить"
+  },
+  "opt_blocked_keep": {
+    "message": "Чтобы оставить закладки, откатите запросившее устройство к точке восстановления, созданной до чистки. Это сотрёт там запись об удалении, и запрос перестанет сюда приходить."
+  },
+  "opt_snapshots_section": {
+    "message": "Точки восстановления"
+  },
+  "opt_snapshots_section_sub": {
+    "message": "Копии ваших закладок с отметкой времени в хранилище, общие для всех ваших устройств. Восстановление возвращает закладки, которых нет на этом устройстве (ничего не удаляется). Хранятся 10 последних; более старые удаляются автоматически, а любую из них можно удалить здесь."
+  },
+  "opt_snap_now_label": {
+    "message": "Сохранить снимок сейчас"
+  },
+  "opt_snap_now_desc": {
+    "message": "Точка восстановления текущего дерева закладок."
+  },
+  "opt_snap_create": {
+    "message": "Создать снимок"
+  },
+  "opt_snap_loading": {
+    "message": "Загрузка точек восстановления…"
+  },
+  "opt_snap_error": {
+    "message": "Не удалось прочитать точки восстановления: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "404 Not Found"
+      }
+    }
+  },
+  "opt_snap_error_desc": {
+    "message": "Это не значит, что их нет. Они находятся в вашем хранилище, и сейчас их не удалось получить. Проверьте подключение в разделе «Хранилище» и снова откройте эту вкладку."
+  },
+  "opt_snap_empty": {
+    "message": "Точек восстановления пока нет. Создайте точку выше; кроме того, она сохраняется автоматически, если будет заблокировано необычное удаление."
+  },
+  "opt_snap_count_one": {
+    "message": "$COUNT$ закладка",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_snap_count_other": {
+    "message": "Закладок: $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      }
+    }
+  },
+  "opt_snap_unknown": {
+    "message": "Точка восстановления закладок"
+  },
+  "opt_snap_confirm_restore": {
+    "message": "Подтвердить восстановление"
+  },
+  "opt_snap_confirm_delete": {
+    "message": "Подтвердить удаление"
+  },
+  "opt_snap_delete_aria": {
+    "message": "Удалить эту точку восстановления"
+  },
+  "opt_log_section": {
+    "message": "Журнал"
+  },
+  "opt_log_empty_sub": {
+    "message": "Записей пока нет."
+  },
+  "opt_log_count_one": {
+    "message": "$COUNT$ запись",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_log_count_other": {
+    "message": "Записей: $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "opt_log_errors": {
+    "message": " · с ошибками: $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_log_skipped": {
+    "message": " · пропущено: $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "opt_log_errors_only_label": {
+    "message": "Только ошибки"
+  },
+  "opt_log_errors_only_desc": {
+    "message": "Скрыть успешные записи."
+  },
+  "opt_log_clear": {
+    "message": "Очистить журнал"
+  },
+  "opt_log_nothing": {
+    "message": "В журнале пока пусто. Запустите синхронизацию, и записи появятся здесь."
+  },
+  "opt_log_no_errors": {
+    "message": "Ошибок не записано. Отлично."
+  },
+  "opt_encryption_section": {
+    "message": "Шифрование"
+  },
+  "opt_e2ee_desc": {
+    "message": "AES-256-GCM. Данные шифруются вашей парольной фразой до того, как покинут это устройство, поэтому сервис хранения никогда не сможет их прочитать. Храните парольную фразу надёжно: без неё зашифрованные данные не восстановить, и на всех устройствах должна быть одна и та же фраза."
+  },
+  "opt_e2ee_disable_confirm": {
+    "message": "Отключить шифрование? Начиная со следующей синхронизации ваши данные будут записываться в хранилище $UNENCRYPTED$. Затем шифрование нужно будет отключить и на всех остальных устройствах.",
+    "placeholders": {
+      "unencrypted": {
+        "content": "$1",
+        "example": "unencrypted"
+      }
+    }
+  },
+  "opt_unencrypted": {
+    "message": "в незашифрованном виде"
+  },
+  "opt_e2ee_turn_off": {
+    "message": "Отключить"
+  },
+  "opt_passphrase_label": {
+    "message": "Парольная фраза"
+  },
+  "opt_passphrase_desc": {
+    "message": "Используется для получения ключа шифрования. Хранится только на этом устройстве и никуда не отправляется."
+  },
+  "opt_passphrase_placeholder": {
+    "message": "Придумайте надёжную парольную фразу"
+  },
+  "opt_passphrase_confirm_placeholder": {
+    "message": "Подтвердите парольную фразу"
+  },
+  "opt_passphrase_match": {
+    "message": "Парольные фразы совпадают."
+  },
+  "opt_genkey_saved_warning": {
+    "message": "Сохраните его сейчас. Это единственный способ восстановить данные, если вы его забудете. Введите тот же ключ на других ваших устройствах."
+  },
+  "opt_e2ee_no_passphrase": {
+    "message": "Шифрование включено, но парольная фраза не задана, поэтому синхронизация продолжает отправлять данные в открытом виде, пока вы её не добавите."
+  },
+  "opt_e2ee_off_warning": {
+    "message": "Шифрование выключено, поэтому синхронизированные данные (закладки, история, сессии, расширения) записываются в ваше хранилище $UNENCRYPTED$. Включите его, чтобы всё шифровалось до того, как покинет это устройство.",
+    "placeholders": {
+      "unencrypted": {
+        "content": "$1",
+        "example": "unencrypted"
+      }
+    }
+  },
+  "opt_advanced_head": {
+    "message": "Дополнительно"
+  },
+  "opt_advanced_head_sub": {
+    "message": "Резервные копии, обратная связь и параметры для разработчиков."
+  },
+  "opt_impexp_section": {
+    "message": "Импорт / экспорт"
+  },
+  "opt_export_label": {
+    "message": "Экспорт резервной копии"
+  },
+  "opt_export_desc": {
+    "message": "Скачать закладки, историю и расширения в виде файла JSON. Облако не нужно."
+  },
+  "opt_export": {
+    "message": "Экспортировать"
+  },
+  "opt_exported": {
+    "message": "Экспортировано"
+  },
+  "opt_export_failed": {
+    "message": "Не удалось"
+  },
+  "opt_import_label": {
+    "message": "Импорт резервной копии"
+  },
+  "opt_import_desc": {
+    "message": "Восстановление из резервной копии Konode в формате JSON. Закладки добавляются в новую папку."
+  },
+  "opt_import_bad_file": {
+    "message": "Неверный или неподдерживаемый формат файла."
+  },
+  "opt_import_ok_one": {
+    "message": "✓ $COUNT$ закладка импортирована в папку $FOLDER$.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      },
+      "folder": {
+        "content": "$2",
+        "example": "Konode Import"
+      }
+    }
+  },
+  "opt_import_ok_other": {
+    "message": "✓ Импортировано закладок: $COUNT$. Папка: $FOLDER$.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "412"
+      },
+      "folder": {
+        "content": "$2",
+        "example": "Konode Import"
+      }
+    }
+  },
+  "opt_import": {
+    "message": "Импортировать"
+  },
+  "opt_import_done": {
+    "message": "Готово"
+  },
+  "opt_import_error": {
+    "message": "Ошибка"
+  },
+  "opt_feedback_section": {
+    "message": "Обратная связь"
+  },
+  "opt_feedback_section_sub": {
+    "message": "Ничего не отправляется автоматически. Эти ссылки открываются, только когда вы по ним нажимаете."
+  },
+  "opt_report_label": {
+    "message": "Сообщить об ошибке или предложить функцию"
+  },
+  "opt_report_desc": {
+    "message": "Открывает Issues проекта на GitHub (публично, привязано к вашему аккаунту GitHub)."
+  },
+  "opt_open_issues": {
+    "message": "Открыть Issues"
+  },
+  "opt_email_label": {
+    "message": "Написать нам"
+  },
+  "opt_email_desc": {
+    "message": "Для всего, что вы не хотите публиковать."
+  },
+  "opt_developer_section": {
+    "message": "Для разработчиков"
+  },
+  "opt_debug_label": {
+    "message": "Режим отладки"
+  },
+  "opt_debug_desc": {
+    "message": "Подробный журнал в консоли браузера и в разделе «Активность», чтобы им можно было поделиться. Отключите, когда закончите."
+  },
+  "opt_about_section": {
+    "message": "О расширении"
+  },
+  "opt_version_label": {
+    "message": "Версия"
+  },
+  "opt_source_label": {
+    "message": "Исходный код"
+  },
+  "opt_source_desc": {
+    "message": "Никакой телеметрии. Никаких внешних серверов."
+  },
+  "opt_devices_bad_reply": {
+    "message": "Не удалось прочитать список устройств."
+  }
+}
