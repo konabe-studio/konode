@@ -327,3 +327,42 @@ beforeEach(() => {
   resetTabs();
   alarmStore = new Map();
 });
+
+// ─── Device switching, for the three-device tests ──────────────────────────
+//
+// A group bug needs a group. #31 took three devices, a blocked deletion and several
+// cycles before anyone could see it, and a suite that can only ever BE one browser
+// cannot produce that shape at all, which is why the rules were provable in isolation
+// while the loop they describe went on running in the field for weeks.
+//
+// What makes a device a device here is its bookmark tree, its `chrome.storage.local`
+// and its history, so a device IS a snapshot of those three and switching is a swap.
+// The raw maps are cloned rather than replayed through the chrome API on purpose: a
+// replay hands every bookmark a new local id, and the id-keyed caches (the bookmark
+// cache behind folder renames, the move logs) would then be describing a tree that no
+// longer exists. Ids have to survive the switch for the same reason they survive a
+// browser restart.
+(globalThis as any).__konodeDevices = {
+  snapshot: () => ({
+    store: new Map([...store].map(([k, v]) => [k, structuredClone(v)])),
+    bookmarks: new Map([...bmNodes].map(([k, v]) => [k, { ...v }])),
+    seq: bmSeq,
+    history: new Map([...histEntries].map(([k, v]) => [k, { ...v }])),
+  }),
+  restore: (snap) => {
+    store.clear();
+    for (const [k, v] of snap.store) store.set(k, structuredClone(v));
+    bmNodes = new Map([...snap.bookmarks].map(([k, v]) => [k, { ...v }]));
+    bmSeq = snap.seq;
+    histEntries = new Map([...snap.history].map(([k, v]) => [k, { ...v }]));
+  },
+  // A brand-new browser. `seq` starts each device's local ids in its own range, so no
+  // assertion can pass by accident on two devices agreeing about an id. Real ones never
+  // do, and a cross-device id match in this suite would be a fake's artefact.
+  fresh: (seq) => {
+    store.clear();
+    resetBookmarks();
+    resetHistory();
+    bmSeq = seq;
+  },
+};
