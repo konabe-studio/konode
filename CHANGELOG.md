@@ -35,6 +35,19 @@ All notable changes to Konode. Format loosely follows
   device only emptied and kept stays, and so does one you created here afterwards. For a
   deleted folder to follow, the device you delete it on needs this version; approving a
   blocked deletion clears the folders whatever version the other device runs.
+- **Deleting a folder in Firefox sticks.** Firefox reports a deleted folder without what was
+  inside it, so Konode recorded no deletion for the folder's bookmarks, and the next sync
+  brought the folder straight back, contents and all, from any other device that still had
+  it. Konode now takes the folder's contents from the last state it synced. Deleting
+  bookmarks one at a time was never affected, and neither was deleting a folder in a
+  Chromium-based browser such as Chrome, Brave or Helium.
+- **Settings keeps up while it is open.** The Activity tab read everything once, so with
+  Settings open a blocked deletion showed up in the popup and nowhere on the page, the restore
+  point it saved was missing, and the device list went on quoting the old upload times until
+  you reloaded. The log, the numbers and the blocked-deletion card now follow each sync as it
+  happens, and the devices and restore points are read again when a sync finishes while you
+  are looking at them. Reloading Settings also keeps the tab you were on instead of going
+  back to Storage.
 - **Restoring bookmarks from your browser's own backup is no longer undone.** Import an
   exported bookmarks file after deleting some of them, and the next sync deleted them again,
   without asking, for up to 90 days. The import keeps each bookmark's original date, so
