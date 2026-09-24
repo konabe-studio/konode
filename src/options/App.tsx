@@ -87,7 +87,7 @@ import { isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl, storeUrlFor, inferStore, STORE_NAME, type LocalExtLike } from "@/lib/utils/extensions-match";
-import { BACKEND_LABEL } from "@/lib/constants";
+import { BACKEND_LABEL, STATE_UPDATE } from "@/lib/constants";
 import {
   PROVIDERS, providerById, providerFromConfig, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf,
   webdavUrlForCard,
@@ -265,6 +265,13 @@ export default function OptionsApp() {
     const hash = window.location.hash.replace("#", "");
     return NAV.some((n) => n.id === hash) ? (hash as NavSection) : "backend";
   });
+  // And written back, so a reload lands on the tab you were reading. Only the popup's deep
+  // link ever set the hash, so every other visit had none, and F5 on Activity went back to
+  // Storage: exactly the refresh somebody makes while waiting for a sync to show up there.
+  // replaceState rather than assigning the hash, so switching tabs does not fill up Back.
+  useEffect(() => {
+    if (window.location.hash !== `#${activeNav}`) history.replaceState(null, "", `#${activeNav}`);
+  }, [activeNav]);
   const [saving, setSaving]       = useState(false);
   const [saveOk, setSaveOk]       = useState(false);
   const [testStatus, setTestStatus] = useState<{ ok: boolean; message: string } | null>(null);
@@ -436,6 +443,16 @@ export default function OptionsApp() {
     }
   }, []);
 
+  // Read on mount and again after every sync, which is what writes it.
+  const loadRemoteExtensions = useCallback(() => {
+    void browser.storage.local.get(KEYS.REMOTE_EXTENSIONS).then((r) => {
+      // Use the normalizer: the value is a device-keyed map now, not the legacy
+      // single object — reading `.extensions` off the map returned nothing, so the
+      // options "missing on this device" list stayed empty (the popup was correct).
+      setRemoteExtensions(normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]));
+    }).catch(() => { /* the peer cache is a display nicety; a read failure must not blank Settings */ });
+  }, []);
+
   useEffect(() => {
     load();
     void browser.storage.local.get(KEYS.GDRIVE_SESSION).then((r) => {
@@ -444,13 +461,8 @@ export default function OptionsApp() {
       const s = r[KEYS.GDRIVE_SESSION];
       if (s) setGdriveUser({ email: s.email ?? "", displayName: s.displayName ?? "" });
     }).catch(() => { /* no session to show is the normal case, not an error */ });
-    void browser.storage.local.get(KEYS.REMOTE_EXTENSIONS).then((r) => {
-      // Use the normalizer: the value is a device-keyed map now, not the legacy
-      // single object — reading `.extensions` off the map returned nothing, so the
-      // options "missing on this device" list stayed empty (the popup was correct).
-      setRemoteExtensions(normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]));
-    }).catch(() => { /* the peer cache is a display nicety; a read failure must not blank Settings */ });
-  }, [load]);
+    loadRemoteExtensions();
+  }, [load, loadRemoteExtensions]);
 
   // Keyed on the availability the permission listener already refreshes rather than on the
   // mount, because the permission can come and go while Settings is open: read once, this
@@ -551,20 +563,69 @@ export default function OptionsApp() {
   };
 
   // Load restore points when the Activity tab opens (LIST_SNAPSHOTS hits the backend,
-  // so don't fetch it until the user actually looks).
+  // so don't fetch it until the user actually looks). `quiet` is a refresh of a list that
+  // is already on screen, which keeps it there instead of blinking to "loading" each cycle.
+  const loadSnapshots = useCallback(async (quiet = false) => {
+    if (!quiet) setSnapLoad("loading");
+    // "No restore points yet" must never stand in for "the list failed to load" — on a
+    // recovery screen that is the worst possible lie. The ERROR response used to be
+    // dropped and the rejection was unhandled, so both read as "you have no backups".
+    const r = await request({ type: "LIST_SNAPSHOTS" });
+    if (!r.ok) { setSnapLoad(r.error); return; }
+    if (r.res.type === "SNAPSHOTS") setSnapshots(r.res.payload);
+    setSnapLoad("ok");
+  }, []);
+
   useEffect(() => {
     if (activeNav !== "activity") return;
-    void (async () => {
-      setSnapLoad("loading");
-      // "No restore points yet" must never stand in for "the list failed to load" — on a
-      // recovery screen that is the worst possible lie. The ERROR response used to be
-      // dropped and the rejection was unhandled, so both read as "you have no backups".
-      const r = await request({ type: "LIST_SNAPSHOTS" });
-      if (!r.ok) { setSnapLoad(r.error); return; }
-      if (r.res.type === "SNAPSHOTS") setSnapshots(r.res.payload);
-      setSnapLoad("ok");
-    })();
-  }, [activeNav]);
+    void loadSnapshots();
+  }, [activeNav, loadSnapshots]);
+
+  /**
+   * Settings follows the sync while it is open, the way the popup does.
+   *
+   * Everything on Activity was read once: the stats and the Blocked deletion card on mount,
+   * the device list and the restore points when the tab opened. So with Settings open, a
+   * deletion blocked on the next cycle rang the popup's banner and left this page saying
+   * "No restore points yet", under a device list still quoting the peer's upload from before
+   * it. Only F5 caught up, and F5 also threw you back to Storage (see the hash above).
+   *
+   * The state comes with every STATE_UPDATE the worker already broadcasts, and the log is
+   * followed in storage as each line is written, so both cost nothing. Devices and restore
+   * points live on the backend, a listing plus a read per device, so they are re-read when a
+   * sync FINISHES, which is what changes them, and only while Activity is on screen: a
+   * Settings tab left open in the background would otherwise spend requests every minute,
+   * and a free Nutstore account counts every one.
+   */
+  useEffect(() => {
+    const handler = (msg: { type: string; payload: SyncState }) => {
+      if (msg.type === STATE_UPDATE) setSyncState(msg.payload);
+    };
+    browser.runtime.onMessage.addListener(handler);
+    return () => browser.runtime.onMessage.removeListener(handler);
+  }, []);
+
+  useEffect(() => {
+    if (!eventPresent("storage", "onChanged")) return;
+    const handler = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area !== "local" || !changes[KEYS.AUDIT_LOG]) return;
+      setAudit((changes[KEYS.AUDIT_LOG].newValue as AuditEntry[] | undefined) ?? []);
+    };
+    browser.storage.onChanged.addListener(handler);
+    return () => browser.storage.onChanged.removeListener(handler);
+  }, []);
+
+  const lastStatus = useRef<SyncState["status"] | null>(null);
+  useEffect(() => {
+    const status = syncState?.status ?? null;
+    const finished = lastStatus.current === "syncing" && status !== "syncing";
+    lastStatus.current = status;
+    if (!finished) return;
+    loadRemoteExtensions();
+    if (activeNav !== "activity" || document.visibilityState !== "visible") return;
+    void loadDevices();
+    void loadSnapshots(true);
+  }, [syncState?.status, activeNav, loadDevices, loadSnapshots, loadRemoteExtensions]);
 
   // Latch onboarding_completed the first time a working config is seen (backend
   // configured + a data type on), so the setup card doesn't reappear when the user
