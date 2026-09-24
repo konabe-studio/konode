@@ -266,6 +266,29 @@ async function localUrlSet(): Promise<Set<string>> {
   return new Set(flattenNodes(await exportBookmarks()).filter((n) => n.url).map((n) => n.url as string));
 }
 
+/**
+ * A removed node together with everything that was inside it.
+ *
+ * Chromium hands onRemoved the whole subtree of a removed folder. Firefox hands it the
+ * folder ALONE: no `children` on the node, and no event at all for anything inside it,
+ * because it skips every `isDescendantRemoval` (browser/components/extensions/parent/
+ * ext-bookmarks.js). So on Firefox a deleted folder recorded no deletion for its bookmarks,
+ * and the next merge put them straight back from any peer that still had them, folder and
+ * all: delete `Reading`, sync, and `Merged +10` brings it back.
+ *
+ * The last synced snapshot (konode_bm_cache) still holds the folder under the same id with
+ * its contents, and it is exactly what the peers can hand back, so that is what gets
+ * recorded. A bookmark added since that snapshot is not in it, but the fast-path sync
+ * refreshes it about a second after any change, and a bookmark this device has not
+ * published yet is not in a peer's file to come back from.
+ */
+async function withRemovedContents(node: BookmarkNode): Promise<BookmarkNode> {
+  if (node.url || node.children) return node;
+  const cache = await getBookmarkCache<SyncBookmark[]>();
+  const cached = cache ? flattenNodes(cache).find((n) => n.id === node.id) : undefined;
+  return (cached as BookmarkNode | undefined) ?? node;
+}
+
 /** Record tombstones for every URL in a removed bookmark/folder subtree — but only
  *  for URLs whose LAST local copy was just removed. Deleting one of several
  *  identical-URL bookmarks must NOT tombstone the URL: the tombstone is URL-keyed,
@@ -278,7 +301,7 @@ async function recordRemovedTombstones(node: BookmarkNode): Promise<void> {
     if (n.url) urls.push(n.url);
     n.children?.forEach(walk);
   };
-  walk(node);
+  walk(await withRemovedContents(node));
   if (!urls.length) return;
   const remaining = await localUrlSet();
   const gone = [...new Set(urls)].filter((url) => !remaining.has(url));
