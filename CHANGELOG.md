@@ -32,7 +32,9 @@ All notable changes to Konode. Format loosely follows
   to deleting 80 bookmarks left their ten folders behind with nothing in them. Konode now
   records the folder deletion too, and a device removes a folder the deletion emptied when
   the other device deleted that folder, or when you approved the deletion. A folder the other
-  device only emptied and kept stays, and so does one you created here afterwards. For a
+  device only emptied and kept stays, and so does one you created here afterwards. Empty a
+  folder first and delete it later, and it goes from your other devices too; an empty folder
+  you made on one device is never removed because of another. For a
   deleted folder to follow, the device you delete it on needs this version; approving a
   blocked deletion clears the folders whatever version the other device runs.
 - **Deleting a folder in Firefox sticks.** Firefox reports a deleted folder without what was
