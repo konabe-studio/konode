@@ -1,6 +1,6 @@
 import type {
   SyncBookmark, Tombstone, MoveRecord, FolderMoveRecord, TitleRecord, FolderRenameRecord,
-  FolderDeleteRecord, AppearedRecord, BookmarkPayload, ConflictStrategy,
+  FolderDeleteRecord, AppearedRecord, KeptShellRecord, BookmarkPayload, ConflictStrategy,
 } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import {
@@ -11,7 +11,7 @@ import {
   getTitles, setTitles, updateTitles,
   getFolderRenames, setFolderRenames, updateFolderRenames,
   updateFolderDeletes,
-  getAppeared, updateAppeared,
+  getAppeared, updateAppeared, getKeptShells, updateKeptShells,
 } from "@/lib/utils/storage";
 import { defaultOtherRootId, matchLocalRoot, matchLocalRootEx, rootKind } from "@/lib/utils/bookmark-roots";
 import { canonicalUrlKey } from "@/lib/utils/url";
@@ -1157,10 +1157,22 @@ async function mergeBookmarks(
     // share the path, and it stays.
     return logs.folderDeletes.remote.some((r) => pathWithin(path, r.path) && (dateAdded ?? 0) <= r.at);
   };
+  // A third kind: a folder an EARLIER merge emptied here and had to leave standing, because
+  // the peer had not recorded deleting it then (see KeptShellRecord). Nothing in this merge
+  // empties it, so neither list above holds it, and no later merge ever would: empty a folder
+  // on one device, sync, then delete the empty folder there, and this device kept its copy
+  // for good. Only folders a merge emptied qualify. An empty folder made here was never
+  // synced, and a peer's record for the same path says nothing about it.
+  // Its own reason, because the approval must not reach it: `approved` covers the deletion
+  // the user was shown, not a folder some earlier cycle emptied.
+  const kept = await getKeptShells();
+  const nowKept = new Set<string>(); // shells this merge leaves standing
+  const pruned = new Set<string>();  // folders this merge removed
   let shells = 0;
-  const queue: Array<{ id: string; reason: "move" | "delete" }> = [
+  const queue: Array<{ id: string; reason: "move" | "delete" | "recorded" }> = [
     ...[...emptiedParents].map((id) => ({ id, reason: "move" as const })),
     ...[...emptiedByDeletion].map((id) => ({ id, reason: "delete" as const })),
+    ...(logs.folderDeletes.remote.length ? kept : []).map(({ id }) => ({ id, reason: "recorded" as const })),
   ];
   // No "seen" set: a folder that still had a child when it came up must be looked at again
   // once that child is pruned, and the queue only grows on a removal, so it always ends.
@@ -1172,11 +1184,37 @@ async function mergeBookmarks(
       if (!node || node.url) continue; // gone already, or not a folder
       const children = await browser.bookmarks.getChildren(id);
       if (children.length > 0) continue;
-      if (reason === "delete" && !approved && !(await peerDeletedFolder(id, node.dateAdded))) continue;
+      if (reason === "delete" && !approved && !(await peerDeletedFolder(id, node.dateAdded))) {
+        nowKept.add(id);
+        continue;
+      }
+      if (reason === "recorded" && !(await peerDeletedFolder(id, node.dateAdded))) continue;
       await browser.bookmarks.remove(id);
+      pruned.add(id);
       shells++;
       if (node.parentId) queue.push({ id: node.parentId, reason });
     } catch { /* concurrently removed — ignore */ }
+  }
+
+  // Remember what this merge left standing, and forget what is no longer a shell of ours:
+  // pruned, gone, or given something back. Refilled, the folder is the user's again, and a
+  // peer's record must not take it once they empty it themselves.
+  const tracked = new Map<string, number>(kept.map((r) => [r.id, r.at]));
+  for (const id of nowKept) if (!tracked.has(id)) tracked.set(id, Date.now());
+  if (tracked.size) {
+    const survivors: KeptShellRecord[] = [];
+    for (const [id, at] of tracked) {
+      if (pruned.has(id)) continue;
+      try {
+        const [node] = await browser.bookmarks.get(id);
+        if (!node || node.url) continue;
+        if ((await browser.bookmarks.getChildren(id)).length) continue;
+        survivors.push({ id, at });
+      } catch { /* gone */ }
+    }
+    if (survivors.length !== kept.length || survivors.some((r, i) => r.id !== kept[i].id)) {
+      await updateKeptShells(() => survivors);
+    }
   }
 
   // The most informative line about what a sync actually DID to the tree, so it belongs

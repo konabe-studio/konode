@@ -1,5 +1,6 @@
 import type {
   AppearedRecord,
+  KeptShellRecord,
   DataType,
   SyncPacket,
   FolderDeleteRecord,
@@ -107,6 +108,7 @@ export const KEYS = {
   BOOKMARK_FOLDER_RENAMES: "konode_bm_folder_renames",
   BOOKMARK_FOLDER_DELETES: "konode_bm_folder_deletes",
   BOOKMARK_APPEARED: "konode_bm_appeared",
+  BOOKMARK_KEPT_SHELLS: "konode_bm_kept_shells",
   // Superseded by the backend-side `konode_snap_index.json`, which every device can
   // read. Kept only so the one-time migration in sync/snapshots.ts can drain the
   // counts this device recorded before dropping the key.
@@ -383,6 +385,16 @@ export function updateAppeared(
   mutate: (current: AppearedRecord[]) => AppearedRecord[]
 ): Promise<AppearedRecord[]> {
   return updateKey<AppearedRecord[]>(KEYS.BOOKMARK_APPEARED, mutate, []);
+}
+
+// Empty folders a merge left standing here (see KeptShellRecord). Local-only.
+export async function getKeptShells(): Promise<KeptShellRecord[]> {
+  return get<KeptShellRecord[]>(KEYS.BOOKMARK_KEPT_SHELLS, []);
+}
+export function updateKeptShells(
+  mutate: (current: KeptShellRecord[]) => KeptShellRecord[]
+): Promise<KeptShellRecord[]> {
+  return updateKey<KeptShellRecord[]>(KEYS.BOOKMARK_KEPT_SHELLS, mutate, []);
 }
 
 // ─── Imported history (CO-6) ─────────────────────────────────────────────────

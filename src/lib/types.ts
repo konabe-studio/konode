@@ -153,6 +153,22 @@ export interface FolderDeleteRecord {
   own?: boolean;
 }
 
+/**
+ * A folder that a merge emptied on THIS device and had to leave standing (#26).
+ *
+ * Emptying a folder is not deleting it, so when a peer's deletions empty a folder here and
+ * the peer has not recorded deleting the folder, it stays. If the peer deletes it later,
+ * nothing empties it here a second time, so the merge remembers which empty folders are its
+ * own doing: only those may be taken by a deletion record that arrives afterwards. An empty
+ * folder made here was never synced (empty folders never are), and a peer's record for the
+ * same path says nothing about it. Local-only, by local id; an entry goes when its folder
+ * does, or once something has been put back in it.
+ */
+export interface KeptShellRecord {
+  id: string;
+  at: number; // epoch ms, when a merge left it standing; for diagnosis, nothing expires by it
+}
+
 // Bookmark sync payload: the live tree plus the device's deletion log.
 // (Older packets are a bare SyncBookmark[] — handled for backward compatibility.)
 export interface BookmarkPayload {

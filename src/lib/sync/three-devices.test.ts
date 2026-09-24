@@ -797,6 +797,86 @@ describe("AA on Firefox: a deleted folder arrives as the folder alone", () => {
   });
 });
 
+// ─── AA. A folder that was already empty when the other device deleted it ────
+
+describe("AA: a folder the other device deleted after emptying it", () => {
+  it("goes here too, though no merge empties it any more", async () => {
+    const [A, B] = await seedGroup(0);
+    await at(A, async () => {
+      const work = await addFolder("Work");
+      await add("W0", site(0), work);
+      await add("W1", site(1), work);
+    });
+    await cycle(A, B);
+
+    // First the bookmarks, keeping the folder: A keeps it too, empty, as AA's second step
+    // says it must, because emptying a folder is not deleting it.
+    await at(B, async () => { await del(site(0)); await del(site(1)); });
+    await cycle(B, A);
+    await at(A, async () => { expect((await folderFor("Work")).id).toBeTruthy(); });
+
+    // Then the folder itself, the way the report did it: on Firefox, with nothing in it.
+    // No merge will ever empty A's copy again, so a rule that only prunes what the merge
+    // emptied left it standing on A for good while B had none.
+    await at(B, async () => { await delFolderLikeFirefox("Work"); });
+    await cycle(B, A);
+    await at(A, async () => { await expect(folderFor("Work")).rejects.toThrow(); });
+  });
+
+  it("leaves a folder alone once something has been put back in it", async () => {
+    const [A, B] = await seedGroup(0);
+    await at(A, async () => { await add("W0", site(0), await addFolder("Work")); });
+    await cycle(A, B);
+    await at(B, async () => { await del(site(0)); });
+    await cycle(B, A); // A keeps Work, empty, and remembers that a merge emptied it
+
+    // A puts something in it before B's deletion of the folder arrives.
+    await at(A, async () => { await add("Mine", site(9), (await folderFor("Work")).id); });
+    await at(B, async () => { await delFolderLikeFirefox("Work"); });
+    await cycle(B, A);
+    await at(A, async () => {
+      const kids = await chrome.bookmarks.getChildren((await folderFor("Work")).id);
+      expect(kids.map((n) => n.url)).toEqual([site(9)]);
+    });
+
+    // Emptied again by the user, it is theirs: B's older record does not reach it.
+    await at(A, async () => { await del(site(9)); });
+    await cycle(A);
+    await at(A, async () => { expect((await folderFor("Work")).id).toBeTruthy(); });
+  });
+
+  it("does not let an approved deletion take a folder an earlier merge emptied", async () => {
+    const [A, B] = await seedGroup(0);
+    await at(A, async () => {
+      await add("K0", site(50), await addFolder("Keep"));
+      const old = await addFolder("Old");
+      for (let i = 0; i < 30; i++) await add(`O${i}`, site(i), old);
+      for (let i = 30; i < 40; i++) await add(`L${i}`, site(i));
+    });
+    await cycle(A, B);
+
+    // B empties Keep and keeps it. A keeps its copy too, and remembers a merge emptied it.
+    await at(B, async () => { await del(site(50)); });
+    await cycle(B, A);
+
+    // Then an unrelated deletion: Old, 30 of 40 against a cap of max(20, floor(40 * 60 /
+    // 100)) = 24, so it is blocked on A until the user approves it.
+    await at(B, async () => { await delFolder("Old"); });
+    const [, card] = await cycle(B, A);
+    expect(card).toMatchObject({ blocked: 30, device_label: "Device B" });
+
+    await at(A, async () => { await setBulkDeleteApproval(30); });
+    await cycle(A);
+    await at(A, async () => {
+      await expect(folderFor("Old")).rejects.toThrow();
+      // The approval covers the deletion the user was shown. Keep was emptied cycles ago and
+      // nobody has deleted it, so it is not part of what they said yes to.
+      expect((await folderFor("Keep")).id).toBeTruthy();
+      expect(await urlsHere()).toEqual(sites(30, 40));
+    });
+  });
+});
+
 // ─── N. Leaving Manual with cards still on screen ───────────────────────────
 
 describe("N. leaving Manual", () => {
