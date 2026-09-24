@@ -278,13 +278,27 @@ async function del(url: string): Promise<void> {
   fire.removed?.(node.id, { parentId: node.parentId as string, index: node.index ?? 0, node });
   await settle();
 }
+/** A folder deleted the way Chromium reports it: one event, for the folder, carrying the
+ *  whole subtree (`recurse=true` in chrome/browser/extensions/api/bookmarks/bookmarks_api.cc). */
 async function delFolder(title: string): Promise<void> {
   const f = await folderFor(title);
-  // The removed node arrives with its children. One event carrying a whole subtree's
-  // worth of tombstones is exactly how a folder deletion travels.
   const [subtree] = await chrome.bookmarks.getSubTree(f.id);
   await chrome.bookmarks.removeTree(f.id);
   fire.removed?.(f.id, { parentId: f.parentId as string, index: f.index ?? 0, node: subtree });
+  await settle();
+}
+/** The same deletion the way Firefox reports it: one event, for the folder ALONE. Nothing
+ *  for what was inside it (every `isDescendantRemoval` is skipped) and no `children` on the
+ *  node it does send (browser/components/extensions/parent/ext-bookmarks.js). */
+async function delFolderLikeFirefox(title: string): Promise<void> {
+  const f = await folderFor(title);
+  await chrome.bookmarks.removeTree(f.id);
+  const node = { id: f.id, parentId: f.parentId, index: f.index, title: f.title, type: "folder" };
+  fire.removed?.(f.id, {
+    parentId: f.parentId as string,
+    index: f.index ?? 0,
+    node: node as chrome.bookmarks.BookmarkTreeNode,
+  });
   await settle();
 }
 async function renameBookmark(url: string, title: string): Promise<void> {
@@ -715,6 +729,71 @@ describe("J2. the approval is one-shot", () => {
     await at(B, async () => { expect(await urlsHere()).toHaveLength(50); });
     // The incident is already on the record, so the latch holds the second restore point.
     expect(restorePoints()).toHaveLength(1);
+  });
+});
+
+// ─── AA on Firefox. A removed folder arrives without its contents ────────────
+
+describe("AA on Firefox: a deleted folder arrives as the folder alone", () => {
+  /** Ten bookmarks in `Reading`, five loose on the bar, on both devices. */
+  async function readingOnBoth(): Promise<[Device, Device]> {
+    const [A, B] = await seedGroup(0);
+    await at(A, async () => {
+      const id = await addFolder("Reading");
+      for (let i = 0; i < 10; i++) await add(`R${i}`, site(i), id);
+      for (let i = 10; i < 15; i++) await add(`B${i}`, site(i));
+    });
+    await cycle(A, B);
+    await at(B, async () => { expect(await urlsHere()).toHaveLength(15); });
+    return [A, B];
+  }
+
+  it("keeps the folder deleted on the device that deleted it", async () => {
+    const [A, B] = await readingOnBoth();
+    await at(B, async () => { await delFolderLikeFirefox("Reading"); });
+
+    // B's own next sync reads A's file, which still lists all ten. Without a deletion on
+    // record for them, the merge put them straight back, folder and all: the report was
+    // "I delete Reading on B and after a sync it is back", with `Merged +10` in B's log.
+    await cycle(B);
+    await at(B, async () => {
+      expect(await urlsHere()).toEqual(sites(10, 15));
+      await expect(folderFor("Reading")).rejects.toThrow();
+    });
+    expect(filedTombstones(B)).toEqual(sites(0, 10));
+    void A;
+  });
+
+  it("takes the bookmarks and the folder from the other device too", async () => {
+    const [A, B] = await readingOnBoth();
+    await at(B, async () => { await delFolderLikeFirefox("Reading"); });
+
+    await cycle(B, A);
+    await at(A, async () => {
+      expect(await urlsHere()).toEqual(sites(10, 15));
+      await expect(folderFor("Reading")).rejects.toThrow();
+    });
+  });
+
+  it("takes a subfolder's bookmarks with it", async () => {
+    const [A, B] = await seedGroup(0);
+    await at(A, async () => {
+      const work = await addFolder("Work");
+      for (let i = 0; i < 4; i++) await add(`W${i}`, site(i), work);
+      const archive = await addFolder("Archive", work);
+      for (let i = 4; i < 8; i++) await add(`A${i}`, site(i), archive);
+    });
+    await cycle(A, B);
+
+    await at(B, async () => { await delFolderLikeFirefox("Work"); });
+    await cycle(B, A);
+    for (const d of [A, B]) {
+      await at(d, async () => {
+        expect(await urlsHere()).toEqual([]);
+        await expect(folderFor("Work")).rejects.toThrow();
+        await expect(folderFor("Archive")).rejects.toThrow();
+      });
+    }
   });
 });
 
