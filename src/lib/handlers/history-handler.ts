@@ -196,6 +196,13 @@ export async function importHistory(
     if (!item.url) continue;
     const key = canonicalUrlKey(item.url);
     const localTime = localLastVisit.get(key);
+    // The peer's time in the form it is stored: Firefox's addUrl takes whole milliseconds
+    // only, and Chrome's history hands out fractions (1783492571151.999), so it goes in
+    // rounded. It has to be COMPARED rounded too. Compared raw, a Chromium visit whose
+    // fraction was under .5 was stored as 151 and read as 151.4 on the next cycle, which is
+    // newer, so Firefox took the same visit again on every sync: half of a Chromium peer's
+    // history, every minute, since 1.0.2.
+    const peerTime = item.lastVisitTime ? Math.round(item.lastVisitTime) : undefined;
     // Take a peer's visit only when it is genuinely NEWER than anything we already hold
     // for that page. That single test is what keeps this from looping, on both engines:
     // Chrome's addUrl stamps the visit NOW, so our local time immediately exceeds the
@@ -203,7 +210,7 @@ export async function importHistory(
     // our local time becomes exactly the peer's and the strict `>` blocks the repeat.
     // Without it, addUrl would re-record the same visit every cycle — the visit-count
     // inflation that made the blanket skip necessary in the first place.
-    if (localTime !== undefined && !(item.lastVisitTime !== undefined && item.lastVisitTime > localTime)) continue;
+    if (localTime !== undefined && !(peerTime !== undefined && peerTime > localTime)) continue;
     // Already known to be unstorable here — don't spend another call finding out.
     if (rejectionStillHolds(rejectedBefore[key], stamp)) { staleRejects++; continue; }
     // Only add plain web URLs from a remote packet — never javascript:/data:/file:.
@@ -219,10 +226,9 @@ export async function importHistory(
     pending.push({
       url: item.url,
       key,
-      // Firefox's addUrl requires an INTEGER visitTime and rejects a fractional value
-      // (Chrome's history search returns sub-millisecond floats like 1783492571151.999),
-      // so round here. Chrome ignores it either way.
-      visitTime: item.lastVisitTime ? Math.round(item.lastVisitTime) : undefined,
+      // Firefox's addUrl requires an INTEGER visitTime and rejects a fractional value, so
+      // this is the rounded time from above. Chrome ignores it either way.
+      visitTime: peerTime,
     });
   }
 
