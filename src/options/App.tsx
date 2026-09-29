@@ -87,7 +87,7 @@ import { isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl, storeUrlFor, inferStore, STORE_NAME, type LocalExtLike } from "@/lib/utils/extensions-match";
-import { BACKEND_LABEL, STATE_UPDATE } from "@/lib/constants";
+import { BACKEND_LABEL, PERMISSION_LOST_PREFIX, STATE_UPDATE } from "@/lib/constants";
 import {
   PROVIDERS, providerById, providerFromConfig, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf,
   webdavUrlForCard,
@@ -2065,6 +2065,7 @@ export default function OptionsApp() {
                       <div className="settings-row-left">
                         <div className="row-desc" style={{ color: "var(--danger)" }}>
                           {t("opt_devices_error", devicesError)}
+                          {!devicesError.startsWith(PERMISSION_LOST_PREFIX) && <> {t("opt_error_check_connection")}</>}
                         </div>
                       </div>
                     </div>
@@ -2228,7 +2229,11 @@ export default function OptionsApp() {
                         <div className="error-row" role="alert">
                           <AlertTriangle size={12} /> {t("opt_snap_error", snapLoad)}
                         </div>
-                        <div className="row-desc">{t("opt_snap_error_desc")}</div>
+                        <div className="row-desc">
+                          {t("opt_snap_error_desc")}
+                          {/* The permission message says what to do already, and where. */}
+                          {!snapLoad.startsWith(PERMISSION_LOST_PREFIX) && <> {t("opt_error_check_connection")}</>}
+                        </div>
                       </div>
                     </div>
                   ) : snapshots.length === 0 ? (

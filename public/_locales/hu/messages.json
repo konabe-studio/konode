@@ -844,13 +844,16 @@
     "message": "Elvetés"
   },
   "opt_devices_error": {
-    "message": "Nem sikerült beolvasni az eszközeidet: $ERROR$. Ez nem azt jelenti, hogy nincs egy sem. Ellenőrizd a kapcsolatot a Tárhely fülön, és nyisd meg újra ezt a fület.",
+    "message": "Nem sikerült beolvasni az eszközeidet: $ERROR$. Ez nem azt jelenti, hogy nincs egy sem.",
     "placeholders": {
       "error": {
         "content": "$1",
         "example": "404 Not Found"
       }
     }
+  },
+  "opt_error_check_connection": {
+    "message": "Ellenőrizd a kapcsolatot a Tárhely fülön, és nyisd meg újra ezt a fület."
   },
   "opt_devices_loading": {
     "message": "Szinkronizálási mappa beolvasása…"
@@ -1033,7 +1036,7 @@
     }
   },
   "opt_snap_error_desc": {
-    "message": "Ez nem azt jelenti, hogy nincs egy sem. A tárhelyeden vannak, csak most nem sikerült listázni őket. Ellenőrizd a kapcsolatot a Tárhely fülön, és nyisd meg újra ezt a fület."
+    "message": "Ez nem azt jelenti, hogy nincs egy sem. A tárhelyeden vannak, csak most nem sikerült listázni őket."
   },
   "opt_snap_empty": {
     "message": "Még nincs visszaállítási pont. Készíts egyet fent, vagy automatikusan mentődik, ha a Konode egyszer blokkol egy szokatlan törlést."

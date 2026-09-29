@@ -844,13 +844,16 @@
     "message": "Ausblenden"
   },
   "opt_devices_error": {
-    "message": "Deine Geräte konnten nicht gelesen werden: $ERROR$. Das bedeutet nicht, dass du keine hast. Prüfe die Verbindung unter Speicher und öffne diesen Tab erneut.",
+    "message": "Deine Geräte konnten nicht gelesen werden: $ERROR$. Das bedeutet nicht, dass du keine hast.",
     "placeholders": {
       "error": {
         "content": "$1",
         "example": "404 Not Found"
       }
     }
+  },
+  "opt_error_check_connection": {
+    "message": "Prüfe die Verbindung unter Speicher und öffne diesen Tab erneut."
   },
   "opt_devices_loading": {
     "message": "Synchronisierungsordner wird gelesen…"
@@ -1033,7 +1036,7 @@
     }
   },
   "opt_snap_error_desc": {
-    "message": "Das bedeutet nicht, dass du keine hast. Sie liegen in deinem Speicher und konnten gerade nicht aufgelistet werden. Prüfe die Verbindung unter Speicher und öffne diesen Tab erneut."
+    "message": "Das bedeutet nicht, dass du keine hast. Sie liegen in deinem Speicher und konnten gerade nicht aufgelistet werden."
   },
   "opt_snap_empty": {
     "message": "Noch keine Wiederherstellungspunkte. Erstelle oben einen, oder es wird automatisch einer gespeichert, falls jemals eine ungewöhnliche Löschung blockiert wird."

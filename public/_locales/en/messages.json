@@ -949,7 +949,7 @@
     "message": "Dismiss"
   },
   "opt_devices_error": {
-    "message": "Couldn't read your devices: $ERROR$. This does not mean you have none. Check the connection in Storage and reopen this tab.",
+    "message": "Couldn't read your devices: $ERROR$. This does not mean you have none.",
     "description": "An empty list must never stand in for a list that failed to load. $ERROR$ is the technical message and is not translated.",
     "placeholders": {
       "error": {
@@ -957,6 +957,10 @@
         "example": "404 Not Found"
       }
     }
+  },
+  "opt_error_check_connection": {
+    "message": "Check the connection in Storage and reopen this tab.",
+    "description": "Follows the device-list and restore-point errors when the error itself gives no advice. Left out after the lost-permission message, which already says to open Settings → Storage and press Save. 'Storage' names the tab, so it must match the tab's own translation."
   },
   "opt_devices_loading": {
     "message": "Reading your sync folder…"
@@ -1124,7 +1128,7 @@
     }
   },
   "opt_snap_error_desc": {
-    "message": "This does not mean you have none. They live on your storage and could not be listed just now. Check the connection in Storage and reopen this tab.",
+    "message": "This does not mean you have none. They live on your storage and could not be listed just now.",
     "description": "On a recovery screen, 'you have no backups' is the worst possible thing to say by mistake."
   },
   "opt_snap_empty": {

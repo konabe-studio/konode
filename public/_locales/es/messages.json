@@ -959,7 +959,7 @@
     }
   },
   "opt_snap_error_desc": {
-    "message": "Esto no significa que no tengas ninguno. Están guardados en tu espacio de almacenamiento y no se pudieron mostrar en este momento. Revisa la conexión en Almacenamiento y vuelve a abrir esta pestaña."
+    "message": "Esto no significa que no tengas ninguno. Están guardados en tu espacio de almacenamiento y no se pudieron mostrar en este momento."
   },
   "opt_snap_empty": {
     "message": "Aún no hay puntos de restauración. Crea uno arriba, o se guardará uno automáticamente si se bloquea una eliminación inusual."
@@ -983,13 +983,16 @@
     }
   },
   "opt_devices_error": {
-    "message": "No se pudieron leer tus dispositivos: $ERROR$. Esto no significa que no tengas ninguno. Revisa la conexión en Almacenamiento y vuelve a abrir esta pestaña.",
+    "message": "No se pudieron leer tus dispositivos: $ERROR$. Esto no significa que no tengas ninguno.",
     "placeholders": {
       "error": {
         "content": "$1",
         "example": "404 Not Found"
       }
     }
+  },
+  "opt_error_check_connection": {
+    "message": "Revisa la conexión en Almacenamiento y vuelve a abrir esta pestaña."
   },
   "opt_snap_unknown": {
     "message": "Punto de restauración de marcadores"

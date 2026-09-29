@@ -844,13 +844,16 @@
     "message": "Chiudi"
   },
   "opt_devices_error": {
-    "message": "Impossibile leggere i tuoi dispositivi: $ERROR$. Questo non significa che tu non ne abbia. Controlla la connessione in Archiviazione e riapri questa scheda.",
+    "message": "Impossibile leggere i tuoi dispositivi: $ERROR$. Questo non significa che tu non ne abbia.",
     "placeholders": {
       "error": {
         "content": "$1",
         "example": "404 Not Found"
       }
     }
+  },
+  "opt_error_check_connection": {
+    "message": "Controlla la connessione in Archiviazione e riapri questa scheda."
   },
   "opt_devices_loading": {
     "message": "Lettura della cartella di sincronizzazione…"
@@ -1033,7 +1036,7 @@
     }
   },
   "opt_snap_error_desc": {
-    "message": "Questo non significa che tu non ne abbia. Si trovano nel tuo spazio di archiviazione e al momento non è stato possibile elencarli. Controlla la connessione in Archiviazione e riapri questa scheda."
+    "message": "Questo non significa che tu non ne abbia. Si trovano nel tuo spazio di archiviazione e al momento non è stato possibile elencarli."
   },
   "opt_snap_empty": {
     "message": "Ancora nessun punto di ripristino. Creane uno qui sopra, oppure ne verrà salvato uno automaticamente se un'eliminazione insolita viene bloccata."

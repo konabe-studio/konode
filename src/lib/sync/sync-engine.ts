@@ -38,6 +38,7 @@ import {
   dropRemoteDevices,
 } from "@/lib/utils/storage";
 import { logger } from "@/lib/utils/logger";
+import { PERMISSION_LOST_PREFIX } from "@/lib/constants";
 import { encrypt, decrypt, sha256, verifyPassphrase } from "@/lib/crypto/encryption";
 import { ConflictResolver, notifyConflict, orderPeersByTime } from "./conflict-resolver";
 
@@ -213,7 +214,7 @@ export async function explainSyncFailure(err: unknown, cfg: BackendConfig | unde
     : "your storage provider";
   // Cause and cure FIRST, original last. The popup clamps this to two lines, and it was
   // clamping away the half that says what to do about it.
-  return `Konode no longer has permission to reach ${where}. Open Settings → Storage and press Save to grant it again. The request never left the browser: ${msg}`;
+  return `${PERMISSION_LOST_PREFIX}${where}. Open Settings → Storage and press Save to grant it again. The request never left the browser: ${msg}`;
 }
 
 export function statusAfterSync(problems: number, pendingConflicts: number): SyncState["status"] {

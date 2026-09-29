@@ -55,3 +55,11 @@ export const BACKEND_LABEL: Record<BackendType, string> = {
   webdav: "WebDAV",
   github: "GitHub", // GitHub only — see the provider card note in storage-providers.ts
 };
+
+/**
+ * How explainSyncFailure's answer for a lost host permission begins. That message brings its
+ * own advice (Settings → Storage, then Save), so a screen showing it must not add another:
+ * the device list and the restore points used to follow it with "Check the connection in
+ * Storage and reopen this tab", the same instruction twice in two different voices.
+ */
+export const PERMISSION_LOST_PREFIX = "Konode no longer has permission to reach ";

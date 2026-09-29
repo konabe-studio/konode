@@ -835,13 +835,16 @@
     "message": "忽略"
   },
   "opt_devices_error": {
-    "message": "无法读取您的设备：$ERROR$。这并不意味着您没有设备。请检查 Storage 中的连接，然后重新打开此标签页。",
+    "message": "无法读取您的设备：$ERROR$。这并不意味着您没有设备。",
     "placeholders": {
       "error": {
         "content": "$1",
         "example": "404 Not Found"
       }
     }
+  },
+  "opt_error_check_connection": {
+    "message": "请检查“存储”中的连接，然后重新打开此标签页。"
   },
   "opt_devices_loading": {
     "message": "正在读取您的同步文件夹…"
@@ -1024,7 +1027,7 @@
     }
   },
   "opt_snap_error_desc": {
-    "message": "这并不意味着您没有设备。它们保存在您的存储空间中，刚才无法列出。请检查“存储”中的连接，然后重新打开此标签页。"
+    "message": "这并不意味着您没有恢复点。它们保存在您的存储空间中，刚才无法列出。"
   },
   "opt_snap_empty": {
     "message": "尚未创建任何恢复点。请在上方创建，或在出现异常删除被阻止时自动保存一个。"

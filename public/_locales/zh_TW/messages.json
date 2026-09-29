@@ -844,13 +844,16 @@
     "message": "關閉"
   },
   "opt_devices_error": {
-    "message": "無法讀取你的裝置：$ERROR$。這不代表你沒有裝置。請檢查「儲存空間」裡的連線，然後重新開啟這個分頁。",
+    "message": "無法讀取你的裝置：$ERROR$。這不代表你沒有裝置。",
     "placeholders": {
       "error": {
         "content": "$1",
         "example": "404 Not Found"
       }
     }
+  },
+  "opt_error_check_connection": {
+    "message": "請檢查「儲存空間」裡的連線，然後重新開啟這個分頁。"
   },
   "opt_devices_loading": {
     "message": "正在讀取你的同步資料夾…"
@@ -1033,7 +1036,7 @@
     }
   },
   "opt_snap_error_desc": {
-    "message": "這不代表你沒有還原點。它們存在你的儲存空間裡，只是剛才列不出來。請檢查「儲存空間」裡的連線，然後重新開啟這個分頁。"
+    "message": "這不代表你沒有還原點。它們存在你的儲存空間裡，只是剛才列不出來。"
   },
   "opt_snap_empty": {
     "message": "還沒有任何還原點。可以在上面建立一個，或是在異常刪除被攔下時自動儲存一個。"

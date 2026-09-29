@@ -56,6 +56,12 @@ All notable changes to Konode. Format loosely follows
   resolve it", and clicking it did nothing. It now opens Konode's popup, where conflicts are
   answered. Where the browser does not let an extension open its popup, the same screen
   opens in a small window of its own, or in a tab on a phone.
+- **Settings gives one piece of advice, not two, when it cannot list your devices.** With
+  Konode's permission to reach your storage taken away, the device list and the restore
+  points said to open Storage and press Save, and then added "Check the connection in
+  Storage and reopen this tab" as well. That second line now appears only when the error
+  gives no advice of its own. In Simplified Chinese the restore-point message also said you
+  had no devices, and the device list left "Storage" untranslated. Both are corrected.
 
 ## [1.4.0] - 2026-09-29
 

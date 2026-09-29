@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { SyncEngine, statusAfterSync, conflictsThatCanExist, conflictsStillOpen, explainSyncFailure, backendOrigins } from "@/lib/sync/sync-engine";
 import { HttpError } from "@/lib/utils/retry";
-import { BADGE_TEXT, BADGE_COLORS } from "@/lib/constants";
+import { BADGE_TEXT, BADGE_COLORS, PERMISSION_LOST_PREFIX } from "@/lib/constants";
 import { createKeyVerifier } from "@/lib/crypto/encryption";
 import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState, setTombstones, acquireSyncLock, KEYS, getRemoteSessions, normalizeRemoteExtensions, getBulkDeleteApproval, setBulkDeleteApproval, getListFailureNoted } from "@/lib/utils/storage";
 import type {
@@ -1839,6 +1839,20 @@ describe("explainSyncFailure: a request that never left the browser", () => {
     expect(msg).toContain("permission");
     // The original is kept: it is what gets pasted into a bug report.
     expect(msg).toContain("NetworkError");
+  });
+
+  it("begins the way Settings recognises, so it adds no second piece of advice", async () => {
+    // The device list and the restore points followed this with "Check the connection in
+    // Storage and reopen this tab", the same instruction twice in two different voices.
+    // Settings leaves that line out for a message starting with the shared prefix, so the
+    // two only work together while this holds.
+    permissionsHeld(false);
+    const lost = await explainSyncFailure(new TypeError("NetworkError when attempting to fetch resource"), webdav);
+    expect(lost.startsWith(PERMISSION_LOST_PREFIX)).toBe(true);
+
+    permissionsHeld(true);
+    const network = await explainSyncFailure(new TypeError("NetworkError when attempting to fetch resource"), webdav);
+    expect(network.startsWith(PERMISSION_LOST_PREFIX)).toBe(false);
   });
 
   it("leaves the message alone when the permission IS held", async () => {
