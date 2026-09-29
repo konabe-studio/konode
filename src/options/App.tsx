@@ -616,16 +616,35 @@ export default function OptionsApp() {
   }, []);
 
   const lastStatus = useRef<SyncState["status"] | null>(null);
+  // A sync that finished while Activity was open but hidden, owed a re-read on the way back.
+  // Skipping the read while hidden is what keeps a background tab from spending requests; not
+  // making it up afterwards is what left the device list quoting a peer's old upload time,
+  // with the page in plain view, until the next sync or a reload. Seen with Settings behind
+  // another browser's window during the 1.4.0 pass.
+  const missedWhileHidden = useRef(false);
   useEffect(() => {
     const status = syncState?.status ?? null;
     const finished = lastStatus.current === "syncing" && status !== "syncing";
     lastStatus.current = status;
     if (!finished) return;
     loadRemoteExtensions();
-    if (activeNav !== "activity" || document.visibilityState !== "visible") return;
+    if (activeNav !== "activity") return;
+    if (document.visibilityState !== "visible") { missedWhileHidden.current = true; return; }
     void loadDevices();
     void loadSnapshots(true);
   }, [syncState?.status, activeNav, loadDevices, loadSnapshots, loadRemoteExtensions]);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible" || !missedWhileHidden.current) return;
+      if (activeNav !== "activity") return; // opening Activity reads both anyway
+      missedWhileHidden.current = false;
+      void loadDevices();
+      void loadSnapshots(true);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [activeNav, loadDevices, loadSnapshots]);
 
   // Latch onboarding_completed the first time a working config is seen (backend
   // configured + a data type on), so the setup card doesn't reappear when the user

@@ -80,9 +80,13 @@ export class GDriveBackend implements IBackend {
   /** Every non-trashed "Konode" folder this app can see. */
   private async findFolders(h: HeadersInit): Promise<DriveFileRef[]> {
     const q = encodeURIComponent(`name='${KONODE_FOLDER}' and mimeType='${FOLDER_MIME}' and trashed=false`);
-    const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,createdTime)`, { headers: h });
-    if (!res.ok) throw new HttpError(res.status, `Drive folder lookup failed: ${res.status}`);
-    return ((await res.json()).files ?? []) as DriveFileRef[];
+    // connect() runs this on every sync, and it was the one Drive call outside withRetry, so
+    // a single transient 500 failed the whole cycle and put an error in the Activity log.
+    return withRetry(async () => {
+      const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,createdTime)`, { headers: h });
+      if (!res.ok) throw new HttpError(res.status, `Drive folder lookup failed: ${res.status}`);
+      return ((await res.json()).files ?? []) as DriveFileRef[];
+    });
   }
 
   private async ensureFolder(): Promise<string> {

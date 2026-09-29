@@ -133,6 +133,40 @@ describe("GDriveBackend.connect — duplicate Konode folders", () => {
   });
 });
 
+describe("GDriveBackend.connect — a transient Drive error", () => {
+  // connect() looks the folder up on every sync, and that lookup was the one Drive call
+  // outside withRetry: a single 500 from Drive failed the whole cycle and wrote an error to
+  // the Activity log, which the upload path beside it would have ridden out.
+  const folderIdOf = (be: GDriveBackend): string | null =>
+    (be as unknown as { folderId: string | null }).folderId;
+
+  it("retries a 500 on the folder lookup instead of failing the sync", async () => {
+    await signIn();
+    let call = 0;
+    vi.stubGlobal("fetch", () => {
+      call++;
+      return Promise.resolve(call === 1
+        ? json({ error: "backendError" }, 500)
+        : json({ files: [{ id: "folder-A", name: "Konode", createdTime: "2026-07-01T09:00:00.000Z" }] }));
+    });
+
+    const be = new GDriveBackend(config());
+    await be.connect();
+
+    expect(folderIdOf(be)).toBe("folder-A");
+    expect(call).toBe(2);
+  });
+
+  it("does not retry a 403, which a second try cannot fix", async () => {
+    await signIn();
+    let call = 0;
+    vi.stubGlobal("fetch", () => { call++; return Promise.resolve(json({}, 403)); });
+
+    await expect(new GDriveBackend(config()).connect()).rejects.toThrow(/folder lookup failed: 403/);
+    expect(call).toBe(1);
+  });
+});
+
 describe("GDriveBackend — a folder move must invalidate the upload checksums", () => {
   // destinationTag() is built from the CONFIG, and Drive's folder isn't in the config —
   // it's resolved by lookup. So the tag can't see a change here, and a device that started
