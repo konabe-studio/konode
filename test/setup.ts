@@ -133,6 +133,14 @@ function bmChildren(parentId) {
     .sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
 }
 
+// The browser keeps a folder's children at contiguous indices, so a removal closes the gap.
+// The fake used to leave it open, and an index read from getChildren (a position) then landed
+// somewhere else in a later create: the #29 restore run put `L4` before `F2 renamed` here
+// while the device, correctly, put it after. `move` has always re-packed.
+function bmRepack(parentId) {
+  bmChildren(parentId).forEach((s, i) => { s.index = i; });
+}
+
 function bmBuild(id) {
   const n = bmNodes.get(id);
   const node = { id: n.id, parentId: n.parentId, title: n.title, dateAdded: n.dateAdded, index: n.index };
@@ -166,15 +174,19 @@ function makeBookmarks() {
       return Promise.resolve(bmBuild(id));
     },
     remove: (id) => {
+      const parentId = bmNodes.get(id)?.parentId;
       bmNodes.delete(id);
+      if (parentId) bmRepack(parentId);
       return Promise.resolve();
     },
     removeTree: (id) => {
+      const parentId = bmNodes.get(id)?.parentId;
       const collect = (pid) => {
         for (const c of bmChildren(pid)) { collect(c.id); bmNodes.delete(c.id); }
       };
       collect(id);
       bmNodes.delete(id);
+      if (parentId) bmRepack(parentId);
       return Promise.resolve();
     },
     move: (id, dest) => {
