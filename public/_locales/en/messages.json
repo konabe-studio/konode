@@ -1219,6 +1219,22 @@
   "opt_log_clear": {
     "message": "Clear log"
   },
+  "opt_log_copy_label": {
+    "message": "Copy for a bug report",
+    "description": "Row label next to the Copy log button in Settings → Activity."
+  },
+  "opt_log_copy_desc": {
+    "message": "Word for word, oldest first, with the Konode version and your browser. That includes your storage server's address and those of pages Konode couldn't sync, so read it before posting it anywhere public.",
+    "description": "Says the copy is not redacted, and why that matters. The log lines themselves stay in English on purpose."
+  },
+  "opt_log_copy": {
+    "message": "Copy log",
+    "description": "Button. Puts the whole Activity log on the clipboard as text."
+  },
+  "opt_log_copy_failed": {
+    "message": "This browser wouldn't let Konode copy the log. Select the entries below and copy them by hand.",
+    "description": "Shown when the clipboard refuses the copy."
+  },
   "opt_log_nothing": {
     "message": "Nothing logged yet. Run a sync and it'll show up here."
   },

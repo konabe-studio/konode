@@ -1122,6 +1122,18 @@
   "opt_log_clear": {
     "message": "Protokoll löschen"
   },
+  "opt_log_copy_label": {
+    "message": "Für einen Fehlerbericht kopieren"
+  },
+  "opt_log_copy_desc": {
+    "message": "Wortgetreu, älteste zuerst, mit der Konode-Version und deinem Browser. Das schließt die Adresse deines Speicherservers ein und die von Seiten, die Konode nicht synchronisieren konnte. Lies es also durch, bevor du es irgendwo öffentlich postest."
+  },
+  "opt_log_copy": {
+    "message": "Protokoll kopieren"
+  },
+  "opt_log_copy_failed": {
+    "message": "Dieser Browser hat Konode das Kopieren des Protokolls nicht erlaubt. Markiere die Einträge unten und kopiere sie von Hand."
+  },
   "opt_log_nothing": {
     "message": "Noch nichts protokolliert. Führe eine Synchronisierung aus, dann erscheint sie hier."
   },

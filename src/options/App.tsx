@@ -83,6 +83,7 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
 import { KEYS, normalizeRemoteExtensions, type AuditEntry } from "@/lib/utils/storage";
+import { auditLogText } from "@/lib/utils/audit-text";
 import { isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
 import { browser, currentStore } from "@/lib/utils/ext";
@@ -405,6 +406,7 @@ export default function OptionsApp() {
   // the Restore points card ninety lines above the button that produced it: the one place
   // nobody who just clicked Clear log is looking.
   const [auditMsg, setAuditMsg] = useState<string | null>(null);
+  const [logCopied, setLogCopied] = useState(false);
   // "loading" | "ok" | an error message — so an empty list can be told apart from a
   // list we never managed to read. See the Activity effect below.
   const [snapLoad, setSnapLoad] = useState<"loading" | "ok" | string>("loading");
@@ -793,6 +795,20 @@ export default function OptionsApp() {
         </div>
       </div>
     );
+  };
+
+  // The whole log, word for word, whatever the errors-only switch shows: a bug report needs
+  // the context around a failure as much as the failure. See auditLogText.
+  const copyAudit = async () => {
+    setAuditMsg(null);
+    try {
+      const text = auditLogText(audit, { version: browser.runtime.getManifest().version, browser: navigator.userAgent });
+      await navigator.clipboard.writeText(text);
+      setLogCopied(true);
+      setTimeout(() => setLogCopied(false), 1500);
+    } catch {
+      setAuditMsg(t("opt_log_copy_failed"));
+    }
   };
 
   const clearAudit = async () => {
@@ -2310,6 +2326,22 @@ export default function OptionsApp() {
                           <Trash2 size={12} /> {t("opt_log_clear")}
                         </button>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Word for word, and it says so here: the log names the storage host and
+                      the pages that would not sync, and a report is usually public. */}
+                  {audit.length > 0 && (
+                    <div className="settings-row">
+                      <div className="settings-row-left">
+                        <div>
+                          <div className="row-label">{t("opt_log_copy_label")}</div>
+                          <div className="row-desc">{t("opt_log_copy_desc")}</div>
+                        </div>
+                      </div>
+                      <button className="btn-secondary" style={{ flexShrink: 0 }} onClick={copyAudit}>
+                        {logCopied ? <Check size={12} /> : <Copy size={12} />} {logCopied ? t("opt_secret_copied") : t("opt_log_copy")}
+                      </button>
                     </div>
                   )}
 

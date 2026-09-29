@@ -1122,6 +1122,18 @@
   "opt_log_clear": {
     "message": "Svuota registro"
   },
+  "opt_log_copy_label": {
+    "message": "Copia per una segnalazione di bug"
+  },
+  "opt_log_copy_desc": {
+    "message": "Parola per parola, dal più vecchio, con la versione di Konode e il tuo browser. Include l'indirizzo del tuo server di archiviazione e quelli delle pagine che Konode non è riuscito a sincronizzare, quindi rileggilo prima di pubblicarlo in un posto pubblico."
+  },
+  "opt_log_copy": {
+    "message": "Copia registro"
+  },
+  "opt_log_copy_failed": {
+    "message": "Questo browser non ha permesso a Konode di copiare il registro. Seleziona le voci qui sotto e copiale a mano."
+  },
   "opt_log_nothing": {
     "message": "Ancora nulla nel registro. Esegui una sincronizzazione e comparirà qui."
   },

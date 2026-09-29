@@ -1122,6 +1122,18 @@
   "opt_log_clear": {
     "message": "清除紀錄"
   },
+  "opt_log_copy_label": {
+    "message": "複製到錯誤回報"
+  },
+  "opt_log_copy_desc": {
+    "message": "逐字複製，從最舊的開始，並附上 Konode 版本和你的瀏覽器。內容包含你的儲存伺服器位址，以及 Konode 無法同步的網頁位址，公開貼出前請先看過一遍。"
+  },
+  "opt_log_copy": {
+    "message": "複製紀錄"
+  },
+  "opt_log_copy_failed": {
+    "message": "這個瀏覽器不讓 Konode 複製紀錄。請選取下方的項目，手動複製。"
+  },
   "opt_log_nothing": {
     "message": "還沒有任何紀錄。執行一次同步就會出現在這裡。"
   },

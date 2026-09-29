@@ -1113,6 +1113,18 @@
   "opt_log_clear": {
     "message": "清除日志"
   },
+  "opt_log_copy_label": {
+    "message": "复制用于错误报告"
+  },
+  "opt_log_copy_desc": {
+    "message": "逐字复制，按时间从旧到新，并附上 Konode 版本和你的浏览器信息。其中包括你的存储服务器地址，以及 Konode 无法同步的页面地址，公开发布前请先检查一遍。"
+  },
+  "opt_log_copy": {
+    "message": "复制日志"
+  },
+  "opt_log_copy_failed": {
+    "message": "此浏览器不允许 Konode 复制日志。请选中下方的条目后手动复制。"
+  },
   "opt_log_nothing": {
     "message": "暂无日志。运行一次同步后即可在此显示。"
   },

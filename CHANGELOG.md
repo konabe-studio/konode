@@ -5,6 +5,15 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+
+- **Copy the Activity log for a bug report.** Settings → Activity has a **Copy log** button
+  that puts the whole log on the clipboard as plain text, oldest first, with the Konode
+  version and your browser at the top, ready to paste into an issue. Until now that meant
+  selecting up to 200 rows by hand. The copy is word for word, so it includes the address of
+  your storage server and of any pages Konode couldn't sync, and the button says so: read it
+  before you post it anywhere public.
+
 ### Fixed
 
 - **A deletion that arrives in pieces no longer slips past the bulk-delete limit.** The
