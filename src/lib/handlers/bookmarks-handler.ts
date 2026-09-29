@@ -1128,6 +1128,10 @@ async function mergeBookmarks(
       if (addedUrls.has(urlKey)) return;
       // The browser may keep this bookmark under another URL (#41), and that copy is it.
       const kept = keptKey(urlKey);
+      // Including a copy this merge has just made, for a peer that holds the kept form too.
+      // `placement` predates the fold, so without this the order of the peer's tree decided
+      // whether a second copy was made.
+      if (kept && addedUrls.has(kept)) return;
       const loc = placement.get(urlKey) ?? (kept ? placement.get(kept) : undefined);
       if (loc) {
         // Already local → relocate to the peer's folder/position if its placement

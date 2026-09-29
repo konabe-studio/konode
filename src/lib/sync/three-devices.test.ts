@@ -980,6 +980,31 @@ describe("AB. Norton Neo keeps chrome://newtab/ as neo://newtab/ (#41)", () => {
     await at(N, async () => { expect(await urlsHere()).toEqual([KEPT, site(0)].sort()); });
   });
 
+  it("gives Neo one copy when Helium holds both forms, the neo:// one first", async () => {
+    const [H, N] = await heliumAndNeo();
+    await at(N, async () => { await del(KEPT); });
+    await cycle(N, H, N);
+
+    // The manual pass: Helium adds a neo:// bookmark and then chrome://newtab/. Neo created
+    // the first, then the second as well, because the check for "made already this merge"
+    // asked under the peer's URL and not under the one this browser keeps it as.
+    await at(H, async () => {
+      await add("Neo tab", KEPT);
+      await add("New Tab", PEER);
+    });
+    await cycle(H, N, N, H);
+    await at(N, async () => { expect(await urlsHere()).toEqual([KEPT, site(0)].sort()); });
+
+    // Dropping the neo:// one on Helium leaves Neo its copy, since chrome://newtab/ is still
+    // there, and dropping that takes it.
+    await at(H, async () => { await del(KEPT); });
+    await cycle(H, N, H);
+    await at(N, async () => { expect(await urlsHere()).toEqual([KEPT, site(0)].sort()); });
+    await at(H, async () => { await del(PEER); });
+    await cycle(H, N, H);
+    await at(N, async () => { expect(await urlsHere()).toEqual([site(0)]); });
+  });
+
   it("leaves Neo's copy alone when Helium deletes the dead neo:// copy it got before the fix", async () => {
     const [H, N] = await heliumAndNeo();
     // What the field group carries now: Neo published the kept form, and Helium made a
