@@ -37,6 +37,12 @@ All notable changes to Konode. Format loosely follows
   New Tab on your other devices too, as it is the same bookmark. A bookmark a browser does
   not keep at all is no longer added again on every sync either. Only the browser that
   changes the address needs this version.
+- **Firefox no longer takes the same history again on every sync.** Firefox stores the time
+  of a visit in whole milliseconds, while Chrome, Brave, Helium and the other Chromium-based
+  browsers report fractions of one. Konode rounded the time when it saved a visit but not when
+  it checked whether a visit was new, so about half of the pages from a Chromium-based
+  device always looked newer than Firefox's copy, and Firefox added the same visits again,
+  every minute, since 1.0.2. Each visit now arrives once. Only Firefox needs this version.
 - **A folder deleted on another device no longer stays behind, empty.** Deleting a folder
   together with its bookmarks removed the bookmarks everywhere and left the folder standing
   on every other device, for good. Approving a blocked deletion did the same, so saying yes
