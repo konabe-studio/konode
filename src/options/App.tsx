@@ -1425,8 +1425,10 @@ export default function OptionsApp() {
                         </div>
                       )}
 
-                      {/* ── Koofr / Fastmail (fixed endpoint) ── */}
-                      {isActive && (p.id === "koofr" || p.id === "fastmail") && (
+                      {/* ── Koofr / Fastmail / Nutstore: any preset with a fixed endpoint. Keyed on
+                          `fixedUrl` rather than on ids, because a list of ids is what left the
+                          Nutstore card with nothing to type into but Test Connection. ── */}
+                      {isActive && p.fixedUrl && (
                         <div className="backend-config" onClick={(e) => e.stopPropagation()}>
                           <InfoHint>
                             {syncingTo(p.fixedUrl!)}{p.noteKey ? ` ${t(p.noteKey)}` : null}

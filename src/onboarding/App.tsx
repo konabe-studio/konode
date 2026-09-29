@@ -572,8 +572,9 @@ export default function OnboardingApp() {
                     </div>
                   )}
 
-                  {/* Koofr / Fastmail (fixed endpoint) */}
-                  {on && (p.id === "koofr" || p.id === "fastmail") && (
+                  {/* Koofr / Fastmail / Nutstore: any preset with a fixed endpoint, keyed on
+                      `fixedUrl` so a new one cannot be left without its fields again. */}
+                  {on && p.fixedUrl && (
                     <div style={S.authPanel} onClick={(e) => e.stopPropagation()}>
                       <div style={hintStyle}>{syncingTo(p.fixedUrl!)}{p.noteKey ? ` ${t(p.noteKey)}` : null}</div>
                       {webdavCreds()}
