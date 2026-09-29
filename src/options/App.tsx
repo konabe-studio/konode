@@ -249,6 +249,13 @@ const formatBytes = (n: number): string => {
   return `${(n / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 };
 
+// When an Activity entry was written, to the second, in the reader's own locale.
+const auditTime = (iso: string): string =>
+  new Date(iso).toLocaleString([], {
+    month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+
 // Backend label stamped on a newly created BackendConfig. The user-facing card
 // copy and icons live in the shared storage-providers module.
 
@@ -2331,15 +2338,20 @@ export default function OptionsApp() {
                               ? <AlertTriangle size={13} className="audit-icon notice" />
                               : <XCircle size={13} className="audit-icon fail" />}
                           <div className="audit-main">
-                            <div className="audit-action">{e.action}</div>
+                            <div className="audit-action">
+                              {e.action}
+                              {/* A warning that kept coming back is one entry with a count,
+                                  first time on top and last time under it (appendAudit). */}
+                              {(e.count ?? 1) > 1 && <span className="audit-count">×{e.count}</span>}
+                            </div>
                             {e.detail && <div className="audit-detail">{e.detail}</div>}
                           </div>
-                          <time className="audit-time" dateTime={e.timestamp}>
-                            {new Date(e.timestamp).toLocaleString([], {
-                              month: "short", day: "numeric",
-                              hour: "2-digit", minute: "2-digit", second: "2-digit",
-                            })}
-                          </time>
+                          <div className="audit-time">
+                            <time dateTime={e.timestamp}>{auditTime(e.timestamp)}</time>
+                            {(e.count ?? 1) > 1 && e.last && (
+                              <time dateTime={e.last}>– {auditTime(e.last)}</time>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -2766,6 +2778,8 @@ const STYLES = `
   .audit-action { font-size: var(--fs-sm); color: var(--text-primary); }
   .audit-detail { font-size: var(--fs-xs); color: var(--text-secondary); margin-top: 1px; word-break: break-word; }
   .audit-time { flex-shrink: 0; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-secondary); font-variant-numeric: tabular-nums; padding-top: 1px; }
+  .audit-time time { display: block; }
+  .audit-count { margin-left: var(--sp-xs); font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 
   /* Stat tiles: a hairline grid inside a titled card (the card clips the 1px gaps). */
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 1px; background: var(--border); }

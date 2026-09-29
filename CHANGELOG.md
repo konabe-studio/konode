@@ -20,6 +20,15 @@ All notable changes to Konode. Format loosely follows
   deletion of most of your real bookmarks could stay under the limit. And a bookmark you hold in
   several copies counts once when another device deletes it, instead of asking you to approve
   "50 bookmarks" that were one. Only the device receiving the deletion needs this version.
+- **A warning that lasts no longer fills the Activity log.** Most warnings describe
+  something Konode checks again on every sync, such as a permission you took away, a device
+  on a different passphrase, or a file that will not download, and each one wrote a new line
+  every sync for as long as it lasted. A passphrase mismatch wrote one per device per data
+  type, so three devices filled the whole log in about a quarter of an hour and pushed out
+  the entries that explained what had gone wrong. A warning that keeps coming back is now one
+  entry that says how many times it happened (×120) and when it last did, under the time it
+  began. Anything else happening in between, such as a merge or a restore, starts a new entry,
+  so the log still reads in the order things happened.
 
 ## [1.4.0] - 2026-09-29
 
