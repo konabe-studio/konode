@@ -34,6 +34,15 @@ All notable changes to Konode. Format loosely follows
   bookmarks and pressing Delete left 25 identical lines, and a large cleanup pushed everything
   else out of the log. It now waits until the deletions stop and writes one line with the
   total. The deletions themselves are recorded straight away, as before.
+- **A Google Drive sign-in that fails no longer tells you something untrue.** When the
+  sign-in window closed before the sign-in came back, Konode said "Sign-in cancelled", even
+  to people who had approved it: a Google error page, or a browser that never hands the
+  result back, ends the same way as closing the window yourself. It now says the window
+  closed before the sign-in came back, and says you cancelled only when Google itself reports
+  that you did. Other failures no longer suggest a redirect address that "may not be
+  registered", which stopped being a likely cause in September. Every message now names
+  GitHub and WebDAV, which need no Google sign-in, and Settings → Activity records which way
+  the sign-in ended, with the address the browser was asked to return to.
 
 ## [1.4.0] - 2026-09-29
 

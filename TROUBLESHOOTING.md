@@ -79,8 +79,9 @@ like a Konode bug rather than a missing redirect. If it still fails, read the
 `Request details: redirect_uri=...` line on Google's own error page: a different extension
 ID there means the browser assigned its own ID to Konode, which can't be registered ahead
 of time, and GitHub or WebDAV are the backends to use on that browser. The Activity log
-won't tell you which case it is, because a mismatch looks like a closed window from
-Konode's side and is logged as a cancelled sign-in.
+can't tell the two cases apart, because from Konode's side a mismatch is a window that
+closed: it logs `Sign-in ended (window closed)` with the redirect Konode asked for, which
+you can compare with the one on Google's page.
 
 **Google sign-in is approved, but Konode returns to the start of setup (Quetta for Android).**
 **Update Quetta first.** The browser fixed this on its side, and a reporter confirmed on
@@ -91,8 +92,8 @@ everything and the sign-in itself worked. That address is not a real website. It
 signal meaning "the sign-in is finished", and the browser is supposed to recognize it,
 close the window and hand the result to the extension. An older Quetta doesn't recognize
 it, so it tries to load the address as an ordinary page, which is why you get an error
-page. Konode never receives the result, reads the silence as a cancelled sign-in, and the
-setup wizard starts over. Nothing is wrong with your Google account or your Drive, and
+page. Konode never receives the result, so all it can say is that the sign-in window closed
+before the sign-in came back, and the setup wizard starts over. Nothing is wrong with your Google account or your Drive, and
 there is nothing to reinstall. Konode can't work around it from inside, because the step
 that fails happens in the browser before any Konode code runs, which is why updating is
 the fix. GitHub and WebDAV need no Google sign-in at all and sync the same data on any
