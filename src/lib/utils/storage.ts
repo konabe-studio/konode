@@ -2,6 +2,7 @@ import type {
   AppearedRecord,
   KeptShellRecord,
   CreatedRecord,
+  PeerRemovalRecord,
   DataType,
   SyncPacket,
   FolderDeleteRecord,
@@ -111,6 +112,7 @@ export const KEYS = {
   BOOKMARK_APPEARED: "konode_bm_appeared",
   BOOKMARK_KEPT_SHELLS: "konode_bm_kept_shells",
   BOOKMARK_CREATED: "konode_bm_created",
+  BOOKMARK_PEER_REMOVED: "konode_bm_peer_removed",
   // Superseded by the backend-side `konode_snap_index.json`, which every device can
   // read. Kept only so the one-time migration in sync/snapshots.ts can drain the
   // counts this device recorded before dropping the key.
@@ -408,6 +410,17 @@ export function updateCreated(
   mutate: (current: CreatedRecord[]) => CreatedRecord[]
 ): Promise<CreatedRecord[]> {
   return updateKey<CreatedRecord[]>(KEYS.BOOKMARK_CREATED, mutate, []);
+}
+
+// What peers' deletions removed here lately, for the mass-delete guard's window (see
+// PeerRemovalRecord). Local-only.
+export async function getPeerRemovals(): Promise<PeerRemovalRecord[]> {
+  return get<PeerRemovalRecord[]>(KEYS.BOOKMARK_PEER_REMOVED, []);
+}
+export function updatePeerRemovals(
+  mutate: (current: PeerRemovalRecord[]) => PeerRemovalRecord[]
+): Promise<PeerRemovalRecord[]> {
+  return updateKey<PeerRemovalRecord[]>(KEYS.BOOKMARK_PEER_REMOVED, mutate, []);
 }
 
 // ─── Imported history (CO-6) ─────────────────────────────────────────────────

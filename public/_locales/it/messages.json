@@ -978,6 +978,24 @@
   "opt_blocked_saved": {
     "message": "Non è stato rimosso nulla, e prima è stato salvato un punto di ripristino."
   },
+  "opt_blocked_recent_one": {
+    "message": "Altri dispositivi hanno già rimosso qui $COUNT$ segnalibro nelle ultime 24 ore, e insieme a quello questa eliminazione supererebbe il tuo limite di eliminazione in blocco.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_recent_other": {
+    "message": "Altri dispositivi hanno già rimosso qui $COUNT$ segnalibri nelle ultime 24 ore, e insieme a quelli questa eliminazione supererebbe il tuo limite di eliminazione in blocco.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
   "opt_blocked_apply": {
     "message": "Applica l'eliminazione"
   },

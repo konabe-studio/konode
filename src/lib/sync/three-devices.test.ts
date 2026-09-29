@@ -8,6 +8,7 @@ import {
   DEFAULT_STATE,
   getBulkDeleteApproval,
   getTombstones,
+  KEYS,
   setBulkDeleteApproval,
   setLastUploadChecksum,
 } from "@/lib/utils/storage";
@@ -130,6 +131,7 @@ type Blocked = {
   cap: number;
   localTotal: number;
   pct: number;
+  recent: number;
   device_id?: string;
   device_label?: string | null;
 } | null;
@@ -702,6 +704,57 @@ describe("Z. the guard and the approval path are unchanged", () => {
       expect(await urlsHere()).toEqual([]);
       await expect(folderFor("Reading")).rejects.toThrow();
     });
+  });
+});
+
+describe("AG. a deletion made in several sittings is one deletion (#41)", () => {
+  it("holds back the sitting that crosses the cap, and says what came before it", async () => {
+    const [A, B, C] = await seedGroup(50);
+    // Fifteen, then fifteen more: each is under the cap of 30, and the two together are it.
+    await at(A, async () => { for (let i = 0; i < 15; i++) await del(site(i)); });
+    await cycle(A, B, C);
+    await at(A, async () => { for (let i = 15; i < 30; i++) await del(site(i)); });
+    expect(await cycle(A, B, C)).toEqual([null, null, null]);
+
+    // Ten more. On its own that is 10 of 20 against max(20, 12), which the old guard let
+    // through, and then the next ten, until B and C were empty.
+    await at(A, async () => { for (let i = 30; i < 40; i++) await del(site(i)); });
+    const [, onB, onC] = await cycle(A, B, C);
+
+    for (const notice of [onB, onC]) {
+      expect(notice).toMatchObject({
+        blocked: 10, local_total: 20, recent: 30, cap: 30, device_label: "Device A",
+      });
+    }
+    for (const d of [B, C]) {
+      await at(d, async () => { expect(await urlsHere()).toEqual(sites(30, 50)); });
+    }
+    expect(restorePoints()).toHaveLength(2);
+    // "10 of your 20, cap 30" alone reads as the guard misfiring. The retained line, which
+    // is what a bug report pastes, has to say what the ten were added to.
+    await at(B, async () => {
+      const log = JSON.stringify((await chrome.storage.local.get(KEYS.AUDIT_LOG))[KEYS.AUDIT_LOG]);
+      expect(log).toContain("Blocked a deletion of 10 of your 20 bookmarks asked for by Device A");
+      expect(log).toContain("counting the 30 that other devices removed here in the last day");
+    });
+  });
+
+  it("lets the rest through once the user approves it", async () => {
+    const [A, B] = await seedGroup(50);
+    await at(A, async () => { for (let i = 0; i < 30; i++) await del(site(i)); });
+    await cycle(A, B);
+    await at(A, async () => { for (let i = 30; i < 40; i++) await del(site(i)); });
+    const [, card] = await cycle(A, B);
+    expect(card).toMatchObject({ blocked: 10, recent: 30 });
+
+    await at(B, async () => { await setBulkDeleteApproval(10); });
+    expect(await cycle(B)).toEqual([null]);
+    await at(B, async () => { expect(await urlsHere()).toEqual(sites(40, 50)); });
+
+    // The approval covered everything the card counted, so A's next few are a new start.
+    await at(A, async () => { for (let i = 40; i < 45; i++) await del(site(i)); });
+    expect(await cycle(A, B)).toEqual([null, null]);
+    await at(B, async () => { expect(await urlsHere()).toEqual(sites(45, 50)); });
   });
 });
 

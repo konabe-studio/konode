@@ -189,6 +189,21 @@ export interface CreatedRecord {
   kept?: string | null;
 }
 
+/**
+ * A bookmark a PEER's deletion removed here, for the mass-delete guard's window (#41).
+ *
+ * The guard used to judge each merge on its own, so a deletion that arrived in several
+ * smaller pieces passed piece by piece, every one of them under the cap, and the tree
+ * emptied just the same. The merge now remembers what peers removed here recently and holds
+ * the next piece against the total. Keyed by canonical URL, the unit the guard counts in.
+ * Local-only; an entry leaves when it ages out of the window, and the whole list goes when
+ * the user approves a blocked deletion, which settles everything the card showed.
+ */
+export interface PeerRemovalRecord {
+  url: string;
+  at: number; // epoch ms, when the merge removed it
+}
+
 // Bookmark sync payload: the live tree plus the device's deletion log.
 // (Older packets are a bare SyncBookmark[] — handled for backward compatibility.)
 export interface BookmarkPayload {
@@ -343,11 +358,14 @@ export interface SyncState {
   // does not carry it, and this object is read back from storage. The device is the
   // useful half: a bare count says 48 bookmarks without saying 48 of what, or which
   // machine asked, and both are needed before anyone can decide to approve it (#18).
+  // `recent` is what other devices' deletions already removed here within the guard's
+  // window: when it is not 0, that is why a deletion smaller than the cap was held back.
   recovery_notice?: {
     at: string;
     blocked: number;
     cap?: number;
     local_total?: number;
+    recent?: number;
     device_id?: string;
     device_label?: string | null;
   } | null;

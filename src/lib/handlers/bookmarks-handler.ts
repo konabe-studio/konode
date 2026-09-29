@@ -12,7 +12,7 @@ import {
   getFolderRenames, setFolderRenames, updateFolderRenames,
   updateFolderDeletes,
   getAppeared, updateAppeared, getKeptShells, updateKeptShells,
-  getCreated, updateCreated,
+  getCreated, updateCreated, getPeerRemovals, updatePeerRemovals,
 } from "@/lib/utils/storage";
 import { defaultOtherRootId, matchLocalRoot, matchLocalRootEx, rootKind } from "@/lib/utils/bookmark-roots";
 import { canonicalUrlKey } from "@/lib/utils/url";
@@ -671,15 +671,29 @@ export function normalizePayload(payload: unknown): BookmarkPayload {
  * and it saves the sync engine recomputing numbers the merge already had in hand.
  */
 export interface BulkDeleteBlock {
-  /** Local bookmarks the guard refused to remove this merge. */
+  /** Local bookmarks the guard refused to remove this merge, each URL once. */
   blocked: number;
-  /** The ceiling it exceeded. */
+  /** The ceiling it exceeded, counted against the tree as it stood before `recent`. */
   cap: number;
-  /** URL bookmarks present locally when the merge ran. */
+  /** Bookmarks present locally when the merge ran, each URL once. */
   localTotal: number;
   /** The configured percentage the cap came from. */
   pct: number;
+  /** What other devices' deletions already removed here within the window, which counts
+   *  toward the cap together with `blocked` (#41). */
+  recent: number;
 }
+
+/**
+ * How far back the mass-delete guard adds up what peers removed here (#41).
+ *
+ * A day, because the gap it closes is a deletion arriving in pieces: every piece sails under
+ * the cap on its own, whether the pieces are one device cleaning up folder by folder, several
+ * devices each asking for part of the tree, or something going wrong a sync at a time. Long
+ * enough to see those as one deletion, short enough that ordinary tidying on another device
+ * over the weeks never adds up to a false alarm.
+ */
+const PEER_REMOVAL_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export async function importBookmarks(
   payload: unknown,
@@ -921,6 +935,9 @@ async function mergeBookmarks(
   // user's newer intent). prefer-remote still differs from lww on the add/move
   // side (it adopts the peer's placement); only the delete side is guarded here.
   const toRemove: string[] = [];
+  // Which local URL each queued id belongs to. The guard counts URLs, not ids: a bookmark
+  // held here in 3,000 copies (#41, Norton Neo) is one bookmark to delete, not 3,000.
+  const keyOfId = new Map<string, string>();
   if (strategy !== "prefer-local") {
     // Two tombstones can reach one local copy now (the peer's form and the kept form), and
     // removing an id twice would throw and count it twice against the guard.
@@ -944,7 +961,10 @@ async function mergeBookmarks(
       // the peer's form, a dead link over there, and the bookmark itself is still on the peer.
       if ((peerKeysOf.get(url) ?? []).some((k) => remoteAdd.has(k))) continue;
       if (loc.dateAdded <= dAt) {
-        for (const id of loc.ids) if (!queued.has(id)) { queued.add(id); toRemove.push(id); }
+        const key = localByUrl.has(url) ? url : (kept as string);
+        for (const id of loc.ids) {
+          if (!queued.has(id)) { queued.add(id); toRemove.push(id); keyOfId.set(id, key); }
+        }
       }
     }
   }
@@ -965,12 +985,29 @@ async function mergeBookmarks(
   // armed indefinitely, and cashed out silently against an unrelated deletion weeks later,
   // with no restore point and nothing in the log. The lifetime belongs to the sync, which
   // is the only scope that can say when the approval has had its chance.
+  //
+  // Two gaps, found looking for how #41's Chrome emptied with the guard on. It counted
+  // bookmark NODES, so a pile of duplicates inflated the tree it measured against: a device
+  // holding 3,000 copies of one New Tab bookmark could lose every other bookmark and stay
+  // under 60%. It now counts each URL once, on both sides of the comparison. And it judged
+  // each merge alone, so a deletion that arrived in pieces passed piece by piece. It now
+  // adds what peers removed here within PEER_REMOVAL_WINDOW_MS, and measures the total
+  // against the tree as it stood before those removals. A URL that is back (a restore, a
+  // re-add) no longer counts as gone.
   const pct = deletePercent > 0 ? deletePercent : 60;
-  const cap = Math.max(20, Math.floor((localFlat.length * pct) / 100));
-  const overCap = toRemove.length > cap;
+  const asked = new Set(keyOfId.values()).size;
+  const windowStart = mergeStart - PEER_REMOVAL_WINDOW_MS;
+  const removals = await getPeerRemovals();
+  const recentGone = new Set<string>();
+  for (const r of removals) if (r.at > windowStart && !localByUrl.has(r.url)) recentGone.add(r.url);
+  const before = localByUrl.size + recentGone.size;
+  const cap = Math.max(20, Math.floor((before * pct) / 100));
+  // `asked > 0`: with nothing to delete there is nothing to hold back, even when the window
+  // alone is over a cap the user has since lowered.
+  const overCap = asked > 0 && asked + recentGone.size > cap;
   // Honoured only for a deletion no larger than the one the user actually saw. Anything
   // bigger arrived after they decided, and has not been approved by anyone.
-  const approved = overCap && approvedFor > 0 && toRemove.length <= approvedFor;
+  const approved = overCap && approvedFor > 0 && asked <= approvedFor;
   // What the removal loop ACTUALLY did. The summary below used to report
   // `toRemove.length`, which is what the peer asked for: a blocked merge logged
   // "-48" directly above the warning saying those 48 were refused (#19). It also
@@ -980,18 +1017,24 @@ async function mergeBookmarks(
   // for Step D, which decides whether the folder itself was meant to go (#26).
   const parentOf = new Map(localFlat.map((n) => [n.id, n.parentId]));
   const emptiedByDeletion = new Set<string>();
+  // The URLs this merge actually took out, for the window.
+  const removedKeys = new Set<string>();
   if (overCap && !approved) {
     // Console only, on every cycle. The RETAINED warning is written once per incident
     // by the sync engine (recordBlockedDeletion), because the guard re-evaluates the
     // same peer deletions every sync: warning from here wrote one identical pair a
     // minute into the Activity log and evicted the entry the banner points at (#20).
-    logger.info("mergeBookmarks", `Skipped deleting ${toRemove.length} bookmarks (cap ${cap}, ${pct}% of ${localFlat.length}): exceeds the mass-delete guard`);
-    onBulkBlocked?.({ blocked: toRemove.length, cap, localTotal: localFlat.length, pct });
+    const why = recentGone.size
+      ? `${asked + recentGone.size} of ${before} with the ${recentGone.size} that peers removed in the last day; cap ${cap}, ${pct}%`
+      : `cap ${cap}, ${pct}% of ${localByUrl.size}`;
+    logger.info("mergeBookmarks", `Skipped deleting ${asked} bookmarks (${why}): exceeds the mass-delete guard`);
+    onBulkBlocked?.({ blocked: asked, cap, localTotal: localByUrl.size, pct, recent: recentGone.size });
   } else {
     for (const id of toRemove) {
       try {
         await browser.bookmarks.remove(id);
         removed++;
+        removedKeys.add(keyOfId.get(id) as string);
         const parent = parentOf.get(id);
         if (parent && !rootKind(parent)) emptiedByDeletion.add(parent);
       } catch (err) {
@@ -1001,6 +1044,17 @@ async function mergeBookmarks(
     if (approved) {
       logger.event("mergeBookmarks", `Applied ${removed} bookmark deletions you approved (over the ${pct}% guard).`);
     }
+  }
+  // Keep the window. An approval starts it over: the user was shown the total, the removals
+  // before it included, and said yes to it, so none of it may count against the next piece.
+  // Written only when something changed, since this runs once per peer on every sync.
+  if (approved) {
+    if (removals.length) await updatePeerRemovals(() => []);
+  } else if (removedKeys.size || removals.some((r) => r.at <= windowStart)) {
+    await updatePeerRemovals((current) => [
+      ...current.filter((r) => r.at > windowStart && !removedKeys.has(r.url)),
+      ...[...removedKeys].map((url) => ({ url, at: mergeStart })),
+    ]);
   }
 
   // ── Step B: fold the remote tree in (folders preserved). For each URL: add it

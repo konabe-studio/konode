@@ -1074,6 +1074,16 @@
     "message": "Nothing was removed, and a restore point was saved first.",
     "description": "The reassurance. Sits right after opt_blocked_from in the same paragraph."
   },
+  "opt_blocked_recent_one": {
+    "message": "Other devices already removed $COUNT$ bookmark here in the last 24 hours, and this would take the total past your bulk-delete limit.",
+    "description": "Under the blocked-deletion headline, only when earlier deletions from other devices are why a deletion smaller than the limit was held back: the guard adds up what peers removed here over a day (#41). The limit is the 'Max bulk delete from a peer' setting.",
+    "placeholders": { "count": { "content": "$1", "example": "1" } }
+  },
+  "opt_blocked_recent_other": {
+    "message": "Other devices already removed $COUNT$ bookmarks here in the last 24 hours, and this would take the total past your bulk-delete limit.",
+    "description": "Plural of opt_blocked_recent_one.",
+    "placeholders": { "count": { "content": "$1", "example": "30" } }
+  },
   "opt_blocked_apply": {
     "message": "Apply the deletion",
     "description": "Button. First step of two, because applying removes bookmarks."

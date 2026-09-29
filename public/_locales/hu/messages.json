@@ -978,6 +978,24 @@
   "opt_blocked_saved": {
     "message": "Semmi nem lett törölve, és előtte mentettünk egy visszaállítási pontot."
   },
+  "opt_blocked_recent_one": {
+    "message": "Más eszközök az elmúlt 24 órában már $COUNT$ könyvjelzőt töröltek itt, és ezzel együtt ez a törlés átlépné a beállított felső határt.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_recent_other": {
+    "message": "Más eszközök az elmúlt 24 órában már $COUNT$ könyvjelzőt töröltek itt, és ezzel együtt ez a törlés átlépné a beállított felső határt.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
   "opt_blocked_apply": {
     "message": "Törlés alkalmazása"
   },

@@ -5,6 +5,22 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **A deletion that arrives in pieces no longer slips past the bulk-delete limit.** The
+  limit on how much of your bookmarks another device may delete judged each sync on its own,
+  so a large deletion that reached this device a piece at a time went through piece by
+  piece, every one of them under the limit, and could empty the tree just the same. Konode
+  now adds up what other devices removed here over the last 24 hours and holds back the
+  piece that takes the total over, with a restore point saved first and the usual choice in
+  Settings → Activity, where the card now says how many went before it. Approve it and the
+  rest of a cleanup you meant goes through without asking again.
+  The limit also counts bookmarks now, not copies of them. A pile of duplicates, such as the
+  New Tab copies Norton Neo made before 1.4.0, made your tree look many times its size, so a
+  deletion of most of your real bookmarks could stay under the limit. And a bookmark you hold in
+  several copies counts once when another device deletes it, instead of asking you to approve
+  "50 bookmarks" that were one. Only the device receiving the deletion needs this version.
+
 ## [1.4.0] - 2026-09-29
 
 ### Added

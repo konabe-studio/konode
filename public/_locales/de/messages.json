@@ -978,6 +978,24 @@
   "opt_blocked_saved": {
     "message": "Es wurde nichts entfernt, und vorher wurde ein Wiederherstellungspunkt gespeichert."
   },
+  "opt_blocked_recent_one": {
+    "message": "Andere Geräte haben hier in den letzten 24 Stunden bereits $COUNT$ Lesezeichen entfernt, und zusammen damit würde diese Löschung dein Limit für Massenlöschungen überschreiten.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_recent_other": {
+    "message": "Andere Geräte haben hier in den letzten 24 Stunden bereits $COUNT$ Lesezeichen entfernt, und zusammen damit würde diese Löschung dein Limit für Massenlöschungen überschreiten.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
   "opt_blocked_apply": {
     "message": "Löschvorgang übernehmen"
   },

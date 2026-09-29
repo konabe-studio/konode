@@ -969,6 +969,24 @@
   "opt_blocked_saved": {
     "message": "没有删除任何内容，并已事先保存恢复点。"
   },
+  "opt_blocked_recent_one": {
+    "message": "其他设备在过去 24 小时内已在此删除了 $COUNT$ 条书签，加上这次删除将超过你设置的批量删除上限。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_recent_other": {
+    "message": "其他设备在过去 24 小时内已在此删除了 $COUNT$ 条书签，加上这次删除将超过你设置的批量删除上限。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
   "opt_blocked_apply": {
     "message": "应用此删除"
   },

@@ -2153,6 +2153,14 @@ export default function OptionsApp() {
                               : t("opt_blocked_from_unknown")}{" "}
                             {t("opt_blocked_saved")}
                           </div>
+                          {/* A deletion under the cap on its own, held back for what other
+                              devices removed here just before it (#41). Without this line
+                              "10 of your 40" at a 60% limit reads as the guard misfiring. */}
+                          {(syncState.recovery_notice.recent ?? 0) > 0 && (
+                            <div className="row-desc">
+                              {plural("opt_blocked_recent", syncState.recovery_notice.recent ?? 0)}
+                            </div>
+                          )}
                         </div>
                       </div>
                       {confirmApply ? (

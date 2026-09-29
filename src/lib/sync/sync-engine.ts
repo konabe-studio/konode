@@ -729,10 +729,15 @@ export class SyncEngine {
       // identical pair a minute (#20). Naming the peer and the total is what makes it
       // actionable rather than alarming (#18).
       const who = blocked.device_label ? ` asked for by ${blocked.device_label}` : "";
+      // A piece under the cap on its own is held back for what came before it (#41), and
+      // the line has to say so, or "10 of your 40, cap 30" reads as the guard misfiring.
+      const recent = blocked.recent
+        ? `, counting the ${blocked.recent} that other devices removed here in the last day`
+        : "";
       logger.warn(
         "mergeBookmarks",
         `Blocked a deletion of ${blocked.blocked} of your ${blocked.localTotal} bookmarks` +
-          `${who} (cap ${blocked.cap}, ${blocked.pct}% of the tree). Nothing was removed and a ` +
+          `${who} (cap ${blocked.cap}, ${blocked.pct}% of the tree${recent}). Nothing was removed and a ` +
           "restore point was saved. Apply it or keep them in Settings → Activity."
       );
       try {
@@ -751,6 +756,7 @@ export class SyncEngine {
       blocked: blocked.blocked,
       cap: blocked.cap,
       local_total: blocked.localTotal,
+      recent: blocked.recent,
       device_id: blocked.device_id,
       device_label: blocked.device_label ?? null,
     };

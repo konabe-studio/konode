@@ -907,6 +907,24 @@
   "opt_blocked_saved": {
     "message": "No se quitó nada, y antes se guardó un punto de restauración."
   },
+  "opt_blocked_recent_one": {
+    "message": "Otros dispositivos ya quitaron $COUNT$ marcador aquí en las últimas 24 horas, y junto con ese esta eliminación superaría tu límite de eliminación masiva.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_recent_other": {
+    "message": "Otros dispositivos ya quitaron $COUNT$ marcadores aquí en las últimas 24 horas, y junto con esos esta eliminación superaría tu límite de eliminación masiva.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
   "opt_blocked_apply": {
     "message": "Aplicar la eliminación"
   },

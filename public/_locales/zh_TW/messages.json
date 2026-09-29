@@ -978,6 +978,24 @@
   "opt_blocked_saved": {
     "message": "沒有刪掉任何東西，而且事先儲存了一個還原點。"
   },
+  "opt_blocked_recent_one": {
+    "message": "其他裝置在過去 24 小時內已經在這裡刪掉了 $COUNT$ 個書籤，再加上這次就會超過你設定的大量刪除上限。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_recent_other": {
+    "message": "其他裝置在過去 24 小時內已經在這裡刪掉了 $COUNT$ 個書籤，再加上這次就會超過你設定的大量刪除上限。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
   "opt_blocked_apply": {
     "message": "套用這次刪除"
   },

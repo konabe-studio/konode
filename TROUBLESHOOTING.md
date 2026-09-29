@@ -15,10 +15,12 @@ browser's minimum for a background check, so that's the floor, not a bug. Histor
 tabs and the extension list have no instant path at all: they travel on that same interval.
 
 **Bookmarks I deleted came back / a big cleanup didn't propagate.**
-Konode has a safety cap: a single sync won't apply peer deletions that would remove
-more than a threshold of your local bookmarks (default **60%**), to guard against a
-corrupt deletion log wiping your tree. The device receiving the deletion saves a restore
-point and shows "an unusual deletion was blocked", so nothing is lost either way.
+Konode has a safety cap: it won't apply other devices' deletions that would remove more
+than a threshold of your local bookmarks within 24 hours (default **60%**), to guard
+against a corrupt deletion log wiping your tree. A deletion that arrives in several pieces
+counts as one, so the piece that takes the day's total over the threshold is the one held
+back, and the card says how many went before it. The device receiving the deletion saves a
+restore point and shows "an unusual deletion was blocked", so nothing is lost either way.
 
 **To let the deletion through**, open **Settings → Activity** on the device showing the
 warning and use **Apply the deletion** on the card at the top. It names the device that
