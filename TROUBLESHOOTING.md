@@ -93,12 +93,12 @@ signal meaning "the sign-in is finished", and the browser is supposed to recogni
 close the window and hand the result to the extension. An older Quetta doesn't recognize
 it, so it tries to load the address as an ordinary page, which is why you get an error
 page. Konode never receives the result, so all it can say is that the sign-in window closed
-before the sign-in came back, and the setup wizard starts over. Nothing is wrong with your Google account or your Drive, and
-there is nothing to reinstall. Konode can't work around it from inside, because the step
+before the sign-in came back, and on older versions the setup wizard also started over.
+Nothing is wrong with your Google account or your Drive, and there is nothing to reinstall. Konode can't work around it from inside, because the step
 that fails happens in the browser before any Konode code runs, which is why updating is
 the fix. GitHub and WebDAV need no Google sign-in at all and sync the same data on any
-version. If you were partway through setup, you will need to enter your answers again,
-because the wizard doesn't yet keep them across a reload.
+version. If you were partway through setup, the wizard picks up where it was when you open
+it again within a day, apart from the encryption step, which asks again.
 
 **"Connected as ()" / Drive sync fails (building from source).**
 Your own Google Cloud project needs the **Google Drive API enabled**

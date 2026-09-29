@@ -43,6 +43,15 @@ All notable changes to Konode. Format loosely follows
   registered", which stopped being a likely cause in September. Every message now names
   GitHub and WebDAV, which need no Google sign-in, and Settings → Activity records which way
   the sign-in ended, with the address the browser was asked to return to.
+- **Setup no longer forgets your answers when the page reloads.** Reload the setup page, or
+  let a phone put it to sleep while you sign in to Google, and it used to come back at the
+  start with everything you had entered gone, a GitHub token GitHub will not show you twice
+  included. It now comes back to the step you were on, with your storage choice, its
+  address and sign-in, the data types and the device name as you left them, for up to a
+  day. A Google Drive sign-in that finished before the reload is recognised instead of asked
+  for again. The encryption step is the exception: your passphrase is never written down,
+  so that step asks again. What setup kept is removed as soon as setup completes, and after
+  a day if you never finish.
 
 ## [1.4.0] - 2026-09-29
 

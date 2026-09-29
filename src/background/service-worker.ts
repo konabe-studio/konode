@@ -11,6 +11,7 @@ import { BADGE_COLORS, BADGE_TEXT, STATE_UPDATE } from "@/lib/constants";
 import { browser } from "@/lib/utils/ext";
 import { ensureSyncAlarm, SYNC_ALARM, BOOKMARK_ALARM } from "@/lib/utils/alarms";
 import { eventPresent } from "@/lib/utils/capabilities";
+import { clearExpiredDraft } from "@/lib/onboarding-draft";
 
 // ─── State ────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,13 @@ async function init(): Promise<void> {
   // fresh worker nothing can still be holding it.
   if (await clearStaleSyncLock()) {
     logger.event("ServiceWorker", "Cleared a sync lock left by an interrupted sync");
+  }
+
+  // A setup abandoned more than a day ago can still hold a GitHub token or a WebDAV password
+  // the user never finished connecting (#38). The wizard drops an expired draft when it
+  // opens, but after an abandoned setup nothing may open it again.
+  if (await clearExpiredDraft().catch(() => false)) {
+    logger.info("ServiceWorker", "Dropped an unfinished setup older than a day");
   }
 
   // ── Migration: drop the legacy "tabs" data type (folded into "sessions") ──

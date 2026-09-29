@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { sendMessage, request } from "@/lib/utils/messaging";
 import { browser } from "@/lib/utils/ext";
 import { t, tParts } from "@/lib/utils/i18n";
-import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
+import { interactiveSignIn, isDriveAuthAvailable, getStoredGDriveUser } from "@/lib/backends/gdrive-oauth";
+import { loadDraft, saveDraft, clearDraft, type DraftStep } from "@/lib/onboarding-draft";
 
 // Some engines (notably iOS WebKit, e.g. Orion) don't support interactive Google
 // sign-in; gate the Drive option so users aren't sent into a dead end.
@@ -105,20 +106,28 @@ export default function OnboardingApp() {
 
   useEffect(() => {
     void (async () => {
-      const found = await allDataTypeAvailability();
-      setAvailability(found);
-      // Bookmarks ships on by default, so on a browser with no bookmarks API the wizard
-      // would otherwise finish with a data type that cannot produce a single byte — and
-      // the progress step would sit there waiting for a count that never moves.
-      setDataTypes((p) => {
-        const next = { ...p };
-        for (const key of Object.keys(next) as DataType[]) {
-          if (found[key]?.state === "unsupported") next[key] = false;
-        }
-        return next;
-      });
+      setAvailability(await allDataTypeAvailability());
     })();
   }, []);
+
+  // Whether the draft has been read back yet (#38). Nothing is written until it has, or the
+  // wizard's blank first render would overwrite the very answers it is about to restore.
+  const [restored, setRestored] = useState(false);
+  // Set once the settings are saved. From then on the draft is only ever removed: a save
+  // still waiting out its debounce would otherwise land after the removal and put the
+  // credentials back for a setup that has already finished.
+  const draftClosed = useRef(false);
+
+  // Bookmarks ships on by default, so on a browser with no bookmarks API the wizard would
+  // otherwise finish with a data type that cannot produce a single byte, and the progress
+  // step would sit there waiting for a count that never moves. Run again once the draft is
+  // back, because a restored choice must not switch a type on that this browser lacks.
+  useEffect(() => {
+    setDataTypes((p) => {
+      const off = (Object.keys(p) as DataType[]).filter((k) => p[k] && availability[k]?.state === "unsupported");
+      return off.length ? { ...p, ...Object.fromEntries(off.map((k) => [k, false])) } : p;
+    });
+  }, [availability, restored]);
 
   const toggleData = (key: keyof typeof dataTypes) => {
     if (unavailable(key)) return;
@@ -222,13 +231,66 @@ export default function OnboardingApp() {
   // offline, so a short passphrase would hollow out the E2EE promise.
   const passTooShort = confirmNeeded && encPass.length < MIN_PASSPHRASE_LENGTH;
 
-  // Read the name the extension detected for this device, so the field starts filled.
+  // Pick up where the wizard was (#38): the draft if there is one, the Drive session if a
+  // sign-in already completed, and otherwise the name the extension detected for this
+  // device, so the field starts filled.
   useEffect(() => {
     void (async () => {
-      const res = await request({ type: "GET_SETTINGS" });
-      if (res.ok && res.res.type === "SETTINGS") setDeviceLabel(res.res.payload.device_label ?? "");
+      try {
+        const [res, draft, driveUser] = await Promise.all([
+          request({ type: "GET_SETTINGS" }),
+          loadDraft().catch(() => null),
+          getStoredGDriveUser().catch(() => null),
+        ]);
+        const detected = res.ok && res.res.type === "SETTINGS" ? res.res.payload.device_label ?? "" : "";
+        // interactiveSignIn stores the session as it completes, so a sign-in that finished
+        // before the page went away is still here. The wizard used to know about it only
+        // from its own state, showed a signed-in user as signed out, and sent them back
+        // through Google's consent: on a phone, the same trip that lost the page.
+        if (driveUser) setGdriveUser(driveUser);
+        if (!draft) {
+          setDeviceLabel(detected);
+          return;
+        }
+        setDeviceLabel(draft.deviceLabel || detected);
+        // Set directly, not through pickProvider, which would swap these very fields out.
+        setProvider(draft.provider);
+        setGithubToken(draft.githubToken);
+        setGithubRepo(draft.githubRepo);
+        setGithubBranch(draft.githubBranch);
+        setWebdavUrl(draft.webdavUrl);
+        setWebdavUser(draft.webdavUser);
+        setWebdavPass(draft.webdavPass);
+        setNcHost(draft.ncHost);
+        setDataTypes(draft.dataTypes);
+        setStep(draft.step);
+        // The token was checked before the reload, but only the check sets who it belongs
+        // to, and Continue waits for that.
+        if (draft.provider === "github" && draft.githubToken) scheduleVerify(draft.githubToken);
+      } finally {
+        setRestored(true);
+      }
     })();
+    // Mount only: this reads back what the rest of the wizard then owns.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keep the draft as the answers change, from the moment it has been read back until the
+  // settings are saved. Debounced, since the text fields change on every keystroke.
+  useEffect(() => {
+    if (!restored || !(["welcome", "backend", "data", "encrypt"] as string[]).includes(step)) return;
+    const id = setTimeout(() => {
+      if (draftClosed.current) return;
+      void saveDraft({
+        step: step as DraftStep, deviceLabel, provider,
+        githubToken, githubRepo, githubBranch,
+        webdavUrl, webdavUser, webdavPass, ncHost,
+        dataTypes,
+      }).catch(() => { /* a draft that cannot be written costs a retype, nothing more */ });
+    }, 300);
+    return () => clearTimeout(id);
+  }, [restored, step, deviceLabel, provider, githubToken, githubRepo, githubBranch,
+    webdavUrl, webdavUser, webdavPass, ncHost, dataTypes]);
 
   useEffect(() => {
     if (step !== "syncing") return;
@@ -377,6 +439,10 @@ export default function OnboardingApp() {
         setSetupError(t("onb_err_save", saved.error));
         return;
       }
+      // Everything in the draft is in the settings now, the credentials included, so the
+      // copy goes: a token left behind there is one the user no longer knows about.
+      draftClosed.current = true;
+      await clearDraft().catch(() => {});
 
       // Capture pre-sync counts, show the live progress step, then start the first
       // sync WITHOUT awaiting — the "syncing" step polls GET_STATE and moves to

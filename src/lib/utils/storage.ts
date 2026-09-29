@@ -132,6 +132,7 @@ export const KEYS = {
   SYNC_LOCK: "konode_sync_lock",
   GDRIVE_SESSION: "konode_gdrive_session",
   GDRIVE_FOLDER: "konode_gdrive_folder",
+  ONBOARDING_DRAFT: "konode_onboarding_draft",
 } as const;
 
 // ─── Generic Helpers ───────────────────────────────────────────────────────
