@@ -411,10 +411,12 @@ export class SyncEngine {
     if (typesToSync.length === 0) {
       logger.info("SyncEngine", "No data types are turned on, so there is nothing to sync");
       const prev = await getState();
-      const newState = await setState({
-        status: prev.pending_conflicts.length > 0 ? "conflict" : "idle",
-      });
-      this.onStateChange(newState);
+      const status = prev.pending_conflicts.length > 0 ? "conflict" : "idle";
+      // Only when that is news. Every alarm used to write the same status back and broadcast
+      // it, which rewrote the state and woke an open popup once a minute to say nothing had
+      // changed (checklist O). The first cycle after everything was switched off still moves
+      // "Synced" or an old error to "Ready".
+      if (prev.status !== status) this.onStateChange(await setState({ status }));
       this.isSyncing = false;
       return "nothing-enabled";
     }

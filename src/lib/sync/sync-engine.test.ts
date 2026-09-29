@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { SyncEngine, statusAfterSync, conflictsThatCanExist, conflictsStillOpen, explainSyncFailure, backendOrigins } from "@/lib/sync/sync-engine";
 import { HttpError } from "@/lib/utils/retry";
 import { BADGE_TEXT, BADGE_COLORS } from "@/lib/constants";
@@ -1155,6 +1155,31 @@ describe("SyncEngine.sync — reports whether it actually ran", () => {
 
     expect(await engine.sync()).toBe("nothing-enabled");
     expect((await getState()).status).toBe("conflict");
+  });
+
+  it("says so once, not on every alarm, while everything stays switched off", async () => {
+    // Checklist O: the early return made no request, which is the part that matters, but it
+    // wrote the same status back and broadcast it every minute, waking an open popup to say
+    // nothing had changed.
+    await setState({ status: "success" });
+    const broadcasts: string[] = [];
+    const engine = new SyncEngine(
+      {
+        ...DEFAULT_SETTINGS,
+        device_id: "me",
+        active_backend: "github",
+        backends: [{ type: "github", label: "GitHub", enabled: true, github: { token: "t", repo: "o/r" } }],
+        enabled_types: [],
+      },
+      (st) => broadcasts.push(st.status)
+    );
+    const writes = vi.spyOn(chrome.storage.local, "set");
+
+    for (let i = 0; i < 3; i++) expect(await engine.sync()).toBe("nothing-enabled");
+
+    expect(broadcasts).toEqual(["idle"]); // "Synced" becomes "Ready" once
+    expect(writes.mock.calls.filter(([items]) => KEYS.STATE in (items as object))).toHaveLength(1);
+    writes.mockRestore();
   });
 
   it("still runs for an explicitly named type, which is how the approval path syncs", async () => {
