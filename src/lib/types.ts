@@ -169,6 +169,26 @@ export interface KeptShellRecord {
   at: number; // epoch ms, when a merge left it standing; for diagnosis, nothing expires by it
 }
 
+/**
+ * A bookmark a merge created on THIS device, for the case where the browser did not keep it
+ * as given (#41).
+ *
+ * The merge decides "do we have this already" by URL, so a browser that stores a different
+ * URL than it was handed never matches the peer's bookmark, and every merge added another
+ * copy. Norton Neo appears to keep a peer's `chrome://newtab/` as `neo://newtab/`, and one
+ * bookmark became thousands, one per sync.
+ *
+ * `kept` says what became of it. Absent: created as given, not yet confirmed by a later
+ * merge. A string: the browser keeps it under that URL, and the merge treats the two as one
+ * bookmark. `null`: it was gone by the next merge although nobody deleted it, so creating it
+ * again would only repeat that. Local-only, keyed by the peer's URL.
+ */
+export interface CreatedRecord {
+  url: string;
+  at: number; // epoch ms, when the merge created it
+  kept?: string | null;
+}
+
 // Bookmark sync payload: the live tree plus the device's deletion log.
 // (Older packets are a bare SyncBookmark[] — handled for backward compatibility.)
 export interface BookmarkPayload {

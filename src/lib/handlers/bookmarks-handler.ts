@@ -1,6 +1,6 @@
 import type {
   SyncBookmark, Tombstone, MoveRecord, FolderMoveRecord, TitleRecord, FolderRenameRecord,
-  FolderDeleteRecord, AppearedRecord, KeptShellRecord, BookmarkPayload, ConflictStrategy,
+  FolderDeleteRecord, AppearedRecord, KeptShellRecord, CreatedRecord, BookmarkPayload, ConflictStrategy,
 } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import {
@@ -12,6 +12,7 @@ import {
   getFolderRenames, setFolderRenames, updateFolderRenames,
   updateFolderDeletes,
   getAppeared, updateAppeared, getKeptShells, updateKeptShells,
+  getCreated, updateCreated,
 } from "@/lib/utils/storage";
 import { defaultOtherRootId, matchLocalRoot, matchLocalRootEx, rootKind } from "@/lib/utils/bookmark-roots";
 import { canonicalUrlKey } from "@/lib/utils/url";
@@ -259,6 +260,24 @@ function withAppearance(tree: SyncBookmark[], appeared: Map<string, number>): Sy
     return n.children ? { ...n, children: n.children.map(walk) } : n;
   };
   return tree.map(walk);
+}
+
+// ─── Creations (what the browser kept of a merge's creates, see CreatedRecord) ──
+
+// How long a create has to survive before a merge that finds it in place stops watching it.
+// The merge right after is usually the next peer in the same sync, milliseconds later, and a
+// browser that rewrites the URL on its own schedule may not have got to it yet.
+const CREATED_CONFIRM_MS = 10 * 60 * 1000;
+
+/** canonical peer url → the newest record for it. */
+function toCreatedMap(list: CreatedRecord[]): Map<string, CreatedRecord> {
+  const m = new Map<string, CreatedRecord>();
+  for (const r of list) {
+    const k = canonicalUrlKey(r.url);
+    const held = m.get(k);
+    if (!held || r.at > held.at) m.set(k, r);
+  }
+  return m;
 }
 
 /** URLs present anywhere in the CURRENT local tree (called after a mutation). */
@@ -802,6 +821,37 @@ async function mergeBookmarks(
     if (n.url) remoteAdd.set(canonicalUrlKey(n.url), Math.max(remoteAdd.get(canonicalUrlKey(n.url)) ?? 0, n.dateAdded ?? 0));
   }
 
+  // What earlier merges created here and what the browser kept of it (#41). A browser that
+  // stores a different URL than it was handed (Norton Neo: `chrome://newtab/` becomes
+  // `neo://newtab/`) holds the peer's bookmark under a key the peer never sends, so every
+  // lookup below that asks "do we have this" has to ask under both.
+  const mergeStart = Date.now();
+  const created = toCreatedMap(await getCreated());
+  let createdDirty = false;
+  /** The key of the copy this browser keeps in place of the peer's `key`, if it differs. */
+  const keptKey = (key: string): string | undefined => {
+    const kept = created.get(key)?.kept;
+    const k = typeof kept === "string" ? canonicalUrlKey(kept) : undefined;
+    return k !== key ? k : undefined;
+  };
+  /** Every key this device may hold the peer's `key` under. */
+  const localKeys = (key: string): string[] => {
+    const kept = keptKey(key);
+    return kept ? [key, kept] : [key];
+  };
+  /** The newest time any of `keys` has in `m`, or undefined when none has one. */
+  const newest = (m: Map<string, number>, keys: string[]): number | undefined => {
+    let at: number | undefined;
+    for (const k of keys) {
+      const v = m.get(k);
+      if (v !== undefined) at = Math.max(at ?? 0, v);
+    }
+    return at;
+  };
+  /** Has anyone, here or on the peer, deleted `key` at or after `at`? */
+  const deletedSince = (key: string, at: number): boolean =>
+    Math.max(localDel.get(key) ?? 0, remoteDel.get(key) ?? 0) >= at;
+
   // ── Step A: apply the peer's deletions to local ──
   // prefer-local never deletes local. prefer-remote and lww both honor a peer
   // deletion, but never destroy a local add that is STRICTLY NEWER than the
@@ -810,8 +860,13 @@ async function mergeBookmarks(
   // side (it adopts the peer's placement); only the delete side is guarded here.
   const toRemove: string[] = [];
   if (strategy !== "prefer-local") {
+    // Two tombstones can reach one local copy now (the peer's form and the kept form), and
+    // removing an id twice would throw and count it twice against the guard.
+    const queued = new Set<string>();
     for (const [url, dAt] of remoteDel) {
-      const loc = localByUrl.get(url);
+      // Our copy may be the one the browser keeps under another URL (#41).
+      const kept = keptKey(url);
+      const loc = localByUrl.get(url) ?? (kept ? localByUrl.get(kept) : undefined);
       if (!loc) continue;
       // The peer is asking us to delete something its own tree still advertises. Whatever
       // that is, it is not a deletion: either they re-added it, or they are relaying a log
@@ -819,7 +874,12 @@ async function mergeBookmarks(
       // can see the contradiction in the packet in front of us, so we don't need them to
       // be fixed first — this is the half of #31 that protects a device on its own.
       if (remoteAdd.has(url)) continue;
-      if (loc.dateAdded <= dAt) toRemove.push(...loc.ids);
+      // The same contradiction in the kept form: a peer still listing that copy has not
+      // deleted the bookmark.
+      if (kept && !localByUrl.has(url) && remoteAdd.has(kept)) continue;
+      if (loc.dateAdded <= dAt) {
+        for (const id of loc.ids) if (!queued.has(id)) { queued.add(id); toRemove.push(id); }
+      }
     }
   }
   // Safety: refuse a mass-delete from a corrupt/oversized tombstone log. The
@@ -897,9 +957,13 @@ async function mergeBookmarks(
   };
   indexLocal(await exportBookmarks());
   const suppressedByDeletion = (url: string): boolean => {
-    const key = canonicalUrlKey(url);
-    const lAt = localDel.get(key);
-    const rAt = remoteDel.get(key);
+    // A deletion of the copy the browser keeps in the bookmark's place counts as well (#41):
+    // that copy is the one the user sees and deletes here, and the peer's form must not
+    // bring it back.
+    const keys = localKeys(canonicalUrlKey(url));
+    const key = keys[0];
+    const lAt = newest(localDel, keys);
+    const rAt = newest(remoteDel, keys);
     if (strategy === "prefer-local") return lAt !== undefined;   // honor only our deletions
     if (strategy === "prefer-remote") return rAt !== undefined;  // honor the peer's deletions
     const newestDel = Math.max(lAt ?? 0, rAt ?? 0);              // lww
@@ -919,7 +983,9 @@ async function mergeBookmarks(
     const rt = remoteTitleAt.get(key);
     if (!rt) return null;
     if (strategy === "prefer-local") return null;
-    if (strategy !== "prefer-remote" && rt.at <= (localTitleAt.get(key)?.at ?? 0)) return null;
+    // A rename made here was recorded under the URL the browser keeps (#41).
+    const localAt = Math.max(0, ...localKeys(key).map((k) => localTitleAt.get(k)?.at ?? 0));
+    if (strategy !== "prefer-remote" && rt.at <= localAt) return null;
     return rt.title === currentTitle ? null : rt.title;
   };
 
@@ -927,7 +993,8 @@ async function mergeBookmarks(
     if (strategy === "prefer-local") return false;               // local placement wins
     if (strategy === "prefer-remote") return true;               // peer placement wins
     const key = canonicalUrlKey(url);
-    return (remoteMoveAt.get(key) ?? 0) > (localMoveAt.get(key) ?? 0); // lww: newer move wins
+    // lww: newer move wins. A move made here was recorded under the URL the browser keeps (#41).
+    return (remoteMoveAt.get(key) ?? 0) > (newest(localMoveAt, localKeys(key)) ?? 0);
   };
 
   const localRoots = (await browser.bookmarks.getTree())[0]?.children ?? [];
@@ -993,7 +1060,9 @@ async function mergeBookmarks(
       // but create/move with the node's original url below.
       const urlKey = canonicalUrlKey(node.url);
       if (addedUrls.has(urlKey)) return;
-      const loc = placement.get(urlKey);
+      // The browser may keep this bookmark under another URL (#41), and that copy is it.
+      const kept = keptKey(urlKey);
+      const loc = placement.get(urlKey) ?? (kept ? placement.get(kept) : undefined);
       if (loc) {
         // Already local → relocate to the peer's folder/position if its placement
         // wins AND we could confidently map the peer's root. Without confidence a
@@ -1039,6 +1108,19 @@ async function mergeBookmarks(
         return; // present → never add a duplicate
       }
       if (suppressedByDeletion(node.url)) return;
+      // We created this before, it is not here, and nobody has deleted it since, nor has the
+      // peer added it again. The browser did not keep what it was given, and creating it again
+      // would only repeat that on every sync, which is how one bookmark became thousands (#41).
+      const rec = created.get(urlKey);
+      if (rec && typeof rec.kept !== "string"
+        && (remoteAdd.get(urlKey) ?? 0) <= rec.at && !deletedSince(urlKey, rec.at)) {
+        if (rec.kept === undefined) {
+          created.set(urlKey, { ...rec, kept: null });
+          createdDirty = true;
+          logger.event("mergeBookmarks", `This browser did not keep ${node.url}, so it is no longer added again on every sync`);
+        }
+        return;
+      }
       try {
         const parentId = await ensureParent();
         // Resolve the position against the LOCAL parent (same anchor-then-clamp rule
@@ -1046,9 +1128,18 @@ async function mergeBookmarks(
         // create whenever the local parent was smaller — and the catch below turned
         // that into a bookmark that silently never appeared, on every sync.
         const at = placementIndex(await browser.bookmarks.getChildren(parentId), prevKey, index);
-        await browser.bookmarks.create({ parentId, index: at, title: node.title, url: node.url });
+        const made = await browser.bookmarks.create({ parentId, index: at, title: node.title, url: node.url });
         addedUrls.add(urlKey);
         added++;
+        // What the browser actually stored. A different URL is one this merge would never
+        // find again under the peer's, so remember the pair (#41).
+        const madeUrl = made?.url && canonicalUrlKey(made.url) !== urlKey ? made.url : undefined;
+        if (madeUrl) {
+          addedUrls.add(canonicalUrlKey(madeUrl));
+          logger.event("mergeBookmarks", `This browser keeps ${node.url} as ${madeUrl}, so the two are now treated as one bookmark`);
+        }
+        created.set(urlKey, madeUrl ? { url: node.url, at: Date.now(), kept: madeUrl } : { url: node.url, at: Date.now() });
+        createdDirty = true;
       } catch (err) {
         logger.error(`Bookmark merge add: ${node.title}`, err);
       }
@@ -1216,6 +1307,28 @@ async function mergeBookmarks(
       await updateKeptShells(() => survivors);
     }
   }
+
+  // Settle what earlier merges created (#41). A create that is still here under the URL it was
+  // given has stuck, and one somebody deleted since is the tombstones' business. Neither needs
+  // watching any longer. A create that vanished stops mattering once its peer has had 90 days
+  // to offer it again, the tombstone TTL. The pair the browser keeps under another URL does
+  // not expire: that is how this browser stores it, and forgetting it restarts the copies.
+  if (created.size) {
+    const here = new Set(
+      flattenNodes(await exportBookmarks()).filter((n) => n.url).map((n) => canonicalUrlKey(n.url as string))
+    );
+    const now = Date.now();
+    for (const [key, r] of created) {
+      if (r.at >= mergeStart) continue; // this merge made it; the next one checks it
+      const stuck = here.has(key) && now - r.at >= CREATED_CONFIRM_MS;
+      const expired = typeof r.kept !== "string" && now - r.at > TOMBSTONE_TTL_MS;
+      if (stuck || expired || deletedSince(key, r.at)) {
+        created.delete(key);
+        createdDirty = true;
+      }
+    }
+  }
+  if (createdDirty) await updateCreated(() => [...created.values()]);
 
   // The most informative line about what a sync actually DID to the tree, so it belongs
   // in the user's Activity log — but only when it changed something. Every idle cycle
@@ -1397,6 +1510,13 @@ export async function restoreBookmarks(tree: SyncBookmark[]): Promise<number> {
     const present = new Set(
       flattenNodes(await exportBookmarks()).filter((n) => n.url).map((n) => canonicalUrlKey(n.url as string))
     );
+    // A bookmark this browser keeps under another URL is here under that one (#41), and
+    // restoring the snapshot's form would only add another copy of it.
+    const created = toCreatedMap(await getCreated());
+    const isPresent = (key: string): boolean => {
+      const kept = created.get(key)?.kept;
+      return present.has(key) || (typeof kept === "string" && present.has(canonicalUrlKey(kept)));
+    };
     let added = 0;
 
     // Every create is placed, not appended (#29). A restore is additive, so the parent it
@@ -1410,12 +1530,15 @@ export async function restoreBookmarks(tree: SyncBookmark[]): Promise<number> {
     ): Promise<void> => {
       if (node.url) {
         const key = canonicalUrlKey(node.url);
-        if (present.has(key)) return;
+        if (isPresent(key)) return;
         try {
           const parentId = await ensureParent();
           const at = restorePlacement(await browser.bookmarks.getChildren(parentId), siblings, i);
-          await browser.bookmarks.create({ parentId, index: at, title: node.title, url: node.url });
+          const made = await browser.bookmarks.create({ parentId, index: at, title: node.title, url: node.url });
           present.add(key);
+          // What the browser stored, which may not be what it was given (#41). A snapshot that
+          // holds both forms must not restore two copies.
+          if (made?.url) present.add(canonicalUrlKey(made.url));
           added++;
         } catch { /* skip invalid url */ }
         return;
