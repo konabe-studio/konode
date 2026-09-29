@@ -157,6 +157,9 @@ interface Device {
   engine: SyncEngine;
   /** This browser, while another one is running. */
   snap: DeviceSnapshot;
+  /** What this browser stores when handed a URL, for one that stores something else. Norton
+   *  Neo keeps `chrome://newtab/` as `neo://newtab/` (#41). */
+  rewrite?: (url: string) => string;
 }
 
 /** A browser that has never seen Konode. `seq` puts its local bookmark ids in their own
@@ -186,9 +189,18 @@ const settle = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 /** Run `fn` on `d`'s browser. Never nest these: each entry restores from the snapshot. */
 async function at<T>(d: Device, fn: () => Promise<T>): Promise<T> {
   hooks().restore(d.snap);
+  const create = chrome.bookmarks.create;
+  const rewrite = d.rewrite;
+  if (rewrite) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (chrome.bookmarks as any).create = (props: { url?: string }) =>
+      create(typeof props.url === "string" ? { ...props, url: rewrite(props.url) } : props);
+  }
   try {
     return await fn();
   } finally {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (chrome.bookmarks as any).create = create;
     await settle();
     d.snap = hooks().snapshot();
   }
@@ -904,5 +916,106 @@ describe("N. leaving Manual", () => {
       expect(await urlsHere()).toContain("https://only-on-a.example/");
       expect(await urlsHere()).toHaveLength(6);
     });
+  });
+});
+
+// ─── AB. A browser that keeps chrome:// pages under its own scheme (#41) ────
+
+describe("AB. Norton Neo keeps chrome://newtab/ as neo://newtab/ (#41)", () => {
+  const PEER = "chrome://newtab/";
+  const KEPT = "neo://newtab/";
+
+  /** Helium with a New Tab bookmark and one ordinary one, Neo joined, several cycles on. */
+  async function heliumAndNeo(): Promise<[Device, Device]> {
+    const H = newDevice("H", 1000);
+    const N = newDevice("N", 2000);
+    N.rewrite = (url) => url.replace(/^chrome:\/\//, "neo://");
+    await at(H, async () => {
+      await add("New Tab", PEER);
+      await add("Real", site(0));
+    });
+    await cycle(H, N, H, N, N, N, H);
+    return [H, N];
+  }
+
+  it("gives Neo one copy however many cycles run, and Helium none of the neo:// form", async () => {
+    const [H, N] = await heliumAndNeo();
+    // Before the fix, every Neo cycle created another New Tab: the peer's URL was never
+    // found here, because the browser had stored a different one.
+    await at(N, async () => { expect(await urlsHere()).toEqual([KEPT, site(0)].sort()); });
+    await at(H, async () => { expect(await urlsHere()).toEqual([PEER, site(0)].sort()); });
+    expect(filedUrls(N)).toContain(PEER);
+    expect(filedUrls(N)).not.toContain(KEPT);
+  });
+
+  it("takes Neo's copy when New Tab is deleted on Helium", async () => {
+    const [H, N] = await heliumAndNeo();
+    await at(H, async () => { await del(PEER); });
+
+    // The field run: Helium's tombstone arrived, and Neo kept its copy, because Neo had
+    // published `neo://newtab/` and Helium's tree listed that as a bookmark of its own.
+    await cycle(H, N, H, N);
+    for (const d of [H, N]) {
+      await at(d, async () => { expect(await urlsHere(), d.label).toEqual([site(0)]); });
+    }
+  });
+
+  it("takes Helium's New Tab when the copy is deleted on Neo", async () => {
+    const [H, N] = await heliumAndNeo();
+    await at(N, async () => { await del(KEPT); });
+
+    await cycle(N, H, N, H);
+    for (const d of [H, N]) {
+      await at(d, async () => { expect(await urlsHere(), d.label).toEqual([site(0)]); });
+    }
+  });
+
+  it("brings it back to Neo, once, when Helium adds it again", async () => {
+    const [H, N] = await heliumAndNeo();
+    await at(H, async () => { await del(PEER); });
+    await cycle(H, N, H);
+    await at(H, async () => { await add("New Tab", PEER); });
+
+    await cycle(H, N, N, N, H);
+    await at(N, async () => { expect(await urlsHere()).toEqual([KEPT, site(0)].sort()); });
+  });
+
+  it("gives Neo one copy when Helium holds both forms, the neo:// one first", async () => {
+    const [H, N] = await heliumAndNeo();
+    await at(N, async () => { await del(KEPT); });
+    await cycle(N, H, N);
+
+    // The manual pass: Helium adds a neo:// bookmark and then chrome://newtab/. Neo created
+    // the first, then the second as well, because the check for "made already this merge"
+    // asked under the peer's URL and not under the one this browser keeps it as.
+    await at(H, async () => {
+      await add("Neo tab", KEPT);
+      await add("New Tab", PEER);
+    });
+    await cycle(H, N, N, H);
+    await at(N, async () => { expect(await urlsHere()).toEqual([KEPT, site(0)].sort()); });
+
+    // Dropping the neo:// one on Helium leaves Neo its copy, since chrome://newtab/ is still
+    // there, and dropping that takes it.
+    await at(H, async () => { await del(KEPT); });
+    await cycle(H, N, H);
+    await at(N, async () => { expect(await urlsHere()).toEqual([KEPT, site(0)].sort()); });
+    await at(H, async () => { await del(PEER); });
+    await cycle(H, N, H);
+    await at(N, async () => { expect(await urlsHere()).toEqual([site(0)]); });
+  });
+
+  it("leaves Neo's copy alone when Helium deletes the dead neo:// copy it got before the fix", async () => {
+    const [H, N] = await heliumAndNeo();
+    // What the field group carries now: Neo published the kept form, and Helium made a
+    // bookmark of it. Cleaning that up on Helium must not cost Neo its New Tab, since
+    // Helium still has its own.
+    await at(H, async () => { await add("New Tab", KEPT); });
+    await cycle(H, N);
+    await at(H, async () => { await del(KEPT); });
+
+    await cycle(H, N, H, N);
+    await at(N, async () => { expect(await urlsHere()).toEqual([KEPT, site(0)].sort()); });
+    await at(H, async () => { expect(await urlsHere()).toEqual([PEER, site(0)].sort()); });
   });
 });
