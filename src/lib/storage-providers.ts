@@ -16,7 +16,7 @@ export interface ProviderDef {
   label: string;
   /** Message key, not text — resolve with `t()` at the render site. */
   descKey: string;
-  fixedUrl?: string;                                        // koofr, fastmail
+  fixedUrl?: string;                                        // koofr, fastmail, jianguoyun
   regions?: { id: string; label: string; url: string }[];  // pcloud (EU/US)
   needsHost?: boolean;                                      // nextcloud/ownCloud
   custom?: boolean;                                         // generic WebDAV (Synology, kDrive, …)
