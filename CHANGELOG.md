@@ -5,6 +5,8 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-29
+
 ### Added
 
 - **Konode now speaks Italian, Russian and Traditional Chinese.** Every screen is translated,
@@ -65,8 +67,13 @@ All notable changes to Konode. Format loosely follows
   point it saved was missing, and the device list went on quoting the old upload times until
   you reloaded. The log, the numbers and the blocked-deletion card now follow each sync as it
   happens, and the devices and restore points are read again when a sync finishes while you
-  are looking at them. Reloading Settings also keeps the tab you were on instead of going
-  back to Storage.
+  are looking at them, or as soon as you come back to the tab if one finished while it was
+  hidden behind another window. Reloading Settings also keeps the tab you were on instead of
+  going back to Storage.
+- **A momentary Google Drive error no longer fails a whole sync.** Konode looks up its
+  folder on Drive at the start of every sync, and that one request gave up on the first
+  error, so a brief hiccup on Google's side cost a sync and put an error in Settings →
+  Activity. It now tries again, as every other Drive request already did.
 - **Restoring bookmarks from your browser's own backup is no longer undone.** Import an
   exported bookmarks file after deleting some of them, and the next sync deleted them again,
   without asking, for up to 90 days. The import keeps each bookmark's original date, so
