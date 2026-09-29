@@ -12,6 +12,7 @@ import { browser } from "@/lib/utils/ext";
 import { ensureSyncAlarm, SYNC_ALARM, BOOKMARK_ALARM } from "@/lib/utils/alarms";
 import { eventPresent } from "@/lib/utils/capabilities";
 import { clearExpiredDraft } from "@/lib/onboarding-draft";
+import { openConflictFromNotification } from "@/lib/sync/conflict-resolver";
 
 // ─── State ────────────────────────────────────────────────────────────────
 
@@ -430,6 +431,14 @@ on("runtime", "onInstalled", () => browser.runtime.onInstalled.addListener(async
 
 on("runtime", "onStartup", () => browser.runtime.onStartup.addListener(async () => {
   await ensureInit();
+}));
+
+// ─── Notifications ────────────────────────────────────────────────────────
+
+// The conflict toast asks the user to open Konode, so its click does. See
+// openConflictFromNotification for where it lands on each browser.
+on("notifications", "onClicked", () => browser.notifications.onClicked.addListener((id) => {
+  void openConflictFromNotification(id).catch((e) => logger.error("notifications.onClicked", e));
 }));
 
 // Register bookmark-change listeners once, synchronously, at the top level —

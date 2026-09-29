@@ -52,6 +52,10 @@ All notable changes to Konode. Format loosely follows
   for again. The encryption step is the exception: your passphrase is never written down,
   so that step asks again. What setup kept is removed as soon as setup completes, and after
   a day if you never finish.
+- **Clicking the conflict notification opens Konode.** The notification says "Open Konode to
+  resolve it", and clicking it did nothing. It now opens Konode's popup, where conflicts are
+  answered. Where the browser does not let an extension open its popup, the same screen
+  opens in a small window of its own, or in a tab on a phone.
 
 ## [1.4.0] - 2026-09-29
 
