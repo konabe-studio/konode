@@ -26,6 +26,17 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **A bookmark to a browser's own page no longer multiplies on Norton Neo.** Neo stores a
+  `chrome://` address under its own `neo://` name, so a New Tab bookmark synced from Chrome
+  arrived as `neo://newtab/`, Konode did not recognise it on the next sync, and added it
+  again, about twice a minute, until the list held thousands. Konode now checks what the
+  browser actually stored and treats the two addresses as one bookmark, and Settings →
+  Activity says so when it happens. Your other devices go on seeing the `chrome://` address,
+  so deleting New Tab on either side removes it from both. The copies already made stay
+  until you delete them: keep one and delete the rest, because deleting every copy deletes
+  New Tab on your other devices too, as it is the same bookmark. A bookmark a browser does
+  not keep at all is no longer added again on every sync either. Only the browser that
+  changes the address needs this version.
 - **A folder deleted on another device no longer stays behind, empty.** Deleting a folder
   together with its bookmarks removed the bookmarks everywhere and left the folder standing
   on every other device, for good. Approving a blocked deletion did the same, so saying yes
