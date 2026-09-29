@@ -29,6 +29,11 @@ All notable changes to Konode. Format loosely follows
   entry that says how many times it happened (×120) and when it last did, under the time it
   began. Anything else happening in between, such as a merge or a restore, starts a new entry,
   so the log still reads in the order things happened.
+- **Deleting many bookmarks at once is one line in the Activity log.** The browser reports
+  every deleted bookmark separately, and Konode wrote a line for each, so selecting 25
+  bookmarks and pressing Delete left 25 identical lines, and a large cleanup pushed everything
+  else out of the log. It now waits until the deletions stop and writes one line with the
+  total. The deletions themselves are recorded straight away, as before.
 
 ## [1.4.0] - 2026-09-29
 

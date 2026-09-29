@@ -333,7 +333,42 @@ async function recordRemovedTombstones(node: BookmarkNode): Promise<void> {
   await updateTombstones((current) =>
     mergeTombstoneLists(current, gone.map((url) => ({ url, deletedAt: now, own: true })))
   );
-  logger.event("Tombstones", `Recorded ${gone.length} deletion(s)`);
+  logRecordedDeletions(gone.length);
+}
+
+/**
+ * How long the Activity line for recorded deletions waits for the burst to end: the same
+ * quiet second the fast-path sync waits for (BOOKMARK_DEBOUNCE_MS in the service worker).
+ */
+const DELETION_LOG_QUIET_MS = 1000;
+let deletionsToLog = 0;
+let deletionLogTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Say how many deletions were recorded, once per burst.
+ *
+ * The browser fires onRemoved once per node, so selecting 25 bookmarks and pressing Delete
+ * wrote 25 identical `Recorded 1 deletion(s)` events in the same second, and a 200-bookmark
+ * cleanup filled the whole 200-entry log with them, evicting everything a bug report would
+ * need. The tombstones are still written per event, because each must be on disk before the
+ * sync that publishes it. Only the line waits, and then gives the total.
+ */
+function logRecordedDeletions(n: number): void {
+  deletionsToLog += n;
+  if (deletionLogTimer) clearTimeout(deletionLogTimer);
+  deletionLogTimer = setTimeout(() => {
+    deletionLogTimer = null;
+    const total = deletionsToLog;
+    deletionsToLog = 0;
+    logger.event("Tombstones", `Recorded ${total} deletion(s)`);
+  }, DELETION_LOG_QUIET_MS);
+}
+
+/** Test seam: drop a burst still waiting for its line, so one test's cannot reach the next. */
+export function resetDeletionLog(): void {
+  if (deletionLogTimer) clearTimeout(deletionLogTimer);
+  deletionLogTimer = null;
+  deletionsToLog = 0;
 }
 
 /**

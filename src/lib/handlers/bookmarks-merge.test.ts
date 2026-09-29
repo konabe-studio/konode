@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import {
-  importBookmarks, exportBookmarkPayload, registerBookmarkListeners, type BulkDeleteBlock,
+  importBookmarks, exportBookmarkPayload, registerBookmarkListeners, resetDeletionLog,
+  type BulkDeleteBlock,
 } from "@/lib/handlers/bookmarks-handler";
 import { getTombstones, setTombstones, getBulkDeleteApproval, setBulkDeleteApproval, KEYS } from "@/lib/utils/storage";
 import type { BookmarkPayload, SyncBookmark } from "@/lib/types";
@@ -114,6 +115,74 @@ describe("tombstones — duplicate-URL safety", () => {
     onRemoved!(b.id, { node: { id: b.id, title: "Dup", url } as chrome.bookmarks.BookmarkTreeNode });
     await new Promise((r) => setTimeout(r, 0));
     expect((await getTombstones()).map((t) => t.url)).toEqual([url]);
+  });
+});
+
+describe("tombstones: a bulk delete is one line in the Activity log", () => {
+  // The browser fires onRemoved once per node. Selecting 25 bookmarks and pressing Delete
+  // wrote 25 identical "Recorded 1 deletion(s)" events in the same second, so a 200-bookmark
+  // cleanup filled the whole log and evicted everything a bug report would need.
+  let onRemoved: ((id: string, info: { node: chrome.bookmarks.BookmarkTreeNode }) => void) | undefined;
+
+  async function recordedLines(): Promise<string[]> {
+    const entries = ((await chrome.storage.local.get(KEYS.AUDIT_LOG))[KEYS.AUDIT_LOG] ?? []) as
+      { action: string; detail?: string }[];
+    return entries.filter((e) => e.action === "Tombstones").map((e) => e.detail ?? "");
+  }
+  let made: chrome.bookmarks.BookmarkTreeNode[] = [];
+  async function make(n: number): Promise<void> {
+    made = [];
+    for (let i = 0; i < n; i++) {
+      made.push(await chrome.bookmarks.create({ parentId: "1", title: `W${i}`, url: `https://w${i}.com` }));
+    }
+  }
+  async function deleteBookmarks(from: number, to: number): Promise<void> {
+    for (const node of made.slice(from, to)) {
+      await chrome.bookmarks.remove(node.id);
+      onRemoved!(node.id, { node });
+    }
+  }
+
+  function setUp(): void {
+    // Before the fake clock, so a real timer an earlier test left running is really cleared.
+    resetDeletionLog();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (chrome.bookmarks.onRemoved as any).addListener = (cb: never) => { onRemoved = cb; };
+    registerBookmarkListeners(() => {});
+  }
+
+  it("records every deletion at once, and says so once for the whole burst", async () => {
+    setUp();
+    try {
+      await make(25);
+      await deleteBookmarks(0, 25);
+      await vi.advanceTimersByTimeAsync(0);
+
+      // The records are not held back: the sync a second from now publishes them.
+      expect(await getTombstones()).toHaveLength(25);
+      expect(await recordedLines()).toEqual([]);
+
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(await recordedLines()).toEqual(["Recorded 25 deletion(s)"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("gives a deletion after a quiet second a line of its own", async () => {
+    setUp();
+    try {
+      await make(3);
+      await deleteBookmarks(0, 2);
+      await vi.advanceTimersByTimeAsync(1500);
+      await deleteBookmarks(2, 3);
+      await vi.advanceTimersByTimeAsync(1500);
+
+      expect(await recordedLines()).toEqual(["Recorded 1 deletion(s)", "Recorded 2 deletion(s)"]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
