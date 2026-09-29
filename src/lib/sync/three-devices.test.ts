@@ -919,9 +919,9 @@ describe("N. leaving Manual", () => {
   });
 });
 
-// ─── AB. A browser that keeps chrome:// pages under its own scheme (#41) ────
+// ─── AF. A browser that keeps chrome:// pages under its own scheme (#41) ────
 
-describe("AB. Norton Neo keeps chrome://newtab/ as neo://newtab/ (#41)", () => {
+describe("AF. Norton Neo keeps chrome://newtab/ as neo://newtab/ (#41)", () => {
   const PEER = "chrome://newtab/";
   const KEPT = "neo://newtab/";
 
