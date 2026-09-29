@@ -514,7 +514,7 @@ export async function exportBookmarkPayload(): Promise<BookmarkPayload> {
   // either undoing the prune or dropping the event's own record, depending on which
   // write happened to land last. Nothing here is exempt from the burst just because it
   // runs inside a sync: `importing` only suppresses the recorders during an IMPORT.
-  const [tree, gced, gcedMoves, gcedFolderMoves, gcedTitles, gcedRenames, gcedFolderDeletes, gcedAppeared] = await Promise.all([
+  const [tree, gced, gcedMoves, gcedFolderMoves, gcedTitles, gcedRenames, gcedFolderDeletes, gcedAppeared, createdRecords] = await Promise.all([
     exportBookmarks(),
     updateTombstones(gcTombstones),
     updateMoves(gcMoves),
@@ -523,18 +523,56 @@ export async function exportBookmarkPayload(): Promise<BookmarkPayload> {
     updateFolderRenames(gcFolderRenames),
     updateFolderDeletes(gcFolderDeletes),
     updateAppeared(gcAppeared),
+    getCreated(),
   ]);
   // Snapshot the current (full) tree so a later URL edit can find the replaced
   // url by id and tombstone it (see recordUrlChange). This is the state peers hold.
   await setBookmarkCache(tree);
+  // A bookmark this browser keeps under another URL than a peer gave it goes out under the
+  // peer's URL (#41). Published as kept, `neo://newtab/` reached the Chrome peer as a
+  // bookmark of its own, a dead link there, and since that peer's tree then listed the kept
+  // form, deleting `chrome://newtab/` on it no longer took the copy here.
+  const forms = peerForms(createdRecords);
+  const asPeer = <T extends { url: string }>(r: T): T => {
+    const url = forms.get(canonicalUrlKey(r.url));
+    return url ? { ...r, url } : r;
+  };
   // Don't sync empty folders — a folder carries no tombstone, so leaving empty
   // folders in the payload is what made a deleted folder resurrect from a peer.
   return {
-    tree: withAppearance(pruneEmptyFolders(tree), toAppearedMap(gcedAppeared)),
-    tombstones: publishableTombstones(gced, tree), moves: gcedMoves,
-    folderMoves: gcedFolderMoves, titles: gcedTitles, folderRenames: gcedRenames,
+    tree: inPeerForm(withAppearance(pruneEmptyFolders(tree), toAppearedMap(gcedAppeared)), forms),
+    tombstones: publishableTombstones(gced, tree, forms), moves: gcedMoves.map(asPeer),
+    folderMoves: gcedFolderMoves, titles: gcedTitles.map(asPeer), folderRenames: gcedRenames,
     folderDeletes: publishableFolderDeletes(gcedFolderDeletes, tree),
   };
+}
+
+/** canonical kept url → the URL the peer gave us, for every bookmark this browser keeps under
+ *  another URL (#41). Two peer URLs kept as one (`chrome://newtab` and `chrome://newtab/`)
+ *  go out as the newer. */
+function peerForms(records: CreatedRecord[]): Map<string, string> {
+  const byKept = new Map<string, CreatedRecord>();
+  for (const r of records) {
+    if (typeof r.kept !== "string") continue;
+    const k = canonicalUrlKey(r.kept);
+    if (k === canonicalUrlKey(r.url)) continue;
+    const held = byKept.get(k);
+    if (!held || r.at > held.at) byKept.set(k, r);
+  }
+  return new Map([...byKept].map(([k, r]) => [k, r.url]));
+}
+
+/** The tree with every kept URL replaced by the one the peer gave us (see peerForms). */
+function inPeerForm(tree: SyncBookmark[], forms: Map<string, string>): SyncBookmark[] {
+  if (!forms.size) return tree;
+  const walk = (n: SyncBookmark): SyncBookmark => {
+    if (n.url) {
+      const url = forms.get(canonicalUrlKey(n.url));
+      return url ? { ...n, url } : n;
+    }
+    return n.children ? { ...n, children: n.children.map(walk) } : n;
+  };
+  return tree.map(walk);
 }
 
 /**
@@ -578,16 +616,34 @@ function publishableFolderDeletes(records: FolderDeleteRecord[], tree: SyncBookm
  *
  * The stored log keeps everything either way: it is what suppresses a re-add from a peer
  * that hasn't caught up yet, and that is a question about OUR tree, not about theirs.
+ *
+ * A bookmark this browser keeps under another URL (#41, see peerForms) is held, and deleted,
+ * under both: the peers know it by the URL they gave us, and one may still carry the kept
+ * form from before the tree was published in theirs.
  */
-function publishableTombstones(tombstones: Tombstone[], tree: SyncBookmark[]): Tombstone[] {
-  const held = new Set(
-    flattenNodes(tree).filter((n) => n.url).map((n) => canonicalUrlKey(n.url as string))
-  );
-  return tombstones
-    .filter((t) => isOwnTombstone(t) && !held.has(canonicalUrlKey(t.url)))
-    // `own` is local bookkeeping. Sending it would let a peer read our provenance as
-    // theirs when they fold the list in, which is precisely the confusion it exists to end.
-    .map((t) => ({ url: t.url, deletedAt: t.deletedAt }));
+function publishableTombstones(
+  tombstones: Tombstone[], tree: SyncBookmark[], forms: Map<string, string> = new Map(),
+): Tombstone[] {
+  const held = new Set<string>();
+  for (const n of flattenNodes(tree)) {
+    if (!n.url) continue;
+    const key = canonicalUrlKey(n.url);
+    held.add(key);
+    const peer = forms.get(key);
+    if (peer) held.add(canonicalUrlKey(peer));
+  }
+  const out: Tombstone[] = [];
+  for (const t of tombstones) {
+    if (!isOwnTombstone(t)) continue;
+    const key = canonicalUrlKey(t.url);
+    const peer = forms.get(key);
+    for (const url of peer ? [t.url, peer] : [t.url]) {
+      // `own` is local bookkeeping. Sending it would let a peer read our provenance as
+      // theirs when they fold the list in, which is precisely the confusion it exists to end.
+      if (!held.has(canonicalUrlKey(url))) out.push({ url, deletedAt: t.deletedAt });
+    }
+  }
+  return out;
 }
 
 /** Normalize a parsed bookmark payload (supports the legacy bare-array format). */
@@ -839,6 +895,12 @@ async function mergeBookmarks(
     const kept = keptKey(key);
     return kept ? [key, kept] : [key];
   };
+  /** The other way round: the peer keys this browser keeps under a kept `key`. */
+  const peerKeysOf = new Map<string, string[]>();
+  for (const key of created.keys()) {
+    const kept = keptKey(key);
+    if (kept) peerKeysOf.set(kept, [...(peerKeysOf.get(kept) ?? []), key]);
+  }
   /** The newest time any of `keys` has in `m`, or undefined when none has one. */
   const newest = (m: Map<string, number>, keys: string[]): number | undefined => {
     let at: number | undefined;
@@ -877,6 +939,10 @@ async function mergeBookmarks(
       // The same contradiction in the kept form: a peer still listing that copy has not
       // deleted the bookmark.
       if (kept && !localByUrl.has(url) && remoteAdd.has(kept)) continue;
+      // And its mirror image: the peer deleted its copy of the kept form while its tree still
+      // lists the URL it gave us. That copy reached it from here before the tree went out in
+      // the peer's form, a dead link over there, and the bookmark itself is still on the peer.
+      if ((peerKeysOf.get(url) ?? []).some((k) => remoteAdd.has(k))) continue;
       if (loc.dateAdded <= dAt) {
         for (const id of loc.ids) if (!queued.has(id)) { queued.add(id); toRemove.push(id); }
       }
