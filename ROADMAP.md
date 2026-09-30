@@ -97,8 +97,8 @@ on any Chromium browser and on Firefox.
   findings", because the second one never arrives.
 
 ## Now live
-Konode is live on both stores. **Firefox Add-ons serves 1.4.0 since 2026-09-29; the Chrome
-Web Store serves 1.3.2, with 1.4.0 in review** since the same day.
+Konode is live on both stores, **both serving 1.4.0**: Firefox Add-ons since 2026-09-29, the
+Chrome Web Store since 2026-09-30, after a day in review.
 
 **1.4.0 shipped on 2026-09-29**, tagged `v1.4.0` at `0acc210`, and both store uploads were
 built from that commit. It carries everything merged since 1.3.2, the four fixes of
@@ -106,9 +106,8 @@ built from that commit. It carries everything merged since 1.3.2, the four fixes
 the Nutstore card, the Norton Neo duplication from #41, deleted folders following their
 bookmarks (#26), restores that stay (#27) and keep their order (#29), the device list's real
 upload times (#30), and pages that no longer let machine translation break them (#36). The
-CHANGELOG has the full list. Neo installs from the Web Store, so #41's fix reaches the
-browser it is for once the Web Store clears it; #36 and #42 are closed then too, as their
-replies promise.
+CHANGELOG has the full list. Neo installs from the Web Store, so #41's fix reached the
+browser it is for with the Web Store release.
 
 **1.3.2 shipped on 2026-09-10**, tagged `v1.3.2` at `7e2ae38`, an hour and a half after
 1.3.1 and for one fix. A device that refused a peer's bookmark deletion absorbed the request
@@ -133,8 +132,8 @@ out says which half of his problem the release solves and which half it does not
   the same morning and was superseded within two hours. AMO auto-approves and signs an
   update on upload, so each goes out within minutes; the source submission a bundled add-on
   requires is reviewed afterwards rather than before.
-- Chrome Web Store: **serving 1.3.2, 1.4.0 in review since 2026-09-29.** 1.3.2 has been
-  served since 2026-09-13, after a second review. 1.3.1 was
+- Chrome Web Store: **serving 1.4.0 since 2026-09-30**, a day after it was submitted. 1.3.2
+  was served from 2026-09-13, after a second review. 1.3.1 was
   submitted on 2026-09-10 and withdrawn the same day in favour of 1.3.2, so it never reached
   the store at all: Chromium went from 1.3.0 straight to 1.3.2, carrying both releases'
   fixes.
@@ -484,7 +483,8 @@ Reopen this if Apple ever ships an API that writes to the user's visible iCloud 
 **Chrome Web Store.** 1.0.0 submitted for review on **2026-07-19**, **published
 2026-07-20** (<https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa>).
 1.2.1 cleared review after it, then 1.3.0 (confirmed 2026-08-26, nine days after it was
-submitted) and 1.3.2 (2026-09-13). **1.4.0 is in review since 2026-09-29.** Listing copy is
+submitted) and 1.3.2 (2026-09-13), and **1.4.0 is live since 2026-09-30**, a day after it was
+submitted. Listing copy is
 maintained per language in the dashboard: the name and the short description come from the
 extension's own catalogues and translate themselves, but the long description is entered by
 hand, in each of the languages Konode ships.
