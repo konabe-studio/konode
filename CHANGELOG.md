@@ -65,6 +65,17 @@ All notable changes to Konode. Format loosely follows
   resolve it", and clicking it did nothing. It now opens Konode's popup, where conflicts are
   answered. Where the browser does not let an extension open its popup, the same screen
   opens in a small window of its own, or in a tab on a phone.
+- **Manual conflict resolution asks only when your bookmarks really differ.** With
+  **Settings → Device → Conflict resolution** on **Manual**, Konode asked which bookmarks
+  to keep on the first sync between any two devices, and asked again whenever the other
+  device changed anything at all, because it compared the files rather than the bookmarks
+  in them. Each browser gives a bookmark its own ID and the date it arrived, so two devices
+  never had identical files even with identical bookmarks. It now compares the bookmarks
+  themselves: the folder each is in, its address and its title. Two devices that hold the
+  same bookmarks are not asked about, and once you answer, the question stays answered
+  until the other device's bookmarks change. Cards already waiting for devices that turn
+  out to agree go away on the next sync. The order of bookmarks within a folder is not
+  counted, since Konode does not carry it reliably between browsers.
 - **Settings gives one piece of advice, not two, when it cannot list your devices.** With
   Konode's permission to reach your storage taken away, the device list and the restore
   points said to open Storage and press Save, and then added "Check the connection in

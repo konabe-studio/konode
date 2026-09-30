@@ -400,6 +400,14 @@ export interface ConflictItem {
   local_version?: unknown;
   remote_version?: unknown;
   remote_packet?: SyncPacket;
+  /**
+   * What the peer's bookmarks held when this was queued, as a hash of `bookmarkContent`
+   * (#34). Resolving remembers it rather than the peer's checksum, which moves with every
+   * date and log entry the peer writes, so the same question stops coming back while the
+   * peer's bookmarks stay the same. Absent for history, and for a peer this device could
+   * not read.
+   */
+  content_key?: string;
   timestamp: string;
   resolved: boolean;
 }

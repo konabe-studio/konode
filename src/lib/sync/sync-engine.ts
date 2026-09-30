@@ -4,7 +4,9 @@ import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncEx
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { normalizeRepoSlug } from "@/lib/backends/github-backend";
 import { createSnapshot as writeSnapshot, listSnapshots as readSnapshots, restoreSnapshot as applySnapshot, deleteSnapshot as dropSnapshot, type SnapshotMeta } from "@/lib/sync/snapshots";
-import { exportBookmarkPayload, importBookmarks, type BulkDeleteBlock } from "@/lib/handlers/bookmarks-handler";
+import {
+  bookmarkContent, exportBookmarkPayload, importBookmarks, type BulkDeleteBlock,
+} from "@/lib/handlers/bookmarks-handler";
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
 import { exportHistory, importHistory, buildLocalHistoryIndex } from "@/lib/handlers/history-handler";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
@@ -1053,16 +1055,37 @@ export class SyncEngine {
         const already = new Set(
           currentState.pending_conflicts.map((c) => `${c.data_type}:${c.device_id}`)
         );
+        // Whether the two devices hold the same BOOKMARKS, rather than the same bytes (#34).
+        // The checksum covers this device's ids, every dateAdded and the four per-device
+        // logs, so it never matched and Manual asked about every pair of devices on first
+        // contact. See bookmarkContent. History keeps the checksum: it has no such notion.
+        const contentOf = async (payload: unknown) => sha256(bookmarkContent(payload));
+        const localContent = dataType === "bookmarks" ? await contentOf(localPayload) : null;
+        // Pending cards whose peer turns out to hold what we hold. Either answer to them
+        // would change nothing, so they go, which is also what clears the cards this bug
+        // raised before the upgrade.
+        const settled = new Set<string>();
         // A resolution (keep-local OR keep-remote) doesn't rewrite the peer's file,
         // so the peer still diverges from us next cycle. Skip a peer we've already
-        // resolved against *this exact content* (matched by checksum) so the same
-        // conflict doesn't re-queue and re-notify forever. A genuine later change on
-        // the peer yields a new checksum, so a fresh conflict still surfaces.
+        // resolved against *this exact content* so the same conflict doesn't re-queue and
+        // re-notify forever: for bookmarks the content is what the peer HOLDS (#34), since
+        // its checksum moves with every date and log entry; otherwise the checksum. A
+        // genuine later change on the peer still surfaces a fresh conflict.
         const resolved = await getResolvedConflicts();
         const fresh: ConflictItem[] = [];
         for (const peer of peers) {
           const key = `${dataType}:${peer.device_id}`;
-          if (already.has(key)) continue;
+          if (already.has(key)) {
+            // A card is already up for this peer. It stays unless the two now hold the same
+            // bookmarks, which is only worth a decrypt when there is a card to take down.
+            if (localContent && this.encryptionBarrier(peer) === null) {
+              const same = await this.openPacket(peer)
+                .then((p) => contentOf(p))
+                .then((c) => c === localContent, () => false);
+              if (same) settled.add(key);
+            }
+            continue;
+          }
           if (resolved[key] === peer.checksum) continue;
           // Don't queue a conflict for a peer we couldn't consume even if the user picked
           // it. `manual` never reaches applyRemote, so this was the one path where an
@@ -1073,20 +1096,46 @@ export class SyncEngine {
             this.encryptionWarnings.set(peer.device_id, barrier);
             continue;
           }
+          let peerContent: string | undefined;
+          if (localContent) {
+            try {
+              peerContent = await contentOf(await this.openPacket(peer));
+            } catch {
+              // Unreadable here (a legacy peer without a verifier on another passphrase, a
+              // corrupt file): the checksum decides, as it always did, and choosing that
+              // peer's version reports the reason.
+            }
+            if (peerContent === localContent) continue;
+            if (peerContent && resolved[key] === peerContent) continue;
+          }
           const { conflict } = this.resolver.resolve(localPacket, peer);
           if (conflict) {
+            if (peerContent) conflict.content_key = peerContent;
             fresh.push(conflict);
             // Park the raw peer packet OUTSIDE konode_state — "use remote" needs it to
             // decrypt and verify, but it must not ride along on every status broadcast.
             await putConflictPacket(conflict.id, peer);
           }
         }
-        if (fresh.length) {
+        const pending = [
+          ...currentState.pending_conflicts.filter((c) => !settled.has(`${c.data_type}:${c.device_id}`)),
+          ...fresh,
+        ];
+        if (settled.size) {
+          // Every card still up keeps its packet, the ones just queued included.
+          await pruneConflictPackets(pending.map((c) => c.id));
+          logger.event(
+            "SyncEngine",
+            `Dropped ${settled.size} pending ${dataType} conflict(s): those devices now hold the same bookmarks as this one`
+          );
+        }
+        if (fresh.length || settled.size) {
+          // The status at the end of the sync is sync()'s to set, from what is left pending.
           await setState({
-            status: "conflict",
-            pending_conflicts: [...currentState.pending_conflicts, ...fresh],
+            ...(fresh.length ? { status: "conflict" as const } : {}),
+            pending_conflicts: pending,
           });
-          if (this.settings.notifications_enabled) notifyConflict(dataType);
+          if (fresh.length && this.settings.notifications_enabled) notifyConflict(dataType);
         }
         // Publish our own file anyway. `manual` gates what we IMPORT — it was never
         // meant to stop us EXPORTING: every device writes its own
@@ -1399,6 +1448,24 @@ export class SyncEngine {
     packet: SyncPacket,
     isLocalEmpty = false
   ): Promise<void> {
+    const payload = await this.openPacket(packet);
+    await this.applyPayload(dataType, payload, {
+      device_id: packet.device_id,
+      timestamp: packet.timestamp,
+      // Outside the encrypted payload, so it reads even with E2EE on. It is what the
+      // recovery notice shows instead of a truncated id when the guard blocks.
+      device_label: packet.device_label ?? null,
+    }, isLocalEmpty);
+  }
+
+  /**
+   * A peer's packet, decrypted and verified, as the payload it carries.
+   *
+   * Everything applyRemote checks before importing, so the manual gate can read a peer
+   * under exactly the same rules (#34): it has to see what a peer holds to know whether the
+   * two devices disagree at all.
+   */
+  private async openPacket(packet: SyncPacket): Promise<unknown> {
     const localE2ee = this.e2eeActive;
     // Refuse to import a plaintext peer while E2EE is active here. The auto-merge
     // path already skips plaintext peers before calling applyRemote (they're stale/
@@ -1452,14 +1519,7 @@ export class SyncEngine {
     if (packet.checksum?.length !== 64 || actual !== packet.checksum) {
       throw new Error("Sync packet checksum invalid or missing. Refusing to import unverified data.");
     }
-    const payload = JSON.parse(raw);
-    await this.applyPayload(dataType, payload, {
-      device_id: packet.device_id,
-      timestamp: packet.timestamp,
-      // Outside the encrypted payload, so it reads even with E2EE on. It is what the
-      // recovery notice shows instead of a truncated id when the guard blocks.
-      device_label: packet.device_label ?? null,
-    }, isLocalEmpty);
+    return JSON.parse(raw);
   }
 
   /** Applies an already-decrypted, already-parsed payload for a data type. */
@@ -1620,11 +1680,11 @@ export class SyncEngine {
     // Remember the peer content we just resolved against so the same conflict
     // doesn't re-queue every cycle (the resolution doesn't rewrite the peer's file,
     // so it keeps diverging from ours). Keyed by data_type:device_id → peer checksum.
-    if (remotePacket?.checksum) {
-      await setResolvedConflict(
-        `${conflict.data_type}:${conflict.device_id}`,
-        remotePacket.checksum
-      );
+    // What the peer's bookmarks held, when the card knows (#34): the checksum moves with every
+    // date and log entry the peer writes, and the same question came back each time it did.
+    const memo = conflict.content_key ?? remotePacket?.checksum;
+    if (memo) {
+      await setResolvedConflict(`${conflict.data_type}:${conflict.device_id}`, memo);
     }
 
     const remaining = state.pending_conflicts.filter((c) => c.id !== id);

@@ -14,7 +14,9 @@ import {
   getAppeared, updateAppeared, getKeptShells, updateKeptShells,
   getCreated, updateCreated, getPeerRemovals, updatePeerRemovals,
 } from "@/lib/utils/storage";
-import { defaultOtherRootId, matchLocalRoot, matchLocalRootEx, rootKind } from "@/lib/utils/bookmark-roots";
+import {
+  defaultOtherRootId, matchLocalRoot, matchLocalRootEx, rootKind, rootKindFromTitle,
+} from "@/lib/utils/bookmark-roots";
 import { canonicalUrlKey } from "@/lib/utils/url";
 import { browser } from "@/lib/utils/ext";
 import { assertDataTypeApi, eventPresent } from "@/lib/utils/capabilities";
@@ -693,6 +695,50 @@ export function normalizePayload(payload: unknown): BookmarkPayload {
     folderMoves: p.folderMoves ?? [], titles: p.titles ?? [], folderRenames: p.folderRenames ?? [],
     folderDeletes: p.folderDeletes ?? [],
   };
+}
+
+/**
+ * What a bookmark payload HOLDS, as a string two devices agree on when their bookmarks do
+ * (#34): one line per bookmark, its folder path, canonical URL and title, sorted.
+ *
+ * Manual conflict resolution compared the transport checksum, and for bookmarks that covers
+ * much more than the bookmarks: this device's ids, every `dateAdded` (a bookmark that arrives
+ * from a peer is stamped with the moment it arrived, since `bookmarks.create` takes no date),
+ * and the deletion, move and rename logs, which are per device by definition. So two
+ * devices never matched, even with the same tree on screen, and Manual asked about every
+ * pair on first contact, and again whenever a peer's payload moved for any reason at all.
+ *
+ * Left out on purpose, besides those: sibling ORDER, which the merge does not converge
+ * across browsers (TODO, "content converges, order does not"), so counting it would ask
+ * forever about something neither answer fixes; and duplicates, for the same reason, since
+ * the merge keys presence by URL. Roots are matched by KIND, as matchLocalRootEx matches
+ * them, so a Chrome "Bookmarks bar" and a Firefox toolbar under any localized title are one
+ * place, and Firefox's Bookmarks Menu, which merges into Other bookmarks on a browser that
+ * has no menu, counts as Other bookmarks here too.
+ *
+ * Compare what devices PUBLISH (exportBookmarkPayload), not the raw local tree: a browser
+ * that keeps a bookmark under another URL (#41) publishes it in the peer's form.
+ *
+ * It is not a replacement for the transport checksum, which `uploadIfChanged` and the E2EE
+ * dedup need over the exact bytes. It answers a different question.
+ */
+export function bookmarkContent(payload: unknown): string {
+  const { tree } = normalizePayload(payload);
+  // tree[0] is the virtual root and its children the real roots; a bare list of roots too.
+  const roots = tree[0]?.children ?? tree;
+  const lines = new Set<string>();
+  roots.forEach((root, i) => {
+    const kind = rootKindFromTitle(root.title) ?? rootKind(root.id);
+    const top = kind === "menu" ? "other" : kind ?? `root:${root.title?.trim().toLowerCase() || i}`;
+    const walk = (nodes: SyncBookmark[] | undefined, path: string[]): void => {
+      for (const n of nodes ?? []) {
+        if (n.url) lines.add([...path, canonicalUrlKey(n.url), n.title ?? ""].join("\u0000"));
+        else walk(n.children, [...path, n.title ?? ""]);
+      }
+    };
+    walk(root.children, [top]);
+  });
+  return [...lines].sort().join("\n");
 }
 
 // ─── Write (import from remote) ──────────────────────────────────────────

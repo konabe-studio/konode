@@ -7,8 +7,10 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_STATE,
   getBulkDeleteApproval,
+  getState,
   getTombstones,
   KEYS,
+  setState,
   setBulkDeleteApproval,
   setLastUploadChecksum,
 } from "@/lib/utils/storage";
@@ -968,6 +970,87 @@ describe("N. leaving Manual", () => {
     await at(B, async () => {
       expect(await urlsHere()).toContain("https://only-on-a.example/");
       expect(await urlsHere()).toHaveLength(6);
+    });
+  });
+});
+
+// ─── AO. Manual asks only when the bookmarks disagree (#34) ──────────────────
+
+describe("AO. Manual asks only when the bookmarks disagree (#34)", () => {
+  /** Switch `d` to Manual, the way Settings does. */
+  async function manual(d: Device): Promise<void> {
+    await at(d, async () => {
+      d.settings = { ...d.settings, conflict_strategy: "manual" };
+      await d.engine.updateSettings(d.settings);
+    });
+  }
+  const cards = (d: Device) => at(d, async () => (await getState()).pending_conflicts);
+
+  it("does not ask about a device that holds the same bookmarks", async () => {
+    // Converged with LWW, so the trees agree; the payloads never did, in the ids, every
+    // dateAdded and each device's own logs, and Manual used to ask on first contact.
+    const [A, B] = await seedGroup(5);
+    await manual(B);
+
+    await cycle(A, B, A, B);
+
+    expect(await cards(B)).toEqual([]);
+  });
+
+  it("still asks when they really disagree, and remembers what the peer held", async () => {
+    const [A, B] = await seedGroup(5);
+    await manual(B);
+    await at(A, async () => { await add("Only on A", "https://only-on-a.example/"); });
+
+    await cycle(A, B);
+
+    const [card] = await cards(B);
+    expect(card).toMatchObject({ data_type: "bookmarks", device_id: A.id });
+    expect(card.content_key).toMatch(/^[0-9a-f]{64}$/);
+    await at(B, async () => { expect(await urlsHere()).toHaveLength(5); });
+  });
+
+  it("keeps an answered question answered while the peer's bookmarks stay the same", async () => {
+    // The memo was the peer's checksum, which moves with every date and log entry it
+    // writes: here A only reorders, which Manual cannot act on and the merge does not
+    // converge, and the same card came back.
+    const [A, B] = await seedGroup(5);
+    await manual(B);
+    await at(A, async () => { await add("Only on A", "https://only-on-a.example/"); });
+    await cycle(A, B);
+    const [card] = await cards(B);
+    await at(B, async () => { await B.engine.resolveConflict(card.id, "local"); });
+    expect(await cards(B)).toEqual([]);
+
+    await at(A, async () => {
+      const n = await nodeFor(site(3));
+      const oldIndex = n.index ?? 0;
+      const moved = await chrome.bookmarks.move(n.id, { parentId: "1", index: 0 });
+      fire.moved?.(n.id, { parentId: "1", index: moved.index ?? 0, oldParentId: "1", oldIndex });
+      await settle();
+    });
+    await cycle(A, B);
+
+    expect(await cards(B)).toEqual([]);
+  });
+
+  it("takes down a card raised before the fix once the two devices agree", async () => {
+    const [A, B] = await seedGroup(5);
+    await manual(B);
+    // The card #34 put up on first contact, from a build that compared checksums.
+    await at(B, async () => {
+      await setState({
+        status: "conflict",
+        pending_conflicts: [{ id: "old-card", data_type: "bookmarks", device_id: A.id, timestamp: "2026-09-13T08:00:00.000Z", resolved: false }],
+      });
+    });
+
+    await cycle(A, B);
+
+    expect(await cards(B)).toEqual([]);
+    await at(B, async () => {
+      const log = JSON.stringify((await chrome.storage.local.get(KEYS.AUDIT_LOG))[KEYS.AUDIT_LOG]);
+      expect(log).toContain("now hold the same bookmarks as this one");
     });
   });
 });

@@ -234,6 +234,11 @@ keeps the two from being confused.
     `uploadIfChanged` and the E2EE dedup both need over the exact bytes. Until then the
     setting asks whether two files are byte-identical while the screen says it is asking
     whether two devices disagree.
+    **Fixed for the next release** with `bookmarkContent`: folder path by root kind,
+    canonical URL and title, with order and duplicates left out too, since the merge
+    converges neither. The transport checksum is untouched. History still compares the
+    checksum under Manual, and whether Manual should gate history at all is the open
+    question it leaves.
   - [#35 A conflict card asks which version to keep without showing what differs](https://github.com/konabe-studio/konode/issues/35),
     from #33. Both buttons are whole-tree operations and neither says what it would change,
     which leaves the user guessing. The data is already at hand where the question is asked,
