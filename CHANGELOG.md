@@ -37,7 +37,9 @@ All notable changes to Konode. Format loosely follows
   the entries that explained what had gone wrong. A warning that keeps coming back is now one
   entry that says how many times it happened (×120) and when it last did, under the time it
   began. Anything else happening in between, such as a merge or a restore, starts a new entry,
-  so the log still reads in the order things happened.
+  so the log still reads in the order things happened. A device whose setup is not finished
+  yet also no longer starts its log with a warning that it has no storage, written every
+  minute until setup was done.
 - **Deleting many bookmarks at once is one line in the Activity log.** The browser reports
   every deleted bookmark separately, and Konode wrote a line for each, so selecting 25
   bookmarks and pressing Delete left 25 identical lines, and a large cleanup pushed everything

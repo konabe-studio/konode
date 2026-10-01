@@ -383,7 +383,10 @@ export class SyncEngine {
     this.isSyncing = true;
 
     if (!this.settings.active_backend) {
-      logger.warn("SyncEngine", "No active backend configured");
+      // Console only. This is every device before setup finishes, with the alarm already
+      // running, so as a warning it opened a new device's Activity log, once a minute for
+      // as long as setup stayed open, which can now be a day.
+      logger.info("SyncEngine", "No active backend configured");
       this.isSyncing = false;
       return "no-backend";
     }

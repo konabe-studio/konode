@@ -1108,6 +1108,20 @@ describe("SyncEngine.sync — reports whether it actually ran", () => {
     expect(await makeEngine().sync()).toBe("no-backend");
   });
 
+  it("keeps a device that is still being set up out of the Activity log", async () => {
+    // The sync alarm runs from install, so every minute of an unfinished setup wrote
+    // "No active backend configured" as a warning, and it was the first thing a new
+    // device's log showed. Nothing is wrong yet; the console still says it.
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    await makeEngine().sync();
+    await makeEngine().sync();
+    await new Promise((r) => setTimeout(r, 0)); // logger fires appendAudit unawaited
+
+    const entries = ((await chrome.storage.local.get(KEYS.AUDIT_LOG))[KEYS.AUDIT_LOG] ?? []) as
+      { detail?: string }[];
+    expect(entries.filter((e) => e.detail?.includes("No active backend"))).toHaveLength(0);
+  });
+
   it("reports no-backend when active_backend has no matching config", async () => {
     const engine = new SyncEngine(
       { ...DEFAULT_SETTINGS, device_id: "me", active_backend: "github", backends: [] },
