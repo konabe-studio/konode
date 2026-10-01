@@ -163,6 +163,15 @@ are built by hand with Konode's own OAuth client compiled in and live in
 keeps the two from being confused.
 
 ## Next
+- **[#11](https://github.com/konabe-studio/konode/issues/11) first: tab groups, then the rest
+  of the list.** Moved ahead of backend expansion on 2026-10-01, after a Helium user with
+  dozens of grouped tabs asked whether the browser blocks it. It does not: live groups are
+  readable and creatable, only *saved* groups are out of reach. The plan the issue now
+  promises: each tab in the session packet gets an optional group (name, colour), and
+  Restore puts the tabs back into groups. To check first: whether the `tabGroups`
+  permission adds an install warning (optional permission if it does), Firefox's extension
+  support for groups, and an ungrouped restore wherever groups do not exist. Then the rest of
+  #11 gets its look, the reading list first.
 - **Backend expansion**, cheapest sign-in first. See *Platform priority* item 3 below.
 - **History sync performance**: the full-history dedup scan. It is now built once per
   SYNC rather than once per peer (1.3.1), which was the larger half of the cost with more
