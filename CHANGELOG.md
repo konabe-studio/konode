@@ -82,6 +82,10 @@ All notable changes to Konode. Format loosely follows
   Storage and reopen this tab" as well. That second line now appears only when the error
   gives no advice of its own. In Simplified Chinese the restore-point message also said you
   had no devices, and the device list left "Storage" untranslated. Both are corrected.
+- **An encryption warning appears once, not once per device.** A device without end-to-end
+  encryption, joining a folder where several devices use it, finished setup with "Some of
+  your devices are end-to-end encrypted..." printed once for each of them, the same sentence
+  two or three times in a row. The popup and the setup screen now show each message once.
 
 ## [1.4.0] - 2026-09-29
 

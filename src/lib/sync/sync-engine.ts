@@ -474,7 +474,9 @@ export class SyncEngine {
       // Encryption disagreements and per-type failures share one surface: both mean
       // "the sync ran and published what it could, but something needs the user's
       // attention". Neither aborts the cycle.
-      const problems = [...this.encryptionWarnings.values(), ...typeErrors];
+      // Each distinct message once. The encryption ones are kept per peer but name no
+      // device, so a folder with two encrypted peers printed the same sentence twice.
+      const problems = [...new Set([...this.encryptionWarnings.values(), ...typeErrors])];
       const prevState = await getState();
       // Drop a queued conflict for a type that cannot have one. Before CONFLICTABLE_TYPES
       // narrowed the gate, sessions and extensions went through it like bookmarks, so a
