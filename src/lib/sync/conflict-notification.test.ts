@@ -24,8 +24,34 @@ afterEach(() => {
   delete c.action.openPopup;
   delete c.notifications.clear;
   delete c.runtime.getURL;
+  delete c.windows.getLastFocused;
+  delete c.windows.update;
   c.windows.create = windowsCreate;
 });
+
+/**
+ * A browser window as Chrome keeps it, and an openPopup that behaves as Chrome's does: it
+ * refuses a window that is not active. `focused` starts false, as it is when the click
+ * landed on the system's toast.
+ */
+function chromeWindow(id = 7): { calls: string[] } {
+  const calls: string[] = [];
+  const win = { id, focused: false };
+  c.windows.getLastFocused = vi.fn(() => Promise.resolve({ ...win }));
+  c.windows.update = vi.fn((wid: number, props: { focused?: boolean }) => {
+    calls.push(`update ${wid}`);
+    if (wid === win.id && props.focused) win.focused = true;
+    return Promise.resolve({ ...win });
+  });
+  c.action.openPopup = vi.fn((opts?: { windowId?: number }) => {
+    calls.push(`openPopup ${opts?.windowId}`);
+    const target = opts?.windowId ?? win.id;
+    return target === win.id && win.focused
+      ? Promise.resolve()
+      : Promise.reject(new Error("Cannot show popup for an inactive window."));
+  });
+  return { calls };
+}
 
 describe("clicking the conflict notification", () => {
   it("opens the popup where the browser lets an extension do that", async () => {
@@ -66,6 +92,31 @@ describe("clicking the conflict notification", () => {
     await openConflictFromNotification("conflict-1790000000000");
 
     expect(await opened()).toEqual(["chrome-extension://test-extension-id/popup.html"]);
+  });
+
+  it("brings the browser window to the front first, since Chrome opens no popup in an inactive one", async () => {
+    // QA step AL, Chrome on Windows: the toast is the system's own, so clicking it takes the
+    // focus, and every click opened the small window even with the browser in front.
+    stub();
+    const { calls } = chromeWindow(7);
+
+    expect(await openConflictFromNotification("conflict-1790000000000")).toBe(true);
+
+    expect(calls).toEqual(["update 7", "openPopup 7"]);
+    expect(windows()).toEqual([]);
+    expect(await opened()).toEqual([]);
+  });
+
+  it("still opens the small window when no browser window can be found to focus", async () => {
+    // Every window closed, the browser still running in the background.
+    stub();
+    chromeWindow();
+    c.windows.getLastFocused = vi.fn(() => Promise.reject(new Error("No last-focused window")));
+
+    expect(await openConflictFromNotification("conflict-1790000000000")).toBe(true);
+
+    expect(c.windows.update).not.toHaveBeenCalled();
+    expect(windows().map((w) => w.urls)).toEqual([["chrome-extension://test-extension-id/popup.html"]]);
   });
 
   it("leaves a notification that is not a conflict alone", async () => {

@@ -160,8 +160,9 @@ export function notifyConflict(dataType: DataType): void {
  * The toast says "Open Konode to resolve it", and clicking it did nothing: nothing listened
  * for the click (QA step H, 2026-08-28, Brave on Windows, where the toast also sat over the
  * toolbar button it was pointing at, so the one gesture it asked for had nowhere to go).
- * Conflicts are answered in the popup, so the click opens the popup where the browser lets
- * an extension do that (`action.openPopup`, every Chromium from 127). Otherwise it opens the
+ * Conflicts are answered in the popup, so the click brings the browser to the front and opens
+ * the popup there, where the browser lets an extension do that (`action.openPopup`, every
+ * Chromium from 127; see focusBrowserWindow for why the focus comes first). Otherwise it opens the
  * same page in a window the popup's size, which answers them just as well (in a full tab it
  * sat in the top left corner of an empty page), and in a tab where there are no windows to
  * open, as on Firefox for Android. Firefox only opens a popup from a user action it
@@ -170,10 +171,13 @@ export function notifyConflict(dataType: DataType): void {
 export async function openConflictFromNotification(id: string): Promise<boolean> {
   if (!id.startsWith(CONFLICT_NOTIFICATION_PREFIX)) return false;
   await Promise.resolve(browser.notifications.clear?.(id)).catch(() => {});
-  const action = (browser as unknown as { action?: { openPopup?: () => Promise<void> } }).action;
+  const action = (browser as unknown as {
+    action?: { openPopup?: (options?: { windowId?: number }) => Promise<void> };
+  }).action;
   if (typeof action?.openPopup === "function") {
     try {
-      await action.openPopup();
+      const windowId = await focusBrowserWindow();
+      await action.openPopup(windowId === undefined ? undefined : { windowId });
       return true;
     } catch (e) {
       // No focused window to open it in, or not without a gesture. The tab still works.
@@ -192,4 +196,28 @@ export async function openConflictFromNotification(id: string): Promise<boolean>
   }
   await browser.tabs.create({ url });
   return true;
+}
+
+/**
+ * Bring the browser window last in front back to the front, and say which one it is.
+ *
+ * Chrome, and Firefox from 149, refuse to open a popup in a window that is not active, and
+ * the click on the toast is what took the focus away: on Windows the toast is the system's
+ * own, so when `onClicked` runs no browser window is active, however much it was in front a
+ * moment before. Every click took the small-window path there (QA step AL, Chrome on
+ * Windows). The browsers' own advice is to focus the window first, which is also what
+ * clicking a notification is expected to do. Undefined where there are no windows to focus
+ * (Firefox for Android) or none is open, and openPopup then picks its own default.
+ */
+async function focusBrowserWindow(): Promise<number | undefined> {
+  const windows = browser.windows as Partial<typeof browser.windows> | undefined;
+  if (typeof windows?.getLastFocused !== "function" || typeof windows.update !== "function") return undefined;
+  try {
+    const win = await windows.getLastFocused({ windowTypes: ["normal"] });
+    if (win.id === undefined) return undefined;
+    await windows.update(win.id, { focused: true });
+    return win.id;
+  } catch {
+    return undefined;
+  }
 }

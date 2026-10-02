@@ -64,9 +64,10 @@ All notable changes to Konode. Format loosely follows
   so that step asks again. What setup kept is removed as soon as setup completes, and after
   a day if you never finish.
 - **Clicking the conflict notification opens Konode.** The notification says "Open Konode to
-  resolve it", and clicking it did nothing. It now opens Konode's popup, where conflicts are
-  answered. Where the browser does not let an extension open its popup, the same screen
-  opens in a small window of its own, or in a tab on a phone.
+  resolve it", and clicking it did nothing. It now brings your browser window to the front
+  and opens Konode's popup there, where conflicts are answered. Where the browser does not
+  let an extension open its popup, the same screen opens in a small window of its own, or in
+  a tab on a phone.
 - **Manual conflict resolution asks only when your bookmarks really differ.** With
   **Settings → Device → Conflict resolution** on **Manual**, Konode asked which bookmarks
   to keep on the first sync between any two devices, and asked again whenever the other
