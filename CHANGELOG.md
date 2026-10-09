@@ -95,6 +95,10 @@ All notable changes to Konode. Format loosely follows
   away for a while, and points you to **Sync interval** in **Settings → Device**, the one
   setting that keeps you under the limit. The same goes for **Test connection**, and when
   every data type hits the limit at once, it is said once rather than once per type.
+- **A large session asks before it opens.** Restoring another device's session with more
+  than 20 tabs used to open them all on the first click. The button now changes to "Open
+  142 tabs", and only a second click opens them; Cancel leaves it. Smaller sessions still
+  restore in one click.
 
 ## [1.4.0] - 2026-09-29
 

@@ -140,6 +140,24 @@
   "popup_restore": {
     "message": "還原"
   },
+  "popup_restore_confirm_one": {
+    "message": "開啟 $COUNT$ 個分頁",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_restore_confirm_other": {
+    "message": "開啟 $COUNT$ 個分頁",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "142"
+      }
+    }
+  },
   "popup_backend_label": {
     "message": "後端"
   },

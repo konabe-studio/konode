@@ -177,6 +177,26 @@
     "message": "Restore",
     "description": "Opens the tabs of a peer device's session. Adds tabs; removes nothing."
   },
+  "popup_restore_confirm_one": {
+    "message": "Open $COUNT$ tab",
+    "description": "The Restore button after a first press, on a session large enough to ask first: the second press opens this many tabs. Exactly one; never shown in practice, since only large sessions ask.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_restore_confirm_other": {
+    "message": "Open $COUNT$ tabs",
+    "description": "The Restore button after a first press, on a session large enough to ask first: the second press opens this many tabs. Keep it short, it is a button. In languages that use the singular after a numeral, this is the same wording as the _one form.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "142"
+      }
+    }
+  },
   "popup_backend_label": {
     "message": "Backend",
     "description": "Footer label before the storage provider's name."

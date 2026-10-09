@@ -38,6 +38,15 @@ const STATUS_CONFIG = {
 
 const SYNC_ORDER: DataType[] = ["bookmarks", "history", "sessions", "extensions"];
 
+/**
+ * A session larger than this asks before it opens.
+ *
+ * The count sits beside the button, and still a reviewer pressed Restore on a 142-tab
+ * session and closed them one by one (appinn, 2026-09-10). One click should not be able to
+ * bury a window. Below this a restore is still a single click, which is what it is for.
+ */
+const RESTORE_CONFIRM_TABS = 20;
+
 // ─── App ──────────────────────────────────────────────────────────────────
 
 export default function PopupApp() {
@@ -55,6 +64,8 @@ export default function PopupApp() {
   // Which conflict button is in flight, as `${id}:${resolution}`: the resolution is part
   // of the key so the spinner lands on the button that was actually pressed.
   const [resolving, setResolving] = useState<string | null>(null);
+  // The session whose Restore was pressed and now waits for "Open N tabs".
+  const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
 
   // Track animation state separately from sync state
   const animTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -272,7 +283,12 @@ export default function PopupApp() {
     }
   };
 
-  const restoreSession = async (id: string) => {
+  const restoreSession = async (id: string, tabs: number) => {
+    if (tabs > RESTORE_CONFIRM_TABS && confirmRestore !== id) {
+      setConfirmRestore(id);
+      return;
+    }
+    setConfirmRestore(null);
     setActionError(null);
     const r = await request({ type: "RESTORE_SESSION", payload: { id } });
     if (!r.ok) setActionError(r.error);
@@ -589,11 +605,22 @@ export default function PopupApp() {
                       })}`}
                   </span>
                 </div>
+                {confirmRestore === entry.session.id && (
+                  <button
+                    onClick={() => setConfirmRestore(null)}
+                    className="shrink-0 px-1.5 py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text"
+                  >
+                    {t("opt_cancel")}
+                  </button>
+                )}
                 <button
-                  onClick={() => restoreSession(entry.session.id)}
+                  onClick={() => restoreSession(entry.session.id, entry.session.tabs.length)}
                   className="flex shrink-0 items-center gap-1.5 rounded-box border border-sk-hairline bg-sk-raised px-2.5 py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text"
                 >
-                  <RotateCcw size={12} /> {t("popup_restore")}
+                  <RotateCcw size={12} />{" "}
+                  {confirmRestore === entry.session.id
+                    ? plural("popup_restore_confirm", entry.session.tabs.length)
+                    : t("popup_restore")}
                 </button>
               </div>
             ))}
