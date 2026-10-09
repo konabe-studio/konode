@@ -35,26 +35,33 @@ describe("Drive auth availability gate", () => {
     await expect(interactiveSignIn()).rejects.toThrow(/isn't available in this browser/i);
   });
 
-  it("still reports a real user cancel as a cancel", async () => {
-    chromeStub.chrome.identity = {
-      getRedirectURL: () => "https://ext.example/gdrive",
-      launchWebAuthFlow: () => Promise.reject(new Error("The user cancelled the sign-in flow.")),
-    };
-    await expect(interactiveSignIn()).rejects.toThrow(/cancel/i);
-  });
+  // Both engines reject with cancel-shaped words whenever the window closes before a
+  // redirect they recognise: a user declining, a redirect_uri_mismatch on Google's error
+  // page, and a browser that navigates to the redirect instead of catching it all end
+  // there. So it is reported as what it is, never as a cancel, which people who had
+  // approved were told (#40).
+  for (const [engine, words] of [
+    ["Chromium", "The user did not approve access."],
+    ["Firefox", "User cancelled or denied access."],
+  ]) {
+    it(`reports a closed window on ${engine} as closed, not as a cancel`, async () => {
+      chromeStub.chrome.identity = {
+        getRedirectURL: () => "https://ext.example/gdrive",
+        launchWebAuthFlow: () => Promise.reject(new Error(words)),
+      };
+      const err = await interactiveSignIn().catch((e: Error) => e);
+      expect(err).toBeInstanceOf(Error);
+      expect((err as Error).message).toMatch(/window closed before the sign-in came back/i);
+      expect((err as Error).message).not.toMatch(/cancel|isn't available in this browser/i);
+    });
+  }
 
-  // A redirect_uri_mismatch is invisible from here: Google shows its own error page in
-  // the auth window and never redirects back, so the user closes it. Every non-"cancel"
-  // failure used to be reported as "isn't available in this browser", which blames the
-  // engine for what is an OAuth-client configuration problem — and misleads whoever is
-  // trying to get that redirect registered.
-  it("treats 'did not approve' (a closed window) as a cancel, not an unsupported browser", async () => {
+  it("says the same when the browser resolves with nothing", async () => {
     chromeStub.chrome.identity = {
       getRedirectURL: () => "https://ext.example/gdrive",
-      launchWebAuthFlow: () => Promise.reject(new Error("The user did not approve access.")),
+      launchWebAuthFlow: () => Promise.resolve(undefined),
     };
-    await expect(interactiveSignIn()).rejects.toThrow(/cancel/i);
-    await expect(interactiveSignIn()).rejects.not.toThrow(/isn't available in this browser/i);
+    await expect(interactiveSignIn()).rejects.toThrow(/window closed before the sign-in came back/i);
   });
 
   it("does not blame the browser for a generic flow failure", async () => {
@@ -64,6 +71,56 @@ describe("Drive auth availability gate", () => {
     };
     await expect(interactiveSignIn()).rejects.toThrow(/didn't complete/i);
     await expect(interactiveSignIn()).rejects.not.toThrow(/isn't available in this browser/i);
+  });
+
+  // The redirect has been registered since 2026-09-08. Naming it as the likely cause kept
+  // #24 going for a week after it had stopped being one.
+  it("names no cause it cannot check, and always the backends that need no Google", async () => {
+    const endings: Array<() => Promise<string | undefined>> = [
+      () => Promise.reject(new Error("The user did not approve access.")),
+      () => Promise.reject(new Error("Authorization page could not be loaded.")),
+      () => Promise.reject(new Error("undefined is not an object (evaluating 'parameters.length')")),
+      () => Promise.resolve(undefined),
+      () => Promise.resolve("https://ext.example/gdrive?error=access_denied"),
+      () => Promise.resolve("https://ext.example/gdrive?error=invalid_request"),
+    ];
+    for (const flow of endings) {
+      chromeStub.chrome.identity = { getRedirectURL: () => "https://ext.example/gdrive", launchWebAuthFlow: flow };
+      const { message } = (await interactiveSignIn().catch((e: Error) => e)) as Error;
+      expect(message).not.toMatch(/regist/i);
+      expect(message).toMatch(/GitHub or WebDAV/);
+      expect(message).not.toContain("\u2014"); // shipped copy carries no em dash
+    }
+  });
+
+  it("says the user cancelled only when Google says so", async () => {
+    chromeStub.chrome.identity = {
+      getRedirectURL: () => "https://ext.example/gdrive",
+      launchWebAuthFlow: () => Promise.resolve("https://ext.example/gdrive?error=access_denied"),
+    };
+    await expect(interactiveSignIn()).rejects.toThrow(/cancelled on Google's consent screen/i);
+  });
+
+  // Asking a reporter to check Settings → Activity is only useful if the line there says
+  // which way it ended. Two of the exits logged, with the same words, and three did not.
+  it("logs every way a sign-in ends, each under its own name, with the redirect", async () => {
+    const redirect = "https://abc-123.extensions.allizom.org/gdrive";
+    const endings: Array<[string, () => Promise<string | undefined>]> = [
+      ["window closed", () => Promise.reject(new Error("User cancelled or denied access."))],
+      ["flow failed", () => Promise.reject(new Error("Authorization page could not be loaded."))],
+      ["browser refused", () => Promise.reject(new TypeError("undefined is not an object"))],
+      ["no redirect", () => Promise.resolve(undefined)],
+      ["Google answered", () => Promise.resolve(`${redirect}?error=invalid_request`)],
+    ];
+    for (const [branch, flow] of endings) {
+      await chrome.storage.local.remove(KEYS.AUDIT_LOG);
+      chromeStub.chrome.identity = { getRedirectURL: () => redirect, launchWebAuthFlow: flow };
+      await expect(interactiveSignIn()).rejects.toThrow();
+
+      await new Promise((r) => setTimeout(r, 0)); // logger.* fires appendAudit unawaited
+      const log = ((await chrome.storage.local.get(KEYS.AUDIT_LOG))[KEYS.AUDIT_LOG] ?? []) as { detail?: string }[];
+      expect(log.map((e) => e.detail)).toEqual([expect.stringContaining(`Sign-in ended (${branch}) for redirect ${redirect}`)]);
+    }
   });
 
   it("mentions the redirect URL in the log so it can be registered", async () => {
@@ -125,7 +182,7 @@ describe("a Drive sign-in that does not complete leaves the existing session alo
     await seed();
     identity(() => Promise.reject(new Error("The user did not approve access.")));
 
-    await expect(interactiveSignIn()).rejects.toThrow(/cancel/i);
+    await expect(interactiveSignIn()).rejects.toThrow(/window closed/i);
     expect(await stored()).toEqual(SESSION);
   });
 
@@ -141,7 +198,11 @@ describe("a Drive sign-in that does not complete leaves the existing session alo
     await seed();
     identity(() => Promise.resolve("https://ext.example/gdrive?error=access_denied"));
 
-    await expect(interactiveSignIn()).rejects.toThrow(/access_denied/);
+    await expect(interactiveSignIn()).rejects.toThrow(/cancelled on Google's consent screen/i);
+    expect(await stored()).toEqual(SESSION);
+
+    identity(() => Promise.resolve("https://ext.example/gdrive?error=invalid_request"));
+    await expect(interactiveSignIn()).rejects.toThrow(/invalid_request/);
     expect(await stored()).toEqual(SESSION);
   });
 

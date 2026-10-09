@@ -1,5 +1,8 @@
-import { describe, it, expect } from "vitest";
-import { importBookmarks, exportBookmarkPayload, registerBookmarkListeners } from "@/lib/handlers/bookmarks-handler";
+import { describe, it, expect, vi } from "vitest";
+import {
+  importBookmarks, exportBookmarkPayload, registerBookmarkListeners, resetDeletionLog,
+  type BulkDeleteBlock,
+} from "@/lib/handlers/bookmarks-handler";
 import { getTombstones, setTombstones, getBulkDeleteApproval, setBulkDeleteApproval, KEYS } from "@/lib/utils/storage";
 import type { BookmarkPayload, SyncBookmark } from "@/lib/types";
 
@@ -112,6 +115,74 @@ describe("tombstones — duplicate-URL safety", () => {
     onRemoved!(b.id, { node: { id: b.id, title: "Dup", url } as chrome.bookmarks.BookmarkTreeNode });
     await new Promise((r) => setTimeout(r, 0));
     expect((await getTombstones()).map((t) => t.url)).toEqual([url]);
+  });
+});
+
+describe("tombstones: a bulk delete is one line in the Activity log", () => {
+  // The browser fires onRemoved once per node. Selecting 25 bookmarks and pressing Delete
+  // wrote 25 identical "Recorded 1 deletion(s)" events in the same second, so a 200-bookmark
+  // cleanup filled the whole log and evicted everything a bug report would need.
+  let onRemoved: ((id: string, info: { node: chrome.bookmarks.BookmarkTreeNode }) => void) | undefined;
+
+  async function recordedLines(): Promise<string[]> {
+    const entries = ((await chrome.storage.local.get(KEYS.AUDIT_LOG))[KEYS.AUDIT_LOG] ?? []) as
+      { action: string; detail?: string }[];
+    return entries.filter((e) => e.action === "Tombstones").map((e) => e.detail ?? "");
+  }
+  let made: chrome.bookmarks.BookmarkTreeNode[] = [];
+  async function make(n: number): Promise<void> {
+    made = [];
+    for (let i = 0; i < n; i++) {
+      made.push(await chrome.bookmarks.create({ parentId: "1", title: `W${i}`, url: `https://w${i}.com` }));
+    }
+  }
+  async function deleteBookmarks(from: number, to: number): Promise<void> {
+    for (const node of made.slice(from, to)) {
+      await chrome.bookmarks.remove(node.id);
+      onRemoved!(node.id, { node });
+    }
+  }
+
+  function setUp(): void {
+    // Before the fake clock, so a real timer an earlier test left running is really cleared.
+    resetDeletionLog();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (chrome.bookmarks.onRemoved as any).addListener = (cb: never) => { onRemoved = cb; };
+    registerBookmarkListeners(() => {});
+  }
+
+  it("records every deletion at once, and says so once for the whole burst", async () => {
+    setUp();
+    try {
+      await make(25);
+      await deleteBookmarks(0, 25);
+      await vi.advanceTimersByTimeAsync(0);
+
+      // The records are not held back: the sync a second from now publishes them.
+      expect(await getTombstones()).toHaveLength(25);
+      expect(await recordedLines()).toEqual([]);
+
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(await recordedLines()).toEqual(["Recorded 25 deletion(s)"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("gives a deletion after a quiet second a line of its own", async () => {
+    setUp();
+    try {
+      await make(3);
+      await deleteBookmarks(0, 2);
+      await vi.advanceTimersByTimeAsync(1500);
+      await deleteBookmarks(2, 3);
+      await vi.advanceTimersByTimeAsync(1500);
+
+      expect(await recordedLines()).toEqual(["Recorded 1 deletion(s)", "Recorded 2 deletion(s)"]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -295,6 +366,95 @@ describe("importBookmarks — mass-delete guard (configurable percent)", () => {
 
     await importBookmarks(payload([], tombstonesFor(98)), "merge", "lww", 95, 98);
     expect((await localUrls()).length).toBe(2);
+  });
+
+  // #41, the first gap: the guard judged each merge alone, so a deletion that arrived in
+  // pieces went through piece by piece. A peer's log grows as it deletes, which is why each
+  // payload below carries every tombstone so far.
+  it("holds a deletion that arrives in pieces against the total", async () => {
+    await seedMany(100);
+    await importBookmarks(payload([], tombstonesFor(30)), "merge", "lww");
+    await importBookmarks(payload([], tombstonesFor(60)), "merge", "lww");
+    // 60 of 100 is the cap exactly, so both pieces were allowed.
+    expect((await localUrls()).length).toBe(40);
+
+    // Ten more is 70 of the 100 there were. On its own it is 10 of 40, which the old guard
+    // (cap max(20, 24)) let through.
+    let info: BulkDeleteBlock | undefined;
+    await importBookmarks(payload([], tombstonesFor(70)), "merge", "lww", 60, 0, (i) => { info = i; });
+
+    expect((await localUrls()).length).toBe(40);
+    expect(info).toEqual({ blocked: 10, cap: 60, localTotal: 40, pct: 60, recent: 60 });
+  });
+
+  it("forgets what peers removed more than a day ago", async () => {
+    await seedMany(100);
+    const start = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+    try {
+      await importBookmarks(payload([], tombstonesFor(30)), "merge", "lww");
+      await importBookmarks(payload([], tombstonesFor(60)), "merge", "lww");
+      clock.mockReturnValue(start + 25 * 60 * 60 * 1000);
+      // The same ten as above, a day later: 10 of 40 again, and nothing to add it to.
+      await importBookmarks(payload([], tombstonesFor(70)), "merge", "lww");
+    } finally {
+      clock.mockRestore();
+    }
+    expect((await localUrls()).length).toBe(30);
+  });
+
+  it("starts the window over once the user approves", async () => {
+    await seedMany(100);
+    await importBookmarks(payload([], tombstonesFor(30)), "merge", "lww");
+    await importBookmarks(payload([], tombstonesFor(60)), "merge", "lww");
+    // Blocked as above, then approved for the ten the card showed.
+    await importBookmarks(payload([], tombstonesFor(70)), "merge", "lww", 60, 10);
+    expect((await localUrls()).length).toBe(30);
+
+    // The card showed the 60 before it too, and the user said yes to all of it. Counted
+    // again, five more would be 65 of 90 and blocked a second time for the same cleanup.
+    await importBookmarks(payload([], tombstonesFor(75)), "merge", "lww");
+    expect((await localUrls()).length).toBe(25);
+  });
+
+  it("no longer counts a bookmark that came back as gone", async () => {
+    await seedMany(100);
+    await importBookmarks(payload([], tombstonesFor(30)), "merge", "lww");
+    await importBookmarks(payload([], tombstonesFor(60)), "merge", "lww");
+    // The user restores the first thirty (a restore point, or the browser's own backup).
+    for (let i = 0; i < 30; i++) await seed(`S${i}`, `https://s${i}.com`);
+
+    // 25 more from another peer: 25 + the 30 still gone = 55 of 100, under 60. Counting the
+    // restored thirty as gone as well would make it 85 of 130 and block it.
+    const more = Array.from({ length: 25 }, (_, i) => ({ url: `https://s${60 + i}.com`, deletedAt: 9e15 }));
+    await importBookmarks(payload([], more), "merge", "lww");
+
+    expect((await localUrls()).length).toBe(45);
+  });
+
+  // #41, the second gap: the guard counted bookmark nodes, so a pile of duplicates (Norton
+  // Neo made thousands of one New Tab bookmark) inflated the tree it measured against.
+  it("counts a bookmark held in many copies once when sizing the tree", async () => {
+    await seedMany(40);
+    for (let i = 0; i < 200; i++) await seed("New Tab", "neo://newtab/");
+
+    // 30 of 41 bookmarks. Counted as nodes it was 30 of 240, well under 60%.
+    let info: BulkDeleteBlock | undefined;
+    await importBookmarks(payload([], tombstonesFor(30)), "merge", "lww", 60, 0, (i) => { info = i; });
+
+    expect((await localUrls()).length).toBe(240);
+    expect(info).toMatchObject({ blocked: 30, localTotal: 41, cap: 24, recent: 0 });
+  });
+
+  it("counts a bookmark held in many copies once when deleting it", async () => {
+    await seedMany(30);
+    for (let i = 0; i < 50; i++) await seed("New Tab", "neo://newtab/");
+
+    // One bookmark deleted on the peer. Counted as nodes it was 50 of 80, over the cap of
+    // 48, and the user was asked to approve deleting "50 bookmarks" that were one.
+    await importBookmarks(payload([], [{ url: "neo://newtab/", deletedAt: 9e15 }]), "merge", "lww");
+
+    expect((await localUrls()).length).toBe(30);
   });
 
   it("refuses to spend an approval on a deletion bigger than the one approved", async () => {

@@ -15,10 +15,12 @@ browser's minimum for a background check, so that's the floor, not a bug. Histor
 tabs and the extension list have no instant path at all: they travel on that same interval.
 
 **Bookmarks I deleted came back / a big cleanup didn't propagate.**
-Konode has a safety cap: a single sync won't apply peer deletions that would remove
-more than a threshold of your local bookmarks (default **60%**), to guard against a
-corrupt deletion log wiping your tree. The device receiving the deletion saves a restore
-point and shows "an unusual deletion was blocked", so nothing is lost either way.
+Konode has a safety cap: it won't apply other devices' deletions that would remove more
+than a threshold of your local bookmarks within 24 hours (default **60%**), to guard
+against a corrupt deletion log wiping your tree. A deletion that arrives in several pieces
+counts as one, so the piece that takes the day's total over the threshold is the one held
+back, and the card says how many went before it. The device receiving the deletion saves a
+restore point and shows "an unusual deletion was blocked", so nothing is lost either way.
 
 **To let the deletion through**, open **Settings → Activity** on the device showing the
 warning and use **Apply the deletion** on the card at the top. It names the device that
@@ -77,8 +79,9 @@ like a Konode bug rather than a missing redirect. If it still fails, read the
 `Request details: redirect_uri=...` line on Google's own error page: a different extension
 ID there means the browser assigned its own ID to Konode, which can't be registered ahead
 of time, and GitHub or WebDAV are the backends to use on that browser. The Activity log
-won't tell you which case it is, because a mismatch looks like a closed window from
-Konode's side and is logged as a cancelled sign-in.
+can't tell the two cases apart, because from Konode's side a mismatch is a window that
+closed: it logs `Sign-in ended (window closed)` with the redirect Konode asked for, which
+you can compare with the one on Google's page.
 
 **Google sign-in is approved, but Konode returns to the start of setup (Quetta for Android).**
 **Update Quetta first.** The browser fixed this on its side, and a reporter confirmed on
@@ -89,13 +92,13 @@ everything and the sign-in itself worked. That address is not a real website. It
 signal meaning "the sign-in is finished", and the browser is supposed to recognize it,
 close the window and hand the result to the extension. An older Quetta doesn't recognize
 it, so it tries to load the address as an ordinary page, which is why you get an error
-page. Konode never receives the result, reads the silence as a cancelled sign-in, and the
-setup wizard starts over. Nothing is wrong with your Google account or your Drive, and
-there is nothing to reinstall. Konode can't work around it from inside, because the step
+page. Konode never receives the result, so all it can say is that the sign-in window closed
+before the sign-in came back, and on older versions the setup wizard also started over.
+Nothing is wrong with your Google account or your Drive, and there is nothing to reinstall. Konode can't work around it from inside, because the step
 that fails happens in the browser before any Konode code runs, which is why updating is
 the fix. GitHub and WebDAV need no Google sign-in at all and sync the same data on any
-version. If you were partway through setup, you will need to enter your answers again,
-because the wizard doesn't yet keep them across a reload.
+version. If you were partway through setup, the wizard picks up where it was when you open
+it again within a day, apart from the encryption step, which asks again.
 
 **"Connected as ()" / Drive sync fails (building from source).**
 Your own Google Cloud project needs the **Google Drive API enabled**

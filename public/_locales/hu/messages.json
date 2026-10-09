@@ -844,13 +844,16 @@
     "message": "Elvetés"
   },
   "opt_devices_error": {
-    "message": "Nem sikerült beolvasni az eszközeidet: $ERROR$. Ez nem azt jelenti, hogy nincs egy sem. Ellenőrizd a kapcsolatot a Tárhely fülön, és nyisd meg újra ezt a fület.",
+    "message": "Nem sikerült beolvasni az eszközeidet: $ERROR$. Ez nem azt jelenti, hogy nincs egy sem.",
     "placeholders": {
       "error": {
         "content": "$1",
         "example": "404 Not Found"
       }
     }
+  },
+  "opt_error_check_connection": {
+    "message": "Ellenőrizd a kapcsolatot a Tárhely fülön, és nyisd meg újra ezt a fület."
   },
   "opt_devices_loading": {
     "message": "Szinkronizálási mappa beolvasása…"
@@ -978,6 +981,24 @@
   "opt_blocked_saved": {
     "message": "Semmi nem lett törölve, és előtte mentettünk egy visszaállítási pontot."
   },
+  "opt_blocked_recent_one": {
+    "message": "Más eszközök az elmúlt 24 órában már $COUNT$ könyvjelzőt töröltek itt, és ezzel együtt ez a törlés átlépné a beállított felső határt.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_recent_other": {
+    "message": "Más eszközök az elmúlt 24 órában már $COUNT$ könyvjelzőt töröltek itt, és ezzel együtt ez a törlés átlépné a beállított felső határt.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
   "opt_blocked_apply": {
     "message": "Törlés alkalmazása"
   },
@@ -1015,7 +1036,7 @@
     }
   },
   "opt_snap_error_desc": {
-    "message": "Ez nem azt jelenti, hogy nincs egy sem. A tárhelyeden vannak, csak most nem sikerült listázni őket. Ellenőrizd a kapcsolatot a Tárhely fülön, és nyisd meg újra ezt a fület."
+    "message": "Ez nem azt jelenti, hogy nincs egy sem. A tárhelyeden vannak, csak most nem sikerült listázni őket."
   },
   "opt_snap_empty": {
     "message": "Még nincs visszaállítási pont. Készíts egyet fent, vagy automatikusan mentődik, ha a Konode egyszer blokkol egy szokatlan törlést."
@@ -1100,6 +1121,18 @@
   },
   "opt_log_clear": {
     "message": "Napló törlése"
+  },
+  "opt_log_copy_label": {
+    "message": "Másolás hibajelentéshez"
+  },
+  "opt_log_copy_desc": {
+    "message": "Szó szerint, a legrégebbitől kezdve, a Konode verziójával és a böngésződdel együtt. Benne van a tárhelyszervered címe, és azoknak az oldalaknak a címe is, amelyeket a Konode nem tudott szinkronizálni, ezért nézd át, mielőtt bárhol nyilvánosan közzéteszed."
+  },
+  "opt_log_copy": {
+    "message": "Napló másolása"
+  },
+  "opt_log_copy_failed": {
+    "message": "A böngésző nem engedte, hogy a Konode kimásolja a naplót. Jelöld ki az alábbi bejegyzéseket, és másold ki őket kézzel."
   },
   "opt_log_nothing": {
     "message": "Még nincs naplózva semmi. Futtass egy szinkronizálást, és itt megjelenik."

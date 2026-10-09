@@ -907,6 +907,24 @@
   "opt_blocked_saved": {
     "message": "No se quitó nada, y antes se guardó un punto de restauración."
   },
+  "opt_blocked_recent_one": {
+    "message": "Otros dispositivos ya quitaron $COUNT$ marcador aquí en las últimas 24 horas, y junto con ese esta eliminación superaría tu límite de eliminación masiva.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_recent_other": {
+    "message": "Otros dispositivos ya quitaron $COUNT$ marcadores aquí en las últimas 24 horas, y junto con esos esta eliminación superaría tu límite de eliminación masiva.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
   "opt_blocked_apply": {
     "message": "Aplicar la eliminación"
   },
@@ -941,7 +959,7 @@
     }
   },
   "opt_snap_error_desc": {
-    "message": "Esto no significa que no tengas ninguno. Están guardados en tu espacio de almacenamiento y no se pudieron mostrar en este momento. Revisa la conexión en Almacenamiento y vuelve a abrir esta pestaña."
+    "message": "Esto no significa que no tengas ninguno. Están guardados en tu espacio de almacenamiento y no se pudieron mostrar en este momento."
   },
   "opt_snap_empty": {
     "message": "Aún no hay puntos de restauración. Crea uno arriba, o se guardará uno automáticamente si se bloquea una eliminación inusual."
@@ -965,13 +983,16 @@
     }
   },
   "opt_devices_error": {
-    "message": "No se pudieron leer tus dispositivos: $ERROR$. Esto no significa que no tengas ninguno. Revisa la conexión en Almacenamiento y vuelve a abrir esta pestaña.",
+    "message": "No se pudieron leer tus dispositivos: $ERROR$. Esto no significa que no tengas ninguno.",
     "placeholders": {
       "error": {
         "content": "$1",
         "example": "404 Not Found"
       }
     }
+  },
+  "opt_error_check_connection": {
+    "message": "Revisa la conexión en Almacenamiento y vuelve a abrir esta pestaña."
   },
   "opt_snap_unknown": {
     "message": "Punto de restauración de marcadores"
@@ -1035,6 +1056,18 @@
   },
   "opt_log_clear": {
     "message": "Borrar registro"
+  },
+  "opt_log_copy_label": {
+    "message": "Copiar para un informe de error"
+  },
+  "opt_log_copy_desc": {
+    "message": "Tal cual, del más antiguo al más reciente, con la versión de Konode y tu navegador. Incluye la dirección de tu servidor de almacenamiento y las de las páginas que Konode no pudo sincronizar, así que revísalo antes de publicarlo en cualquier sitio público."
+  },
+  "opt_log_copy": {
+    "message": "Copiar registro"
+  },
+  "opt_log_copy_failed": {
+    "message": "Este navegador no dejó que Konode copiara el registro. Selecciona las entradas de abajo y cópialas a mano."
   },
   "opt_log_nothing": {
     "message": "Aún no hay nada registrado. Ejecuta una sincronización y aparecerá aquí."

@@ -835,13 +835,16 @@
     "message": "忽略"
   },
   "opt_devices_error": {
-    "message": "无法读取您的设备：$ERROR$。这并不意味着您没有设备。请检查 Storage 中的连接，然后重新打开此标签页。",
+    "message": "无法读取您的设备：$ERROR$。这并不意味着您没有设备。",
     "placeholders": {
       "error": {
         "content": "$1",
         "example": "404 Not Found"
       }
     }
+  },
+  "opt_error_check_connection": {
+    "message": "请检查“存储”中的连接，然后重新打开此标签页。"
   },
   "opt_devices_loading": {
     "message": "正在读取您的同步文件夹…"
@@ -969,6 +972,24 @@
   "opt_blocked_saved": {
     "message": "没有删除任何内容，并已事先保存恢复点。"
   },
+  "opt_blocked_recent_one": {
+    "message": "其他设备在过去 24 小时内已在此删除了 $COUNT$ 条书签，加上这次删除将超过你设置的批量删除上限。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_recent_other": {
+    "message": "其他设备在过去 24 小时内已在此删除了 $COUNT$ 条书签，加上这次删除将超过你设置的批量删除上限。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
   "opt_blocked_apply": {
     "message": "应用此删除"
   },
@@ -1006,7 +1027,7 @@
     }
   },
   "opt_snap_error_desc": {
-    "message": "这并不意味着您没有设备。它们保存在您的存储空间中，刚才无法列出。请检查“存储”中的连接，然后重新打开此标签页。"
+    "message": "这并不意味着您没有恢复点。它们保存在您的存储空间中，刚才无法列出。"
   },
   "opt_snap_empty": {
     "message": "尚未创建任何恢复点。请在上方创建，或在出现异常删除被阻止时自动保存一个。"
@@ -1091,6 +1112,18 @@
   },
   "opt_log_clear": {
     "message": "清除日志"
+  },
+  "opt_log_copy_label": {
+    "message": "复制用于错误报告"
+  },
+  "opt_log_copy_desc": {
+    "message": "逐字复制，按时间从旧到新，并附上 Konode 版本和你的浏览器信息。其中包括你的存储服务器地址，以及 Konode 无法同步的页面地址，公开发布前请先检查一遍。"
+  },
+  "opt_log_copy": {
+    "message": "复制日志"
+  },
+  "opt_log_copy_failed": {
+    "message": "此浏览器不允许 Konode 复制日志。请选中下方的条目后手动复制。"
   },
   "opt_log_nothing": {
     "message": "暂无日志。运行一次同步后即可在此显示。"

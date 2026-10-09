@@ -167,3 +167,37 @@ describe("restoreBookmarks keeps the snapshot's order (#29)", () => {
     expect(await getTombstones()).toEqual([]);
   });
 });
+
+describe("restoreBookmarks on the tree QA step AC was played on", () => {
+  it("gives the device's order, which the suite only gives on a fake that re-packs", async () => {
+    // Helium, 2026-09-29: `L1, F1{2}, L2, L3, F2{2}, L4, L5`, a restore point, then L2 deleted,
+    // N1 put right after F1, F2 renamed, L4 deleted. The device restored exactly the order
+    // below. Played here on a fake that left a hole where L2 had been, L4 came back before
+    // the renamed folder instead of after it.
+    await seedLink("L1");
+    const f1 = await chrome.bookmarks.create({ parentId: "1", title: "F1" });
+    await seedLink("X1", f1.id);
+    await seedLink("X2", f1.id);
+    await seedLink("L2");
+    await seedLink("L3");
+    const f2 = await chrome.bookmarks.create({ parentId: "1", title: "F2" });
+    await seedLink("Y1", f2.id);
+    await seedLink("Y2", f2.id);
+    await seedLink("L4");
+    await seedLink("L5");
+    const point = snapshot([
+      link("L1"), folder("F1", [link("X1"), link("X2")]), link("L2"), link("L3"),
+      folder("F2", [link("Y1"), link("Y2")]), link("L4"), link("L5"),
+    ]);
+
+    const byTitle = async (t: string) => (await chrome.bookmarks.getChildren("1")).find((c) => c.title === t)!;
+    await chrome.bookmarks.remove((await byTitle("L2")).id);
+    await chrome.bookmarks.create({ parentId: "1", index: 2, title: "N1", url: "https://n1.com" });
+    await chrome.bookmarks.update(f2.id, { title: "F2 renamed" });
+    await chrome.bookmarks.remove((await byTitle("L4")).id);
+
+    await restoreBookmarks(point);
+
+    expect(await titles()).toEqual(["L1", "F1", "L2", "N1", "L3", "F2 renamed", "L4", "L5"]);
+  });
+});

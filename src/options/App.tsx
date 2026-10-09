@@ -83,11 +83,12 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
 import { KEYS, normalizeRemoteExtensions, type AuditEntry } from "@/lib/utils/storage";
+import { auditLogText } from "@/lib/utils/audit-text";
 import { isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl, storeUrlFor, inferStore, STORE_NAME, type LocalExtLike } from "@/lib/utils/extensions-match";
-import { BACKEND_LABEL, STATE_UPDATE } from "@/lib/constants";
+import { BACKEND_LABEL, PERMISSION_LOST_PREFIX, STATE_UPDATE } from "@/lib/constants";
 import {
   PROVIDERS, providerById, providerFromConfig, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf,
   webdavUrlForCard,
@@ -249,6 +250,13 @@ const formatBytes = (n: number): string => {
   return `${(n / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 };
 
+// When an Activity entry was written, to the second, in the reader's own locale.
+const auditTime = (iso: string): string =>
+  new Date(iso).toLocaleString([], {
+    month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+
 // Backend label stamped on a newly created BackendConfig. The user-facing card
 // copy and icons live in the shared storage-providers module.
 
@@ -398,6 +406,7 @@ export default function OptionsApp() {
   // the Restore points card ninety lines above the button that produced it: the one place
   // nobody who just clicked Clear log is looking.
   const [auditMsg, setAuditMsg] = useState<string | null>(null);
+  const [logCopied, setLogCopied] = useState(false);
   // "loading" | "ok" | an error message — so an empty list can be told apart from a
   // list we never managed to read. See the Activity effect below.
   const [snapLoad, setSnapLoad] = useState<"loading" | "ok" | string>("loading");
@@ -786,6 +795,20 @@ export default function OptionsApp() {
         </div>
       </div>
     );
+  };
+
+  // The whole log, word for word, whatever the errors-only switch shows: a bug report needs
+  // the context around a failure as much as the failure. See auditLogText.
+  const copyAudit = async () => {
+    setAuditMsg(null);
+    try {
+      const text = auditLogText(audit, { version: browser.runtime.getManifest().version, browser: navigator.userAgent });
+      await navigator.clipboard.writeText(text);
+      setLogCopied(true);
+      setTimeout(() => setLogCopied(false), 1500);
+    } catch {
+      setAuditMsg(t("opt_log_copy_failed"));
+    }
   };
 
   const clearAudit = async () => {
@@ -2058,6 +2081,7 @@ export default function OptionsApp() {
                       <div className="settings-row-left">
                         <div className="row-desc" style={{ color: "var(--danger)" }}>
                           {t("opt_devices_error", devicesError)}
+                          {!devicesError.startsWith(PERMISSION_LOST_PREFIX) && <> {t("opt_error_check_connection")}</>}
                         </div>
                       </div>
                     </div>
@@ -2153,6 +2177,14 @@ export default function OptionsApp() {
                               : t("opt_blocked_from_unknown")}{" "}
                             {t("opt_blocked_saved")}
                           </div>
+                          {/* A deletion under the cap on its own, held back for what other
+                              devices removed here just before it (#41). Without this line
+                              "10 of your 40" at a 60% limit reads as the guard misfiring. */}
+                          {(syncState.recovery_notice.recent ?? 0) > 0 && (
+                            <div className="row-desc">
+                              {plural("opt_blocked_recent", syncState.recovery_notice.recent ?? 0)}
+                            </div>
+                          )}
                         </div>
                       </div>
                       {confirmApply ? (
@@ -2213,7 +2245,11 @@ export default function OptionsApp() {
                         <div className="error-row" role="alert">
                           <AlertTriangle size={12} /> {t("opt_snap_error", snapLoad)}
                         </div>
-                        <div className="row-desc">{t("opt_snap_error_desc")}</div>
+                        <div className="row-desc">
+                          {t("opt_snap_error_desc")}
+                          {/* The permission message says what to do already, and where. */}
+                          {!snapLoad.startsWith(PERMISSION_LOST_PREFIX) && <> {t("opt_error_check_connection")}</>}
+                        </div>
                       </div>
                     </div>
                   ) : snapshots.length === 0 ? (
@@ -2293,6 +2329,22 @@ export default function OptionsApp() {
                     </div>
                   )}
 
+                  {/* Word for word, and it says so here: the log names the storage host and
+                      the pages that would not sync, and a report is usually public. */}
+                  {audit.length > 0 && (
+                    <div className="settings-row">
+                      <div className="settings-row-left">
+                        <div>
+                          <div className="row-label">{t("opt_log_copy_label")}</div>
+                          <div className="row-desc">{t("opt_log_copy_desc")}</div>
+                        </div>
+                      </div>
+                      <button className="btn-secondary" style={{ flexShrink: 0 }} onClick={copyAudit}>
+                        {logCopied ? <Check size={12} /> : <Copy size={12} />} {logCopied ? t("opt_secret_copied") : t("opt_log_copy")}
+                      </button>
+                    </div>
+                  )}
+
                   {auditMsg && (
                     <div className="settings-row">
                       <div className="settings-row-left">
@@ -2323,15 +2375,20 @@ export default function OptionsApp() {
                               ? <AlertTriangle size={13} className="audit-icon notice" />
                               : <XCircle size={13} className="audit-icon fail" />}
                           <div className="audit-main">
-                            <div className="audit-action">{e.action}</div>
+                            <div className="audit-action">
+                              {e.action}
+                              {/* A warning that kept coming back is one entry with a count,
+                                  first time on top and last time under it (appendAudit). */}
+                              {(e.count ?? 1) > 1 && <span className="audit-count">×{e.count}</span>}
+                            </div>
                             {e.detail && <div className="audit-detail">{e.detail}</div>}
                           </div>
-                          <time className="audit-time" dateTime={e.timestamp}>
-                            {new Date(e.timestamp).toLocaleString([], {
-                              month: "short", day: "numeric",
-                              hour: "2-digit", minute: "2-digit", second: "2-digit",
-                            })}
-                          </time>
+                          <div className="audit-time">
+                            <time dateTime={e.timestamp}>{auditTime(e.timestamp)}</time>
+                            {(e.count ?? 1) > 1 && e.last && (
+                              <time dateTime={e.last}>– {auditTime(e.last)}</time>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -2758,6 +2815,8 @@ const STYLES = `
   .audit-action { font-size: var(--fs-sm); color: var(--text-primary); }
   .audit-detail { font-size: var(--fs-xs); color: var(--text-secondary); margin-top: 1px; word-break: break-word; }
   .audit-time { flex-shrink: 0; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-secondary); font-variant-numeric: tabular-nums; padding-top: 1px; }
+  .audit-time time { display: block; }
+  .audit-count { margin-left: var(--sp-xs); font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 
   /* Stat tiles: a hairline grid inside a titled card (the card clips the 1px gaps). */
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 1px; background: var(--border); }

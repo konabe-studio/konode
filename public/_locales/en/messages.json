@@ -949,7 +949,7 @@
     "message": "Dismiss"
   },
   "opt_devices_error": {
-    "message": "Couldn't read your devices: $ERROR$. This does not mean you have none. Check the connection in Storage and reopen this tab.",
+    "message": "Couldn't read your devices: $ERROR$. This does not mean you have none.",
     "description": "An empty list must never stand in for a list that failed to load. $ERROR$ is the technical message and is not translated.",
     "placeholders": {
       "error": {
@@ -957,6 +957,10 @@
         "example": "404 Not Found"
       }
     }
+  },
+  "opt_error_check_connection": {
+    "message": "Check the connection in Storage and reopen this tab.",
+    "description": "Follows the device-list and restore-point errors when the error itself gives no advice. Left out after the lost-permission message, which already says to open Settings → Storage and press Save. 'Storage' names the tab, so it must match the tab's own translation."
   },
   "opt_devices_loading": {
     "message": "Reading your sync folder…"
@@ -1074,6 +1078,16 @@
     "message": "Nothing was removed, and a restore point was saved first.",
     "description": "The reassurance. Sits right after opt_blocked_from in the same paragraph."
   },
+  "opt_blocked_recent_one": {
+    "message": "Other devices already removed $COUNT$ bookmark here in the last 24 hours, and this would take the total past your bulk-delete limit.",
+    "description": "Under the blocked-deletion headline, only when earlier deletions from other devices are why a deletion smaller than the limit was held back: the guard adds up what peers removed here over a day (#41). The limit is the 'Max bulk delete from a peer' setting.",
+    "placeholders": { "count": { "content": "$1", "example": "1" } }
+  },
+  "opt_blocked_recent_other": {
+    "message": "Other devices already removed $COUNT$ bookmarks here in the last 24 hours, and this would take the total past your bulk-delete limit.",
+    "description": "Plural of opt_blocked_recent_one.",
+    "placeholders": { "count": { "content": "$1", "example": "30" } }
+  },
   "opt_blocked_apply": {
     "message": "Apply the deletion",
     "description": "Button. First step of two, because applying removes bookmarks."
@@ -1114,7 +1128,7 @@
     }
   },
   "opt_snap_error_desc": {
-    "message": "This does not mean you have none. They live on your storage and could not be listed just now. Check the connection in Storage and reopen this tab.",
+    "message": "This does not mean you have none. They live on your storage and could not be listed just now.",
     "description": "On a recovery screen, 'you have no backups' is the worst possible thing to say by mistake."
   },
   "opt_snap_empty": {
@@ -1204,6 +1218,22 @@
   },
   "opt_log_clear": {
     "message": "Clear log"
+  },
+  "opt_log_copy_label": {
+    "message": "Copy for a bug report",
+    "description": "Row label next to the Copy log button in Settings → Activity."
+  },
+  "opt_log_copy_desc": {
+    "message": "Word for word, oldest first, with the Konode version and your browser. That includes your storage server's address and those of pages Konode couldn't sync, so read it before posting it anywhere public.",
+    "description": "Says the copy is not redacted, and why that matters. The log lines themselves stay in English on purpose."
+  },
+  "opt_log_copy": {
+    "message": "Copy log",
+    "description": "Button. Puts the whole Activity log on the clipboard as text."
+  },
+  "opt_log_copy_failed": {
+    "message": "This browser wouldn't let Konode copy the log. Select the entries below and copy them by hand.",
+    "description": "Shown when the clipboard refuses the copy."
   },
   "opt_log_nothing": {
     "message": "Nothing logged yet. Run a sync and it'll show up here."

@@ -5,6 +5,91 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+
+- **Copy the Activity log for a bug report.** Settings → Activity has a **Copy log** button
+  that puts the whole log on the clipboard as plain text, oldest first, with the Konode
+  version and your browser at the top, ready to paste into an issue. Until now that meant
+  selecting up to 200 rows by hand. The copy is word for word, so it includes the address of
+  your storage server and of any pages Konode couldn't sync, and the button says so: read it
+  before you post it anywhere public.
+
+### Fixed
+
+- **A deletion that arrives in pieces no longer slips past the bulk-delete limit.** The
+  limit on how much of your bookmarks another device may delete judged each sync on its own,
+  so a large deletion that reached this device a piece at a time went through piece by
+  piece, every one of them under the limit, and could empty the tree just the same. Konode
+  now adds up what other devices removed here over the last 24 hours and holds back the
+  piece that takes the total over, with a restore point saved first and the usual choice in
+  Settings → Activity, where the card now says how many went before it. Approve it and the
+  rest of a cleanup you meant goes through without asking again.
+  The limit also counts bookmarks now, not copies of them. A pile of duplicates, such as the
+  New Tab copies Norton Neo made before 1.4.0, made your tree look many times its size, so a
+  deletion of most of your real bookmarks could stay under the limit. And a bookmark you hold in
+  several copies counts once when another device deletes it, instead of asking you to approve
+  "50 bookmarks" that were one. Only the device receiving the deletion needs this version.
+- **A warning that lasts no longer fills the Activity log.** Most warnings describe
+  something Konode checks again on every sync, such as a permission you took away, a device
+  on a different passphrase, or a file that will not download, and each one wrote a new line
+  every sync for as long as it lasted. A passphrase mismatch wrote one per device per data
+  type, so three devices filled the whole log in about a quarter of an hour and pushed out
+  the entries that explained what had gone wrong. A warning that keeps coming back is now one
+  entry that says how many times it happened (×120) and when it last did, under the time it
+  began. Anything else happening in between, such as a merge or a restore, starts a new entry,
+  so the log still reads in the order things happened. A device whose setup is not finished
+  yet also no longer starts its log with a warning that it has no storage, written every
+  minute until setup was done.
+- **Deleting many bookmarks at once is one line in the Activity log.** The browser reports
+  every deleted bookmark separately, and Konode wrote a line for each, so selecting 25
+  bookmarks and pressing Delete left 25 identical lines, and a large cleanup pushed everything
+  else out of the log. It now waits until the deletions stop and writes one line with the
+  total. The deletions themselves are recorded straight away, as before.
+- **A Google Drive sign-in that fails no longer tells you something untrue.** When the
+  sign-in window closed before the sign-in came back, Konode said "Sign-in cancelled", even
+  to people who had approved it: a Google error page, or a browser that never hands the
+  result back, ends the same way as closing the window yourself. It now says the window
+  closed before the sign-in came back, and says you cancelled only when Google itself reports
+  that you did. Other failures no longer suggest a redirect address that "may not be
+  registered", which stopped being a likely cause in September. Every message now names
+  GitHub and WebDAV, which need no Google sign-in, and Settings → Activity records which way
+  the sign-in ended, with the address the browser was asked to return to.
+- **Setup no longer forgets your answers when the page reloads.** Reload the setup page, or
+  let a phone put it to sleep while you sign in to Google, and it used to come back at the
+  start with everything you had entered gone, a GitHub token GitHub will not show you twice
+  included. It now comes back to the step you were on, with your storage choice, its
+  address and sign-in, the data types and the device name as you left them, for up to a
+  day. A Google Drive sign-in that finished before the reload is recognised instead of asked
+  for again. The encryption step is the exception: your passphrase is never written down,
+  so that step asks again. What setup kept is removed as soon as setup completes, and after
+  a day if you never finish.
+- **Clicking the conflict notification opens Konode.** The notification says "Open Konode to
+  resolve it", and clicking it did nothing. It now brings your browser window to the front
+  and opens Konode's popup there, where conflicts are answered. Where the browser does not
+  let an extension open its popup, the same screen opens in a small window of its own, or in
+  a tab on a phone.
+- **Manual conflict resolution asks only when your bookmarks really differ.** With
+  **Settings → Device → Conflict resolution** on **Manual**, Konode asked which bookmarks
+  to keep on the first sync between any two devices, and asked again whenever the other
+  device changed anything at all, because it compared the files rather than the bookmarks
+  in them. Each browser gives a bookmark its own ID and the date it arrived, so two devices
+  never had identical files even with identical bookmarks. It now compares the bookmarks
+  themselves: the folder each is in, its address and its title. Two devices that hold the
+  same bookmarks are not asked about, and once you answer, the question stays answered
+  until the other device's bookmarks change. Cards already waiting for devices that turn
+  out to agree go away on the next sync. The order of bookmarks within a folder is not
+  counted, since Konode does not carry it reliably between browsers.
+- **Settings gives one piece of advice, not two, when it cannot list your devices.** With
+  Konode's permission to reach your storage taken away, the device list and the restore
+  points said to open Storage and press Save, and then added "Check the connection in
+  Storage and reopen this tab" as well. That second line now appears only when the error
+  gives no advice of its own. In Simplified Chinese the restore-point message also said you
+  had no devices, and the device list left "Storage" untranslated. Both are corrected.
+- **An encryption warning appears once, not once per device.** A device without end-to-end
+  encryption, joining a folder where several devices use it, finished setup with "Some of
+  your devices are end-to-end encrypted..." printed once for each of them, the same sentence
+  two or three times in a row. The popup and the setup screen now show each message once.
+
 ## [1.4.0] - 2026-09-29
 
 ### Added

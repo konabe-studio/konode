@@ -844,13 +844,16 @@
     "message": "關閉"
   },
   "opt_devices_error": {
-    "message": "無法讀取你的裝置：$ERROR$。這不代表你沒有裝置。請檢查「儲存空間」裡的連線，然後重新開啟這個分頁。",
+    "message": "無法讀取你的裝置：$ERROR$。這不代表你沒有裝置。",
     "placeholders": {
       "error": {
         "content": "$1",
         "example": "404 Not Found"
       }
     }
+  },
+  "opt_error_check_connection": {
+    "message": "請檢查「儲存空間」裡的連線，然後重新開啟這個分頁。"
   },
   "opt_devices_loading": {
     "message": "正在讀取你的同步資料夾…"
@@ -978,6 +981,24 @@
   "opt_blocked_saved": {
     "message": "沒有刪掉任何東西，而且事先儲存了一個還原點。"
   },
+  "opt_blocked_recent_one": {
+    "message": "其他裝置在過去 24 小時內已經在這裡刪掉了 $COUNT$ 個書籤，再加上這次就會超過你設定的大量刪除上限。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_recent_other": {
+    "message": "其他裝置在過去 24 小時內已經在這裡刪掉了 $COUNT$ 個書籤，再加上這次就會超過你設定的大量刪除上限。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
   "opt_blocked_apply": {
     "message": "套用這次刪除"
   },
@@ -1015,7 +1036,7 @@
     }
   },
   "opt_snap_error_desc": {
-    "message": "這不代表你沒有還原點。它們存在你的儲存空間裡，只是剛才列不出來。請檢查「儲存空間」裡的連線，然後重新開啟這個分頁。"
+    "message": "這不代表你沒有還原點。它們存在你的儲存空間裡，只是剛才列不出來。"
   },
   "opt_snap_empty": {
     "message": "還沒有任何還原點。可以在上面建立一個，或是在異常刪除被攔下時自動儲存一個。"
@@ -1100,6 +1121,18 @@
   },
   "opt_log_clear": {
     "message": "清除紀錄"
+  },
+  "opt_log_copy_label": {
+    "message": "複製到錯誤回報"
+  },
+  "opt_log_copy_desc": {
+    "message": "逐字複製，從最舊的開始，並附上 Konode 版本和你的瀏覽器。內容包含你的儲存伺服器位址，以及 Konode 無法同步的網頁位址，公開貼出前請先看過一遍。"
+  },
+  "opt_log_copy": {
+    "message": "複製紀錄"
+  },
+  "opt_log_copy_failed": {
+    "message": "這個瀏覽器不讓 Konode 複製紀錄。請選取下方的項目，手動複製。"
   },
   "opt_log_nothing": {
     "message": "還沒有任何紀錄。執行一次同步就會出現在這裡。"
