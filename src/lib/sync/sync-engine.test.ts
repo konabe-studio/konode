@@ -432,6 +432,28 @@ describe("SyncEngine — one data type's failure must not abort the others", () 
     expect(backend.uploads.map((u) => u.data_type)).toEqual(["bookmarks"]);
   });
 
+  it("says a rate limit once, with what to do, instead of once per type", async () => {
+    // "WebDAV PUT failed: 429" per type told the user it failed and nothing else.
+    class RateLimitedBackend extends FakeBackend {
+      downloadAll(): Promise<SyncPacket[]> {
+        return Promise.reject(new HttpError(429, "WebDAV list failed: 429"));
+      }
+    }
+    const engine = new SyncEngine({
+      ...DEFAULT_SETTINGS,
+      device_id: "me",
+      active_backend: "webdav",
+      backends: [{ type: "webdav", label: "Nutstore", enabled: true, webdav: { url: "https://dav.jianguoyun.com/dav/", username: "u", password: "p" } }],
+    }, () => {});
+
+    const problems = await priv(engine).syncAllTypes(["history", "bookmarks"], new RateLimitedBackend(), DEFAULT_STATE);
+
+    expect(new Set(problems).size).toBe(1);
+    expect(problems[0]).toContain("dav.jianguoyun.com");
+    expect(problems[0]).toContain("Sync interval");
+    expect(problems[0]).not.toContain("history:");
+  });
+
   it("reports EVERY failing type, not just the first", async () => {
     const engine = makeEngine();
     const backend = new FailingBackend(["history", "extensions"]);
@@ -1884,6 +1906,16 @@ describe("explainSyncFailure: a request that never left the browser", () => {
     const msg = await explainSyncFailure(new HttpError(401, "WebDAV PUT failed: 401"), webdav);
 
     expect(msg).toBe("WebDAV PUT failed: 401");
+  });
+
+  it("turns a 429 into the advice to raise the sync interval, naming the host", async () => {
+    permissionsHeld(true);
+    const msg = await explainSyncFailure(new HttpError(429, "WebDAV PUT failed: 429"), webdav);
+
+    // Cure first: the popup shows two lines of this.
+    expect(msg.startsWith("Too many requests: app.koofr.net")).toBe(true);
+    expect(msg).toContain("Sync interval");
+    expect(msg).toContain("HTTP 429");
   });
 
   it("knows which origins each backend needs", () => {

@@ -1,5 +1,5 @@
 import type { IBackend, BackendConfig, DataType, ListedFile, SyncPacket } from "@/lib/types";
-import { withRetry, HttpError } from "@/lib/utils/retry";
+import { withRetry, HttpError, rateLimitMessage } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 import { getAccessToken, getStoredGDriveUser } from "./gdrive-oauth";
 import { clearUploadChecksums, getLastDriveFolder, setLastDriveFolder } from "@/lib/utils/storage";
@@ -376,6 +376,7 @@ export class GDriveBackend implements IBackend {
       if (res.status === 401 || res.status === 403) {
         return { ok: false, message: "Google rejected the saved access. Sign in again." };
       }
+      if (res.status === 429) return { ok: false, message: rateLimitMessage("Google Drive") };
       if (!res.ok) return { ok: false, message: `Drive check failed (HTTP ${res.status})` };
       const d = await res.json();
       const name = d.user?.displayName ?? stored.displayName;

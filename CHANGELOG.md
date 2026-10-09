@@ -89,6 +89,12 @@ All notable changes to Konode. Format loosely follows
   encryption, joining a folder where several devices use it, finished setup with "Some of
   your devices are end-to-end encrypted..." printed once for each of them, the same sentence
   two or three times in a row. The popup and the setup screen now show each message once.
+- **"Too many requests" now says what to do about it.** Some storage providers limit how
+  many requests an account may make, Nutstore's free plan the best known, and when Konode
+  went over, all it said was "HTTP 429". It now names the server, says it is turning Konode
+  away for a while, and points you to **Sync interval** in **Settings → Device**, the one
+  setting that keeps you under the limit. The same goes for **Test connection**, and when
+  every data type hits the limit at once, it is said once rather than once per type.
 
 ## [1.4.0] - 2026-09-29
 
