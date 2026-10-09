@@ -594,7 +594,7 @@ export default function PopupApp() {
               <div key={entry.session.id} className="flex items-center gap-2 px-0.5 py-0.5">
                 <div className="min-w-0 flex-1">
                   <span className="block truncate text-[14px]">{entry.session.label || t("popup_unknown_device")}</span>
-                  <span className="font-mono text-[12px] text-sk-subtle">
+                  <span className="block truncate font-mono text-[12px] text-sk-subtle">
                     {plural("popup_tabs", entry.session.tabs.length)}
                     {entry.timestamp &&
                       ` · ${new Date(entry.timestamp).toLocaleString([], {
