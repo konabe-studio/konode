@@ -128,6 +128,24 @@
   "popup_restore": {
     "message": "还原"
   },
+  "popup_restore_confirm_one": {
+    "message": "打开 $COUNT$ 个标签页",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_restore_confirm_other": {
+    "message": "打开 $COUNT$ 个标签页",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "142"
+      }
+    }
+  },
   "popup_backend_label": {
     "message": "后端"
   },

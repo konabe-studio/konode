@@ -11,7 +11,7 @@ import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
 import { exportHistory, importHistory, buildLocalHistoryIndex } from "@/lib/handlers/history-handler";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
 import { dataTypeAvailability, unsupportedReason, hasPermission } from "@/lib/utils/capabilities";
-import { HttpError } from "@/lib/utils/retry";
+import { HttpError, rateLimitMessage } from "@/lib/utils/retry";
 import {
   getState,
   setState,
@@ -189,6 +189,20 @@ export function backendOrigins(cfg: BackendConfig | undefined): string[] {
   }
 }
 
+/** The storage as a sentence can name it: the WebDAV host, or the service. */
+export function storageName(cfg: BackendConfig | undefined): string {
+  switch (cfg?.type) {
+    case "webdav":
+      try { return new URL(cfg.webdav!.url).host; } catch { return "your storage"; }
+    case "gdrive":
+      return "Google Drive";
+    case "github":
+      return "GitHub";
+    default:
+      return "your storage";
+  }
+}
+
 /**
  * Say why a sync failed, when a bare failure does not.
  *
@@ -204,6 +218,7 @@ export function backendOrigins(cfg: BackendConfig | undefined): string[] {
  */
 export async function explainSyncFailure(err: unknown, cfg: BackendConfig | undefined): Promise<string> {
   const msg = err instanceof Error ? err.message : "Unknown error";
+  if (err instanceof HttpError && err.status === 429) return rateLimitMessage(storageName(cfg));
   // Only for the failure shape a blocked request actually has. An HttpError carries a
   // status, which means the request did leave and the permission is not the story.
   if (err instanceof HttpError || !/network|failed to fetch|load failed/i.test(msg)) return msg;
@@ -617,7 +632,14 @@ export class SyncEngine {
         await this.syncType(dataType, backend, state);
       } catch (err) {
         // syncType already logged it — just collect the message.
-        errors.push(`${dataType}: ${err instanceof Error ? err.message : String(err)}`);
+        // A rate limit is said without the type: it is one fact about the storage, so every
+        // type hitting it folds into a single sentence instead of one per type.
+        if (err instanceof HttpError && err.status === 429) {
+          const cfg = this.settings.backends.find((b) => b.type === this.settings.active_backend);
+          errors.push(rateLimitMessage(storageName(cfg)));
+        } else {
+          errors.push(`${dataType}: ${err instanceof Error ? err.message : String(err)}`);
+        }
         this.failedTypes.add(dataType);
       }
     }

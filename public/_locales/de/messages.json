@@ -140,6 +140,24 @@
   "popup_restore": {
     "message": "Wiederherstellen"
   },
+  "popup_restore_confirm_one": {
+    "message": "$COUNT$ Tab öffnen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_restore_confirm_other": {
+    "message": "$COUNT$ Tabs öffnen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "142"
+      }
+    }
+  },
   "popup_backend_label": {
     "message": "Speicher"
   },

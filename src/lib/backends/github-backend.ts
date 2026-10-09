@@ -1,5 +1,5 @@
 import type { IBackend, BackendConfig, DataType, SyncPacket } from "@/lib/types";
-import { withRetry, HttpError, defaultShouldRetry } from "@/lib/utils/retry";
+import { withRetry, HttpError, defaultShouldRetry, rateLimitMessage } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 import { utf8ToBase64 } from "@/lib/utils/base64";
 
@@ -289,6 +289,7 @@ export class GitHubBackend implements IBackend {
 
       // Verify token works
       const userRes = await fetch(`${GITHUB_API}/user`, { headers: this.headers() });
+      if (userRes.status === 429) return { ok: false, message: rateLimitMessage("GitHub") };
       if (!userRes.ok) {
         return {
           ok: false,

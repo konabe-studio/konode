@@ -1,5 +1,5 @@
 import type { IBackend, BackendConfig, DataType, ListedFile, SyncPacket } from "@/lib/types";
-import { withRetry, HttpError } from "@/lib/utils/retry";
+import { withRetry, HttpError, rateLimitMessage } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 import { isSecureBackendUrl } from "@/lib/utils/url";
 import { utf8ToBase64 } from "@/lib/utils/base64";
@@ -332,6 +332,7 @@ export class WebDAVBackend implements IBackend {
         return { ok: true, message: `Connected to ${new URL(this.w.url).hostname}` };
       }
       if (res.status === 401) return { ok: false, message: this.authFailureMessage(res) };
+      if (res.status === 429) return { ok: false, message: rateLimitMessage(new URL(this.w.url).host) };
       return { ok: false, message: `Server returned HTTP ${res.status}` };
     } catch (err) {
       return { ok: false, message: err instanceof Error ? err.message : "Connection failed" };
