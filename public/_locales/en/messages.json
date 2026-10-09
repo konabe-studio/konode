@@ -459,6 +459,14 @@
   "onb_finish_sync": {
     "message": "Finish & Sync"
   },
+  "onb_waiting_permission": {
+    "message": "Waiting for permission…",
+    "description": "The Finish & Sync button while the browser's permission prompt is open."
+  },
+  "onb_perm_prompt_slow": {
+    "message": "No permission prompt on screen? Some browsers don't show one. Allow Konode's permissions in your browser's extension settings and press Finish & Sync again, or go back and turn off the data types that need them.",
+    "description": "Shown under Finish & Sync when the permission prompt has gone unanswered for several seconds, because some browsers never show it. Name the button as it reads in your translation."
+  },
   "onb_err_bad_webdav_url": {
     "message": "That WebDAV address doesn't look like a valid URL."
   },

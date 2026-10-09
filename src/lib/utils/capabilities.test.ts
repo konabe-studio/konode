@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   apiPresent, eventPresent, dataTypeApiPresent, dataTypeAvailability, allDataTypeAvailability,
-  assertDataTypeApi, ensurePermission, hasPermission, isAndroid, resetCapabilityCache,
+  assertDataTypeApi, ensurePermission, ensurePermissionWatched, hasPermission, isAndroid, resetCapabilityCache,
 } from "@/lib/utils/capabilities";
 import { registerBookmarkListeners, exportBookmarks } from "@/lib/handlers/bookmarks-handler";
 import { notifyConflict } from "@/lib/sync/conflict-resolver";
@@ -280,5 +280,33 @@ describe("identifying the platform", () => {
     } finally {
       Object.defineProperty(globalThis.navigator, "userAgent", { value: ua, configurable: true });
     }
+  });
+});
+
+describe("a permission prompt that never answers", () => {
+  // Vivaldi 8.2 on Android showed no prompt and never settled the request, so the setup's
+  // Finish & Sync waited forever with nothing on screen: a dead button, as reported.
+  afterEach(() => { vi.useRealTimers(); });
+
+  it("says so once the request has gone unanswered, without abandoning it", async () => {
+    vi.useFakeTimers();
+    permissions({ held: false, request: () => new Promise<boolean>(() => {}) });
+    const onSlow = vi.fn();
+
+    void ensurePermissionWatched({ permissions: ["history"] }, onSlow, 8000);
+    await vi.advanceTimersByTimeAsync(7999);
+    expect(onSlow).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(onSlow).toHaveBeenCalledTimes(1);
+  });
+
+  it("stays quiet when the prompt is answered in time", async () => {
+    vi.useFakeTimers();
+    permissions({ held: false, request: () => Promise.resolve(true) });
+    const onSlow = vi.fn();
+
+    expect(await ensurePermissionWatched({ permissions: ["history"] }, onSlow, 8000)).toBe("granted");
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(onSlow).not.toHaveBeenCalled();
   });
 });

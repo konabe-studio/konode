@@ -99,6 +99,13 @@ All notable changes to Konode. Format loosely follows
   than 20 tabs used to open them all on the first click. The button now changes to "Open
   142 tabs", and only a second click opens them; Cancel leaves it. Smaller sessions still
   restore in one click.
+- **Setup no longer looks frozen when the browser shows no permission prompt.** Vivaldi on
+  Android neither showed the prompt for the permissions Konode asks for at the last step nor
+  answered the request, so **Finish & Sync** did nothing at all. The button now says it is
+  waiting for permission as soon as you press it, and if no answer comes within a few seconds,
+  a note explains that some browsers show no prompt: allow Konode's permissions in the
+  browser's extension settings and press the button again, or go back and turn off the data
+  types that need them. A prompt that is on screen can still be answered as before.
 
 ## [1.4.0] - 2026-09-29
 

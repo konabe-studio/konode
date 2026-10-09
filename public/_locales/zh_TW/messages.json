@@ -401,6 +401,12 @@
   "onb_finish_sync": {
     "message": "完成並同步"
   },
+  "onb_waiting_permission": {
+    "message": "正在等待授權…"
+  },
+  "onb_perm_prompt_slow": {
+    "message": "沒有看到權限提示？有些瀏覽器不會顯示。請在瀏覽器的擴充功能設定中為 Konode 授予權限，然後再按一次「完成並同步」，或返回並關閉需要這些權限的資料類型。"
+  },
   "onb_err_bad_webdav_url": {
     "message": "那個 WebDAV 位址看起來不是有效的網址。"
   },
