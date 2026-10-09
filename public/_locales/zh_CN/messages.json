@@ -389,6 +389,12 @@
   "onb_finish_sync": {
     "message": "完成并同步"
   },
+  "onb_waiting_permission": {
+    "message": "正在等待授权…"
+  },
+  "onb_perm_prompt_slow": {
+    "message": "没有看到权限提示？有些浏览器不会显示。请在浏览器的扩展设置中为 Konode 授予权限，然后再次点击“完成并同步”，或返回并关闭需要这些权限的数据类型。"
+  },
   "onb_err_bad_webdav_url": {
     "message": "那个 WebDAV 地址看起来不像是有效的 URL。"
   },

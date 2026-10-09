@@ -401,6 +401,12 @@
   "onb_finish_sync": {
     "message": "Fertigstellen & synchronisieren"
   },
+  "onb_waiting_permission": {
+    "message": "Warte auf Berechtigung…"
+  },
+  "onb_perm_prompt_slow": {
+    "message": "Keine Berechtigungsabfrage zu sehen? Manche Browser zeigen keine an. Erteile Konode die Berechtigungen in den Erweiterungseinstellungen deines Browsers und tippe erneut auf „Fertigstellen & synchronisieren“, oder gehe zurück und schalte die Datentypen aus, die sie brauchen."
+  },
   "onb_err_bad_webdav_url": {
     "message": "Diese WebDAV-Adresse sieht nicht wie eine gültige URL aus."
   },

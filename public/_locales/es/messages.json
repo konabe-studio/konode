@@ -389,6 +389,12 @@
   "onb_finish_sync": {
     "message": "Finalizar y sincronizar"
   },
+  "onb_waiting_permission": {
+    "message": "Esperando el permiso…"
+  },
+  "onb_perm_prompt_slow": {
+    "message": "¿No aparece la solicitud de permiso? Algunos navegadores no la muestran. Concede los permisos de Konode en la configuración de extensiones de tu navegador y vuelve a pulsar Finalizar y sincronizar, o vuelve atrás y desactiva los tipos de datos que los necesitan."
+  },
   "onb_err_bad_webdav_url": {
     "message": "La dirección WebDAV no parece ser una URL válida."
   },

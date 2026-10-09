@@ -401,6 +401,12 @@
   "onb_finish_sync": {
     "message": "Befejezés és szinkronizálás"
   },
+  "onb_waiting_permission": {
+    "message": "Várakozás az engedélyre…"
+  },
+  "onb_perm_prompt_slow": {
+    "message": "Nem jelent meg engedélykérő ablak? Egyes böngészők nem mutatják. Engedélyezd a Konode jogosultságait a böngésző bővítménybeállításaiban, és nyomd meg újra a Befejezés és szinkronizálás gombot, vagy lépj vissza, és kapcsold ki az ezeket igénylő adattípusokat."
+  },
   "onb_err_bad_webdav_url": {
     "message": "Ez a WebDAV-cím nem tűnik érvényes URL-nek."
   },

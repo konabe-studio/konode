@@ -10,7 +10,7 @@ import { loadDraft, saveDraft, clearDraft, type DraftStep } from "@/lib/onboardi
 const DRIVE_AVAILABLE = isDriveAuthAvailable();
 import type { BackendType, DataType, SyncSettings } from "@/lib/types";
 import {
-  allDataTypeAvailability, ensurePermission, unsupportedReason,
+  allDataTypeAvailability, ensurePermissionWatched, unsupportedReason,
   PERMISSION_FOR_TYPE, type Availability,
 } from "@/lib/utils/capabilities";
 import {
@@ -60,6 +60,13 @@ export default function OnboardingApp() {
   // from it below (several cards map to the WebDAV backend).
   const [provider, setProvider] = useState<ProviderId | null>(null);
   const [saving, setSaving] = useState(false);
+  // Finish is waiting on the browser's permission prompt, and whether that wait has run
+  // long enough to suggest there is no prompt at all (see ensurePermissionWatched).
+  const [awaitingPerm, setAwaitingPerm] = useState(false);
+  const [permSlow, setPermSlow] = useState(false);
+  // Each Finish press takes a number. A prompt that never answered may still answer after
+  // the user has pressed again, and only the latest press may carry on from there.
+  const finishSeq = useRef(0);
 
   // Google Drive
   const [gdriveUser, setGdriveUser] = useState<{ email: string; displayName: string } | null>(null);
@@ -374,11 +381,24 @@ export default function OnboardingApp() {
       }
     }
 
+    const seq = ++finishSeq.current;
     if (optPerms.length || origins.length) {
-      const outcome = await ensurePermission({
-        ...(optPerms.length ? { permissions: optPerms } : {}),
-        ...(origins.length ? { origins } : {}),
-      });
+      setPermSlow(false);
+      setAwaitingPerm(true);
+      setSaving(true);
+      const outcome = await ensurePermissionWatched(
+        {
+          ...(optPerms.length ? { permissions: optPerms } : {}),
+          ...(origins.length ? { origins } : {}),
+        },
+        // Give the button back with the hint, so a press after granting the permissions
+        // in the browser's settings can go through.
+        () => { if (seq === finishSeq.current) { setPermSlow(true); setSaving(false); } },
+      );
+      if (seq !== finishSeq.current) return;
+      setAwaitingPerm(false);
+      setPermSlow(false);
+      setSaving(false);
       if (outcome !== "granted") {
         // Two different situations, and telling them apart is the whole point. On a
         // browser that can't show the prompt at all (Firefox for Android), "please
@@ -935,11 +955,16 @@ export default function OnboardingApp() {
           {setupError && (
             <div style={{ ...S.errorRow, marginBottom: 12 }}><XCircle size={12} /> {setupError}</div>
           )}
+          {permSlow && (
+            <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 12, lineHeight: 1.5 }}>
+              {t("onb_perm_prompt_slow")}
+            </div>
+          )}
           <div style={S.navRow}>
-            <button style={S.btnSecondary} onClick={() => setStep("data")}>{t("common_back")}</button>
+            <button style={S.btnSecondary} onClick={() => { finishSeq.current++; setAwaitingPerm(false); setPermSlow(false); setSaving(false); setStep("data"); }}>{t("common_back")}</button>
             <button style={{ ...S.btnPrimary, flex: 1 }} onClick={finish} disabled={saving}>
               {saving ? <Loader2 size={14} className="spin" /> : <CheckCircle2 size={14} />}
-              {saving ? t("onb_setting_up") : t("onb_finish_sync")}
+              {awaitingPerm && saving ? t("onb_waiting_permission") : saving ? t("onb_setting_up") : t("onb_finish_sync")}
             </button>
           </div>
         </div>

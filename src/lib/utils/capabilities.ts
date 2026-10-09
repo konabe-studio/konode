@@ -232,6 +232,33 @@ export async function ensurePermission(req: chrome.permissions.Permissions): Pro
   return (await promptsForPermissions()) ? "denied" : "cannot-prompt";
 }
 
+/** How long a permission prompt may stay unanswered before the caller is told. */
+export const PERMISSION_SLOW_MS = 8000;
+
+/**
+ * `ensurePermission`, with word when the answer is slow in coming.
+ *
+ * Vivaldi on Android (8.2) neither showed the prompt nor answered the request, so the
+ * setup's Finish waited on a promise that never settled and looked like a dead button
+ * (reported on Reddit, fixed in Vivaldi Snapshot). The request is not abandoned, since a
+ * real prompt may simply be read slowly; `onSlow` runs once it has gone unanswered for
+ * `slowMs`, so the caller can say what to do if no prompt is on screen.
+ *
+ * The request itself is made before anything is awaited, so it keeps the click's gesture.
+ */
+export async function ensurePermissionWatched(
+  req: chrome.permissions.Permissions,
+  onSlow: () => void,
+  slowMs = PERMISSION_SLOW_MS,
+): Promise<PermissionOutcome> {
+  const timer = setTimeout(onSlow, slowMs);
+  try {
+    return await ensurePermission(req);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * Can this browser show a runtime permission prompt at all?
  *
