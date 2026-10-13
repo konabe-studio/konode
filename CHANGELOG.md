@@ -106,6 +106,12 @@ All notable changes to Konode. Format loosely follows
   a note explains that some browsers show no prompt: allow Konode's permissions in the
   browser's extension settings and press the button again, or go back and turn off the data
   types that need them. A prompt that is on screen can still be answered as before.
+- **Names in Hebrew, Arabic or Persian no longer scramble the text around them.** A device
+  called "מחשב 2" shown inside a sentence such as "Asked for by …" took the sentence's
+  full stop and number into its own right-to-left run, so they appeared on the wrong side.
+  Device names, extension names and your GitHub name are now kept apart from the text around
+  them, in the popup, Settings and setup, and the device name field lines up with what you
+  type in it.
 
 ## [1.4.0] - 2026-09-29
 

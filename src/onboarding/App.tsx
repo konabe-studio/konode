@@ -847,6 +847,7 @@ export default function OnboardingApp() {
             <div style={{ ...S.backendDesc, marginBottom: 8 }}>{t("onb_device_name_desc")}</div>
             <input
               style={S.input}
+              dir="auto"
               value={deviceLabel}
               onChange={(e) => setDeviceLabel(e.target.value)}
               placeholder={t("onb_device_name_placeholder")}

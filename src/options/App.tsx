@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef, Fragment } from "react";
 import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, SyncExtension, SnapshotMeta, DeviceInfo } from "@/lib/types";
 import { sendMessage, request } from "@/lib/utils/messaging";
-import { t, tParts, plural } from "@/lib/utils/i18n";
+import { t, tParts, plural, isolate } from "@/lib/utils/i18n";
 import { interactiveSignIn, isDriveAuthAvailable, clearGDriveSession } from "@/lib/backends/gdrive-oauth";
 import {
   allDataTypeAvailability, dataTypeAvailability, dataTypeApiPresent, ensurePermission,
@@ -1591,7 +1591,7 @@ export default function OptionsApp() {
                             />
                             {githubChecking && <div className="verify-row"><Loader2 size={12} className="spin" /> {t("onb_verifying")}</div>}
                             {githubUser && !githubChecking && (
-                              <div className="verify-row ok"><CheckCircle2 size={12} /> @{githubUser.login} · {githubUser.name}</div>
+                              <div className="verify-row ok"><CheckCircle2 size={12} /> @{githubUser.login} · <bdi>{githubUser.name}</bdi></div>
                             )}
                           </div>
                           <div className="field-row-2">
@@ -1881,10 +1881,10 @@ export default function OptionsApp() {
                           <Puzzle size={16} className="row-icon" />
                           <div>
                             <div className="row-label">
-                              {ext.name}{" "}
+                              <bdi>{ext.name}</bdi>{" "}
                               <span className="row-desc">{t("opt_ext_from", STORE_NAME[inferStore(ext)])}</span>
                             </div>
-                            {ext.description && <div className="row-desc">{ext.description.slice(0, 80)}</div>}
+                            {ext.description && <div className="row-desc" dir="auto">{ext.description.slice(0, 80)}</div>}
                           </div>
                         </div>
                         <a href={installOrSearchUrl(ext, currentStore())} target="_blank" rel="noreferrer" className="btn-install">
@@ -1923,7 +1923,7 @@ export default function OptionsApp() {
                       <div className="row-desc">{t("opt_device_name_desc")}</div>
                     </div>
                   </div>
-                  <input className="field-input-inline"
+                  <input className="field-input-inline" dir="auto"
                     value={settings.device_label}
                     onChange={(e) => update({ device_label: e.target.value })}
                     placeholder={t("opt_device_name_placeholder")} />
@@ -2069,7 +2069,7 @@ export default function OptionsApp() {
                     <div className="settings-row">
                       <div className="settings-row-left">
                         <div className="row-desc">
-                          {plural("opt_forget_result", forgetResult.removed, [String(forgetResult.removed), forgetResult.label])}
+                          {plural("opt_forget_result", forgetResult.removed, [String(forgetResult.removed), isolate(forgetResult.label)])}
                         </div>
                       </div>
                       <button className="btn-secondary" style={{ flexShrink: 0 }}
@@ -2106,7 +2106,7 @@ export default function OptionsApp() {
                         <div className="settings-row-left">
                           <div>
                             <div className="row-label">
-                              {d.label ?? t("opt_device_unnamed", d.device_id.slice(0, 8))}
+                              {d.label != null ? <bdi>{d.label}</bdi> : t("opt_device_unnamed", d.device_id.slice(0, 8))}
                               {d.isSelf && <span className="badge-active" style={{ marginLeft: 8 }}>{t("opt_this_device")}</span>}
                             </div>
                             <div className="row-desc">
@@ -2173,7 +2173,7 @@ export default function OptionsApp() {
                           </div>
                           <div className="row-desc">
                             {syncState.recovery_notice.device_label
-                              ? t("opt_blocked_from", syncState.recovery_notice.device_label)
+                              ? t("opt_blocked_from", isolate(syncState.recovery_notice.device_label))
                               : t("opt_blocked_from_unknown")}{" "}
                             {t("opt_blocked_saved")}
                           </div>

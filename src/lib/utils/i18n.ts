@@ -42,6 +42,24 @@ export function plural(baseKey: string, count: number, subs?: string | string[])
 }
 
 /**
+ * A value the user (or another program) named, made safe to substitute into a sentence.
+ *
+ * A device called "מחשב 2" dropped into "Asked for by $DEVICE$." is laid out by the
+ * Unicode bidi algorithm together with the sentence around it: its digit and the full stop
+ * join the Hebrew run and land on the wrong side. Wrapping the value in FIRST STRONG
+ * ISOLATE / POP DIRECTIONAL ISOLATE makes it one opaque unit that takes its direction from
+ * its own first strong letter and leaves the sentence alone, in both directions: an Arabic
+ * catalogue gets a Latin device name back intact too. Both marks are invisible.
+ *
+ * Only for text that is DISPLAYED. A value written back into an input or into storage
+ * would carry the marks with it. A value rendered as its own element uses `<bdi>`, which is
+ * the same isolation done by the markup.
+ */
+export function isolate(value: string): string {
+  return `⁨${value}⁩`;
+}
+
+/**
  * A one-placeholder message split into the text before and after the placeholder, so the
  * value can be rendered as its own element — `<code>` for a URL, `<b>` for an emphasised
  * word — instead of being flattened into the sentence.
