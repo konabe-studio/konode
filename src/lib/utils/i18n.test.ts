@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve, join } from "node:path";
-import { t, plural } from "@/lib/utils/i18n";
+import { t, plural, isolate } from "@/lib/utils/i18n";
 
 // The catalogues are data, and nothing type-checks them. `chrome.i18n.getMessage` answers
 // an unknown key with an EMPTY STRING, so the native failure is a label that silently
@@ -279,5 +279,11 @@ describe("t() and plural()", () => {
     expect(plural("popup_tabs", 1)).toBe("1 tab");
     expect(plural("popup_tabs", 2)).toBe("2 tabs");
     expect(plural("popup_tabs", 0)).toBe("0 tabs");
+  });
+
+  it("isolate() wraps a substituted name in invisible bidi isolation marks", () => {
+    // A right-to-left name must not drag the sentence's punctuation into its own run.
+    expect(isolate("מחשב 2")).toBe("⁨מחשב 2⁩");
+    expect(t("opt_blocked_from", isolate("מחשב 2"))).toBe("Asked for by ⁨מחשב 2⁩.");
   });
 });

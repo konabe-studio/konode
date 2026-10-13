@@ -448,7 +448,7 @@ export default function PopupApp() {
                   <div className="flex items-center gap-2">
                     <GitMerge size={12} className="shrink-0 text-sk-warn" />
                     <span className="truncate text-[12px] text-sk-warn">
-                      {group[0].device_label || t("popup_unknown_device")}
+                      {group[0].device_label ? <bdi>{group[0].device_label}</bdi> : t("popup_unknown_device")}
                     </span>
                   </div>
                   {group.map((c) => {
@@ -593,7 +593,7 @@ export default function PopupApp() {
             {remoteSessions.map((entry) => (
               <div key={entry.session.id} className="flex items-center gap-2 px-0.5 py-0.5">
                 <div className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px]">{entry.session.label || t("popup_unknown_device")}</span>
+                  <span className="block truncate text-[14px]">{entry.session.label ? <bdi>{entry.session.label}</bdi> : t("popup_unknown_device")}</span>
                   <span className="block truncate font-mono text-[12px] text-sk-subtle">
                     {plural("popup_tabs", entry.session.tabs.length)}
                     {entry.timestamp &&
@@ -638,7 +638,7 @@ export default function PopupApp() {
           {settings?.device_label && (
             <div className="flex items-center gap-2">
               <span className="text-xs text-sk-muted">{t("popup_device_label")}</span>
-              <span className="font-mono text-xs">{settings.device_label}</span>
+              <bdi className="font-mono text-xs">{settings.device_label}</bdi>
             </div>
           )}
         </div>
