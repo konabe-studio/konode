@@ -44,9 +44,10 @@ export function plural(baseKey: string, count: number, subs?: string | string[])
 /**
  * A value the user (or another program) named, made safe to substitute into a sentence.
  *
- * A device called "מחשב 2" dropped into "Asked for by $DEVICE$." is laid out by the
- * Unicode bidi algorithm together with the sentence around it: its digit and the full stop
- * join the Hebrew run and land on the wrong side. Wrapping the value in FIRST STRONG
+ * A device called "מחשב!" dropped into "Asked for by $DEVICE$." is laid out by the
+ * Unicode bidi algorithm together with the sentence around it: the "!" sits between Hebrew
+ * and the left-to-right text that follows, so it takes the sentence's direction and is
+ * drawn at the START of the name instead of its end. Wrapping the value in FIRST STRONG
  * ISOLATE / POP DIRECTIONAL ISOLATE makes it one opaque unit that takes its direction from
  * its own first strong letter and leaves the sentence alone, in both directions: an Arabic
  * catalogue gets a Latin device name back intact too. Both marks are invisible.

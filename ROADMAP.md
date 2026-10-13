@@ -486,6 +486,14 @@ Reopen this if Apple ever ships an API that writes to the user's visible iCloud 
   generic WebDAV card takes a local address, but a server the user runs is not a backend.
   Nobody has reported trying it.
 - Optional OAuth proxy (serverless) to avoid shipping the Google client secret.
+- **Right-to-left languages (Arabic, Hebrew, Persian).** Due with the first one that heads
+  for `shipped-languages.json`, not before: a catalogue on its own translates the words and
+  leaves every page laid out left to right. Names users choose (devices, extensions) are
+  already isolated from the text around them, so a Hebrew device name reads correctly in
+  today's languages. What remains is the page direction itself (`dir` beside `lang`, from
+  the catalogue that answered), CSS that says left and right where it means start and end,
+  toggles that slide the other way, arrow icons that point the other way, and the Settings
+  tab strip's overflow fade, which reads `scrollLeft`.
 
 ## Publishing
 
