@@ -13,6 +13,7 @@
 
 import { getRateProgress, setRateProgress } from "@/lib/utils/storage";
 import type { RateProgress } from "@/lib/utils/storage";
+import type { SyncState } from "@/lib/types";
 
 export const RATE_MIN_DAYS = 14;
 export const RATE_MIN_SYNCS = 200;
@@ -38,6 +39,24 @@ export async function noteCleanSync(now: number = Date.now()): Promise<boolean> 
   } catch {
     return false;
   }
+}
+
+/**
+ * Whether the popup is showing something the user has to deal with: an error, a conflict,
+ * a held-back deletion. The card never sits beside one.
+ *
+ * "syncing" is not on the list, and it cannot be judged on its own: a sync clears the last
+ * error the moment it starts, so a device failing every minute looks clean for the second
+ * or two of each retry. The popup therefore decides once, when it opens, from a settled
+ * `success`, and from then on can only take the card away (see `popup/App.tsx`), so it never
+ * blinks in between two failures.
+ */
+export function stateNeedsUser(
+  st: Pick<SyncState, "status" | "last_error" | "recovery_notice" | "pending_conflicts"> | null,
+): boolean {
+  if (!st) return false;
+  return st.status === "error" || st.status === "conflict" || !!st.last_error ||
+    !!st.recovery_notice || (st.pending_conflicts?.length ?? 0) > 0;
 }
 
 /** Whether the card has earned its one showing. The popup's own conditions come on top. */

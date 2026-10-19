@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { noteCleanSync, rateCardDue, RATE_MIN_DAYS, RATE_MIN_SYNCS } from "./rate-prompt";
+import { noteCleanSync, rateCardDue, stateNeedsUser, RATE_MIN_DAYS, RATE_MIN_SYNCS } from "./rate-prompt";
 import {
   DEFAULT_SETTINGS, KEYS, getRateAnswered, getRateProgress, getState, setRateAnswered, setRateProgress,
 } from "@/lib/utils/storage";
@@ -30,6 +30,29 @@ describe("rateCardDue", () => {
   it("does not show with nothing counted, or a start it cannot read", () => {
     expect(rateCardDue(null, null, T0 + 60 * DAY)).toBe(false);
     expect(rateCardDue({ first_at: "not a date", syncs: RATE_MIN_SYNCS }, null, T0 + 60 * DAY)).toBe(false);
+  });
+});
+
+describe("stateNeedsUser", () => {
+  const quiet = { status: "success" as const, last_error: null, recovery_notice: null, pending_conflicts: [] };
+
+  it("is quiet for a clean sync, and while one runs", () => {
+    expect(stateNeedsUser(quiet)).toBe(false);
+    expect(stateNeedsUser({ ...quiet, status: "syncing" })).toBe(false);
+  });
+
+  it("says so for an error, a conflict or a held-back deletion", () => {
+    expect(stateNeedsUser({ ...quiet, status: "error" })).toBe(true);
+    expect(stateNeedsUser({ ...quiet, last_error: "server said no" })).toBe(true);
+    expect(stateNeedsUser({ ...quiet, status: "conflict" })).toBe(true);
+    expect(stateNeedsUser({ ...quiet, recovery_notice: { at: "2026-10-19T12:00:00Z", blocked: 40 } })).toBe(true);
+    expect(stateNeedsUser({ ...quiet, pending_conflicts: [{} as never] })).toBe(true);
+  });
+
+  // Why the popup cannot decide from "syncing": the retry of a failing sync starts by
+  // clearing the error, so for that moment it looks exactly like a healthy one.
+  it("cannot tell a failing device's retry from a healthy sync", () => {
+    expect(stateNeedsUser({ ...quiet, status: "syncing", last_error: null })).toBe(false);
   });
 });
 

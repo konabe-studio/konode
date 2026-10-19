@@ -5,7 +5,7 @@ import { sendMessage, request } from "@/lib/utils/messaging";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl } from "@/lib/utils/extensions-match";
 import { KEYS, getSettings, getState, normalizeRemoteSessions, normalizeRemoteExtensions, getRateProgress, getRateAnswered, setRateAnswered } from "@/lib/utils/storage";
-import { rateCardDue } from "@/lib/rate-prompt";
+import { rateCardDue, stateNeedsUser } from "@/lib/rate-prompt";
 import { reviewPageFor } from "@/lib/store-review";
 import { STATE_UPDATE } from "@/lib/constants";
 import { streamState, streamInputFor, streamColor, streamLabelKey } from "@/popup/stream-state";
@@ -72,8 +72,9 @@ export default function PopupApp() {
   const [resolving, setResolving] = useState<string | null>(null);
   // The session whose Restore was pressed and now waits for "Open N tabs".
   const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
-  // The rating card has earned its one showing. Read with the state, cleared the moment
-  // either button is pressed.
+  // The rating card has earned its one showing. Decided once, when the popup opens, from a
+  // settled clean `success`; after that it can only be taken away: by either button, or by
+  // anything appearing that needs the user (see `stateNeedsUser`).
   const [rateDue, setRateDue] = useState(false);
 
   // Track animation state separately from sync state
@@ -92,7 +93,7 @@ export default function PopupApp() {
       const [st, se, rp, ra] = await Promise.all([getState(), getSettings(), getRateProgress(), getRateAnswered()]);
       setState(st);
       setSettings(se);
-      setRateDue(rateCardDue(rp, ra));
+      setRateDue(st.status === "success" && !stateNeedsUser(st) && rateCardDue(rp, ra));
       setLoadError(false);
     } catch (err) {
       console.error("Popup load error:", err);
@@ -353,12 +354,14 @@ export default function PopupApp() {
   // read lands, enabled_types is undefined and an empty list would be indistinguishable
   // from "we don't know yet".
   const nothingEnabled = settingsLoaded && (settings?.enabled_types?.length ?? 0) === 0;
-  // Never during setup, never beside anything that needs the user. "syncing" is allowed
-  // because a sync starts every minute and clears the error it is about to re-decide, so
-  // hiding the card then would only make it blink. Every other status keeps it hidden.
-  const showRateCard = !!REVIEW_PAGE && rateDue && hasBackend && !!settings?.onboarding_completed &&
-    (status === "success" || status === "syncing") && !state?.last_error && !state?.recovery_notice &&
-    (state?.pending_conflicts?.length ?? 0) === 0 && !actionError && !loadError;
+  // Never during setup, never beside anything that needs the user. Once something does, the
+  // card is gone for as long as this popup stays open: the retry that follows clears the
+  // error for a moment, and the card must not come back in that gap.
+  const rateBlocked = stateNeedsUser(state) || !!actionError || loadError;
+  useEffect(() => {
+    if (rateBlocked) setRateDue(false);
+  }, [rateBlocked]);
+  const showRateCard = !!REVIEW_PAGE && rateDue && !rateBlocked && hasBackend && !!settings?.onboarding_completed;
 
   return (
     <div className="flex max-h-[600px] w-[360px] flex-col bg-sk-bg text-sk-text">
