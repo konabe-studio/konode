@@ -140,6 +140,15 @@
   "popup_restore": {
     "message": "Visszaállítás"
   },
+  "popup_rate_body": {
+    "message": "A Konode már egy ideje szinkronizálja az eszközeidet. Ha beválik neked, egy értékelés az áruházban segít másoknak rátalálni."
+  },
+  "popup_rate_yes": {
+    "message": "Értékelem"
+  },
+  "popup_rate_no": {
+    "message": "Nem, köszönöm"
+  },
   "popup_restore_confirm_one": {
     "message": "$COUNT$ lap megnyitása",
     "placeholders": {
@@ -1303,6 +1312,12 @@
   },
   "opt_email_desc": {
     "message": "Bármit, amit inkább nem tennél közzé nyilvánosan."
+  },
+  "opt_rate_label": {
+    "message": "Értékelés az áruházban"
+  },
+  "opt_rate_desc": {
+    "message": "Ha a Konode beválik neked, egy értékelés segít másoknak rátalálni (nyilvános, az áruházi fiókodhoz kötve)."
   },
   "opt_developer_section": {
     "message": "Fejlesztői"

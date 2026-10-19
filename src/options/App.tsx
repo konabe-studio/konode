@@ -30,11 +30,15 @@ import {
   Puzzle, AlertTriangle, CheckCircle2, XCircle,
   Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
   Pencil, Key, Copy, Check, ArrowRight,
-  Trash2, RotateCcw, Camera, Mail,
+  Trash2, RotateCcw, Camera, Mail, Star,
 } from "lucide-react";
 // Shown in the About section. The manifest is the single source of truth for the
 // version — bump `package.json` and the build stamps it into the manifest.
 const APP_VERSION = browser.runtime.getManifest().version;
+// The store this install came from, for the rating row under Feedback. The row is always
+// there; following it also ends the popup's one-time card (lib/rate-prompt.ts), so nobody
+// is asked for a rating they already gave. Null on a build no store knows.
+const REVIEW_PAGE = reviewPageFor(browser.runtime.id);
 
 function useScrollEdges<T extends HTMLElement>(axis: "x" | "y", revision: unknown = 0) {
   // A CALLBACK ref, not useRef, and that distinction was the whole bug. The audit list
@@ -82,7 +86,7 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 }
 
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
-import { KEYS, normalizeRemoteExtensions, type AuditEntry } from "@/lib/utils/storage";
+import { KEYS, normalizeRemoteExtensions, setRateAnswered, type AuditEntry } from "@/lib/utils/storage";
 import { auditLogText } from "@/lib/utils/audit-text";
 import { isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
@@ -90,11 +94,12 @@ import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl, storeUrlFor, inferStore, STORE_NAME, type LocalExtLike } from "@/lib/utils/extensions-match";
 import { BACKEND_LABEL, PERMISSION_LOST_PREFIX, STATE_UPDATE } from "@/lib/constants";
 import {
-  PROVIDERS, providerById, providerFromConfig, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf,
+  providerCards, providerById, providerFromConfig, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf,
   webdavUrlForCard,
   type ProviderId,
 } from "@/lib/storage-providers";
 import { ProviderLogo } from "@/lib/provider-logos";
+import { reviewPageFor } from "@/lib/store-review";
 
 // ─── Secret field ───────────────────────────────────────────────────────────
 // Masks a *saved* secret (token / password / passphrase): once a value exists, the
@@ -1383,7 +1388,7 @@ export default function OptionsApp() {
               <p className="page-subtitle">{t("opt_backend_head_sub")}</p>
 
               <div className="card-list">
-                {PROVIDERS.map((p) => {
+                {providerCards(t("locale_bcp47")).map((p) => {
                   // Selection drives the card UI (expanded config, radio); only the
                   // persisted provider earns the "active" badge.
                   const isActive = selectedProvider === p.id;
@@ -2471,6 +2476,20 @@ export default function OptionsApp() {
                     <Mail size={12} /> konabe@proton.me
                   </a>
                 </div>
+                {REVIEW_PAGE && (
+                  <div className="settings-row">
+                    <div className="settings-row-left">
+                      <div>
+                        <div className="row-label">{t("opt_rate_label")}</div>
+                        <div className="row-desc">{t("opt_rate_desc")}</div>
+                      </div>
+                    </div>
+                    <a className="link-external" href={REVIEW_PAGE.url} target="_blank" rel="noreferrer"
+                      onClick={() => void setRateAnswered(new Date().toISOString())}>
+                      <Star size={12} /> {REVIEW_PAGE.store} <ExternalLink size={10} />
+                    </a>
+                  </div>
+                )}
               </div>
 
               <div className="settings-section">

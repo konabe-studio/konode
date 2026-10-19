@@ -128,6 +128,15 @@
   "popup_restore": {
     "message": "还原"
   },
+  "popup_rate_body": {
+    "message": "Konode 已经为您的设备同步了一段时间。如果它对您有用，在商店里评个分可以帮助更多人找到它。"
+  },
+  "popup_rate_yes": {
+    "message": "去评分"
+  },
+  "popup_rate_no": {
+    "message": "不用了"
+  },
   "popup_restore_confirm_one": {
     "message": "打开 $COUNT$ 个标签页",
     "placeholders": {
@@ -1273,6 +1282,12 @@
   },
   "opt_email_desc": {
     "message": "适用于不便公开的内容。"
+  },
+  "opt_rate_label": {
+    "message": "在商店中评分"
+  },
+  "opt_rate_desc": {
+    "message": "如果 Konode 对您有用，评分可以帮助更多人找到它（公开，关联至您的商店账号）。"
   },
   "opt_developer_section": {
     "message": "开发者"

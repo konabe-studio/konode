@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  PROVIDERS,
+  PROVIDERS, providerCards,
   webdavUrlForCard, providerFromConfig, providerById, nextcloudUrl, nextcloudBaseFromUrl,
   pcloudRegionOf, sameUrl,
 } from "./storage-providers";
@@ -126,6 +126,23 @@ describe("sameUrl / pcloudRegionOf", () => {
     expect(pcloudRegionOf(PCLOUD_EU)).toBe("eu");
     expect(pcloudRegionOf(undefined)).toBe("eu");
     expect(pcloudRegionOf(KOOFR)).toBe("eu");
+  });
+});
+
+describe("providerCards", () => {
+  const ids = (tag: string) => providerCards(tag).map((p) => p.id);
+
+  it("leads with Google Drive in every language but Simplified Chinese", () => {
+    for (const tag of ["en", "hu", "de", "es", "it", "ru", "zh-TW"]) {
+      expect(ids(tag)).toEqual(PROVIDERS.map((p) => p.id));
+    }
+    expect(ids(t("locale_bcp47"))[0]).toBe("gdrive"); // the suite renders English
+  });
+
+  it("puts Nutstore first for Simplified Chinese and keeps the rest in order", () => {
+    const zh = ids("zh-CN");
+    expect(zh[0]).toBe("jianguoyun");
+    expect(zh.slice(1)).toEqual(PROVIDERS.map((p) => p.id).filter((id) => id !== "jianguoyun"));
   });
 });
 

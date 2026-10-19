@@ -29,7 +29,7 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
 import {
-  PROVIDERS, providerById, nextcloudUrl, pcloudRegionOf, webdavUrlForCard,
+  providerCards, providerById, nextcloudUrl, pcloudRegionOf, webdavUrlForCard,
   type ProviderId,
 } from "@/lib/storage-providers";
 import { ProviderLogo } from "@/lib/provider-logos";
@@ -606,7 +606,7 @@ export default function OnboardingApp() {
           <p style={S.subtitle}>{t("onb_backend_subtitle")}</p>
 
           <div style={S.backendList}>
-            {PROVIDERS.map((p) => {
+            {providerCards(t("locale_bcp47")).map((p) => {
               const on = provider === p.id;
               return (
                 <div

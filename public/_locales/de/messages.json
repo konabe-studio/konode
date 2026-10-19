@@ -140,6 +140,15 @@
   "popup_restore": {
     "message": "Wiederherstellen"
   },
+  "popup_rate_body": {
+    "message": "Konode synchronisiert deine Geräte jetzt schon eine Weile. Wenn es für dich funktioniert, hilft eine Bewertung im Store anderen, es zu finden."
+  },
+  "popup_rate_yes": {
+    "message": "Bewerten"
+  },
+  "popup_rate_no": {
+    "message": "Nein, danke"
+  },
   "popup_restore_confirm_one": {
     "message": "$COUNT$ Tab öffnen",
     "placeholders": {
@@ -1303,6 +1312,12 @@
   },
   "opt_email_desc": {
     "message": "Für alles, was du nicht öffentlich posten möchtest."
+  },
+  "opt_rate_label": {
+    "message": "Im Store bewerten"
+  },
+  "opt_rate_desc": {
+    "message": "Wenn Konode für dich funktioniert, hilft eine Bewertung anderen, es zu finden (öffentlich, mit deinem Store-Konto verknüpft)."
   },
   "opt_developer_section": {
     "message": "Entwickler"

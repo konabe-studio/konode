@@ -125,6 +125,15 @@
   "popup_restore": {
     "message": "Ripristina"
   },
+  "popup_rate_body": {
+    "message": "Konode sincronizza i tuoi dispositivi già da un po'. Se ti è utile, una valutazione nello store aiuta altre persone a trovarlo."
+  },
+  "popup_rate_yes": {
+    "message": "Valuta"
+  },
+  "popup_rate_no": {
+    "message": "No, grazie"
+  },
   "popup_restore_confirm_one": {
     "message": "Apri $COUNT$ scheda",
     "placeholders": {
@@ -1303,6 +1312,12 @@
   },
   "opt_email_desc": {
     "message": "Per tutto ciò che preferisci non pubblicare."
+  },
+  "opt_rate_label": {
+    "message": "Valuta nello store"
+  },
+  "opt_rate_desc": {
+    "message": "Se Konode ti è utile, una valutazione aiuta altre persone a trovarlo (pubblica e collegata al tuo account dello store)."
   },
   "opt_developer_section": {
     "message": "Sviluppatore"

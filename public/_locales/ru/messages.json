@@ -140,6 +140,15 @@
   "popup_restore": {
     "message": "Восстановить"
   },
+  "popup_rate_body": {
+    "message": "Konode уже какое-то время синхронизирует ваши устройства. Если он вам полезен, оценка в магазине поможет другим его найти."
+  },
+  "popup_rate_yes": {
+    "message": "Оценить"
+  },
+  "popup_rate_no": {
+    "message": "Нет, спасибо"
+  },
   "popup_restore_confirm_one": {
     "message": "Открыть вкладки: $COUNT$",
     "placeholders": {
@@ -1303,6 +1312,12 @@
   },
   "opt_email_desc": {
     "message": "Для всего, что вы не хотите публиковать."
+  },
+  "opt_rate_label": {
+    "message": "Оценить в магазине"
+  },
+  "opt_rate_desc": {
+    "message": "Если Konode вам полезен, оценка поможет другим его найти (публично, привязано к вашему аккаунту в магазине)."
   },
   "opt_developer_section": {
     "message": "Для разработчиков"

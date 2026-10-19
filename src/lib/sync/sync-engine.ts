@@ -40,6 +40,7 @@ import {
   dropRemoteDevices,
 } from "@/lib/utils/storage";
 import { logger } from "@/lib/utils/logger";
+import { noteCleanSync } from "@/lib/rate-prompt";
 import { PERMISSION_LOST_PREFIX } from "@/lib/constants";
 import { encrypt, decrypt, sha256, verifyPassphrase } from "@/lib/crypto/encryption";
 import { ConflictResolver, notifyConflict, orderPeersByTime } from "./conflict-resolver";
@@ -278,6 +279,12 @@ export class SyncEngine {
   // accumulated across data types and folded into the cumulative `bytes_transferred`
   // stat at the end. Reset per sync so it's a per-run tally, not a running double-count.
   private bytesThisSync = 0;
+  // The other devices whose files this sync read, across every type. Only the rating
+  // card asks (lib/rate-prompt.ts): a sync with no other device has nothing to show yet.
+  private peersThisSync = new Set<string>();
+  // Set once the rating card has counted all the syncs it needs, so the rest of this
+  // worker's life does not even read the counter.
+  private rateCountDone = false;
   // Types whose own file is missing from the folder this sync, so the upload must go out
   // even though the local checksum record says this content already went. Rebuilt every
   // sync by `findOwnMissingFiles` and consumed by `uploadIfChanged`.
@@ -461,6 +468,7 @@ export class SyncEngine {
     this.encryptionWarnings.clear();
     this.failedTypes.clear();
     this.bytesThisSync = 0;
+    this.peersThisSync.clear();
     this.bulkBlockedThisSync = null;
     this.historyIndexThisSync = null;
     const backend = createBackend(backendConfig);
@@ -529,6 +537,10 @@ export class SyncEngine {
       });
       this.onStateChange(newState);
       logger.info("SyncEngine", problems.length ? `Sync complete with ${problems.length} problem(s)` : "Sync complete");
+      // `noteCleanSync` never throws, so it cannot turn this sync into a failed one.
+      if (!this.rateCountDone && newState.status === "success" && !recovery && this.peersThisSync.size > 0) {
+        this.rateCountDone = await noteCleanSync();
+      }
 
     } catch (err) {
       const msg = await explainSyncFailure(err, backendConfig);
@@ -1049,6 +1061,7 @@ export class SyncEngine {
       );
       // Count pulled bytes (the serialized peer payloads) toward the transfer stat.
       for (const p of peers) this.bytesThisSync += p.payload?.length ?? 0;
+      for (const p of peers) this.peersThisSync.add(p.device_id);
 
       // A device we hold a cached session / extension list for, that did NOT arrive here,
       // may simply be gone from the folder — someone forgot it on another machine. Runs

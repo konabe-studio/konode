@@ -4,7 +4,9 @@ import { providerFromConfig, providerById } from "@/lib/storage-providers";
 import { sendMessage, request } from "@/lib/utils/messaging";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl } from "@/lib/utils/extensions-match";
-import { KEYS, getSettings, getState, normalizeRemoteSessions, normalizeRemoteExtensions } from "@/lib/utils/storage";
+import { KEYS, getSettings, getState, normalizeRemoteSessions, normalizeRemoteExtensions, getRateProgress, getRateAnswered, setRateAnswered } from "@/lib/utils/storage";
+import { rateCardDue, stateNeedsUser } from "@/lib/rate-prompt";
+import { reviewPageFor } from "@/lib/store-review";
 import { STATE_UPDATE } from "@/lib/constants";
 import { streamState, streamInputFor, streamColor, streamLabelKey } from "@/popup/stream-state";
 import { groupConflictsByDevice } from "@/popup/conflict-groups";
@@ -13,7 +15,7 @@ import { dataTypeApiPresent, hasPermission } from "@/lib/utils/capabilities";
 import {
   RefreshCw, Settings, Bookmark, Clock, Globe,
   AlertCircle, Loader2, ChevronRight,
-  Wifi, Puzzle, ExternalLink, GitMerge, RotateCcw,
+  Wifi, Puzzle, ExternalLink, GitMerge, RotateCcw, Star,
 } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────
@@ -47,6 +49,10 @@ const SYNC_ORDER: DataType[] = ["bookmarks", "history", "sessions", "extensions"
  */
 const RESTORE_CONFIRM_TABS = 20;
 
+// Where this install can be rated. Null on a build no store knows, and then the rating
+// card never shows (see lib/rate-prompt.ts for when it does).
+const REVIEW_PAGE = reviewPageFor(browser.runtime.id);
+
 // ─── App ──────────────────────────────────────────────────────────────────
 
 export default function PopupApp() {
@@ -66,6 +72,10 @@ export default function PopupApp() {
   const [resolving, setResolving] = useState<string | null>(null);
   // The session whose Restore was pressed and now waits for "Open N tabs".
   const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
+  // The rating card has earned its one showing. Decided once, when the popup opens, from a
+  // settled clean `success`; after that it can only be taken away: by either button, or by
+  // anything appearing that needs the user (see `stateNeedsUser`).
+  const [rateDue, setRateDue] = useState(false);
 
   // Track animation state separately from sync state
   const animTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -80,9 +90,10 @@ export default function PopupApp() {
       // `settings === null` state as "No backend configured", then corrected when
       // the message resolved (the transient flash). Reading storage removes that
       // dependency; the flash is also gated below on `settingsLoaded`.
-      const [st, se] = await Promise.all([getState(), getSettings()]);
+      const [st, se, rp, ra] = await Promise.all([getState(), getSettings(), getRateProgress(), getRateAnswered()]);
       setState(st);
       setSettings(se);
+      setRateDue(st.status === "success" && !stateNeedsUser(st) && rateCardDue(rp, ra));
       setLoadError(false);
     } catch (err) {
       console.error("Popup load error:", err);
@@ -294,6 +305,14 @@ export default function PopupApp() {
     if (!r.ok) setActionError(r.error);
   };
 
+  /** Either answer ends the card for good. Recorded before the store tab opens, because
+   *  opening it closes the popup. */
+  const answerRate = async (rate: boolean) => {
+    setRateDue(false);
+    await setRateAnswered(new Date().toISOString());
+    if (rate && REVIEW_PAGE) void browser.tabs.create({ url: REVIEW_PAGE.url });
+  };
+
   const status = state?.status ?? "idle";
   const statusCfg = STATUS_CONFIG[status];
   const isSyncing = status === "syncing";
@@ -335,6 +354,14 @@ export default function PopupApp() {
   // read lands, enabled_types is undefined and an empty list would be indistinguishable
   // from "we don't know yet".
   const nothingEnabled = settingsLoaded && (settings?.enabled_types?.length ?? 0) === 0;
+  // Never during setup, never beside anything that needs the user. Once something does, the
+  // card is gone for as long as this popup stays open: the retry that follows clears the
+  // error for a moment, and the card must not come back in that gap.
+  const rateBlocked = stateNeedsUser(state) || !!actionError || loadError;
+  useEffect(() => {
+    if (rateBlocked) setRateDue(false);
+  }, [rateBlocked]);
+  const showRateCard = !!REVIEW_PAGE && rateDue && !rateBlocked && hasBackend && !!settings?.onboarding_completed;
 
   return (
     <div className="flex max-h-[600px] w-[360px] flex-col bg-sk-bg text-sk-text">
@@ -626,6 +653,27 @@ export default function PopupApp() {
             ))}
           </div>
         </section>
+      )}
+
+      {/* ── Rating, once ── */}
+      {showRateCard && (
+        <div className="mt-4 rounded-box border border-sk-hairline bg-sk-raised px-3 py-3">
+          <p className="text-[12px] text-sk-muted">{t("popup_rate_body")}</p>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={() => void answerRate(true)}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-box border border-sk-hairline bg-sk-surface py-1.5 text-[12px] text-sk-text transition-colors hover:bg-sk-tint"
+            >
+              <Star size={12} /> {t("popup_rate_yes")}
+            </button>
+            <button
+              onClick={() => void answerRate(false)}
+              className="flex flex-1 items-center justify-center rounded-box py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text"
+            >
+              {t("popup_rate_no")}
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ── Footer ── */}
