@@ -1304,6 +1304,12 @@
   "opt_email_desc": {
     "message": "任何你不想公開張貼的事情。"
   },
+  "opt_rate_label": {
+    "message": "在商店評分"
+  },
+  "opt_rate_desc": {
+    "message": "如果 Konode 對你有幫助，評分可以讓更多人找到它（公開，而且會連到你的商店帳號）。"
+  },
   "opt_developer_section": {
     "message": "開發者"
   },

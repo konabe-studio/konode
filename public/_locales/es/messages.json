@@ -1239,6 +1239,12 @@
   "opt_email_desc": {
     "message": "Para cualquier cosa que prefieras no hacer pública."
   },
+  "opt_rate_label": {
+    "message": "Valorar en la tienda"
+  },
+  "opt_rate_desc": {
+    "message": "Si Konode te resulta útil, una valoración ayuda a que otras personas lo encuentren (pública, vinculada a tu cuenta de la tienda)."
+  },
   "opt_developer_section": {
     "message": "Desarrollador"
   },

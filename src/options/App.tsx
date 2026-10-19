@@ -30,11 +30,14 @@ import {
   Puzzle, AlertTriangle, CheckCircle2, XCircle,
   Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
   Pencil, Key, Copy, Check, ArrowRight,
-  Trash2, RotateCcw, Camera, Mail,
+  Trash2, RotateCcw, Camera, Mail, Star,
 } from "lucide-react";
 // Shown in the About section. The manifest is the single source of truth for the
 // version — bump `package.json` and the build stamps it into the manifest.
 const APP_VERSION = browser.runtime.getManifest().version;
+// The store this install came from, for the rating row under Feedback. A row and nothing
+// more: it waits to be found, it never prompts. Null on a build no store knows.
+const REVIEW_PAGE = reviewPageFor(browser.runtime.id);
 
 function useScrollEdges<T extends HTMLElement>(axis: "x" | "y", revision: unknown = 0) {
   // A CALLBACK ref, not useRef, and that distinction was the whole bug. The audit list
@@ -95,6 +98,7 @@ import {
   type ProviderId,
 } from "@/lib/storage-providers";
 import { ProviderLogo } from "@/lib/provider-logos";
+import { reviewPageFor } from "@/lib/store-review";
 
 // ─── Secret field ───────────────────────────────────────────────────────────
 // Masks a *saved* secret (token / password / passphrase): once a value exists, the
@@ -2471,6 +2475,19 @@ export default function OptionsApp() {
                     <Mail size={12} /> konabe@proton.me
                   </a>
                 </div>
+                {REVIEW_PAGE && (
+                  <div className="settings-row">
+                    <div className="settings-row-left">
+                      <div>
+                        <div className="row-label">{t("opt_rate_label")}</div>
+                        <div className="row-desc">{t("opt_rate_desc")}</div>
+                      </div>
+                    </div>
+                    <a className="link-external" href={REVIEW_PAGE.url} target="_blank" rel="noreferrer">
+                      <Star size={12} /> {REVIEW_PAGE.store} <ExternalLink size={10} />
+                    </a>
+                  </div>
+                )}
               </div>
 
               <div className="settings-section">

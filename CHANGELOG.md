@@ -13,6 +13,9 @@ All notable changes to Konode. Format loosely follows
   selecting up to 200 rows by hand. The copy is word for word, so it includes the address of
   your storage server and of any pages Konode couldn't sync, and the button says so: read it
   before you post it anywhere public.
+- **Rate Konode from Settings.** Settings → Advanced → Feedback has a row that opens Konode's
+  page in the store you installed it from, the Chrome Web Store or Firefox Add-ons. It is
+  only a row: Konode never asks you for a rating.
 
 ### Changed
 

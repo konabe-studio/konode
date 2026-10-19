@@ -1415,6 +1415,12 @@
   "opt_email_desc": {
     "message": "For anything you'd rather not post publicly."
   },
+  "opt_rate_label": {
+    "message": "Rate it in the store"
+  },
+  "opt_rate_desc": {
+    "message": "If Konode works for you, a rating helps other people find it (public, tied to your store account)."
+  },
   "opt_developer_section": {
     "message": "Developer"
   },

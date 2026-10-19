@@ -1304,6 +1304,12 @@
   "opt_email_desc": {
     "message": "Für alles, was du nicht öffentlich posten möchtest."
   },
+  "opt_rate_label": {
+    "message": "Im Store bewerten"
+  },
+  "opt_rate_desc": {
+    "message": "Wenn Konode für dich funktioniert, hilft eine Bewertung anderen, es zu finden (öffentlich, mit deinem Store-Konto verknüpft)."
+  },
   "opt_developer_section": {
     "message": "Entwickler"
   },

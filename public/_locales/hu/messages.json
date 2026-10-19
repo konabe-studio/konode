@@ -1304,6 +1304,12 @@
   "opt_email_desc": {
     "message": "Bármit, amit inkább nem tennél közzé nyilvánosan."
   },
+  "opt_rate_label": {
+    "message": "Értékelés az áruházban"
+  },
+  "opt_rate_desc": {
+    "message": "Ha a Konode beválik neked, egy értékelés segít másoknak rátalálni (nyilvános, az áruházi fiókodhoz kötve)."
+  },
   "opt_developer_section": {
     "message": "Fejlesztői"
   },
