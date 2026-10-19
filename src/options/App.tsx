@@ -35,8 +35,9 @@ import {
 // Shown in the About section. The manifest is the single source of truth for the
 // version — bump `package.json` and the build stamps it into the manifest.
 const APP_VERSION = browser.runtime.getManifest().version;
-// The store this install came from, for the rating row under Feedback. A row and nothing
-// more: it waits to be found, it never prompts. Null on a build no store knows.
+// The store this install came from, for the rating row under Feedback. The row is always
+// there; following it also ends the popup's one-time card (lib/rate-prompt.ts), so nobody
+// is asked for a rating they already gave. Null on a build no store knows.
 const REVIEW_PAGE = reviewPageFor(browser.runtime.id);
 
 function useScrollEdges<T extends HTMLElement>(axis: "x" | "y", revision: unknown = 0) {
@@ -85,7 +86,7 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 }
 
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
-import { KEYS, normalizeRemoteExtensions, type AuditEntry } from "@/lib/utils/storage";
+import { KEYS, normalizeRemoteExtensions, setRateAnswered, type AuditEntry } from "@/lib/utils/storage";
 import { auditLogText } from "@/lib/utils/audit-text";
 import { isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
@@ -2483,7 +2484,8 @@ export default function OptionsApp() {
                         <div className="row-desc">{t("opt_rate_desc")}</div>
                       </div>
                     </div>
-                    <a className="link-external" href={REVIEW_PAGE.url} target="_blank" rel="noreferrer">
+                    <a className="link-external" href={REVIEW_PAGE.url} target="_blank" rel="noreferrer"
+                      onClick={() => void setRateAnswered(new Date().toISOString())}>
                       <Star size={12} /> {REVIEW_PAGE.store} <ExternalLink size={10} />
                     </a>
                   </div>

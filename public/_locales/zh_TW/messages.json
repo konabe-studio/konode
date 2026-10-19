@@ -140,6 +140,15 @@
   "popup_restore": {
     "message": "還原"
   },
+  "popup_rate_body": {
+    "message": "Konode 已經幫你的裝置同步一段時間了。如果它對你有幫助，在商店評個分可以讓更多人找到它。"
+  },
+  "popup_rate_yes": {
+    "message": "去評分"
+  },
+  "popup_rate_no": {
+    "message": "不用了"
+  },
   "popup_restore_confirm_one": {
     "message": "開啟 $COUNT$ 個分頁",
     "placeholders": {

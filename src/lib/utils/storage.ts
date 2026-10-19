@@ -133,6 +133,10 @@ export const KEYS = {
   GDRIVE_SESSION: "konode_gdrive_session",
   GDRIVE_FOLDER: "konode_gdrive_folder",
   ONBOARDING_DRAFT: "konode_onboarding_draft",
+  // The one-time rating card (lib/rate-prompt.ts). Two keys because two contexts write:
+  // the service worker counts into PROGRESS, the popup records the answer in ANSWERED.
+  RATE_PROGRESS: "konode_rate_progress",
+  RATE_ANSWERED: "konode_rate_answered",
 } as const;
 
 // ─── Generic Helpers ───────────────────────────────────────────────────────
@@ -1007,4 +1011,30 @@ export async function getResolvedConflicts(): Promise<Record<string, string>> {
 export async function setResolvedConflict(key: string, checksum: string): Promise<void> {
   const map = { ...(await getResolvedConflicts()), [key]: checksum };
   await set(KEYS.RESOLVED_CONFLICTS, map);
+}
+
+// ─── Rating card ────────────────────────────────────────────────────────────
+// See lib/rate-prompt.ts for what these mean and when the card shows.
+
+export interface RateProgress {
+  /** ISO-8601 of the first sync that counted. */
+  first_at: string;
+  /** Syncs that counted, up to the threshold: counting stops there. */
+  syncs: number;
+}
+
+export async function getRateProgress(): Promise<RateProgress | null> {
+  const v = await get<RateProgress | null>(KEYS.RATE_PROGRESS, null);
+  return v && typeof v.first_at === "string" && typeof v.syncs === "number" ? v : null;
+}
+export async function setRateProgress(p: RateProgress): Promise<void> {
+  await set(KEYS.RATE_PROGRESS, p);
+}
+
+export async function getRateAnswered(): Promise<string | null> {
+  const v = await get<string | null>(KEYS.RATE_ANSWERED, null);
+  return typeof v === "string" ? v : null;
+}
+export async function setRateAnswered(at: string): Promise<void> {
+  await set(KEYS.RATE_ANSWERED, at);
 }

@@ -128,6 +128,15 @@
   "popup_restore": {
     "message": "Restaurar"
   },
+  "popup_rate_body": {
+    "message": "Konode lleva un tiempo sincronizando tus dispositivos. Si te resulta útil, una valoración en la tienda ayuda a que otras personas lo encuentren."
+  },
+  "popup_rate_yes": {
+    "message": "Valorar"
+  },
+  "popup_rate_no": {
+    "message": "No, gracias"
+  },
   "popup_restore_confirm_one": {
     "message": "Abrir $COUNT$ pestaña",
     "placeholders": {

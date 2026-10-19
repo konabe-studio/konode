@@ -125,6 +125,15 @@
   "popup_restore": {
     "message": "Ripristina"
   },
+  "popup_rate_body": {
+    "message": "Konode sincronizza i tuoi dispositivi già da un po'. Se ti è utile, una valutazione nello store aiuta altre persone a trovarlo."
+  },
+  "popup_rate_yes": {
+    "message": "Valuta"
+  },
+  "popup_rate_no": {
+    "message": "No, grazie"
+  },
   "popup_restore_confirm_one": {
     "message": "Apri $COUNT$ scheda",
     "placeholders": {

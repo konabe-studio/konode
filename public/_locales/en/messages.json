@@ -177,6 +177,15 @@
     "message": "Restore",
     "description": "Opens the tabs of a peer device's session. Adds tabs; removes nothing."
   },
+  "popup_rate_body": {
+    "message": "Konode has been syncing your devices for a while now. If it works for you, a rating in the store helps other people find it."
+  },
+  "popup_rate_yes": {
+    "message": "Rate it"
+  },
+  "popup_rate_no": {
+    "message": "No thanks"
+  },
   "popup_restore_confirm_one": {
     "message": "Open $COUNT$ tab",
     "description": "The Restore button after a first press, on a session large enough to ask first: the second press opens this many tabs. Exactly one; never shown in practice, since only large sessions ask.",

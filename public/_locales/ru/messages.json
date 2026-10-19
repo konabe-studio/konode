@@ -140,6 +140,15 @@
   "popup_restore": {
     "message": "Восстановить"
   },
+  "popup_rate_body": {
+    "message": "Konode уже какое-то время синхронизирует ваши устройства. Если он вам полезен, оценка в магазине поможет другим его найти."
+  },
+  "popup_rate_yes": {
+    "message": "Оценить"
+  },
+  "popup_rate_no": {
+    "message": "Нет, спасибо"
+  },
   "popup_restore_confirm_one": {
     "message": "Открыть вкладки: $COUNT$",
     "placeholders": {

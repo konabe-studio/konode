@@ -14,8 +14,12 @@ All notable changes to Konode. Format loosely follows
   your storage server and of any pages Konode couldn't sync, and the button says so: read it
   before you post it anywhere public.
 - **Rate Konode from Settings.** Settings → Advanced → Feedback has a row that opens Konode's
-  page in the store you installed it from, the Chrome Web Store or Firefox Add-ons. It is
-  only a row: Konode never asks you for a rating.
+  page in the store you installed it from, the Chrome Web Store or Firefox Add-ons.
+- **Konode asks for a rating once, and only once it has earned it.** After two weeks and
+  200 syncs that went through cleanly with another device in your storage, the popup shows
+  a small card at the bottom. Never during setup and never next to an error, a conflict or a
+  held-back deletion. Rate it or say no thanks, and either way it is gone for good; rating
+  from the Settings row counts too. Nothing about it leaves your device.
 
 ### Changed
 
