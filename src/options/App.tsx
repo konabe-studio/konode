@@ -90,7 +90,7 @@ import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl, storeUrlFor, inferStore, STORE_NAME, type LocalExtLike } from "@/lib/utils/extensions-match";
 import { BACKEND_LABEL, PERMISSION_LOST_PREFIX, STATE_UPDATE } from "@/lib/constants";
 import {
-  PROVIDERS, providerById, providerFromConfig, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf,
+  providerCards, providerById, providerFromConfig, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf,
   webdavUrlForCard,
   type ProviderId,
 } from "@/lib/storage-providers";
@@ -1383,7 +1383,7 @@ export default function OptionsApp() {
               <p className="page-subtitle">{t("opt_backend_head_sub")}</p>
 
               <div className="card-list">
-                {PROVIDERS.map((p) => {
+                {providerCards(t("locale_bcp47")).map((p) => {
                   // Selection drives the card UI (expanded config, radio); only the
                   // persisted provider earns the "active" badge.
                   const isActive = selectedProvider === p.id;

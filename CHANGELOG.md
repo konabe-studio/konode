@@ -14,6 +14,14 @@ All notable changes to Konode. Format loosely follows
   your storage server and of any pages Konode couldn't sync, and the button says so: read it
   before you post it anywhere public.
 
+### Changed
+
+- **Nutstore comes first when Konode is in Simplified Chinese.** The storage picker in setup
+  and in Settings led with Google Drive for everyone, and from mainland China Drive answers
+  only through a VPN that every sync would need open. In Simplified Chinese the first card
+  is now Nutstore / 坚果云, which works there without one. Every other language, Traditional
+  Chinese included, keeps the order it had.
+
 ### Fixed
 
 - **A deletion that arrives in pieces no longer slips past the bulk-delete limit.** The

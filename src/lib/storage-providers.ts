@@ -30,6 +30,7 @@ export interface ProviderDef {
 // host, so they take a host field (Nextcloud) or a full custom URL (WebDAV) instead.
 // Card order (2026-07): Google Drive leads (most familiar entry point), then the
 // privacy-friendly own-storage options, GitHub, and the generic WebDAV catch-all last.
+// Simplified Chinese moves Nutstore to the front: see `providerCards()`.
 export const PROVIDERS: ProviderDef[] = [
   {
     id: "gdrive", backend: "gdrive", label: "Google Drive",
@@ -91,6 +92,25 @@ export const PROVIDERS: ProviderDef[] = [
     descKey: "provider_webdav_desc",
   },
 ];
+
+/** The cards in the order a picker shows them, for the language the page is rendered in.
+ *
+ *  Simplified Chinese puts Nutstore first. It is the language most Konode users read the
+ *  UI in (2026-10), and from the mainland Google Drive answers only through a VPN, which a
+ *  background sync every minute would need held open for good. Nutstore is the backend
+ *  that works there without one, and leading with Drive sent that audience to the one card
+ *  that fails for it. Traditional Chinese keeps the default order: Taiwan and Hong Kong
+ *  reach Drive directly.
+ *
+ *  Pass `t("locale_bcp47")`, the CATALOGUE's own tag, not the browser's language, for the
+ *  reason `applyDocumentLanguage()` gives: it names the language the page is actually in. */
+export function providerCards(localeTag: string): ProviderDef[] {
+  if (localeTag !== "zh-CN") return PROVIDERS;
+  return [
+    ...PROVIDERS.filter((p) => p.id === "jianguoyun"),
+    ...PROVIDERS.filter((p) => p.id !== "jianguoyun"),
+  ];
+}
 
 export function providerById(id: ProviderId): ProviderDef {
   const p = PROVIDERS.find((x) => x.id === id);
