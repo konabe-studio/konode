@@ -93,20 +93,56 @@ resetHistory();
 // the allowance on the first tab and then rescued the rest with a windows.create that the
 // fake always honoured and Orion always swallowed. The suite was green while a 10-tab
 // session restored as 1 tab in the field.
+//
+// Tab groups (#11) follow both engines: every tab carries `groupId` (-1 when in none) and a
+// `windowId` (the current window is 1, each windows.create gets the next id), and
+// `tabs.group` UNPINS what it groups, as Chrome and Firefox do. `tabGroups` is present
+// because every permission is held here; a test that wants the namespace gone, or
+// `tabs.group` gone, removes it and puts it back.
 let openTabs = [];
 let windowsCreated = [];
 let programmaticOpens = 0;
+let groupStore = new Map();
+let nextGroupId = 100;
+let nextWindowId = 2;
 const allowanceSpent = () => tabsApi.__popupBlocked && programmaticOpens > 1;
 const tabsApi = {
   __popupBlocked: false,
-  query: () => Promise.resolve(openTabs.slice()),
+  query: (q = {}) => Promise.resolve(
+    openTabs.filter((t) => q.windowId == null || t.windowId === q.windowId).map((t) => ({ ...t })),
+  ),
   create: (props = {}) => {
-    const t = { id: openTabs.length + 1, url: props.url, pinned: !!props.pinned, active: props.active ?? true };
+    const t = {
+      id: openTabs.length + 1, url: props.url, pinned: !!props.pinned, active: props.active ?? true,
+      groupId: -1, windowId: props.windowId ?? 1,
+    };
     programmaticOpens++;
     if (allowanceSpent()) return Promise.resolve(t); // resolves, opens nothing
     openTabs.push(t);
     return Promise.resolve(t);
   },
+  group: (opts = {}) => {
+    const ids = Array.isArray(opts.tabIds) ? opts.tabIds : opts.tabIds != null ? [opts.tabIds] : [];
+    const tabs = ids.map((id) => openTabs.find((t) => t.id === id));
+    if (!ids.length || tabs.some((t) => !t)) return Promise.reject(new Error("No tab with that id"));
+    const windowId = opts.createProperties?.windowId ?? tabs[0].windowId;
+    const id = nextGroupId++;
+    groupStore.set(id, { id, title: "", color: "grey", collapsed: false, windowId });
+    for (const t of tabs) { t.groupId = id; t.pinned = false; t.windowId = windowId; }
+    return Promise.resolve(id);
+  },
+};
+const tabGroupsApi = {
+  get: (id) => (groupStore.has(id)
+    ? Promise.resolve({ ...groupStore.get(id) })
+    : Promise.reject(new Error(`No group with id: ${id}`))),
+  update: (id, props = {}) => {
+    const g = groupStore.get(id);
+    if (!g) return Promise.reject(new Error(`No group with id: ${id}`));
+    Object.assign(g, props);
+    return Promise.resolve({ ...g });
+  },
+  __groups: () => [...groupStore.values()].map((g) => ({ ...g })),
 };
 const windowsApi = {
   create: (props = {}) => {
@@ -114,8 +150,13 @@ const windowsApi = {
     programmaticOpens++;
     windowsCreated.push({ urls, focused: !!props.focused, blocked: allowanceSpent() });
     if (allowanceSpent()) return Promise.resolve({ id: 1, focused: !!props.focused, tabs: [] });
-    const tabs = urls.map((u) => { const t = { id: openTabs.length + 1, url: u }; openTabs.push(t); return t; });
-    return Promise.resolve({ id: 1, focused: !!props.focused, tabs });
+    const windowId = nextWindowId++;
+    const tabs = urls.map((u) => {
+      const t = { id: openTabs.length + 1, url: u, pinned: false, groupId: -1, windowId };
+      openTabs.push(t);
+      return { ...t };
+    });
+    return Promise.resolve({ id: windowId, focused: !!props.focused, tabs });
   },
   __created: () => windowsCreated.slice(),
 };
@@ -124,6 +165,9 @@ function resetTabs() {
   windowsCreated = [];
   tabsApi.__popupBlocked = false;
   programmaticOpens = 0;
+  groupStore = new Map();
+  nextGroupId = 100;
+  nextWindowId = 2;
 }
 resetTabs();
 
@@ -281,6 +325,7 @@ function makeChrome() {
     },
     bookmarks: makeBookmarks(),
     tabs: tabsApi,
+    tabGroups: tabGroupsApi,
     windows: windowsApi,
     history: histApi,
     notifications: { create: vi.fn() },

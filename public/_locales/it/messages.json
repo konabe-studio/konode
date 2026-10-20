@@ -671,6 +671,15 @@
   "opt_data_permission_lost": {
     "message": "Konode non ha più l'autorizzazione che serve a questo tipo di dati, quindi non viene sincronizzato. Disattivalo e riattivalo per ripristinarla."
   },
+  "opt_tab_groups_label": {
+    "message": "Nomi e colori dei gruppi di schede"
+  },
+  "opt_tab_groups_desc": {
+    "message": "Le schede aperte tornano comunque nei loro gruppi. Con questa opzione attiva, i gruppi mantengono anche il nome e il colore."
+  },
+  "opt_tab_groups_denied": {
+    "message": "Per questo Konode ha bisogno dell'autorizzazione \"tabGroups\". I gruppi tornano comunque, ma senza nome."
+  },
   "opt_history_days_label": {
     "message": "Giorni da sincronizzare"
   },

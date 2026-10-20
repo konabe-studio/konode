@@ -662,6 +662,15 @@
   "opt_data_permission_lost": {
     "message": "Konode ya no tiene el permiso necesario para esto, por lo que no se está sincronizando. Desactívalo y vuelve a activarlo para restablecerlo."
   },
+  "opt_tab_groups_label": {
+    "message": "Nombres y colores de los grupos de pestañas"
+  },
+  "opt_tab_groups_desc": {
+    "message": "Las pestañas abiertas vuelven en sus grupos en cualquier caso. Con esto activado, los grupos conservan también su nombre y su color."
+  },
+  "opt_tab_groups_denied": {
+    "message": "Konode necesita el permiso «tabGroups» para esto. Tus grupos vuelven igualmente, aunque sin nombre."
+  },
   "opt_history_days_label": {
     "message": "Días a sincronizar"
   },

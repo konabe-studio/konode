@@ -5,8 +5,8 @@ import { t, tParts, plural, isolate } from "@/lib/utils/i18n";
 import { interactiveSignIn, isDriveAuthAvailable, clearGDriveSession } from "@/lib/backends/gdrive-oauth";
 import {
   allDataTypeAvailability, dataTypeAvailability, dataTypeApiPresent, ensurePermission,
-  hasPermission, unsupportedReason, eventPresent,
-  PERMISSION_FOR_TYPE, type Availability, type PermissionOutcome,
+  hasPermission, unsupportedReason, eventPresent, permissionsToEnable, tabGroupsAskable,
+  type Availability, type PermissionOutcome,
 } from "@/lib/utils/capabilities";
 
 /**
@@ -299,6 +299,10 @@ export default function OptionsApp() {
   // next to the row they belong to — see toggleDataType and the Data Types tab.
   const [availability, setAvailability] = useState<Partial<Record<DataType, Availability>>>({});
   const [typeError, setTypeError] = useState<{ type: DataType; message: string } | null>(null);
+  // Tab group names and colours (#11): whether this browser can be asked for `tabGroups` at
+  // all, and whether it is held. Membership needs neither, so this row only adds the names.
+  const [groupNames, setGroupNames] = useState<{ askable: boolean; granted: boolean }>({ askable: false, granted: false });
+  const [groupNamesError, setGroupNamesError] = useState(false);
 
   /**
    * Read on mount, and again whenever a permission changes.
@@ -322,6 +326,8 @@ export default function OptionsApp() {
         // so an "this browser doesn't implement it" message is left where it belongs.
         setTypeError((prev) => (prev && next[prev.type]?.state === "ready" ? null : prev));
       });
+      void Promise.all([tabGroupsAskable(), hasPermission({ permissions: ["tabGroups"] })])
+        .then(([askable, granted]) => setGroupNames({ askable, granted: askable && granted }));
     };
     refresh();
     if (!eventPresent("permissions", "onAdded")) return;
@@ -1052,9 +1058,11 @@ export default function OptionsApp() {
     const enabling = !settings.enabled_types.includes(type);
     if (enabling) {
       setTypeError(null);
-      const perm = PERMISSION_FOR_TYPE[type];
+      // Open tabs asks for tabGroups in the same prompt where the browser knows it (#11).
+      const perms = permissionsToEnable(type, groupNames.askable);
+      const perm = perms[0];
       if (perm) {
-        const outcome = await ensurePermission({ permissions: [perm] });
+        const outcome = await ensurePermission({ permissions: perms });
         if (outcome !== "granted") {
           setTypeError({
             type,
@@ -1079,6 +1087,25 @@ export default function OptionsApp() {
       ? [...settings.enabled_types, type]
       : settings.enabled_types.filter((t) => t !== type);
     update({ enabled_types: next });
+  };
+
+  // Names and colours for tab groups, on top of the membership Open tabs always carries.
+  // request() first, before anything is awaited, for the reason ensurePermission gives.
+  const toggleGroupNames = async () => {
+    setGroupNamesError(false);
+    if (!groupNames.granted) {
+      const outcome = await ensurePermission({ permissions: ["tabGroups"] });
+      if (outcome === "granted") setGroupNames((p) => ({ ...p, granted: true }));
+      else setGroupNamesError(true);
+      return;
+    }
+    try {
+      await browser.permissions.remove({ permissions: ["tabGroups"] });
+    } catch {
+      // The re-read below says what is really held, which is all the switch should show.
+    }
+    const still = await hasPermission({ permissions: ["tabGroups"] });
+    setGroupNames((p) => ({ ...p, granted: still }));
   };
 
   // ─── Google Drive OAuth ────────────────────────────────────────────────
@@ -1845,6 +1872,34 @@ export default function OptionsApp() {
                   );
                 })}
               </div>
+
+              {/* Open tabs carry their groups wherever the browser has them; this row adds the
+                  names and colours. Shown only where tabGroups can be asked for at all, so a
+                  browser without it never sees a switch that can only fail. */}
+              {settings.enabled_types.includes("sessions") && groupNames.askable && (
+              <div className="settings-section">
+                <div className="settings-card-head">{t("datatype_sessions")}</div>
+                <div className="settings-row">
+                  <div className="settings-row-left">
+                    <div>
+                      <div className="row-label">{t("opt_tab_groups_label")}</div>
+                      <div className="row-desc">{t("opt_tab_groups_desc")}</div>
+                      {groupNamesError && (
+                        <div className="error-row" role="alert">
+                          <AlertTriangle size={12} /> {t("opt_tab_groups_denied")}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <label className="toggle-wrap">
+                    <input type="checkbox" className="toggle-input"
+                      checked={groupNames.granted}
+                      onChange={() => void toggleGroupNames()} />
+                    <span className="toggle-track"><span className="toggle-thumb" /></span>
+                  </label>
+                </div>
+              </div>
+              )}
 
               {/* Nothing to configure when the browser has no history API — the row above
                   already explains why, and a live "days to sync" slider under it would

@@ -671,6 +671,15 @@
   "opt_data_permission_lost": {
     "message": "Konode 已經沒有這項功能需要的權限，所以它沒有在同步。把它關掉再重新開啟就會恢復。"
   },
+  "opt_tab_groups_label": {
+    "message": "分頁群組的名稱和顏色"
+  },
+  "opt_tab_groups_desc": {
+    "message": "開啟的分頁無論如何都會回到各自的群組裡。開啟這項設定後，群組也會保留名稱和顏色。"
+  },
+  "opt_tab_groups_denied": {
+    "message": "這需要「tabGroups」權限。沒有它，群組還是會回來，只是沒有名稱。"
+  },
   "opt_history_days_label": {
     "message": "同步天數"
   },

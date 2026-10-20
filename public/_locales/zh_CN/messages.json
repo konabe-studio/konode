@@ -662,6 +662,15 @@
   "opt_data_permission_lost": {
     "message": "Konode 已经不再拥有所需的权限，因此无法同步。将其关闭后再重新开启即可恢复。"
   },
+  "opt_tab_groups_label": {
+    "message": "标签页分组的名称和颜色"
+  },
+  "opt_tab_groups_desc": {
+    "message": "打开的标签页无论如何都会回到各自的分组中。开启后，分组还会保留名称和颜色。"
+  },
+  "opt_tab_groups_denied": {
+    "message": "此功能需要 “tabGroups” 权限。即使没有它，分组也会恢复，只是没有名称。"
+  },
   "opt_history_days_label": {
     "message": "同步天数"
   },

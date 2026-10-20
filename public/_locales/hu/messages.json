@@ -671,6 +671,15 @@
   "opt_data_permission_lost": {
     "message": "A Konodenak már nincs meg az ehhez szükséges engedélye, ezért ez nem szinkronizál. Kapcsold ki, majd újra be, hogy visszaálljon."
   },
+  "opt_tab_groups_label": {
+    "message": "Lapcsoportok neve és színe"
+  },
+  "opt_tab_groups_desc": {
+    "message": "A megnyitott lapok mindenképp a csoportjukban térnek vissza. Ha ez be van kapcsolva, a csoportok a nevüket és a színüket is megtartják."
+  },
+  "opt_tab_groups_denied": {
+    "message": "Ehhez a Konodenak a „tabGroups” engedély kell. A csoportok így is visszatérnek, csak név nélkül."
+  },
   "opt_history_days_label": {
     "message": "Szinkronizált napok száma"
   },

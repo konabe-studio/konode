@@ -1,6 +1,6 @@
 # Konode Privacy Policy
 
-_Last updated: August 7, 2026_
+_Last updated: October 20, 2026_
 
 ## The short version
 
@@ -31,7 +31,8 @@ choices, Konode may read:
   sync. Local files (`file://`) and browser-internal pages are never included, and neither
   are addresses that carry a sign-in token.
 - **Open tabs / sessions**: the URLs and titles of your open tabs, if you enable
-  session sync.
+  session sync, and which of them share a tab group. Where you allow it, the group's
+  name and colour go with it too; without that permission a group travels unnamed.
 - **Installed-extension list**: the names, IDs, versions, descriptions, homepage links,
   store links, whether each one is a theme, and whether it is currently enabled, if you
   enable extension-list sync (this surfaces which extensions are "missing on this
@@ -44,7 +45,9 @@ is not used for any other purpose.
 The browser permissions for the more sensitive types (**history**, **open tabs**,
 and the **extension list**) are **requested when you turn that type on**, not at
 install time. If you never enable them, Konode never holds those permissions and
-never reads that data.
+never reads that data. Open tabs asks for the **tab groups** permission in the same
+request, where your browser has it, so group names and colours can travel; you can
+switch that part off in Settings and keep syncing the tabs.
 
 ## Where your data goes
 

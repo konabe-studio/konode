@@ -282,6 +282,72 @@ export function resetCapabilityCache(): void {
   promptsCache = undefined;
   androidCache = undefined;
   iosCache = undefined;
+  tabGroupsAskableCache = undefined;
+}
+
+// ─── Tab groups (#11) ─────────────────────────────────────────────────────
+
+/**
+ * How much of a tab group this browser can carry.
+ *
+ * - `none`: no `tabs.group` at all (Firefox for Android, Safari, Firefox before 138, and
+ *   probably Orion, which only a device can say). Sessions restore ungrouped, as before.
+ * - `membership`: `tabs.group` and `Tab.groupId` work, and they need NO permission on
+ *   either engine (Chromium gates only the `tabGroups` namespace; MDN says the same for
+ *   Firefox). Names and colours are out of reach, because `tabGroups` is not granted or
+ *   the browser has none (Firefox 138).
+ * - `full`: `tabGroups` granted, so names and colours can be read and written too. The
+ *   namespace is `undefined` until the permission is granted, like `history`, which is
+ *   why the permission is checked and not just the API.
+ */
+export type TabGroupSupport = "none" | "membership" | "full";
+
+export async function tabGroupSupport(): Promise<TabGroupSupport> {
+  if (!apiPresent("tabs", "group")) return "none";
+  if (apiPresent("tabGroups", "get") && (await hasPermission({ permissions: ["tabGroups"] }))) {
+    return "full";
+  }
+  return "membership";
+}
+
+let tabGroupsAskableCache: boolean | undefined;
+/**
+ * Does this browser know the `tabGroups` permission, so it can be asked for?
+ *
+ * It has to be known BEFORE the click, because `permissions.request()` must be the first
+ * thing a click awaits (see `ensurePermission`), and it has to be known at all because one
+ * permission the browser does not recognise makes the WHOLE request fail. Firefox 138 has
+ * `tabs.group` and no `tabGroups` (that came in 139), so asking there would take the Open
+ * tabs switch down with it, and in the wizard the whole setup.
+ *
+ * Answered by asking, not by the version: `permissions.contains()` resolves for a
+ * permission the browser knows, granted or not, and throws for one it doesn't, on Chrome
+ * and on Firefox alike.
+ */
+export async function tabGroupsAskable(): Promise<boolean> {
+  if (tabGroupsAskableCache !== undefined) return tabGroupsAskableCache;
+  if (!apiPresent("tabs", "group")) return (tabGroupsAskableCache = false);
+  try {
+    await browser.permissions.contains({ permissions: ["tabGroups"] });
+    tabGroupsAskableCache = true;
+  } catch {
+    tabGroupsAskableCache = false;
+  }
+  return tabGroupsAskableCache;
+}
+
+/**
+ * The permissions to ask for when a data type is switched on.
+ *
+ * Open tabs also asks for `tabGroups` where the browser knows it, in the same request
+ * (decided 2026-10-02): from Settings or the wizard, never from the popup. Chrome shows its
+ * warning ("View and manage your tab groups") in the one prompt; Firefox grants it without
+ * a prompt at all. `askTabGroups` comes from `tabGroupsAskable()`, read before the click.
+ */
+export function permissionsToEnable(type: DataType, askTabGroups: boolean): string[] {
+  const perm = PERMISSION_FOR_TYPE[type];
+  if (!perm) return [];
+  return type === "sessions" && askTabGroups ? [perm, "tabGroups"] : [perm];
 }
 
 let iosCache: boolean | undefined;

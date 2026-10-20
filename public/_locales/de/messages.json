@@ -671,6 +671,15 @@
   "opt_data_permission_lost": {
     "message": "Konode hat die dafür nötige Berechtigung nicht mehr, deshalb wird nicht synchronisiert. Schalte es aus und wieder ein, um sie neu zu erteilen."
   },
+  "opt_tab_groups_label": {
+    "message": "Namen und Farben der Tabgruppen"
+  },
+  "opt_tab_groups_desc": {
+    "message": "Geöffnete Tabs kommen in jedem Fall in ihren Gruppen zurück. Ist dies an, behalten die Gruppen auch ihre Namen und Farben."
+  },
+  "opt_tab_groups_denied": {
+    "message": "Dafür braucht Konode die Berechtigung „tabGroups“. Deine Gruppen kommen trotzdem zurück, nur ohne Namen."
+  },
   "opt_history_days_label": {
     "message": "Zu synchronisierende Tage"
   },

@@ -238,7 +238,34 @@ export interface SyncSession {
     title?: string;
     pinned: boolean;
     favIconUrl?: string;
+    /** Index into `groups`. Absent for a tab in no group. */
+    group?: number;
   }>;
+  /**
+   * The tab groups the tabs point into, in the order their first tab appears (#11).
+   * Absent when no tab is grouped, so a session without groups is byte for byte what it
+   * was before groups existed, and nobody's checksum moves on the upgrade. Older builds
+   * ignore both fields. Not the browser's own group id: that is a per-run integer and
+   * would change the checksum on every browser restart.
+   */
+  groups?: SyncTabGroup[];
+}
+
+/** The nine tab group colours Chrome and Firefox share, so a colour crosses engines as is. */
+export const TAB_GROUP_COLORS = [
+  "grey", "blue", "red", "yellow", "green", "pink", "purple", "cyan", "orange",
+] as const;
+export type TabGroupColor = (typeof TAB_GROUP_COLORS)[number];
+
+/**
+ * One group of a session. Both fields need the `tabGroups` permission on the device that
+ * publishes them, so a device without it sends `{}`: the tabs still come back together,
+ * unnamed, in a colour the browser picks. `collapsed` is deliberately not here: it is
+ * per-screen view state, like the active tab, and a restore shows what it brought back.
+ */
+export interface SyncTabGroup {
+  title?: string;
+  color?: TabGroupColor;
 }
 
 /** A peer device's stored session, keyed by device_id in `konode_remote_sessions`. */

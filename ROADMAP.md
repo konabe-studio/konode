@@ -166,12 +166,15 @@ keeps the two from being confused.
 - **[#11](https://github.com/konabe-studio/konode/issues/11) first: tab groups, then the rest
   of the list.** Moved ahead of backend expansion on 2026-10-01, after a Helium user with
   dozens of grouped tabs asked whether the browser blocks it. It does not: live groups are
-  readable and creatable, only *saved* groups are out of reach. The plan the issue now
-  promises: each tab in the session packet gets an optional group (name, colour), and
-  Restore puts the tabs back into groups. To check first: whether the `tabGroups`
-  permission adds an install warning (optional permission if it does), Firefox's extension
-  support for groups, and an ungrouped restore wherever groups do not exist. Then the rest of
-  #11 gets its look, the reading list first.
+  readable and creatable, only *saved* groups are out of reach. **Built on 2026-10-20 for
+  the next release:** each tab in the session packet can point into a list of groups, and
+  Restore puts the tabs back into them. Which tabs share a group needs no permission on
+  either engine; names and colours need `tabGroups`, which is an OPTIONAL permission
+  because Chrome warns for it ("View and manage your tab groups"), asked together with Open
+  tabs and switchable on its own in Settings. Firefox has groups from 138 and `tabGroups`
+  from 139, grants it without a prompt, and shares Chrome's nine colours. Wherever groups do
+  not exist (Firefox for Android, Safari, older Firefox), a session restores ungrouped, as
+  before. Then the rest of #11 gets its look, the reading list first.
 - **Backend expansion**, cheapest sign-in first. See *Platform priority* item 3 below.
 - **History sync performance**: the full-history dedup scan. It is now built once per
   SYNC rather than once per peer (1.3.1), which was the larger half of the cost with more

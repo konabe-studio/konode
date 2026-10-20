@@ -764,6 +764,15 @@
     "message": "Konode doesn't have the permission this needs any more, so it isn't syncing. Switch it off and on again to restore it.",
     "description": "A browser can revoke an optional permission from its own extension settings without telling the extension, which leaves a data type looking enabled while it syncs nothing."
   },
+  "opt_tab_groups_label": {
+    "message": "Tab group names and colours"
+  },
+  "opt_tab_groups_desc": {
+    "message": "Open tabs come back in their groups either way. With this on, the groups keep their names and colours as well."
+  },
+  "opt_tab_groups_denied": {
+    "message": "Konode needs the \"tabGroups\" permission for this. Your groups still come back, without names."
+  },
   "opt_history_days_label": {
     "message": "Days to sync"
   },
