@@ -1,6 +1,7 @@
 import type {
   SyncBookmark, Tombstone, MoveRecord, FolderMoveRecord, TitleRecord, FolderRenameRecord,
   FolderDeleteRecord, AppearedRecord, KeptShellRecord, CreatedRecord, BookmarkPayload, ConflictStrategy,
+  BookmarkExclusion,
 } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import {
@@ -12,12 +13,16 @@ import {
   getFolderRenames, setFolderRenames, updateFolderRenames,
   updateFolderDeletes,
   getAppeared, updateAppeared, getKeptShells, updateKeptShells,
-  getCreated, updateCreated, getPeerRemovals, updatePeerRemovals,
+  getCreated, updateCreated, getPeerRemovals, updatePeerRemovals, getBookmarkExclusions,
 } from "@/lib/utils/storage";
 import {
   defaultOtherRootId, matchLocalRoot, matchLocalRootEx, rootKind, rootKindFromTitle,
 } from "@/lib/utils/bookmark-roots";
 import { canonicalUrlKey } from "@/lib/utils/url";
+import {
+  excludedByOwnRule, excludedInSubtree, folderPathExcluded, mayHaveOwnRule, partitionExcluded, peerRules,
+  rootKey, type Partition,
+} from "@/lib/utils/bookmark-exclusions";
 import { browser } from "@/lib/utils/ext";
 import { assertDataTypeApi, eventPresent } from "@/lib/utils/capabilities";
 
@@ -25,10 +30,60 @@ type BookmarkNode = chrome.bookmarks.BookmarkTreeNode;
 
 // ─── Read ─────────────────────────────────────────────────────────────────
 
+/**
+ * The tree as it syncs: everything except what this device keeps to itself (#54). Every
+ * reader of the local tree in this file goes through here, so an excluded node is invisible
+ * to the export, to the merge and to the deletion recorders alike, and none of them can
+ * publish, move or delete it.
+ */
 export async function exportBookmarks(): Promise<SyncBookmark[]> {
   assertDataTypeApi("bookmarks");
-  const tree = await browser.bookmarks.getTree();
-  return tree.map(mapNode);
+  return (await localExclusions()).part.tree;
+}
+
+interface LocalExclusions {
+  rules: BookmarkExclusion[];
+  part: Partition<SyncBookmark>;
+  /** The real roots, excluded nodes included. */
+  roots: BookmarkNode[];
+}
+
+/** This device's tree, split into what syncs and what it keeps to itself (#54). */
+async function localExclusions(rules?: BookmarkExclusion[]): Promise<LocalExclusions> {
+  const [raw, stored] = await Promise.all([
+    browser.bookmarks.getTree(),
+    rules ? Promise.resolve(rules) : getBookmarkExclusions(),
+  ]);
+  return {
+    rules: stored,
+    part: partitionExcluded(raw.map(mapNode), stored, { byId: true }),
+    roots: raw[0]?.children ?? [],
+  };
+}
+
+/**
+ * A peer's tree without anything that would land in what this device keeps to itself (#54).
+ *
+ * A peer running the same extension has the same folder, and the merge, which matches
+ * folders by title, would otherwise fill the excluded folder here with the peer's copy. The
+ * peer's roots are named after the LOCAL roots they merge into, so the paths compare.
+ */
+function withoutExcluded(tree: SyncBookmark[], local: LocalExclusions): SyncBookmark[] {
+  if (!local.rules.length) return tree;
+  const other = defaultOtherRootId(local.roots);
+  return partitionExcluded(tree, peerRules(local.rules, local.part), {
+    byId: false,
+    rootKeyOf: (root, i) => {
+      const id = matchLocalRootEx(root, local.roots, i).id ?? other;
+      const mapped = local.roots.find((r) => r.id === id);
+      return mapped ? rootKey(mapped) : rootKey(root);
+    },
+  }).tree;
+}
+
+/** The folders a peer's path-keyed logs must leave alone (#54). */
+function excludedFolderPaths(local: LocalExclusions): string[][] {
+  return peerRules(local.rules, local.part).filter((r) => !r.url).map((r) => r.path);
 }
 
 function mapNode(node: BookmarkNode): SyncBookmark {
@@ -315,10 +370,13 @@ async function withRemovedContents(node: BookmarkNode): Promise<BookmarkNode> {
  *  identical-URL bookmarks must NOT tombstone the URL: the tombstone is URL-keyed,
  *  so it would delete every copy on every peer (and the surviving local copy, being
  *  older than the tombstone, wouldn't re-propagate → the devices diverge). */
-async function recordRemovedTombstones(node: BookmarkNode): Promise<void> {
+async function recordRemovedTombstones(node: BookmarkNode, skip?: Set<string>): Promise<void> {
   if (importing) return;
   const urls: string[] = [];
+  // `skip`: what this device keeps to itself (#54). Deleting a synced folder that holds an
+  // excluded one must not tell the peers to delete their copies of what was never theirs.
   const walk = (n: BookmarkNode) => {
+    if (skip?.has(n.id)) return;
     if (n.url) urls.push(n.url);
     n.children?.forEach(walk);
   };
@@ -790,11 +848,27 @@ export async function importBookmarks(
   onBulkBlocked?: (info: BulkDeleteBlock) => void
 ): Promise<void> {
   assertDataTypeApi("bookmarks");
-  const {
-    tree, tombstones: remoteTombstones, moves: remoteMoves = [],
-    folderMoves: remoteFolderMoves = [], titles: remoteTitles = [],
-    folderRenames: remoteFolderRenames = [], folderDeletes: remoteFolderDeletes = [],
-  } = normalizePayload(payload);
+  const normalized = normalizePayload(payload);
+  const { tombstones: remoteTombstones, moves: remoteMoves = [], titles: remoteTitles = [] } = normalized;
+  let {
+    tree, folderMoves: remoteFolderMoves = [], folderRenames: remoteFolderRenames = [],
+    folderDeletes: remoteFolderDeletes = [],
+  } = normalized;
+  // What this device keeps to itself (#54) is taken out of the peer's packet before anything
+  // reads it: its copy of an excluded folder, and every folder operation that would reach one.
+  // URL-keyed logs need nothing: the merge never sees an excluded bookmark to act on.
+  // Read the tree only when something is excluded: most devices exclude nothing, and the
+  // merge reads it again anyway.
+  const rules = await getBookmarkExclusions();
+  const local = rules.length ? await localExclusions(rules) : null;
+  if (local) {
+    tree = withoutExcluded(tree, local);
+    const folders = excludedFolderPaths(local);
+    const out = (path: string[]) => folderPathExcluded(path, folders);
+    remoteFolderMoves = remoteFolderMoves.filter((r) => !out(r.path));
+    remoteFolderRenames = remoteFolderRenames.filter((r) => !out([...r.path, r.from]) && !out([...r.path, r.to]));
+    remoteFolderDeletes = remoteFolderDeletes.filter((r) => !out(r.path));
+  }
   importing = true;
   try {
     // Capture our own deletions/moves before folding in the peer's, so the merge
@@ -820,16 +894,16 @@ export async function importBookmarks(
     await setFolderRenames(mergeFolderRenameLists(logs.folderRenames.local, logs.folderRenames.remote));
 
     if (strategy === "replace") {
-      await clearAndImport(tree);
+      await clearAndImport(tree, local?.part.excludedIds);
     } else {
-      await mergeBookmarks(tree, logs, conflictStrategy, deletePercent, approvedFor, onBulkBlocked);
+      await mergeBookmarks(tree, logs, conflictStrategy, deletePercent, approvedFor, onBulkBlocked, local?.part.excludedIds);
     }
   } finally {
     importing = false;
   }
 }
 
-async function clearAndImport(tree: SyncBookmark[]): Promise<void> {
+async function clearAndImport(tree: SyncBookmark[], excluded: Set<string> = new Set()): Promise<void> {
   // The remote tree: tree[0] is the virtual root, tree[0].children are the real roots.
   const remoteRoots = tree[0]?.children ?? tree;
 
@@ -852,15 +926,26 @@ async function clearAndImport(tree: SyncBookmark[]): Promise<void> {
   const localTree = await browser.bookmarks.getTree();
   const localRoots = localTree[0]?.children ?? [];
 
-  // Clear all children from each local root folder
-  for (const root of localRoots) {
-    if (root.children) {
-      for (const child of root.children) {
-        try {
-          await browser.bookmarks.removeTree(child.id);
-        } catch { /* system folders may be protected */ }
+  // Clear all children from each local root folder, except what this device keeps to itself
+  // (#54) and the folders on the way to it, which stay standing for the restore to fill.
+  const holdsExcluded = (n: BookmarkNode): boolean =>
+    excluded.size > 0 && (n.children ?? []).some((c) => excluded.has(c.id) || holdsExcluded(c));
+  const kept = new Set<string>();
+  const clear = async (nodes: BookmarkNode[]): Promise<void> => {
+    for (const child of nodes) {
+      if (excluded.has(child.id)) continue;
+      if (!child.url && holdsExcluded(child)) {
+        kept.add(child.id);
+        await clear(child.children ?? []);
+        continue;
       }
+      try {
+        await browser.bookmarks.removeTree(child.id);
+      } catch { /* system folders may be protected */ }
     }
+  };
+  for (const root of localRoots) {
+    if (root.children) await clear(root.children);
   }
 
   // Match remote roots to local roots by kind (bar/other/mobile/menu), then exact
@@ -874,7 +959,7 @@ async function clearAndImport(tree: SyncBookmark[]): Promise<void> {
     if (!localRootId) continue;
 
     for (const child of remoteRoot.children ?? []) {
-      await restoreNode(child, localRootId);
+      await restoreNode(child, localRootId, kept);
     }
   }
 
@@ -883,7 +968,10 @@ async function clearAndImport(tree: SyncBookmark[]): Promise<void> {
 
 async function restoreNode(
   node: SyncBookmark,
-  parentId: string
+  parentId: string,
+  // Folders the clear left standing because something excluded is inside (#54). The restore
+  // fills them rather than making a second folder of the same name beside each.
+  kept: Set<string> = new Set(),
 ): Promise<void> {
   try {
     if (node.url) {
@@ -893,12 +981,15 @@ async function restoreNode(
         url: node.url,
       });
     } else {
-      const folder = await browser.bookmarks.create({
+      const standing = kept.size
+        ? (await browser.bookmarks.getChildren(parentId)).find((c) => !c.url && c.title === node.title && kept.has(c.id))
+        : undefined;
+      const folder = standing ?? await browser.bookmarks.create({
         parentId,
         title: node.title,
       });
       for (const child of node.children ?? []) {
-        await restoreNode(child, folder.id);
+        await restoreNode(child, folder.id, kept);
       }
     }
   } catch (err) {
@@ -932,6 +1023,10 @@ async function mergeBookmarks(
   deletePercent = 60,
   approvedFor = 0,
   onBulkBlocked?: (info: BulkDeleteBlock) => void,
+  // What this device keeps to itself (#54). The peer's tree has been pruned of it already;
+  // this is the backstop for the folder lookups below, which match by title alone and must
+  // never hand back an excluded folder to write into.
+  excluded: Set<string> = new Set(),
 ): Promise<void> {
   // All URL identity maps below are keyed by the CANONICAL url (canonicalUrlKey),
   // not the raw string, so a bare-origin bookmark that Chromium/Firefox store with
@@ -1227,8 +1322,8 @@ async function mergeBookmarks(
         // If we renamed it too and the peer's is newer, the folder is sitting under OUR
         // new name, not under `from` — look for that as well, or the peer's newer rename
         // would silently find nothing and be lost.
-        const target = children.find((c) => !c.url && c.title === r.from)
-          ?? (mine ? children.find((c) => !c.url && c.title === mine.to) : undefined);
+        const target = children.find((c) => !c.url && c.title === r.from && !excluded.has(c.id))
+          ?? (mine ? children.find((c) => !c.url && c.title === mine.to && !excluded.has(c.id)) : undefined);
         if (!target || target.title === r.to) continue;
         await browser.bookmarks.update(target.id, { title: r.to });
         renamedFolders++;
@@ -1356,7 +1451,7 @@ async function mergeBookmarks(
         if (folderId) return folderId;
         const parentId = await ensureParent();
         const children = await browser.bookmarks.getChildren(parentId);
-        const existing = children.find((c) => !c.url && c.title === node.title);
+        const existing = children.find((c) => !c.url && c.title === node.title && !excluded.has(c.id));
         // Same anchor-then-clamp as the bookmark add — `children` is already in hand,
         // so this costs nothing. Unclamped, a folder at a peer index past the local
         // parent's end failed to create, and the rejection surfaced (confusingly) as
@@ -1409,7 +1504,7 @@ async function mergeBookmarks(
       : rec.at > (localFolderMoveAt.get(folderPathKey(rec.path)) ?? 0);
     if (!winsLWW) continue;
     const folderId = await resolveFolderPath(rec.path, localRoots);
-    if (!folderId) continue;
+    if (!folderId || excluded.has(folderId)) continue;
     try {
       const [node] = await browser.bookmarks.get(folderId);
       if (!node || node.parentId == null) continue;
@@ -1698,8 +1793,13 @@ function restorePlacement(
  *  the restored URLs are dropped so this device doesn't immediately re-delete them.
  *  Folders are materialized lazily (only when a restored bookmark lands under them),
  *  so an empty folder from the snapshot isn't recreated. Returns the count added. */
-export async function restoreBookmarks(tree: SyncBookmark[]): Promise<number> {
+export async function restoreBookmarks(snapshot: SyncBookmark[]): Promise<number> {
   assertDataTypeApi("bookmarks");
+  // A restore point taken before a folder was excluded still holds it, and putting it back
+  // would only fill the excluded folder with copies of what is already there (#54).
+  const rules = await getBookmarkExclusions();
+  const local = rules.length ? await localExclusions(rules) : null;
+  const tree = local ? withoutExcluded(snapshot, local) : snapshot;
   importing = true;
   try {
     const snapUrls = new Set(
@@ -1753,7 +1853,7 @@ export async function restoreBookmarks(tree: SyncBookmark[]): Promise<number> {
         if (folderId) return folderId;
         const parentId = await ensureParent();
         const children = await browser.bookmarks.getChildren(parentId);
-        const existing = children.find((c) => !c.url && c.title === node.title);
+        const existing = children.find((c) => !c.url && c.title === node.title && !local?.part.excludedIds.has(c.id));
         folderId = existing
           ? existing.id
           : (await browser.bookmarks.create({ parentId, index: restorePlacement(children, siblings, i), title: node.title })).id;
@@ -1783,6 +1883,98 @@ export async function restoreBookmarks(tree: SyncBookmark[]): Promise<number> {
 
 export type BookmarkChangeCallback = () => void;
 
+/**
+ * The ids the exclusion rules cover right now (#54), kept from one event to the next.
+ *
+ * An extension filling its excluded folder fires thousands of onCreated in a row, and
+ * reading the whole tree for each of them would be its own freeze. So the set is built once
+ * and grown as nodes appear inside it, and rebuilt when the rules change or a move may have
+ * carried something in or out.
+ *
+ * It is only ever asked about a node's PARENT. The event that wakes a stopped service worker
+ * is often the very one being judged, so the set may well be built after the move or the
+ * removal it is asked about, and by then it cannot say where the node itself was. The parent
+ * is there on both sides of the event; the node's own rules are checked separately.
+ */
+let excludedCache: { sig: string; rules: BookmarkExclusion[]; ids: Set<string> } | null = null;
+
+async function excludedNow(): Promise<typeof excludedCache> {
+  const rules = await getBookmarkExclusions();
+  if (!rules.length) return (excludedCache = null);
+  const sig = JSON.stringify(rules);
+  if (excludedCache?.sig !== sig) {
+    excludedCache = { sig, rules, ids: (await localExclusions(rules)).part.excludedIds };
+  }
+  return excludedCache;
+}
+
+/** Test seam: forget the set, so one test's tree cannot answer for the next one's. */
+export function resetExclusionCache(): void {
+  excludedCache = null;
+}
+
+/** A local folder's path the way the exclusion rules spell it (rootKey first), or null. */
+async function exclusionPath(id: string): Promise<string[] | null> {
+  const titles: string[] = [];
+  let currentId: string | undefined = id;
+  for (let hops = 0; hops < 64 && currentId; hops++) {
+    let node: BookmarkNode | undefined;
+    try { [node] = await browser.bookmarks.get(currentId); } catch { return null; }
+    if (!node || !node.parentId) return null;
+    // A root: a known root id, or whatever sits right under Chrome's or Firefox's virtual root.
+    if (rootKind(node.id) || node.parentId === "0" || node.parentId === "root________") {
+      return [rootKey(node), ...titles];
+    }
+    titles.unshift(node.title);
+    currentId = node.parentId;
+  }
+  return null;
+}
+
+/** Is (or was) `node` excluded, sitting in `parentId`? Judged from the parent, see above. */
+async function excludedUnder(
+  ex: NonNullable<typeof excludedCache>, parentId: string | undefined, node: BookmarkNode,
+): Promise<boolean> {
+  if (parentId && ex.ids.has(parentId)) return true;
+  if (!parentId || !mayHaveOwnRule(node, ex.rules)) return false;
+  const path = await exclusionPath(parentId);
+  return !!path && excludedByOwnRule(node, path, ex.rules);
+}
+
+/** Every node in a subtree, as it stands now. */
+async function subtreeNodes(id: string): Promise<BookmarkNode[]> {
+  try {
+    return flattenNodes((await browser.bookmarks.getSubTree(id)) as SyncBookmark[]) as BookmarkNode[];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Something synced was moved into an excluded folder (#54), so for the peers it is gone.
+ * Recorded as the deletion it is to them: they still hold it under its old folder, and the
+ * next merge would put it straight back here as a second copy outside the excluded one.
+ */
+async function recordLeftSync(id: string, oldParentId: string): Promise<void> {
+  const [node] = await browser.bookmarks.getSubTree(id).catch(() => [] as BookmarkNode[]);
+  if (!node) return;
+  await recordRemovedTombstones(node);
+  await recordRemovedFolder(oldParentId, node);
+}
+
+/**
+ * Something excluded was moved out into the synced tree (#54). It reaches the peers as new,
+ * but it keeps its old dateAdded, and a deletion recorded when it went in would read as
+ * newer and remove it again: the same trap a restored backup falls into (#27).
+ */
+async function recordJoinedSync(id: string): Promise<void> {
+  const now = Date.now();
+  const urls = (await subtreeNodes(id))
+    .filter((n) => n.url && now - (n.dateAdded ?? now) >= APPEARED_SLACK_MS)
+    .map((n) => n.url as string);
+  if (urls.length) await updateAppeared((current) => gcAppeared([...current, ...urls.map((url) => ({ url, at: now }))]));
+}
+
 export function registerBookmarkListeners(onChange: BookmarkChangeCallback): void {
   // The background script calls this at the TOP LEVEL, because MV3 requires listeners to
   // be attached on every worker load. So on a browser with no bookmarks API this line
@@ -1800,36 +1992,98 @@ export function registerBookmarkListeners(onChange: BookmarkChangeCallback): voi
   const swallow = (p: Promise<unknown>): void => {
     void p.catch((err) => logger.error("BookmarkListeners", err));
   };
-  browser.bookmarks.onCreated.addListener((_id, node) => {
-    // An import that keeps each bookmark's original date would otherwise read as months old
-    // to the next merge, and a peer's older deletion would undo it (#27).
-    swallow(recordAppeared(node));
-    onChange();
+  // Each event first asks whether it is about something this device keeps to itself (#54).
+  // Those record nothing and start no sync: an extension rewriting its excluded folder is
+  // exactly the storm of events that froze the browser. A merge never writes there, so
+  // its own churn (`importing`) skips the question.
+  // A storage read that fails is no reason to drop the event: judged as not excluded, it is
+  // recorded and synced as it always was.
+  const exclusions = () => (importing ? Promise.resolve(null) : excludedNow().catch(() => null));
+  browser.bookmarks.onCreated.addListener((id, node) => {
+    swallow((async () => {
+      const ex = await exclusions();
+      // Outside every excluded folder it can still be excluded itself: an extension
+      // rebuilding its folder makes a new one at the excluded path.
+      if (ex && await excludedUnder(ex, node.parentId, node)) {
+        ex.ids.add(id);
+        return;
+      }
+      // An import that keeps each bookmark's original date would otherwise read as months old
+      // to the next merge, and a peer's older deletion would undo it (#27).
+      swallow(recordAppeared(node));
+      onChange();
+    })());
   });
   browser.bookmarks.onChanged.addListener((id, changeInfo) => {
-    // A URL edit is a delete(old)+add(new) in the URL-keyed sync model — record a
-    // tombstone for the replaced url so a peer doesn't resurrect it as a duplicate.
-    swallow(recordUrlChange(id, changeInfo.url));
-    // A title edit is the other half of onChanged, and nothing was listening for it:
-    // the new title rode along in the tree but the receiver had no way to know it was
-    // newer than its own, so it kept the old one. Both renames land here.
-    swallow(recordTitleChange(id, changeInfo.title));
-    onChange();
+    swallow((async () => {
+      const ex = await exclusions();
+      if (ex) {
+        if (ex.ids.has(id)) return;
+        // Renamed or re-pointed onto an excluded path or URL: it leaves the sync as a move
+        // into an excluded folder does.
+        const [node] = await browser.bookmarks.get(id).catch(() => [] as BookmarkNode[]);
+        if (node && await excludedUnder(ex, node.parentId, node)) {
+          excludedCache = null;
+          swallow(browser.bookmarks.getSubTree(id).then(([sub]) => (sub ? recordRemovedTombstones(sub) : undefined)));
+          onChange();
+          return;
+        }
+      }
+      // A URL edit is a delete(old)+add(new) in the URL-keyed sync model — record a
+      // tombstone for the replaced url so a peer doesn't resurrect it as a duplicate.
+      swallow(recordUrlChange(id, changeInfo.url));
+      // A title edit is the other half of onChanged, and nothing was listening for it:
+      // the new title rode along in the tree but the receiver had no way to know it was
+      // newer than its own, so it kept the old one. Both renames land here.
+      swallow(recordTitleChange(id, changeInfo.title));
+      onChange();
+    })());
   });
   browser.bookmarks.onMoved.addListener((id, moveInfo) => {
-    // Record the move (per URL, timestamped) so the new placement propagates.
-    swallow(recordMove(id));
-    // Also record a folder's own reposition (path-keyed) — a reordered folder has
-    // no URL, so recordMove alone can't carry its new index across devices.
-    swallow(recordFolderMove(id, moveInfo));
-    onChange();
+    swallow((async () => {
+      const ex = await exclusions();
+      if (ex) {
+        const [node] = await browser.bookmarks.get(id).catch(() => [] as BookmarkNode[]);
+        if (node) {
+          const was = await excludedUnder(ex, moveInfo.oldParentId, node);
+          const now = await excludedUnder(ex, moveInfo.parentId, node);
+          if (was && now) return; // reshuffled inside: nothing syncs
+          // In or out, the set no longer describes the tree.
+          if (was !== now) excludedCache = null;
+          if (now) {
+            swallow(recordLeftSync(id, moveInfo.oldParentId));
+            onChange();
+            return;
+          }
+          if (was) swallow(recordJoinedSync(id));
+        }
+      }
+      // Record the move (per URL, timestamped) so the new placement propagates.
+      swallow(recordMove(id));
+      // Also record a folder's own reposition (path-keyed) — a reordered folder has
+      // no URL, so recordMove alone can't carry its new index across devices.
+      swallow(recordFolderMove(id, moveInfo));
+      onChange();
+    })());
   });
   browser.bookmarks.onRemoved.addListener((_id, removeInfo) => {
-    // Record a tombstone so the deletion propagates instead of resurrecting.
-    swallow(recordRemovedTombstones(removeInfo.node));
-    // And, for a folder, that the folder went too, or its shell outlives it everywhere else.
-    swallow(recordRemovedFolder(removeInfo.parentId, removeInfo.node));
-    onChange();
+    swallow((async () => {
+      const ex = await exclusions();
+      let skip: Set<string> | undefined;
+      if (ex) {
+        if (await excludedUnder(ex, removeInfo.parentId, removeInfo.node)) return;
+        // A synced folder going with something excluded inside it.
+        if (removeInfo.node.children?.length) {
+          const path = await exclusionPath(removeInfo.parentId);
+          if (path) skip = excludedInSubtree(removeInfo.node, path, ex.rules);
+        }
+      }
+      // Record a tombstone so the deletion propagates instead of resurrecting.
+      swallow(recordRemovedTombstones(removeInfo.node, skip));
+      // And, for a folder, that the folder went too, or its shell outlives it everywhere else.
+      swallow(recordRemovedFolder(removeInfo.parentId, removeInfo.node));
+      onChange();
+    })());
   });
   logger.info("BookmarkListeners", "Registered");
 }

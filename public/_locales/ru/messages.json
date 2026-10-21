@@ -827,6 +827,108 @@
   "opt_bulk_delete_desc": {
     "message": "Страховка: если удаления с другого устройства убрали бы больше этой доли ваших локальных закладок, слияние их пропускает (защита от повреждённой синхронизации, которая стёрла бы всё дерево). Увеличьте значение, если вы регулярно удаляете закладки массово."
   },
+  "bm_exclude_label": {
+    "message": "Исключить закладки из синхронизации"
+  },
+  "bm_exclude_desc": {
+    "message": "Отметьте папки и закладки, которые это устройство оставляет себе. Они остаются здесь нетронутыми, и ваши другие устройства ничего в них не меняют."
+  },
+  "bm_exclude_hint": {
+    "message": "Исключение ничего не удаляет: копии, которые уже есть на других ваших устройствах, там и останутся. Если позже переместить закладку в исключённую папку, она исчезнет с других ваших устройств, как будто вы её удалили."
+  },
+  "bm_exclude_loading": {
+    "message": "Загрузка закладок…"
+  },
+  "bm_exclude_error": {
+    "message": "Не удалось прочитать закладки: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Bookmarks API unavailable"
+      }
+    }
+  },
+  "bm_exclude_empty": {
+    "message": "На этом устройстве пока нет закладок."
+  },
+  "bm_exclude_untitled": {
+    "message": "(без названия)"
+  },
+  "bm_exclude_expand": {
+    "message": "Открыть: $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_collapse": {
+    "message": "Закрыть: $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_count_one": {
+    "message": "$COUNT$ закладка",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_count_other": {
+    "message": "Закладок: $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4182"
+      }
+    }
+  },
+  "bm_exclude_more_one": {
+    "message": "Показать ещё $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_more_other": {
+    "message": "Показать ещё $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "bm_exclude_summary_one": {
+    "message": "$COUNT$ элемент не синхронизируется",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_summary_other": {
+    "message": "Не синхронизируется элементов: $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "bm_exclude_none": {
+    "message": "Пока ничего не исключено."
+  },
   "opt_activity_head": {
     "message": "Активность"
   },
