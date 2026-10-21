@@ -827,6 +827,108 @@
   "opt_bulk_delete_desc": {
     "message": "Ein Sicherheitsnetz: Würden die Löschungen eines anderen Geräts mehr als diesen Anteil deiner lokalen Lesezeichen entfernen, überspringt die Zusammenführung sie (das schützt deinen Baum vor einer fehlerhaften Synchronisierung). Erhöhe den Wert, wenn du regelmäßig in großen Mengen löschst."
   },
+  "bm_exclude_label": {
+    "message": "Lesezeichen von der Synchronisierung ausschließen"
+  },
+  "bm_exclude_desc": {
+    "message": "Hake die Ordner und Lesezeichen an, die dieses Gerät für sich behält. Sie bleiben hier unverändert, und nichts, was deine anderen Geräte tun, ändert sie."
+  },
+  "bm_exclude_hint": {
+    "message": "Ausschließen löscht nichts: Kopien, die deine anderen Geräte schon haben, bleiben dort. Verschiebst du später ein Lesezeichen in einen ausgeschlossenen Ordner, verschwindet es von deinen anderen Geräten, als hättest du es gelöscht."
+  },
+  "bm_exclude_loading": {
+    "message": "Lesezeichen werden geladen…"
+  },
+  "bm_exclude_error": {
+    "message": "Deine Lesezeichen konnten nicht gelesen werden: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Bookmarks API unavailable"
+      }
+    }
+  },
+  "bm_exclude_empty": {
+    "message": "Auf diesem Gerät gibt es noch keine Lesezeichen."
+  },
+  "bm_exclude_untitled": {
+    "message": "(ohne Namen)"
+  },
+  "bm_exclude_expand": {
+    "message": "$NAME$ öffnen",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_collapse": {
+    "message": "$NAME$ schließen",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_count_one": {
+    "message": "$COUNT$ Lesezeichen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_count_other": {
+    "message": "$COUNT$ Lesezeichen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4182"
+      }
+    }
+  },
+  "bm_exclude_more_one": {
+    "message": "$COUNT$ weiteres anzeigen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_more_other": {
+    "message": "$COUNT$ weitere anzeigen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "bm_exclude_summary_one": {
+    "message": "$COUNT$ Eintrag wird nicht synchronisiert",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_summary_other": {
+    "message": "$COUNT$ Einträge werden nicht synchronisiert",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "bm_exclude_none": {
+    "message": "Noch ist nichts ausgeschlossen."
+  },
   "opt_activity_head": {
     "message": "Aktivität"
   },

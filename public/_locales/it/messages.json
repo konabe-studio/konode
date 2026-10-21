@@ -827,6 +827,108 @@
   "opt_bulk_delete_desc": {
     "message": "Una rete di sicurezza: se le eliminazioni di un altro dispositivo dovessero rimuovere più di questa percentuale dei tuoi segnalibri locali, l'unione le ignora (protegge da una sincronizzazione corrotta che cancellerebbe il tuo albero). Aumentala se elimini spesso in blocco."
   },
+  "bm_exclude_label": {
+    "message": "Escludi segnalibri dalla sincronizzazione"
+  },
+  "bm_exclude_desc": {
+    "message": "Spunta le cartelle e i segnalibri che questo dispositivo tiene per sé. Restano qui intatti, e niente di ciò che fanno gli altri tuoi dispositivi li modifica."
+  },
+  "bm_exclude_hint": {
+    "message": "Escludere non elimina nulla: le copie che gli altri tuoi dispositivi hanno già restano lì. Se in seguito sposti un segnalibro in una cartella esclusa, sparisce dagli altri tuoi dispositivi, come se l'avessi eliminato."
+  },
+  "bm_exclude_loading": {
+    "message": "Caricamento dei segnalibri…"
+  },
+  "bm_exclude_error": {
+    "message": "Impossibile leggere i segnalibri: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Bookmarks API unavailable"
+      }
+    }
+  },
+  "bm_exclude_empty": {
+    "message": "Su questo dispositivo non ci sono ancora segnalibri."
+  },
+  "bm_exclude_untitled": {
+    "message": "(senza nome)"
+  },
+  "bm_exclude_expand": {
+    "message": "Apri $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_collapse": {
+    "message": "Chiudi $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_count_one": {
+    "message": "$COUNT$ segnalibro",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_count_other": {
+    "message": "$COUNT$ segnalibri",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4182"
+      }
+    }
+  },
+  "bm_exclude_more_one": {
+    "message": "Mostra altro $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_more_other": {
+    "message": "Mostra altri $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "bm_exclude_summary_one": {
+    "message": "$COUNT$ elemento resta fuori dalla sincronizzazione",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_summary_other": {
+    "message": "$COUNT$ elementi restano fuori dalla sincronizzazione",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "bm_exclude_none": {
+    "message": "Ancora nulla è escluso."
+  },
   "opt_activity_head": {
     "message": "Attività"
   },

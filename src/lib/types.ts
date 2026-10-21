@@ -204,6 +204,26 @@ export interface PeerRemovalRecord {
   at: number; // epoch ms, when the merge removed it
 }
 
+/**
+ * A folder or a single bookmark this device keeps out of sync (#54).
+ *
+ * An extension that maintains a huge bookmark folder of its own made every sync crawl and
+ * froze the browser while Konode pushed thousands of bookmarks it had no business with.
+ * Excluded nodes stay here untouched: they are never published, and nothing a peer sends
+ * creates, moves, renames or deletes anything inside them.
+ *
+ * Keyed the way folders are everywhere else, by path, because the peer's copy of the same
+ * folder has to be recognised too. `path` is `[rootKind, …ancestorTitles, folderTitle]` for
+ * a folder, and the PARENT folder's path for a bookmark, which also carries `url`. `id` is
+ * the local id when it was excluded: it keeps a folder excluded here after a rename or a
+ * move, which a path alone would lose. Local-only, like the rest of the settings.
+ */
+export interface BookmarkExclusion {
+  path: string[];
+  url?: string;
+  id?: string;
+}
+
 // Bookmark sync payload: the live tree plus the device's deletion log.
 // (Older packets are a bare SyncBookmark[] — handled for backward compatibility.)
 export interface BookmarkPayload {
@@ -316,6 +336,9 @@ export interface SyncSettings {
   // than this % of local bookmarks (guards against a corrupt/oversized tombstone
   // log wiping the tree). Default 60; raise it if you routinely delete in bulk.
   bulk_delete_percent: number;
+  // Bookmarks this device keeps to itself (#54). Optional: settings stored by an older
+  // build have none, which means nothing is excluded.
+  excluded_bookmarks?: BookmarkExclusion[];
   auto_sync: boolean;
   sync_on_change: boolean;       // trigger sync immediately on bookmark change
   notifications_enabled: boolean;

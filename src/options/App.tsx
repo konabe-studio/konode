@@ -32,6 +32,7 @@ import {
   Pencil, Key, Copy, Check, ArrowRight,
   Trash2, RotateCcw, Camera, Mail, Star,
 } from "lucide-react";
+import { BookmarkExclusionTree } from "@/lib/ui/bookmark-exclusion-tree";
 // Shown in the About section. The manifest is the single source of truth for the
 // version — bump `package.json` and the build stamps it into the manifest.
 const APP_VERSION = browser.runtime.getManifest().version;
@@ -299,6 +300,9 @@ export default function OptionsApp() {
   // next to the row they belong to — see toggleDataType and the Data Types tab.
   const [availability, setAvailability] = useState<Partial<Record<DataType, Availability>>>({});
   const [typeError, setTypeError] = useState<{ type: DataType; message: string } | null>(null);
+  // Whether the bookmark picker is open (#54). Null until the user touches the switch: it
+  // then follows the stored list, so a device with exclusions opens with them on show.
+  const [excludeOpen, setExcludeOpen] = useState<boolean | null>(null);
 
   /**
    * Read on mount, and again whenever a permission changes.
@@ -1845,6 +1849,42 @@ export default function OptionsApp() {
                   );
                 })}
               </div>
+
+              {/* Bookmarks this device keeps to itself (#54), for an extension that keeps a huge
+                  folder of its own. Off unless asked for: the tree only opens behind the
+                  switch, and switching it off again puts everything back into the sync. */}
+              {availability.bookmarks?.state !== "unsupported" && (() => {
+                const excluded = settings.excluded_bookmarks ?? [];
+                const shown = excludeOpen ?? excluded.length > 0;
+                return (
+                  <div className="settings-section">
+                    <div className="settings-card-head">{t("datatype_bookmarks")}</div>
+                    <div className="settings-row">
+                      <div className="settings-row-left">
+                        <div>
+                          <div className="row-label">{t("bm_exclude_label")}</div>
+                          <div className="row-desc">{t("bm_exclude_desc")}</div>
+                        </div>
+                      </div>
+                      <label className="toggle-wrap">
+                        <input type="checkbox" className="toggle-input" checked={shown}
+                          aria-label={t("bm_exclude_label")}
+                          onChange={(e) => {
+                            setExcludeOpen(e.target.checked);
+                            if (!e.target.checked) update({ excluded_bookmarks: [] });
+                          }} />
+                        <span className="toggle-track"><span className="toggle-thumb" /></span>
+                      </label>
+                    </div>
+                    {shown && (
+                      <div style={{ padding: "0 var(--sp-xl) var(--sp-xl)" }}>
+                        <BookmarkExclusionTree value={excluded} onChange={(next) => update({ excluded_bookmarks: next })} />
+                        <InfoHint>{t("bm_exclude_hint")}</InfoHint>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Nothing to configure when the browser has no history API — the row above
                   already explains why, and a live "days to sync" slider under it would

@@ -827,6 +827,108 @@
   "opt_bulk_delete_desc": {
     "message": "Védőháló: ha egy másik eszköz törlései a helyi könyvjelzőidnek ennél nagyobb részét vinnék el, az összefésülés kihagyja őket (ez védi a könyvjelzőfádat egy hibás szinkronizálástól). Növeld, ha rendszeresen törölsz nagy tételben."
   },
+  "bm_exclude_label": {
+    "message": "Könyvjelzők kizárása a szinkronból"
+  },
+  "bm_exclude_desc": {
+    "message": "Jelöld be azokat a mappákat és könyvjelzőket, amelyeket ez az eszköz megtart magának. Itt érintetlenül maradnak, és a többi eszközöd semmit nem változtat rajtuk."
+  },
+  "bm_exclude_hint": {
+    "message": "A kizárás nem töröl semmit: a többi eszközödön már meglévő példányok ott maradnak. Ha később egy könyvjelzőt kizárt mappába helyezel át, az eltűnik a többi eszközödről, mintha törölted volna."
+  },
+  "bm_exclude_loading": {
+    "message": "Könyvjelzők betöltése…"
+  },
+  "bm_exclude_error": {
+    "message": "Nem sikerült beolvasni a könyvjelzőket: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Bookmarks API unavailable"
+      }
+    }
+  },
+  "bm_exclude_empty": {
+    "message": "Ezen az eszközön még nincsenek könyvjelzők."
+  },
+  "bm_exclude_untitled": {
+    "message": "(névtelen)"
+  },
+  "bm_exclude_expand": {
+    "message": "$NAME$ kinyitása",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_collapse": {
+    "message": "$NAME$ becsukása",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_count_one": {
+    "message": "$COUNT$ könyvjelző",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_count_other": {
+    "message": "$COUNT$ könyvjelző",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4182"
+      }
+    }
+  },
+  "bm_exclude_more_one": {
+    "message": "További $COUNT$ megjelenítése",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_more_other": {
+    "message": "További $COUNT$ megjelenítése",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "bm_exclude_summary_one": {
+    "message": "$COUNT$ elem kimarad a szinkronból",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_summary_other": {
+    "message": "$COUNT$ elem kimarad a szinkronból",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "bm_exclude_none": {
+    "message": "Még semmi sincs kizárva."
+  },
   "opt_activity_head": {
     "message": "Aktivitás"
   },

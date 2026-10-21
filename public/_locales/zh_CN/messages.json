@@ -818,6 +818,108 @@
   "opt_bulk_delete_desc": {
     "message": "安全机制：如果来自节点的删除操作影响到超过此比例的本地书签，合并过程将跳过这些删除（防止因同步异常而清空您的书签树）。如果您经常批量删除，可调高此数值。"
   },
+  "bm_exclude_label": {
+    "message": "将书签排除在同步之外"
+  },
+  "bm_exclude_desc": {
+    "message": "勾选此设备要自己保留的文件夹和书签。它们会原样留在这里，您其他设备上的任何操作都不会改动它们。"
+  },
+  "bm_exclude_hint": {
+    "message": "排除不会删除任何内容：您其他设备上已有的副本会继续保留。之后如果把书签移入已排除的文件夹，它会从您的其他设备上消失，就像您删除了它一样。"
+  },
+  "bm_exclude_loading": {
+    "message": "正在加载书签…"
+  },
+  "bm_exclude_error": {
+    "message": "无法读取书签：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Bookmarks API unavailable"
+      }
+    }
+  },
+  "bm_exclude_empty": {
+    "message": "此设备上还没有书签。"
+  },
+  "bm_exclude_untitled": {
+    "message": "（未命名）"
+  },
+  "bm_exclude_expand": {
+    "message": "展开 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_collapse": {
+    "message": "收起 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_count_one": {
+    "message": "$COUNT$ 个书签",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_count_other": {
+    "message": "$COUNT$ 个书签",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4182"
+      }
+    }
+  },
+  "bm_exclude_more_one": {
+    "message": "再显示 $COUNT$ 个",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_more_other": {
+    "message": "再显示 $COUNT$ 个",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "bm_exclude_summary_one": {
+    "message": "$COUNT$ 项不参与同步",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_summary_other": {
+    "message": "$COUNT$ 项不参与同步",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "bm_exclude_none": {
+    "message": "尚未排除任何内容。"
+  },
   "opt_activity_head": {
     "message": "活动"
   },

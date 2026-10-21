@@ -1,5 +1,6 @@
 import type {
   AppearedRecord,
+  BookmarkExclusion,
   KeptShellRecord,
   CreatedRecord,
   PeerRemovalRecord,
@@ -21,6 +22,7 @@ import { browser } from "@/lib/utils/ext";
 import { BACKEND_LABEL } from "@/lib/constants";
 import { inferStore, storeUrlFor } from "@/lib/utils/extensions-match";
 import { canonicalUrlKey } from "@/lib/utils/url";
+import { sanitizeExclusions } from "@/lib/utils/bookmark-exclusions";
 
 // ─── Device name detection ─────────────────────────────────────────────────
 
@@ -73,6 +75,7 @@ export const DEFAULT_SETTINGS: SyncSettings = {
   conflict_strategy: "lww",
   history_days_limit: 30,
   bulk_delete_percent: 60,
+  excluded_bookmarks: [],
   auto_sync: true,
   sync_on_change: true,
   notifications_enabled: true,
@@ -237,6 +240,17 @@ export async function getSettings(): Promise<SyncSettings> {
     {}
   );
   return ensureActiveBackendConfig({ ...DEFAULT_SETTINGS, ...settled });
+}
+
+/**
+ * The bookmarks this device keeps out of sync (#54), straight from the stored settings.
+ *
+ * Not through getSettings(): the bookmark listeners ask on every event, and getSettings()
+ * mints a device id when there is none, which is no business of a bookmark recorder.
+ */
+export async function getBookmarkExclusions(): Promise<BookmarkExclusion[]> {
+  const stored = await get<Partial<SyncSettings>>(KEYS.SETTINGS, {});
+  return sanitizeExclusions(stored.excluded_bookmarks);
 }
 
 export async function saveSettings(partial: Partial<SyncSettings>): Promise<SyncSettings> {

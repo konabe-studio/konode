@@ -827,6 +827,108 @@
   "opt_bulk_delete_desc": {
     "message": "一道安全防線：如果某台裝置要刪掉的書籤超過你本機書籤的這個比例，合併時就會跳過它們（避免一次壞掉的同步清空你的書籤樹）。如果你本來就常常大量刪除，可以調高。"
   },
+  "bm_exclude_label": {
+    "message": "將書籤排除在同步之外"
+  },
+  "bm_exclude_desc": {
+    "message": "勾選這台裝置要自己保留的資料夾和書籤。它們會原封不動留在這裡，你其他裝置上的任何操作都不會改到它們。"
+  },
+  "bm_exclude_hint": {
+    "message": "排除不會刪掉任何東西：你其他裝置上已經有的副本會繼續留著。之後如果把書籤移進已排除的資料夾，它就會從你的其他裝置上消失，就像你把它刪掉一樣。"
+  },
+  "bm_exclude_loading": {
+    "message": "正在載入書籤…"
+  },
+  "bm_exclude_error": {
+    "message": "無法讀取書籤：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Bookmarks API unavailable"
+      }
+    }
+  },
+  "bm_exclude_empty": {
+    "message": "這台裝置上還沒有書籤。"
+  },
+  "bm_exclude_untitled": {
+    "message": "（未命名）"
+  },
+  "bm_exclude_expand": {
+    "message": "展開 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_collapse": {
+    "message": "收合 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_count_one": {
+    "message": "$COUNT$ 個書籤",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_count_other": {
+    "message": "$COUNT$ 個書籤",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4182"
+      }
+    }
+  },
+  "bm_exclude_more_one": {
+    "message": "再顯示 $COUNT$ 個",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_more_other": {
+    "message": "再顯示 $COUNT$ 個",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "bm_exclude_summary_one": {
+    "message": "$COUNT$ 個項目不參與同步",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_summary_other": {
+    "message": "$COUNT$ 個項目不參與同步",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "bm_exclude_none": {
+    "message": "目前沒有排除任何項目。"
+  },
   "opt_activity_head": {
     "message": "活動"
   },

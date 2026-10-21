@@ -1290,6 +1290,108 @@
   "opt_bulk_delete_desc": {
     "message": "Una red de seguridad: si las eliminaciones de otro dispositivo borran más de esta proporción de tus marcadores locales, la fusión las omitirá (protege contra una sincronización corrupta que borre tu árbol de marcadores). Aumenta este valor si sueles eliminar marcadores de forma masiva."
   },
+  "bm_exclude_label": {
+    "message": "Excluir marcadores de la sincronización"
+  },
+  "bm_exclude_desc": {
+    "message": "Marca las carpetas y los marcadores que este dispositivo se guarda para sí. Se quedan aquí intactos, y nada de lo que hagan tus otros dispositivos los cambia."
+  },
+  "bm_exclude_hint": {
+    "message": "Excluir no borra nada: las copias que tus otros dispositivos ya tienen se quedan allí. Si más adelante mueves un marcador a una carpeta excluida, desaparecerá de tus otros dispositivos, como si lo hubieras eliminado."
+  },
+  "bm_exclude_loading": {
+    "message": "Cargando tus marcadores…"
+  },
+  "bm_exclude_error": {
+    "message": "No se pudieron leer tus marcadores: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Bookmarks API unavailable"
+      }
+    }
+  },
+  "bm_exclude_empty": {
+    "message": "Todavía no hay marcadores en este dispositivo."
+  },
+  "bm_exclude_untitled": {
+    "message": "(sin nombre)"
+  },
+  "bm_exclude_expand": {
+    "message": "Abrir $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_collapse": {
+    "message": "Cerrar $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_count_one": {
+    "message": "$COUNT$ marcador",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_count_other": {
+    "message": "$COUNT$ marcadores",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4182"
+      }
+    }
+  },
+  "bm_exclude_more_one": {
+    "message": "Mostrar $COUNT$ más",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_more_other": {
+    "message": "Mostrar $COUNT$ más",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "bm_exclude_summary_one": {
+    "message": "$COUNT$ elemento queda fuera de la sincronización",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_summary_other": {
+    "message": "$COUNT$ elementos quedan fuera de la sincronización",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "bm_exclude_none": {
+    "message": "Todavía no hay nada excluido."
+  },
   "opt_activity_head_sub": {
     "message": "Lo que hizo Konode en este dispositivo y los recursos con los que cuenta. Todo calculado aquí: los números, los puntos de restauración y las últimas 200 entradas del registro son locales, y nada de lo que está en esta página se sube jamás a la red."
   },

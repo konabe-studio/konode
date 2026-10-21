@@ -20,6 +20,15 @@ All notable changes to Konode. Format loosely follows
   a small card at the bottom. Never during setup and never next to an error, a conflict or a
   held-back deletion. Rate it or say no thanks, and either way it is gone for good; rating
   from the Settings row counts too. Nothing about it leaves your device.
+- **Keep bookmarks out of sync (#54).** An extension that keeps a big bookmark folder of its
+  own had Konode syncing every entry in it, and the browser froze until it was done. Under
+  Bookmarks, in setup and in Settings → Data Types, **Exclude bookmarks from sync** opens
+  your bookmark tree with a box in front of every folder and bookmark. Whatever you tick
+  stays on this device untouched: it is never uploaded, nothing your other devices do
+  changes it, and changes inside it no longer start a sync. A ticked folder stays excluded
+  when you rename it, and so does whatever the extension adds to it later. Excluding deletes
+  nothing, so copies your other devices already have stay there. Moving a bookmark into an
+  excluded folder takes it off your other devices, as deleting it would.
 
 ### Changed
 

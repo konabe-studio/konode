@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { sendMessage, request } from "@/lib/utils/messaging";
 import { browser } from "@/lib/utils/ext";
 import { t, tParts } from "@/lib/utils/i18n";
@@ -8,7 +8,8 @@ import { loadDraft, saveDraft, clearDraft, type DraftStep } from "@/lib/onboardi
 // Some engines (notably iOS WebKit, e.g. Orion) don't support interactive Google
 // sign-in; gate the Drive option so users aren't sent into a dead end.
 const DRIVE_AVAILABLE = isDriveAuthAvailable();
-import type { BackendType, DataType, SyncSettings } from "@/lib/types";
+import type { BackendType, BookmarkExclusion, DataType, SyncSettings } from "@/lib/types";
+import { BookmarkExclusionTree } from "@/lib/ui/bookmark-exclusion-tree";
 import {
   allDataTypeAvailability, ensurePermissionWatched, unsupportedReason,
   PERMISSION_FOR_TYPE, type Availability,
@@ -100,6 +101,10 @@ export default function OnboardingApp() {
     history: false,
     sessions: false,
   });
+  // Bookmarks this device keeps out of sync (#54), offered here because the first sync is
+  // the one that would otherwise push an extension's whole folder to every device.
+  const [exclusions, setExclusions] = useState<BookmarkExclusion[]>([]);
+  const [excludeOpen, setExcludeOpen] = useState(false);
 
   /**
    * What this browser can actually sync — see lib/utils/capabilities.
@@ -270,6 +275,8 @@ export default function OnboardingApp() {
         setWebdavPass(draft.webdavPass);
         setNcHost(draft.ncHost);
         setDataTypes(draft.dataTypes);
+        setExclusions(draft.bookmarkExclusions);
+        setExcludeOpen(draft.bookmarkExclusions.length > 0);
         setStep(draft.step);
         // The token was checked before the reload, but only the check sets who it belongs
         // to, and Continue waits for that.
@@ -292,12 +299,12 @@ export default function OnboardingApp() {
         step: step as DraftStep, deviceLabel, provider,
         githubToken, githubRepo, githubBranch,
         webdavUrl, webdavUser, webdavPass, ncHost,
-        dataTypes,
+        dataTypes, bookmarkExclusions: exclusions,
       }).catch(() => { /* a draft that cannot be written costs a retype, nothing more */ });
     }, 300);
     return () => clearTimeout(id);
   }, [restored, step, deviceLabel, provider, githubToken, githubRepo, githubBranch,
-    webdavUrl, webdavUser, webdavPass, ncHost, dataTypes]);
+    webdavUrl, webdavUser, webdavPass, ncHost, dataTypes, exclusions]);
 
   useEffect(() => {
     if (step !== "syncing") return;
@@ -447,6 +454,7 @@ export default function OnboardingApp() {
         type: "SAVE_SETTINGS",
         payload: {
           ...current, active_backend: backend, backends, enabled_types,
+          excluded_bookmarks: exclusions,
           // Blank falls back to what was detected: an unnamed device is worse than a
           // generically named one, and the field is optional by design.
           device_label: deviceLabel.trim() || current.device_label,
@@ -801,8 +809,8 @@ export default function OnboardingApp() {
               // one thing this user needs to know is that it's the browser, not Konode.
               const off = unavailable(key);
               return (
+              <Fragment key={key}>
               <label
-                key={key}
                 style={{ ...S.dataRow, ...(off ? { opacity: 0.55, cursor: "not-allowed" } : null) }}
                 role="switch"
                 aria-checked={dataTypes[key]}
@@ -833,6 +841,33 @@ export default function OnboardingApp() {
                   </div>
                 )}
               </label>
+              {/* Under Bookmarks, while it is on: the first sync is the one that would push an
+                  extension's whole folder to every device, so this is the moment to say no
+                  to it (#54). Outside the row's label, which toggles the type on a click. */}
+              {key === "bookmarks" && !off && dataTypes.bookmarks && (
+                <div style={S.excludeBox}>
+                  <label style={S.excludeToggle}>
+                    <input
+                      type="checkbox" checked={excludeOpen}
+                      style={{ margin: "2px 0 0", accentColor: "var(--accent)", cursor: "pointer", flexShrink: 0 }}
+                      onChange={(e) => {
+                        setExcludeOpen(e.target.checked);
+                        if (!e.target.checked) setExclusions([]);
+                      }}
+                    />
+                    <span>
+                      <span style={{ display: "block", fontSize: 13, color: "var(--text-primary)" }}>{t("bm_exclude_label")}</span>
+                      <span style={{ display: "block", fontSize: 12, color: "var(--text-secondary)" }}>{t("bm_exclude_desc")}</span>
+                    </span>
+                  </label>
+                  {excludeOpen && (
+                    <div style={{ marginTop: 10 }}>
+                      <BookmarkExclusionTree value={exclusions} onChange={setExclusions} />
+                    </div>
+                  )}
+                </div>
+              )}
+              </Fragment>
               );
             })}
           </div>
@@ -1155,6 +1190,10 @@ const S: Record<string, React.CSSProperties> = {
   errorRow: { display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--danger)" },
   dataList: { display: "flex", flexDirection: "column", gap: 0, marginBottom: 24,
     borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 2px rgba(17,21,26,.04), 0 0 0 1px rgba(17,21,26,.07)" },
+  excludeBox: {
+    padding: "12px 16px 14px 44px", borderBottom: "1px solid var(--border)", background: "var(--bg-card)",
+  },
+  excludeToggle: { display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer" },
   dataRow: {
     display: "flex", alignItems: "center", justifyContent: "space-between",
     padding: "14px 16px", borderBottom: "1px solid var(--border)",
