@@ -206,6 +206,30 @@
       }
     }
   },
+  "popup_tabs_open_here_one": {
+    "message": "$COUNT$ open here",
+    "description": "Beside a peer's session in the popup: how many of its tabs are already open in this browser, so Restore will not open them again. In the case of exactly one.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_tabs_open_here_other": {
+    "message": "$COUNT$ open here",
+    "description": "Beside a peer's session in the popup: how many of its tabs are already open in this browser, so Restore will not open them again. In languages that use the singular after a numeral, this is the same wording as the _one form.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "popup_restore_all_open": {
+    "message": "All open",
+    "description": "The Restore button, disabled, when every tab of the session is already open in this browser. Keep it short, it is a button."
+  },
   "popup_backend_label": {
     "message": "Backend",
     "description": "Footer label before the storage provider's name."

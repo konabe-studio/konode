@@ -167,6 +167,27 @@
       }
     }
   },
+  "popup_tabs_open_here_one": {
+    "message": "$COUNT$ már nyitva",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_tabs_open_here_other": {
+    "message": "$COUNT$ már nyitva",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "popup_restore_all_open": {
+    "message": "Mind nyitva"
+  },
   "popup_backend_label": {
     "message": "Tárhely"
   },

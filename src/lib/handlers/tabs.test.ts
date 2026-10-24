@@ -212,3 +212,80 @@ describe("a session restore is bounded by what Konode will open", () => {
     expect(opened).toBe(200);
   });
 });
+
+// Reported on #51: restore a peer's 10 tabs, let the peer open an 11th, restore again, and
+// this browser had 21 tabs, because every restore opened the whole session.
+describe("a session restore opens only what is not open here yet", () => {
+  const openUrls = async (): Promise<string[]> => (await chrome.tabs.query({})).map((t) => t.url as string);
+
+  it("a second restore of a session that grew by one tab opens that one tab", async () => {
+    const ten = Array.from({ length: 10 }, (_, i) => `https://t${i}.com/`);
+    await importSession(session(ten));
+    expect(await openUrls()).toHaveLength(10);
+
+    await importSession(session([...ten, "https://new.com/"]));
+
+    const urls = await openUrls();
+    expect(urls).toHaveLength(11);
+    expect(urls.filter((u) => u === "https://new.com/")).toHaveLength(1);
+  });
+
+  it("opens nothing when every tab is already open", async () => {
+    await chrome.tabs.create({ url: "https://a.com/" });
+    await chrome.tabs.create({ url: "https://b.com/" });
+
+    await importSession(session(["https://b.com/", "https://a.com/"]));
+
+    expect(await openUrls()).toEqual(["https://a.com/", "https://b.com/"]);
+    expect(windowsFake.__created()).toEqual([]);
+  });
+
+  it("counts copies: two of the same page in the session and one open here opens the second", async () => {
+    await chrome.tabs.create({ url: "https://a.com/" });
+
+    await importSession(session(["https://a.com/", "https://a.com/", "https://b.com/"]));
+
+    expect((await openUrls()).sort()).toEqual(["https://a.com/", "https://a.com/", "https://b.com/"]);
+  });
+
+  it("treats a bare origin with and without its trailing slash as the same page", async () => {
+    // WebKit reports `https://a.com`, Chromium `https://a.com/`.
+    await chrome.tabs.create({ url: "https://a.com/" });
+
+    await importSession(session(["https://a.com"]));
+
+    expect(await openUrls()).toEqual(["https://a.com/"]);
+  });
+
+  it("counts a tab that is still loading as open", async () => {
+    // Chromium reports url "" while a tab loads, with the address in pendingUrl. A restore
+    // pressed again right after the first used to open the still-loading tabs a second time.
+    await chrome.tabs.create({ url: "https://a.com/" });
+    const realQuery = chrome.tabs.query;
+    (chrome.tabs as unknown as { query: () => Promise<unknown[]> }).query = async () =>
+      (await realQuery.call(chrome.tabs, {})).map((tab) => ({ ...tab, url: "", pendingUrl: tab.url }));
+    try {
+      await importSession(session(["https://a.com/"]));
+    } finally {
+      (chrome.tabs as unknown as { query: typeof realQuery }).query = realQuery;
+    }
+
+    expect(await openUrls()).toEqual(["https://a.com/"]);
+  });
+
+  it("still opens everything when this browser withholds the open tabs' URLs", async () => {
+    // Without the `tabs` permission, query() returns tabs with no url: nothing can be
+    // matched, so the restore behaves as it always did rather than skipping blindly.
+    await chrome.tabs.create({ url: "https://a.com/" });
+    const realQuery = chrome.tabs.query;
+    (chrome.tabs as unknown as { query: () => Promise<unknown[]> }).query = async () =>
+      (await realQuery.call(chrome.tabs, {})).map(({ url: _url, ...rest }) => rest);
+    try {
+      await importSession(session(["https://a.com/"]));
+    } finally {
+      (chrome.tabs as unknown as { query: typeof realQuery }).query = realQuery;
+    }
+
+    expect(await openUrls()).toEqual(["https://a.com/", "https://a.com/"]);
+  });
+});

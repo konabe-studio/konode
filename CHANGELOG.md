@@ -40,6 +40,11 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **Restoring a session no longer opens tabs you already have open.** Every restore opened
+  the whole session again, so restoring another device's 10 tabs, letting it open an 11th
+  and restoring once more left you with 21. A restore now opens only the tabs that aren't
+  open in this browser yet, and the popup says how many of a session's tabs are already open
+  here. When all of them are, the button reads **All open** instead of opening them again.
 - **A deletion that arrives in pieces no longer slips past the bulk-delete limit.** The
   limit on how much of your bookmarks another device may delete judged each sync on its own,
   so a large deletion that reached this device a piece at a time went through piece by
