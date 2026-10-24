@@ -155,6 +155,27 @@
       }
     }
   },
+  "popup_tabs_open_here_one": {
+    "message": "$COUNT$ ya abierta",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_tabs_open_here_other": {
+    "message": "$COUNT$ ya abiertas",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "popup_restore_all_open": {
+    "message": "Todas abiertas"
+  },
   "popup_backend_label": {
     "message": "Backend"
   },

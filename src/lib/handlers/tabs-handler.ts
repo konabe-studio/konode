@@ -6,6 +6,7 @@ import { isSafeContentUrl, isSensitiveUrl } from "@/lib/utils/url";
 import { browser } from "@/lib/utils/ext";
 import { assertDataTypeApi, isIOS } from "@/lib/utils/capabilities";
 import { getSingleTabOpenLimit, setSingleTabOpenLimit } from "@/lib/utils/storage";
+import { openTabUrl, tabsToRestore } from "@/lib/session-restore";
 
 // ─── Export Current Tabs ──────────────────────────────────────────────────
 
@@ -72,15 +73,26 @@ export async function importSession(session: SyncSession): Promise<void> {
     logger.warn("importSession", "Skipping an unsafe tab URL");
     return false;
   });
-  const openable = safe.slice(0, MAX_RESTORE_TABS);
-  if (safe.length > openable.length) {
+  // Only what is not open here yet, so a second restore of a session that has grown opens
+  // the new tabs instead of every tab again (see lib/session-restore).
+  const missing = tabsToRestore(safe, (await browser.tabs.query({})).map(openTabUrl));
+  if (safe.length && !missing.length) {
+    logger.event("importSession", `All ${safe.length} tabs from "${session.label}" are already open`);
+    return;
+  }
+  const openable = missing.slice(0, MAX_RESTORE_TABS);
+  if (missing.length > openable.length) {
     logger.warn(
       "importSession",
-      `That session lists ${safe.length} tabs, which is more than Konode will open at once. Opening the first ${MAX_RESTORE_TABS}.`
+      `That session lists ${missing.length} tabs that are not open here, which is more than Konode will open at once. Opening the first ${MAX_RESTORE_TABS}.`
     );
   }
 
-  logger.event("importSession", `Opening ${openable.length} tabs from "${session.label}"`);
+  const already = safe.length - missing.length;
+  logger.event(
+    "importSession",
+    `Opening ${openable.length} tabs from "${session.label}"${already ? ` (${already} already open)` : ""}`
+  );
   if (openable.length === 0) return;
 
   /**

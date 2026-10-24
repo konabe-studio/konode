@@ -6,6 +6,7 @@ import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl } from "@/lib/utils/extensions-match";
 import { KEYS, getSettings, getState, normalizeRemoteSessions, normalizeRemoteExtensions, getRateProgress, getRateAnswered, setRateAnswered } from "@/lib/utils/storage";
 import { rateCardDue, stateNeedsUser } from "@/lib/rate-prompt";
+import { openTabUrl, tabsToRestore } from "@/lib/session-restore";
 import { reviewPageFor } from "@/lib/store-review";
 import { STATE_UPDATE } from "@/lib/constants";
 import { streamState, streamInputFor, streamColor, streamLabelKey } from "@/popup/stream-state";
@@ -62,6 +63,9 @@ export default function PopupApp() {
   const [syncedTypes, setSyncedTypes]   = useState<Set<DataType>>(new Set());
   const [missingExtensions, setMissingExtensions] = useState<SyncExtension[]>([]);
   const [remoteSessions, setRemoteSessions] = useState<RemoteSessionEntry[]>([]);
+  // What is open in this browser, so each session can say how much of it a restore would
+  // still open (lib/session-restore). Undefined entries: no `tabs` permission to read them.
+  const [openUrls, setOpenUrls] = useState<Array<string | undefined>>([]);
   const [loadError, setLoadError] = useState(false);
   // Why the last button press did nothing. Every one of these handlers used to
   // `await sendMessage(...)` and drop the answer, so an ERROR response — "a sync is
@@ -147,10 +151,19 @@ export default function PopupApp() {
    * any single measurement somebody takes while watching, which is how a bug report ends up
    * with a number nobody can reproduce.
    */
+  const loadOpenTabs = useCallback(async () => {
+    try {
+      setOpenUrls((await browser.tabs.query({})).map(openTabUrl));
+    } catch {
+      setOpenUrls([]); // no tabs API: every session tab counts as not open, as before
+    }
+  }, []);
+
   const loadPeerCaches = useCallback(async () => {
     try {
       const r = await browser.storage.local.get([KEYS.REMOTE_SESSIONS, KEYS.REMOTE_EXTENSIONS]);
       setRemoteSessions(normalizeRemoteSessions(r[KEYS.REMOTE_SESSIONS]));
+      void loadOpenTabs();
       // Union of every peer device's extension list (deduped by id).
       const remote = normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]);
       // Three ways to arrive at "we cannot say what is missing here", and all three now
@@ -180,7 +193,7 @@ export default function PopupApp() {
       // that true.
       console.error("Popup peer-cache load error:", err);
     }
-  }, []);
+  }, [loadOpenTabs]);
 
   useEffect(() => {
     load();
@@ -294,6 +307,7 @@ export default function PopupApp() {
     }
   };
 
+  /** `tabs`: how many of the session's tabs are not open here, which is what will open. */
   const restoreSession = async (id: string, tabs: number) => {
     if (tabs > RESTORE_CONFIRM_TABS && confirmRestore !== id) {
       setConfirmRestore(id);
@@ -303,6 +317,9 @@ export default function PopupApp() {
     setActionError(null);
     const r = await request({ type: "RESTORE_SESSION", payload: { id } });
     if (!r.ok) setActionError(r.error);
+    // The restored tabs are open now, so the session reads "All open" instead of offering
+    // the same tabs again.
+    await loadOpenTabs();
   };
 
   /** Either answer ends the card for good. Recorded before the store tab opens, because
@@ -617,12 +634,17 @@ export default function PopupApp() {
             {t("popup_sessions_head")}
           </h2>
           <div className="space-y-1.5">
-            {remoteSessions.map((entry) => (
+            {remoteSessions.map((entry) => {
+              const total = entry.session.tabs.length;
+              const missing = tabsToRestore(entry.session.tabs, openUrls).length;
+              const openHere = total - missing;
+              return (
               <div key={entry.session.id} className="flex items-center gap-2 px-0.5 py-0.5">
                 <div className="min-w-0 flex-1">
                   <span className="block truncate text-[14px]">{entry.session.label ? <bdi>{entry.session.label}</bdi> : t("popup_unknown_device")}</span>
                   <span className="block truncate font-mono text-[12px] text-sk-subtle">
-                    {plural("popup_tabs", entry.session.tabs.length)}
+                    {plural("popup_tabs", total)}
+                    {openHere > 0 && ` · ${plural("popup_tabs_open_here", openHere)}`}
                     {entry.timestamp &&
                       ` · ${new Date(entry.timestamp).toLocaleString([], {
                         month: "short",
@@ -641,16 +663,20 @@ export default function PopupApp() {
                   </button>
                 )}
                 <button
-                  onClick={() => restoreSession(entry.session.id, entry.session.tabs.length)}
-                  className="flex shrink-0 items-center gap-1.5 rounded-box border border-sk-hairline bg-sk-raised px-2.5 py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text"
+                  onClick={() => restoreSession(entry.session.id, missing)}
+                  disabled={missing === 0}
+                  className="flex shrink-0 items-center gap-1.5 rounded-box border border-sk-hairline bg-sk-raised px-2.5 py-1.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text disabled:cursor-default disabled:opacity-60 disabled:hover:text-sk-muted"
                 >
                   <RotateCcw size={12} />{" "}
-                  {confirmRestore === entry.session.id
-                    ? plural("popup_restore_confirm", entry.session.tabs.length)
-                    : t("popup_restore")}
+                  {missing === 0
+                    ? t("popup_restore_all_open")
+                    : confirmRestore === entry.session.id
+                      ? plural("popup_restore_confirm", missing)
+                      : t("popup_restore")}
                 </button>
               </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
