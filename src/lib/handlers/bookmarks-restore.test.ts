@@ -166,6 +166,18 @@ describe("restoreBookmarks keeps the snapshot's order (#29)", () => {
     expect(await titles()).toEqual(["A", "B"]);
     expect(await getTombstones()).toEqual([]);
   });
+
+  it("restores same-named folders as separate folders, in their order (#51)", async () => {
+    await seedLink("A");
+
+    await restoreBookmarks(snapshot([
+      link("A"), folder("", [link("B")]), folder("", [link("C")]), folder("News", [link("D")]), folder("News", [link("E")]),
+    ]));
+
+    const bar = await chrome.bookmarks.getChildren("1");
+    expect(bar.map((c) => c.title)).toEqual(["A", "", "", "News", "News"]);
+    expect(await Promise.all(bar.slice(1).map((f) => titles(f.id)))).toEqual([["B"], ["C"], ["D"], ["E"]]);
+  });
 });
 
 describe("restoreBookmarks on the tree QA step AC was played on", () => {

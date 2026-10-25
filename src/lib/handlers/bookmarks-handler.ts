@@ -1342,6 +1342,8 @@ async function mergeBookmarks(
   // shell. Cleaned up after the fold (bottom-up), never touching user-empty
   // folders (only ids WE moved a bookmark out of).
   const emptiedParents = new Set<string>();
+  // Local folders a peer folder has been matched to in this merge (see sameTitleFolder).
+  const claimedFolders = new Set<string>();
 
   // Create folders LAZILY — a folder is only materialized when a descendant
   // bookmark is actually added/moved under it (`ensureParent` walks up and creates
@@ -1350,7 +1352,15 @@ async function mergeBookmarks(
   // no tombstone of their own), nothing triggers its creation, so it stays gone.
   // `index` = the node's position among its siblings in the REMOTE tree, so adds
   // and moves land at the peer's position instead of always at the end of the folder.
-  const mergeNode = async (node: SyncBookmark, ensureParent: () => Promise<string>, index: number, rootConfident: boolean, prevKey: string | undefined): Promise<void> => {
+  const mergeNode = async (
+    node: SyncBookmark, ensureParent: () => Promise<string>, siblings: SyncBookmark[], index: number,
+    rootConfident: boolean,
+  ): Promise<void> => {
+    // The peer's previous sibling is the anchor, and so is WHICH of its name it is: a parent
+    // can hold several folders of one name (#51). Counted only for an add or a move, which
+    // walk the siblings anyway: every node of a folder of thousands, on every sync, is not.
+    const prevKey = index > 0 ? siblingKey(siblings[index - 1]) : undefined;
+    const prevNth = (): number => (index > 0 ? keyOrdinal(siblings, index - 1, siblingKey) : 0);
     if (node.url) {
       // Match on the canonical key (bare-origin trailing-slash differs by engine),
       // but create/move with the node's original url below.
@@ -1374,7 +1384,7 @@ async function mergeBookmarks(
             // absolute index — an index doesn't translate across devices with different
             // device-local siblings. Fall back to the peer's index when the anchor is
             // absent here. (Mirrors the folder-reposition placement in Step C.)
-            const target = await anchoredIndex(targetId, loc.id, prevKey, index);
+            const target = await anchoredIndex(targetId, loc.id, prevKey, index, prevNth());
             if (loc.parentId !== targetId || loc.index !== target) {
               const from = loc.parentId;
               if (loc.parentId !== targetId) {
@@ -1427,7 +1437,7 @@ async function mergeBookmarks(
         // as the move path). Passing the peer's raw index made the browser reject the
         // create whenever the local parent was smaller — and the catch below turned
         // that into a bookmark that silently never appeared, on every sync.
-        const at = placementIndex(await browser.bookmarks.getChildren(parentId), prevKey, index);
+        const at = placementIndex(await browser.bookmarks.getChildren(parentId), prevKey, index, prevNth());
         const made = await browser.bookmarks.create({ parentId, index: at, title: node.title, url: node.url });
         addedUrls.add(urlKey);
         added++;
@@ -1451,23 +1461,26 @@ async function mergeBookmarks(
         if (folderId) return folderId;
         const parentId = await ensureParent();
         const children = await browser.bookmarks.getChildren(parentId);
-        const existing = children.find((c) => !c.url && c.title === node.title && !excluded.has(c.id));
+        const existing = await sameTitleFolder(node, siblings, children, excluded, claimedFolders);
         // Same anchor-then-clamp as the bookmark add — `children` is already in hand,
         // so this costs nothing. Unclamped, a folder at a peer index past the local
         // parent's end failed to create, and the rejection surfaced (confusingly) as
         // an error against its first child, which then went missing too.
-        folderId = existing
-          ? existing.id
-          : (await browser.bookmarks.create({
-              parentId,
-              index: placementIndex(children, prevKey, index),
-              title: node.title,
-            })).id;
+        if (existing) {
+          folderId = existing;
+        } else {
+          folderId = (await browser.bookmarks.create({
+            parentId,
+            index: placementIndex(children, prevKey, index, prevNth()),
+            title: node.title,
+          })).id;
+          claimedFolders.add(folderId);
+        }
         return folderId;
       };
       const kids = node.children ?? [];
       for (let i = 0; i < kids.length; i++) {
-        await mergeNode(kids[i], ensureThis, i, rootConfident, i > 0 ? siblingKey(kids[i - 1]) : undefined);
+        await mergeNode(kids[i], ensureThis, kids, i, rootConfident);
       }
     }
   };
@@ -1484,7 +1497,7 @@ async function mergeBookmarks(
     const rootConfident = match.confident;
     const kids = remoteRoot.children ?? [];
     for (let i = 0; i < kids.length; i++) {
-      await mergeNode(kids[i], () => Promise.resolve(targetRootId), i, rootConfident, i > 0 ? siblingKey(kids[i - 1]) : undefined);
+      await mergeNode(kids[i], () => Promise.resolve(targetRootId), kids, i, rootConfident);
     }
   }
 
@@ -1660,6 +1673,59 @@ async function resolveFolderPath(path: string[], localRoots: BookmarkNode[]): Pr
   return currentId;
 }
 
+/**
+ * The local folder among `children` that the peer's folder `node` fills, or undefined to make
+ * a new one (#51).
+ *
+ * A folder has no id that crosses devices, so it is found by its title under the same parent.
+ * That is enough while the title is unique there, and it is what lets two devices that each
+ * have a "Work" folder end up with one. But a parent can hold several folders of one name
+ * (unnamed ones, most often), and matching on the title alone poured all of them into the
+ * first, on every device the tree reached.
+ *
+ * So among the local folders of that name it takes the one holding most of `node`'s bookmarks,
+ * else one holding none of a same-named sibling's on the peer, else none. `claimed` is what
+ * this merge already gave to another folder, so two of the peer's never share one here; the
+ * one chosen is added to it.
+ */
+async function sameTitleFolder(
+  node: SyncBookmark,
+  siblings: SyncBookmark[],
+  children: BookmarkNode[],
+  excluded: Set<string>,
+  claimed: Set<string>,
+): Promise<string | undefined> {
+  const candidates = children.filter((c) => !c.url && c.title === node.title && !excluded.has(c.id) && !claimed.has(c.id));
+  const twins = siblings.filter((s) => s !== node && !s.url && s.title === node.title);
+  let chosen: string | undefined;
+  if (candidates.length <= 1 && !twins.length) {
+    chosen = candidates[0]?.id; // the title is unique on both sides: nothing to tell apart
+  } else {
+    const urlsOf = (nodes: SyncBookmark[]): Set<string> =>
+      new Set(flattenNodes(nodes).filter((n) => n.url).map((n) => canonicalUrlKey(n.url as string)));
+    const mine = urlsOf([node]);
+    const theirs = urlsOf(twins);
+    let best = 0;
+    let free: string | undefined;
+    for (const c of candidates) {
+      // getChildren does not carry grandchildren, and a folder of folders is matched by what
+      // is inside those.
+      const held = urlsOf((await browser.bookmarks.getSubTree(c.id)).map(mapNode));
+      let score = 0;
+      let twinHeld = false;
+      for (const u of held) {
+        if (mine.has(u)) score++;
+        else if (theirs.has(u)) twinHeld = true;
+      }
+      if (score > best) { best = score; chosen = c.id; }
+      if (!score && !twinHeld && free === undefined) free = c.id;
+    }
+    chosen ??= free;
+  }
+  if (chosen) claimed.add(chosen);
+  return chosen;
+}
+
 /** Move a node to a target FINAL index within its parent, correcting for the
  *  browser's same-parent move convention. Chromium computes the insertion point
  *  against the pre-removal array, so a downward same-folder move lands one slot
@@ -1672,9 +1738,11 @@ async function resolveFolderPath(path: string[], localRoots: BookmarkNode[]): Pr
  *  Frame = the parent's children WITHOUT the moving node (the final-array convention
  *  moveToIndex expects). Falls back to the peer's absolute index if the anchor is
  *  absent locally. */
-async function anchoredIndex(parentId: string, movingId: string, prevKey: string | undefined, fallbackIndex: number): Promise<number> {
+async function anchoredIndex(
+  parentId: string, movingId: string, prevKey: string | undefined, fallbackIndex: number, prevNth = 0,
+): Promise<number> {
   const rest = (await browser.bookmarks.getChildren(parentId)).filter((c) => c.id !== movingId);
-  return placementIndex(rest, prevKey, fallbackIndex);
+  return placementIndex(rest, prevKey, fallbackIndex, prevNth);
 }
 
 /** Where to place a node among `siblings` — the pure core shared by the move path
@@ -1686,16 +1754,42 @@ async function anchoredIndex(parentId: string, movingId: string, prevKey: string
  *  rejects `create`/`move` past the child count ("Index out of bounds."), and on the
  *  add path that rejection was swallowed by the caller's catch — so a peer index
  *  larger than the local parent silently dropped the bookmark on every sync. Every
- *  return here is a valid insertion point. */
+ *  return here is a valid insertion point.
+ *
+ *  `prevNth` says which of the siblings sharing `prevKey` the anchor is (see nthIndexOf). */
 function placementIndex(
   siblings: Array<{ url?: string; title: string }>,
   prevKey: string | undefined,
-  fallbackIndex: number
+  fallbackIndex: number,
+  prevNth = 0,
 ): number {
   if (prevKey === undefined) return 0; // peer had it first
-  const p = siblings.findIndex((s) => siblingKey(s) === prevKey);
+  const p = nthIndexOf(siblings.map(siblingKey), prevKey, prevNth);
   if (p >= 0) return p + 1; // immediately after the shared prev sibling
   return Math.min(Math.max(0, fallbackIndex), siblings.length); // anchor absent → clamp
+}
+
+/** How many of `nodes` before `i` share its key. */
+function keyOrdinal<T>(nodes: T[], i: number, keyOf: (n: T) => string): number {
+  const key = keyOf(nodes[i]);
+  let n = 0;
+  for (let j = 0; j < i; j++) if (keyOf(nodes[j]) === key) n++;
+  return n;
+}
+
+/** Where the `nth` (from 0) of the entries equal to `key` sits in `keys`; the last of them when
+ *  there are fewer, and -1 when there is none. An anchor is a sibling's title or url, and a
+ *  parent can hold several folders of one name (#51): after the peer's second "News" folder
+ *  means after the second one here too, not after the first. */
+function nthIndexOf(keys: string[], key: string, nth: number): number {
+  let last = -1;
+  let seen = 0;
+  for (let i = 0; i < keys.length; i++) {
+    if (keys[i] !== key) continue;
+    if (seen++ === nth) return i;
+    last = i;
+  }
+  return last;
 }
 
 async function moveToIndex(id: string, parentId: string, finalIndex: number): Promise<void> {
@@ -1769,7 +1863,8 @@ function restorePlacement(
   children: Array<{ url?: string; title: string }>, siblings: SyncBookmark[], i: number,
 ): number {
   const here = children.map(restoreKey);
-  const find = (j: number): number => (j >= 0 && j < siblings.length ? here.indexOf(restoreKey(siblings[j])) : -1);
+  const find = (j: number): number =>
+    (j >= 0 && j < siblings.length ? nthIndexOf(here, restoreKey(siblings[j]), keyOrdinal(siblings, j, restoreKey)) : -1);
   const prev = find(i - 1);
   if (prev >= 0) return prev + 1;
   const next = find(i + 1);
@@ -1823,6 +1918,8 @@ export async function restoreBookmarks(snapshot: SyncBookmark[]): Promise<number
       return present.has(key) || (typeof kept === "string" && present.has(canonicalUrlKey(kept)));
     };
     let added = 0;
+    const claimed = new Set<string>(); // see sameTitleFolder
+    const excluded = local?.part.excludedIds ?? new Set<string>();
 
     // Every create is placed, not appended (#29). A restore is additive, so the parent it
     // fills usually still holds some of its old children, and appending put everything that
@@ -1853,10 +1950,13 @@ export async function restoreBookmarks(snapshot: SyncBookmark[]): Promise<number
         if (folderId) return folderId;
         const parentId = await ensureParent();
         const children = await browser.bookmarks.getChildren(parentId);
-        const existing = children.find((c) => !c.url && c.title === node.title && !local?.part.excludedIds.has(c.id));
-        folderId = existing
-          ? existing.id
-          : (await browser.bookmarks.create({ parentId, index: restorePlacement(children, siblings, i), title: node.title })).id;
+        const existing = await sameTitleFolder(node, siblings, children, excluded, claimed);
+        if (existing) {
+          folderId = existing;
+        } else {
+          folderId = (await browser.bookmarks.create({ parentId, index: restorePlacement(children, siblings, i), title: node.title })).id;
+          claimed.add(folderId);
+        }
         return folderId;
       };
       await walkChildren(node.children ?? [], ensureThis);

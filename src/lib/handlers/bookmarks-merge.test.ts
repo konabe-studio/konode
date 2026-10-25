@@ -254,6 +254,68 @@ describe("importBookmarks — merge", () => {
   });
 });
 
+describe("importBookmarks — folders that share a name (#51)", () => {
+  // Folders have no id that crosses devices and were matched by title alone, so every folder
+  // of one name under a parent went into the first: a tree with several unnamed folders came
+  // out with one, holding the bookmarks of all of them.
+
+  /** The bar as "title" for a bookmark and "[title] children" for a folder. */
+  async function bar(): Promise<string[]> {
+    return Promise.all((await chrome.bookmarks.getChildren("1")).map(async (c) =>
+      c.url ? c.title : `[${c.title}] ${(await chrome.bookmarks.getChildren(c.id)).map((k) => k.title).join(",")}`
+    ));
+  }
+
+  it("keeps each of the peer's same-named folders apart, in the peer's order", async () => {
+    await seed("Mine", "https://mine.com"); // not empty, so this is a merge and not a replace
+    const p = payload([
+      folder("", [link("A", "https://a.com"), link("B", "https://b.com")]),
+      folder("", [link("C", "https://c.com")]),
+      folder("News", [link("D", "https://d.com")]),
+      folder("News", [link("E", "https://e.com")]),
+    ]);
+
+    await importBookmarks(p, "merge", "lww");
+    await importBookmarks(p, "merge", "lww"); // and the next sync finds them again
+
+    expect(await bar()).toEqual(["[] A,B", "[] C", "[News] D", "[News] E", "Mine"]);
+  });
+
+  it("files a new bookmark into the same-named folder that holds its neighbours", async () => {
+    await seed("Mine", "https://mine.com");
+    const a = folder("", [link("A", "https://a.com")]);
+    await importBookmarks(payload([a, folder("", [link("C", "https://c.com")])]), "merge", "lww");
+
+    await importBookmarks(
+      payload([a, folder("", [link("C", "https://c.com"), link("X", "https://x.com")])]), "merge", "lww"
+    );
+
+    expect(await bar()).toEqual(["[] A", "[] C,X", "Mine"]);
+  });
+
+  it("does not file a new folder's bookmarks into one that holds a same-named sibling's", async () => {
+    await seed("Mine", "https://mine.com");
+    const a = folder("", [link("A", "https://a.com")]);
+    await importBookmarks(payload([a]), "merge", "lww");
+
+    // The peer adds a second unnamed folder. The one here is the first one's, by what is in it.
+    await importBookmarks(payload([a, folder("", [link("X", "https://x.com")])]), "merge", "lww");
+
+    expect(await bar()).toEqual(["[] A", "[] X", "Mine"]);
+  });
+
+  it("still merges into a same-named folder of this device's own", async () => {
+    // Two devices that each had a Work folder end up with one: the title is unique on both
+    // sides, so there is nothing to tell apart.
+    const work = await chrome.bookmarks.create({ parentId: "1", title: "Work" });
+    await seed("Mine", "https://mine.com", work.id);
+
+    await importBookmarks(payload([folder("Work", [link("W", "https://work.com")])]), "merge", "lww");
+
+    expect(await bar()).toEqual(["[Work] W,Mine"]);
+  });
+});
+
 describe("importBookmarks — the peer's index must not exceed the local parent", () => {
   // The peer's absolute child index is meaningless on a device whose matching parent
   // holds fewer children. Chrome/Firefox REJECT `create({ index })` past the child
