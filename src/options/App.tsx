@@ -456,8 +456,8 @@ export default function OptionsApp() {
       setSettings(res.payload);
       setSavedFingerprint(settingsFingerprint(res.payload));
       setInitialPass(res.payload.encryption_passphrase ?? "");
-      const url = res.payload.backends.find((b) => b.type === "webdav")?.webdav?.url;
-      setSavedProvider(providerFromConfig(res.payload.active_backend, url));
+      const dav = res.payload.backends.find((b) => b.type === "webdav")?.webdav;
+      setSavedProvider(providerFromConfig(res.payload.active_backend, dav?.url, dav?.username));
     }
   }, []);
 
@@ -540,8 +540,8 @@ export default function OptionsApp() {
   // the user's own selection.
   useEffect(() => {
     if (selectedProvider !== null || !settings) return;
-    const url = settings.backends.find((b) => b.type === "webdav")?.webdav?.url;
-    setSelectedProvider(providerFromConfig(settings.active_backend, url));
+    const dav = settings.backends.find((b) => b.type === "webdav")?.webdav;
+    setSelectedProvider(providerFromConfig(settings.active_backend, dav?.url, dav?.username));
   }, [settings, selectedProvider]);
 
   // Devices come from the backend too, so they wait for the tab as well. Reused by the
@@ -970,10 +970,8 @@ export default function OptionsApp() {
       return;
     }
     // The staged provider is now the live one — move the "active" badge onto it.
-    setSavedProvider(providerFromConfig(
-      settings.active_backend,
-      settings.backends.find((b) => b.type === "webdav")?.webdav?.url,
-    ));
+    const dav = settings.backends.find((b) => b.type === "webdav")?.webdav;
+    setSavedProvider(providerFromConfig(settings.active_backend, dav?.url, dav?.username));
     setSavedFingerprint(settingsFingerprint(settings));
     setSaving(false); setSaveOk(true);
     setTimeout(() => setSaveOk(false), 2500);

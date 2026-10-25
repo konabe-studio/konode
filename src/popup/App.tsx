@@ -361,8 +361,8 @@ export default function PopupApp() {
   // ("webdav") — several providers map to the WebDAV backend.
   const backendLabel = (() => {
     if (!settings?.active_backend) return t("popup_backend_none");
-    const url = settings.backends.find((b) => b.type === "webdav")?.webdav?.url;
-    const pid = providerFromConfig(settings.active_backend, url);
+    const dav = settings.backends.find((b) => b.type === "webdav")?.webdav;
+    const pid = providerFromConfig(settings.active_backend, dav?.url, dav?.username);
     return pid ? providerById(pid).label : settings.active_backend;
   })();
   const pulsing = status === "syncing" || status === "success";
