@@ -40,6 +40,14 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **Folders that share a name stay separate (#51).** Konode tells folders apart by their
+  name, so several folders of one name side by side, unnamed ones most often, were merged
+  into the first of them on your other devices, with all their bookmarks in it. The same
+  happened when you brought bookmarks back from a restore point. Such folders now stay
+  separate and in their order: each one is matched by the bookmarks it holds, and a new
+  bookmark goes into the folder that holds the bookmarks around it. A folder that was
+  already merged stays that way until you split it up again on that device; the bookmarks
+  you move out of it go to the right folder on your other devices too.
 - **A Nextcloud server set up on the WebDAV card stays on the WebDAV card (#51).** Settings
   marked the Nextcloud / ownCloud card as active for any address with `/remote.php/dav/` in
   it. That card rebuilds the address from the username, so changing the username or the
