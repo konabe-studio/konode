@@ -48,6 +48,14 @@ All notable changes to Konode. Format loosely follows
   bookmark goes into the folder that holds the bookmarks around it. A folder that was
   already merged stays that way until you split it up again on that device; the bookmarks
   you move out of it go to the right folder on your other devices too.
+- **Renaming or reordering one of several folders that share a name reaches the right folder
+  (#51).** A folder rename travels as "the folder called X here is now called Y", and your
+  other devices gave the new name to the first folder called X, which with several of them
+  was not always the one you renamed. Moving such a folder among its neighbours went wrong
+  the same way, and renaming an unnamed folder never reached your other devices at all. Now
+  a folder that shares its name with a neighbour sends one of its bookmarks along, and your
+  other devices rename or move the folder that holds it. Both devices need this version; with
+  an older one on either side, it works as it did before.
 - **A Nextcloud server set up on the WebDAV card stays on the WebDAV card (#51).** Settings
   marked the Nextcloud / ownCloud card as active for any address with `/remote.php/dav/` in
   it. That card rebuilds the address from the username, so changing the username or the

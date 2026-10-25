@@ -114,6 +114,9 @@ export interface FolderRenameRecord {
   from: string;
   to: string;
   at: number; // epoch ms
+  /** A bookmark the folder holds (canonical url), when same-named siblings make the path
+   *  name more than one folder (#51). Peers on an older build neither send nor read it. */
+  holds?: string;
 }
 
 export interface FolderMoveRecord {
@@ -122,6 +125,7 @@ export interface FolderMoveRecord {
   at: number;      // epoch ms
   prev?: string;   // sibling key immediately before the folder (undefined = it's first)
   next?: string;   // sibling key immediately after the folder (undefined = it's last)
+  holds?: string;  // as FolderRenameRecord.holds
 }
 
 /**

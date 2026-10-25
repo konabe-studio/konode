@@ -178,10 +178,24 @@ export function folderPathKey(path: string[]): string {
   return path.join("\u0000");
 }
 
+/** A folder log's key: the path, and the bookmark that tells the folder from same-named
+ *  siblings when it has any (see twinMark). Two of them in one parent are two folders. */
+function markedKey(path: string[], holds: string | undefined): string {
+  return holds ? `${folderPathKey(path)}\u0001${holds}` : folderPathKey(path);
+}
+
+function folderMoveKey(r: FolderMoveRecord): string {
+  return markedKey(r.path, r.holds);
+}
+
+function folderRenameKey(r: FolderRenameRecord): string {
+  return markedKey([...r.path, r.from], r.holds);
+}
+
 export function toFolderMoveMap(list: FolderMoveRecord[]): Map<string, number> {
   const m = new Map<string, number>();
   for (const r of list) {
-    const k = folderPathKey(r.path);
+    const k = folderMoveKey(r);
     m.set(k, Math.max(m.get(k) ?? 0, r.at));
   }
   return m;
@@ -192,7 +206,7 @@ export function gcFolderMoves(list: FolderMoveRecord[]): FolderMoveRecord[] {
   const byPath = new Map<string, FolderMoveRecord>();
   for (const r of list) {
     if (r.at < cutoff) continue;
-    const k = folderPathKey(r.path);
+    const k = folderMoveKey(r);
     const existing = byPath.get(k);
     if (!existing || r.at > existing.at) byPath.set(k, r); // keep the newest per path
   }
@@ -235,11 +249,12 @@ export function mergeTitleLists(a: TitleRecord[], b: TitleRecord[]): TitleRecord
 export function gcFolderRenames(list: FolderRenameRecord[]): FolderRenameRecord[] {
   const cutoff = Date.now() - TOMBSTONE_TTL_MS;
   // Keyed by parent path + the OLD name, so two renames of the same folder collapse to
-  // the newest, while renaming two different folders in one parent both survive.
+  // the newest, while renaming two different folders in one parent both survive. Two that
+  // shared the old name are told apart by the bookmark each record carries (#51).
   const byKey = new Map<string, FolderRenameRecord>();
   for (const r of list) {
     if (r.at < cutoff) continue;
-    const k = folderPathKey([...r.path, r.from]);
+    const k = folderRenameKey(r);
     const existing = byKey.get(k);
     if (!existing || r.at > existing.at) byKey.set(k, r);
   }
@@ -515,12 +530,15 @@ async function recordTitleChange(id: string, newTitle: string | undefined): Prom
   // A folder. Its identity is its path, so we need what it was called BEFORE.
   const cache = await getBookmarkCache<SyncBookmark[]>();
   const oldTitle = cache ? flattenNodes(cache).find((n) => n.id === id)?.title : undefined;
-  if (!oldTitle || oldTitle === newTitle) return;
+  // An unnamed folder's old title is "", and that is a title (#51): testing it for truth
+  // meant renaming an unnamed folder never reached the other devices.
+  if (oldTitle === undefined || oldTitle === newTitle) return;
   if (!node.parentId) return;
   const parentPath = await folderPath(node.parentId);
   if (!parentPath) return;
+  const holds = await twinMark(id, oldTitle, node.parentId, cache);
   await updateFolderRenames((current) =>
-    mergeFolderRenameLists(current, [{ path: parentPath, from: oldTitle, to: newTitle, at: now }])
+    mergeFolderRenameLists(current, [{ path: parentPath, from: oldTitle, to: newTitle, at: now, ...(holds ? { holds } : {}) }])
   );
   logger.info("Titles", "Recorded a folder rename");
 }
@@ -572,6 +590,57 @@ async function folderPath(id: string): Promise<string[] | null> {
   return null;
 }
 
+/** Every bookmark under `nodes`, by canonical url. */
+function urlKeysIn(nodes: SyncBookmark[]): Set<string> {
+  return new Set(flattenNodes(nodes).filter((n) => n.url).map((n) => canonicalUrlKey(n.url as string)));
+}
+
+/**
+ * A bookmark that tells folder `id` apart from its same-named siblings, for the path-keyed
+ * folder logs (#51), or undefined when no sibling under `parentId` is called `title`.
+ *
+ * A rename or a reposition is filed under the folder's path, and with several folders of one
+ * name in a parent that path names all of them: the receiver took the first, so renaming the
+ * second unnamed folder renamed the first one everywhere else. A record for such a folder
+ * carries one of its bookmarks, and the receiver acts on the folder that holds it.
+ *
+ * Taken from the last synced snapshot, which is what the peers hold, and only among what the
+ * folder still holds, since the receiver has to find it in there. The smallest, so that two
+ * devices renaming the same folder mark it alike and the newer rename wins as for any folder.
+ */
+async function twinMark(
+  id: string, title: string, parentId: string, cache?: SyncBookmark[] | null,
+): Promise<string | undefined> {
+  try {
+    const siblings = await browser.bookmarks.getChildren(parentId);
+    if (!siblings.some((s) => !s.url && s.id !== id && s.title === title)) return undefined;
+    const synced = flattenNodes((cache ?? await getBookmarkCache<SyncBookmark[]>()) ?? []).find((n) => n.id === id);
+    if (!synced) return undefined;
+    const now = urlKeysIn((await browser.bookmarks.getSubTree(id)).map(mapNode));
+    return [...urlKeysIn([synced])].filter((k) => now.has(k)).sort()[0];
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Which of `candidates` a folder record marked with a bookmark means (see twinMark): the one
+ * holding it, under any of `keys`. None when only another of `folders` holds it, which is the
+ * same folder under a name it has since been given here, so the record has been applied. And
+ * none when no folder holds it and there is more than one candidate: nothing says which.
+ */
+async function markedFolder(
+  folders: BookmarkNode[], candidates: BookmarkNode[], keys: string[],
+): Promise<BookmarkNode | undefined> {
+  const holds = async (f: BookmarkNode): Promise<boolean> => {
+    const held = urlKeysIn((await browser.bookmarks.getSubTree(f.id)).map(mapNode));
+    return keys.some((k) => held.has(k));
+  };
+  for (const c of candidates) if (await holds(c)) return c;
+  for (const f of folders) if (!candidates.includes(f) && await holds(f)) return undefined;
+  return candidates.length === 1 ? candidates[0] : undefined;
+}
+
 /** Record a folder REPOSITION (per path) so a reorder among siblings propagates
  *  with LWW. Only pure reorders (same parent) are recorded — a cross-parent folder
  *  move relocates its bookmarks via the URL move-log (recordMove) and the emptied
@@ -595,9 +664,10 @@ async function recordFolderMove(id: string, moveInfo: chrome.bookmarks.BookmarkM
     if (gi > 0) prev = siblingKey(siblings[gi - 1]);
     if (gi >= 0 && gi < siblings.length - 1) next = siblingKey(siblings[gi + 1]);
   } catch { /* best effort — fall back to index on the receiver */ }
+  const holds = await twinMark(id, node.title, moveInfo.parentId);
   const now = Date.now();
   await updateFolderMoves((current) =>
-    mergeFolderMoveLists(current, [{ path, index: moveInfo.index, at: now, prev, next }])
+    mergeFolderMoveLists(current, [{ path, index: moveInfo.index, at: now, prev, next, ...(holds ? { holds } : {}) }])
   );
   logger.info("Moves", "Recorded a folder reposition");
 }
@@ -632,12 +702,16 @@ export async function exportBookmarkPayload(): Promise<BookmarkPayload> {
     const url = forms.get(canonicalUrlKey(r.url));
     return url ? { ...r, url } : r;
   };
+  const asPeerMark = <T extends { holds?: string }>(r: T): T => {
+    const url = r.holds ? forms.get(r.holds) : undefined;
+    return url ? { ...r, holds: canonicalUrlKey(url) } : r;
+  };
   // Don't sync empty folders — a folder carries no tombstone, so leaving empty
   // folders in the payload is what made a deleted folder resurrect from a peer.
   return {
     tree: inPeerForm(withAppearance(pruneEmptyFolders(tree), toAppearedMap(gcedAppeared)), forms),
     tombstones: publishableTombstones(gced, tree, forms), moves: gcedMoves.map(asPeer),
-    folderMoves: gcedFolderMoves, titles: gcedTitles.map(asPeer), folderRenames: gcedRenames,
+    folderMoves: gcedFolderMoves.map(asPeerMark), titles: gcedTitles.map(asPeer), folderRenames: gcedRenames.map(asPeerMark),
     folderDeletes: publishableFolderDeletes(gcedFolderDeletes, tree),
   };
 }
@@ -1310,20 +1384,26 @@ async function mergeBookmarks(
   if (strategy !== "prefer-local") {
     // Our own renames of the same folder, so LWW has something to compare against.
     const localRenameByKey = new Map<string, FolderRenameRecord>();
-    for (const r of logs.folderRenames.local) localRenameByKey.set(folderPathKey([...r.path, r.from]), r);
+    for (const r of logs.folderRenames.local) localRenameByKey.set(folderRenameKey(r), r);
 
     for (const r of logs.folderRenames.remote) {
-      const mine = localRenameByKey.get(folderPathKey([...r.path, r.from]));
+      const mine = localRenameByKey.get(folderRenameKey(r));
       if (strategy !== "prefer-remote" && mine && mine.at >= r.at) continue; // ours is newer
       try {
         const parentId = await resolveFolderPath(r.path, localRoots);
         if (!parentId) continue; // path doesn't exist here — fail safe, same as Step C
-        const children = await browser.bookmarks.getChildren(parentId);
+        const folders = (await browser.bookmarks.getChildren(parentId)).filter((c) => !c.url && !excluded.has(c.id));
         // If we renamed it too and the peer's is newer, the folder is sitting under OUR
         // new name, not under `from` — look for that as well, or the peer's newer rename
         // would silently find nothing and be lost.
-        const target = children.find((c) => !c.url && c.title === r.from && !excluded.has(c.id))
-          ?? (mine ? children.find((c) => !c.url && c.title === mine.to && !excluded.has(c.id)) : undefined);
+        const candidates = [
+          ...folders.filter((c) => c.title === r.from),
+          ...(mine ? folders.filter((c) => c.title === mine.to) : []),
+        ];
+        // One of several folders called `from` (#51): the one holding the bookmark it names.
+        const target = r.holds
+          ? await markedFolder(folders, candidates, localKeys(canonicalUrlKey(r.holds)))
+          : candidates[0];
         if (!target || target.title === r.to) continue;
         await browser.bookmarks.update(target.id, { title: r.to });
         renamedFolders++;
@@ -1514,9 +1594,20 @@ async function mergeBookmarks(
   for (const rec of logs.folderMoves.remote) {
     const winsLWW = strategy === "prefer-local" ? false
       : strategy === "prefer-remote" ? true
-      : rec.at > (localFolderMoveAt.get(folderPathKey(rec.path)) ?? 0);
+      : rec.at > (localFolderMoveAt.get(folderMoveKey(rec)) ?? 0);
     if (!winsLWW) continue;
-    const folderId = await resolveFolderPath(rec.path, localRoots);
+    let folderId: string | null | undefined;
+    if (rec.holds && rec.path.length > 1) {
+      // One of several folders of this name (#51): the one holding the bookmark it names.
+      const parentId = await resolveFolderPath(rec.path.slice(0, -1), localRoots);
+      const folders = parentId
+        ? (await browser.bookmarks.getChildren(parentId).catch(() => [] as BookmarkNode[])).filter((c) => !c.url && !excluded.has(c.id))
+        : [];
+      const title = rec.path[rec.path.length - 1];
+      folderId = (await markedFolder(folders, folders.filter((c) => c.title === title), localKeys(canonicalUrlKey(rec.holds))))?.id;
+    } else {
+      folderId = await resolveFolderPath(rec.path, localRoots);
+    }
     if (!folderId || excluded.has(folderId)) continue;
     try {
       const [node] = await browser.bookmarks.get(folderId);
@@ -1701,16 +1792,14 @@ async function sameTitleFolder(
   if (candidates.length <= 1 && !twins.length) {
     chosen = candidates[0]?.id; // the title is unique on both sides: nothing to tell apart
   } else {
-    const urlsOf = (nodes: SyncBookmark[]): Set<string> =>
-      new Set(flattenNodes(nodes).filter((n) => n.url).map((n) => canonicalUrlKey(n.url as string)));
-    const mine = urlsOf([node]);
-    const theirs = urlsOf(twins);
+    const mine = urlKeysIn([node]);
+    const theirs = urlKeysIn(twins);
     let best = 0;
     let free: string | undefined;
     for (const c of candidates) {
       // getChildren does not carry grandchildren, and a folder of folders is matched by what
       // is inside those.
-      const held = urlsOf((await browser.bookmarks.getSubTree(c.id)).map(mapNode));
+      const held = urlKeysIn((await browser.bookmarks.getSubTree(c.id)).map(mapNode));
       let score = 0;
       let twinHeld = false;
       for (const u of held) {
