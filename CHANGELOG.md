@@ -40,6 +40,13 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **A Nextcloud server set up on the WebDAV card stays on the WebDAV card (#51).** Settings
+  marked the Nextcloud / ownCloud card as active for any address with `/remote.php/dav/` in
+  it. That card rebuilds the address from the username, so changing the username or the
+  server there could quietly break a setup that only the WebDAV card can hold: a Nextcloud
+  app password created while signed in with an email address needs the email as the
+  username, while the address keeps the plain account name. Now the Nextcloud card counts as
+  active only when the address is exactly the one it would build itself.
 - **Restoring a session no longer opens tabs you already have open.** Every restore opened
   the whole session again, so restoring another device's 10 tabs, letting it open an 11th
   and restoring once more left you with 21. A restore now opens only the tabs that aren't

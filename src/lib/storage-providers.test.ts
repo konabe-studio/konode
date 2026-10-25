@@ -76,7 +76,28 @@ describe("providerFromConfig", () => {
     expect(providerFromConfig("webdav", FASTMAIL)).toBe("fastmail");
     expect(providerFromConfig("webdav", PCLOUD_EU)).toBe("pcloud");
     expect(providerFromConfig("webdav", PCLOUD_US)).toBe("pcloud");
-    expect(providerFromConfig("webdav", nextcloudUrl("cloud.example.com", "ben"))).toBe("nextcloud");
+    expect(providerFromConfig("webdav", nextcloudUrl("cloud.example.com", "ben"), "ben")).toBe("nextcloud");
+  });
+
+  // #51. The Nextcloud card rebuilds its URL from the username whenever either field
+  // changes, so it may only claim a config whose URL it would build itself. An app password
+  // made while signed in with an email address needs the email as the username, while the
+  // files path still has to carry the plain account name: only the WebDAV card can hold that.
+  it("leaves a files-DAV URL on the WebDAV card when the username isn't the one in its path", () => {
+    const url = "https://cloud.disroot.org/remote.php/dav/files/someone/";
+    expect(providerFromConfig("webdav", url, "someone@disroot.org")).toBe("webdav");
+    expect(providerFromConfig("webdav", url, "someone")).toBe("nextcloud");
+    expect(providerFromConfig("webdav", url, undefined)).toBe("webdav");
+  });
+
+  it("leaves a files-DAV URL into a subfolder on the WebDAV card", () => {
+    // The Nextcloud card has no field for the folder and would drop it on the next edit.
+    expect(providerFromConfig("webdav", "https://cloud.example.com/remote.php/dav/files/ben/Sync/", "ben")).toBe("webdav");
+  });
+
+  it("still recognises a Nextcloud setup by an email-address username it built itself", () => {
+    const url = nextcloudUrl("cloud.example.com/nextcloud", "ben@example.com");
+    expect(providerFromConfig("webdav", url, "ben@example.com")).toBe("nextcloud");
   });
 
   it("falls back to the generic card for an unknown or empty URL", () => {
