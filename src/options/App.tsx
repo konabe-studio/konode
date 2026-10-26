@@ -95,7 +95,7 @@ import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl, storeUrlFor, inferStore, STORE_NAME, type LocalExtLike } from "@/lib/utils/extensions-match";
 import { BACKEND_LABEL, PERMISSION_LOST_PREFIX, STATE_UPDATE } from "@/lib/constants";
 import {
-  providerCards, providerById, providerFromConfig, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf,
+  providerCards, providerById, providerFromConfig, providerLabel, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf,
   webdavUrlForCard,
   type ProviderId,
 } from "@/lib/storage-providers";
@@ -1403,7 +1403,7 @@ export default function OptionsApp() {
                       role="button"
                       tabIndex={0}
                       aria-pressed={isActive}
-                      aria-label={`Use ${p.label}`}
+                      aria-label={t("opt_use_provider", providerLabel(p))}
                       onClick={() => pickProvider(p.id)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
@@ -1416,8 +1416,8 @@ export default function OptionsApp() {
                         <div className="backend-icon-wrap"><ProviderLogo id={p.id} size={16} /></div>
                         <div className="backend-info">
                           <div className="backend-name">
-                            {p.label}
-                            {isSaved && <span className="badge-active">active</span>}
+                            {providerLabel(p)}
+                            {isSaved && <span className="badge-active">{t("opt_provider_active")}</span>}
                           </div>
                           <div className="backend-desc">{t(p.descKey)}</div>
                         </div>
@@ -1435,7 +1435,7 @@ export default function OptionsApp() {
                                 <div className="account-email">{gdriveUser.email}</div>
                               </div>
                               <button className="btn-disconnect" onClick={disconnectGDrive}>
-                                <LogOut size={12} /> Disconnect
+                                <LogOut size={12} /> {t("opt_drive_disconnect")}
                               </button>
                             </div>
                           ) : !DRIVE_AVAILABLE ? (

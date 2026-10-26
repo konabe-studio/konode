@@ -305,6 +305,24 @@
       }
     }
   },
+  "opt_use_provider": {
+    "message": "使用 $PROVIDER$",
+    "placeholders": {
+      "provider": {
+        "example": "Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "opt_provider_active": {
+    "message": "使用中"
+  },
+  "opt_drive_disconnect": {
+    "message": "断开连接"
+  },
+  "provider_webdav_other": {
+    "message": "WebDAV（其他）"
+  },
   "onb_drive_unavailable": {
     "message": "此浏览器不支持 Google 登录。请选择其他选项。"
   },

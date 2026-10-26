@@ -30,7 +30,7 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
 import {
-  providerCards, providerById, nextcloudUrl, pcloudRegionOf, webdavUrlForCard,
+  providerCards, providerById, providerLabel, nextcloudUrl, pcloudRegionOf, webdavUrlForCard,
   type ProviderId,
 } from "@/lib/storage-providers";
 import { ProviderLogo } from "@/lib/provider-logos";
@@ -620,14 +620,14 @@ export default function OnboardingApp() {
                 <div
                   key={p.id}
                   style={{ ...S.backendCard, ...(on ? S.backendSelected : {}) }}
-                  role="button" tabIndex={0} aria-pressed={on} aria-label={t("onb_use_provider", p.label)}
+                  role="button" tabIndex={0} aria-pressed={on} aria-label={t("onb_use_provider", providerLabel(p))}
                   onClick={() => pickProvider(p.id)}
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickProvider(p.id); } }}
                 >
                   <div style={S.backendHeader}>
                     <ProviderLogo id={p.id} size={18} color={on ? "var(--text-primary)" : "var(--text-secondary)"} />
                     <div>
-                      <div style={S.backendName}>{p.label}</div>
+                      <div style={S.backendName}>{providerLabel(p)}</div>
                       <div style={S.backendDesc}>{t(p.descKey)}</div>
                     </div>
                     <div style={{ ...S.radio, ...(on ? S.radioChecked : {}) }} />

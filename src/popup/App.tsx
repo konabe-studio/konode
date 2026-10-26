@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { SyncState, SyncSettings, DataType, SyncExtension, RemoteSessionEntry } from "@/lib/types";
-import { providerFromConfig, providerById } from "@/lib/storage-providers";
+import { providerFromConfig, providerById, providerLabel } from "@/lib/storage-providers";
 import { sendMessage, request } from "@/lib/utils/messaging";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl } from "@/lib/utils/extensions-match";
@@ -363,7 +363,7 @@ export default function PopupApp() {
     if (!settings?.active_backend) return t("popup_backend_none");
     const dav = settings.backends.find((b) => b.type === "webdav")?.webdav;
     const pid = providerFromConfig(settings.active_backend, dav?.url, dav?.username);
-    return pid ? providerById(pid).label : settings.active_backend;
+    return pid ? providerLabel(providerById(pid)) : settings.active_backend;
   })();
   const pulsing = status === "syncing" || status === "success";
   const conflictGroups = groupConflictsByDevice(state?.pending_conflicts ?? []);

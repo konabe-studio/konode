@@ -305,6 +305,24 @@
       }
     }
   },
+  "opt_use_provider": {
+    "message": "Usa $PROVIDER$",
+    "placeholders": {
+      "provider": {
+        "example": "Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "opt_provider_active": {
+    "message": "activo"
+  },
+  "opt_drive_disconnect": {
+    "message": "Desconectar"
+  },
+  "provider_webdav_other": {
+    "message": "WebDAV (otro)"
+  },
   "onb_drive_unavailable": {
     "message": "El inicio de sesión con Google no está disponible en este navegador. Elige otra opción."
   },

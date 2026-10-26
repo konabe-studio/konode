@@ -40,6 +40,10 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **The storage cards speak your language all the way through.** In Settings the badge on
+  your storage card read "active" and the Google Drive card's button "Disconnect" in every
+  language, and the catch-all card was "WebDAV (other)" in setup too. They now follow the
+  language Konode is in, and so does the name a screen reader gives each card in Settings.
 - **Folders that share a name stay separate (#51).** Konode tells folders apart by their
   name, so several folders of one name side by side, unnamed ones most often, were merged
   into the first of them on your other devices, with all their bookmarks in it. The same

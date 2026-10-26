@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   PROVIDERS, providerCards,
   webdavUrlForCard, providerFromConfig, providerById, nextcloudUrl, nextcloudBaseFromUrl,
-  pcloudRegionOf, sameUrl,
+  pcloudRegionOf, sameUrl, providerLabel,
 } from "./storage-providers";
 import { t } from "@/lib/utils/i18n";
 
@@ -189,5 +189,15 @@ describe("provider cards only name hosts the backend can actually reach", () => 
       expect(`${p.label} ${en(p.descKey)} ${p.noteKey ? en(p.noteKey) : ""}`)
         .not.toMatch(/gitea|gitlab|bitbucket|codeberg|forgejo/i);
     }
+  });
+});
+
+describe("providerLabel", () => {
+  it("leaves brand names alone and reads the catch-all WebDAV card's name from the catalogue", () => {
+    // "(other)" stayed English in every language until QA AR (2026-10-26).
+    expect(providerLabel(providerById("koofr"))).toBe("Koofr");
+    expect(providerLabel(providerById("jianguoyun"))).toBe("Nutstore / 坚果云");
+    expect(providerById("webdav").labelKey).toBe("provider_webdav_other");
+    expect(providerLabel(providerById("webdav"))).toBe(en("provider_webdav_other"));
   });
 });

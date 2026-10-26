@@ -373,6 +373,28 @@
       }
     }
   },
+  "opt_use_provider": {
+    "message": "Use $PROVIDER$",
+    "description": "Accessible name of a storage card in Settings, as in the setup wizard. $PROVIDER$ is a brand name and is never translated.",
+    "placeholders": {
+      "provider": {
+        "example": "Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "opt_provider_active": {
+    "message": "active",
+    "description": "Badge on the storage card that is saved and in use. Shown in capitals."
+  },
+  "opt_drive_disconnect": {
+    "message": "Disconnect",
+    "description": "Button on the Google Drive card: this device forgets its Google sign-in. Nothing in Drive is deleted."
+  },
+  "provider_webdav_other": {
+    "message": "WebDAV (other)",
+    "description": "Name of the storage card for any other WebDAV server. WebDAV is not translated, only the word in brackets."
+  },
   "onb_drive_unavailable": {
     "message": "Google sign-in isn't available in this browser. Pick another option."
   },
