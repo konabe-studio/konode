@@ -47,6 +47,11 @@ All notable changes to Konode. Format loosely follows
   sent you to Firefox's extension settings again and again, where there was nothing to
   switch on. History now reads as not available there, as Bookmarks already did, and open
   tabs and the extension list set up as they should.
+- **Prefer Remote keeps your bookmarks in order when a folder moves in front of them.** On a
+  device set to Prefer Remote, dragging a folder in front of loose bookmarks on another
+  device sent those bookmarks to the end of the bar here, behind the folder. The folder now
+  takes its new place first, and the bookmarks around it stay where they were. The Activity
+  line no longer counts them as moved either.
 - **Folders that share a name stay separate (#51).** Konode tells folders apart by their
   name, so several folders of one name side by side, unnamed ones most often, were merged
   into the first of them on your other devices, with all their bookmarks in it. The same
