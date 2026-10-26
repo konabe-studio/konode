@@ -538,6 +538,33 @@ describe("SyncEngine — one data type's failure must not abort the others", () 
       (chrome as any).bookmarks = bookmarks;
     }
   });
+
+  it("skips History where the browser does not know the permission, rather than asking for it", async () => {
+    // Firefox for Android (158, from the device): no history API, and contains() THROWS
+    // for `history` because the name is not in its schema. That is the case above, not the
+    // missing-permission one: no settings screen there can grant it, so a "permission"
+    // problem would sit in the popup for good over something nobody can fix.
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    const history = chrome.history;
+    const permissions = chrome.permissions;
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    delete (chrome as any).history;
+    (chrome as any).permissions = {
+      contains: () => Promise.reject(new Error('Type error for parameter permissions (Error processing permissions.0: Value "history" must either: …)')),
+      request: () => Promise.resolve(false),
+    };
+    try {
+      const problems = await priv(engine).syncAllTypes(["history", "bookmarks"], backend, DEFAULT_STATE);
+      expect(problems).toEqual([]);
+      expect(backend.uploads.map((u) => u.data_type)).toEqual(["bookmarks"]);
+    } finally {
+      (chrome as any).history = history;
+      (chrome as any).permissions = permissions;
+      /* eslint-enable @typescript-eslint/no-explicit-any */
+    }
+  });
 });
 
 describe("SyncEngine.syncType — a tab-less session is not published", () => {
