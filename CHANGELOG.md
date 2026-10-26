@@ -28,7 +28,8 @@ All notable changes to Konode. Format loosely follows
   changes it, and changes inside it no longer start a sync. A ticked folder stays excluded
   when you rename it, and so does whatever the extension adds to it later. Excluding deletes
   nothing, so copies your other devices already have stay there. Moving a bookmark into an
-  excluded folder takes it off your other devices, as deleting it would.
+  excluded folder takes it off your other devices, as deleting it would, and moving it back
+  out brings it back to them, even one you saved a moment ago.
 
 ### Changed
 
@@ -40,6 +41,12 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **Setup can finish on Firefox for Android.** Firefox for Android has no history, but
+  Konode offered History as a switch there, in setup and in Settings. Switched on, it made
+  setup ask for a permission that Firefox for Android does not have, so **Finish & Sync**
+  sent you to Firefox's extension settings again and again, where there was nothing to
+  switch on. History now reads as not available there, as Bookmarks already did, and open
+  tabs and the extension list set up as they should.
 - **Prefer Remote keeps your bookmarks in order when a folder moves in front of them.** On a
   device set to Prefer Remote, dragging a folder in front of loose bookmarks on another
   device sent those bookmarks to the end of the bar here, behind the folder. The folder now
