@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { openTabUrl, tabsToRestore } from "@/lib/session-restore";
+import { openTabUrl, openTabUrls, rememberOpened, tabsToRestore } from "@/lib/session-restore";
 
 const tabs = (...urls: string[]) => urls.map((url) => ({ url }));
 
@@ -30,5 +30,17 @@ describe("openTabUrl", () => {
     expect(openTabUrl({ url: "", pendingUrl: "https://a.com/" })).toBe("https://a.com/");
     expect(openTabUrl({ url: "https://b.com/", pendingUrl: "https://c.com/" })).toBe("https://b.com/");
     expect(openTabUrl({})).toBeUndefined();
+  });
+});
+
+describe("openTabUrls", () => {
+  it("names a restored tab still at about:blank by the page it is loading, and nothing else", async () => {
+    await rememberOpened([{ id: 7, url: "https://a.com/" }, { id: 8, url: "https://b.com/" }]);
+    expect(await openTabUrls([
+      { id: 7, url: "about:blank" },           // Firefox, still waiting for a.com
+      { id: 8, url: "https://elsewhere.com/" }, // arrived, then went somewhere else: as it is now
+      { id: 9, url: "about:blank" },            // not a restore's tab
+      { id: 10, url: "", pendingUrl: "https://c.com/" }, // Chromium, loading
+    ])).toEqual(["https://a.com/", "https://elsewhere.com/", "about:blank", "https://c.com/"]);
   });
 });

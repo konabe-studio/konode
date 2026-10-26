@@ -6,7 +6,7 @@ import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl } from "@/lib/utils/extensions-match";
 import { KEYS, getSettings, getState, normalizeRemoteSessions, normalizeRemoteExtensions, getRateProgress, getRateAnswered, setRateAnswered } from "@/lib/utils/storage";
 import { rateCardDue, stateNeedsUser } from "@/lib/rate-prompt";
-import { openTabUrl, tabsToRestore } from "@/lib/session-restore";
+import { openTabUrls, tabsToRestore } from "@/lib/session-restore";
 import { reviewPageFor } from "@/lib/store-review";
 import { STATE_UPDATE } from "@/lib/constants";
 import { streamState, streamInputFor, streamColor, streamLabelKey } from "@/popup/stream-state";
@@ -153,7 +153,7 @@ export default function PopupApp() {
    */
   const loadOpenTabs = useCallback(async () => {
     try {
-      setOpenUrls((await browser.tabs.query({})).map(openTabUrl));
+      setOpenUrls(await openTabUrls(await browser.tabs.query({})));
     } catch {
       setOpenUrls([]); // no tabs API: every session tab counts as not open, as before
     }

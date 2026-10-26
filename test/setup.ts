@@ -10,6 +10,8 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const store = new Map();
+// chrome.storage.session: in memory on a real browser too, gone when the browser closes.
+const sessionStore = new Map();
 
 // ─── chrome.bookmarks in-memory fake ───────────────────────────────────────
 // Flat node map (id → node); the tree is materialized on demand. Models Chrome's
@@ -278,6 +280,23 @@ function makeChrome() {
           return Promise.resolve();
         },
       },
+      session: {
+        get: (keys) => {
+          const out = {};
+          for (const k of typeof keys === "string" ? [keys] : Array.isArray(keys) ? keys : [...sessionStore.keys()]) {
+            if (sessionStore.has(k)) out[k] = sessionStore.get(k);
+          }
+          return Promise.resolve(out);
+        },
+        set: (obj) => {
+          for (const [k, v] of Object.entries(obj)) sessionStore.set(k, v);
+          return Promise.resolve();
+        },
+        remove: (key) => {
+          sessionStore.delete(key);
+          return Promise.resolve();
+        },
+      },
     },
     bookmarks: makeBookmarks(),
     tabs: tabsApi,
@@ -334,6 +353,7 @@ if (typeof navigator === "undefined") {
 
 beforeEach(() => {
   store.clear();
+  sessionStore.clear();
   resetBookmarks();
   resetHistory();
   resetTabs();

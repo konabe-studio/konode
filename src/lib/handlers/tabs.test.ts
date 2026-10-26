@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { importSession, exportCurrentTabs } from "@/lib/handlers/tabs-handler";
+import { RESTORE_PENDING_MS } from "@/lib/session-restore";
 import { getSingleTabOpenLimit, setSingleTabOpenLimit } from "@/lib/utils/storage";
 import { resetCapabilityCache } from "@/lib/utils/capabilities";
 import type { SyncSession } from "@/lib/types";
@@ -271,6 +272,51 @@ describe("a session restore opens only what is not open here yet", () => {
     }
 
     expect(await openUrls()).toEqual(["https://a.com/"]);
+  });
+
+  /** Show every open tab the way Firefox shows one still waiting for its page. */
+  async function whileLoadingOnFirefox(run: () => Promise<void>): Promise<void> {
+    const realQuery = chrome.tabs.query;
+    (chrome.tabs as unknown as { query: () => Promise<unknown[]> }).query = async () =>
+      (await realQuery.call(chrome.tabs, {})).map((tab) => ({ ...tab, url: "about:blank", status: "loading" }));
+    try {
+      await run();
+    } finally {
+      (chrome.tabs as unknown as { query: typeof realQuery }).query = realQuery;
+    }
+  }
+
+  it("counts a tab a restore opened as open while Firefox still shows it as about:blank (QA AU 4)", async () => {
+    // Firefox has no pendingUrl: until its page arrives a tab reads about:blank. Found headless
+    // on Firefox 158: the popup opened again mid-load offered Restore again, and the press
+    // opened the page a second time.
+    await importSession(session(["https://a.com/", "https://b.com/"]));
+    await whileLoadingOnFirefox(() => importSession(session(["https://a.com/", "https://b.com/"])));
+
+    expect((await openUrls()).sort()).toEqual(["https://a.com/", "https://b.com/"]);
+  });
+
+  it("remembers the tabs of a restore that opened them in one window, too", async () => {
+    await setSingleTabOpenLimit(true); // the one-open-per-click engines take that path
+    await importSession(session(["https://a.com/", "https://b.com/"]));
+    await whileLoadingOnFirefox(() => importSession(session(["https://a.com/", "https://b.com/"])));
+
+    expect((await openUrls()).sort()).toEqual(["https://a.com/", "https://b.com/"]);
+    expect(windowsFake.__created()).toHaveLength(1);
+  });
+
+  it("stops counting a restored tab by its note once two minutes have passed", async () => {
+    // By then the page has had every chance to arrive, and the tab id may be another tab's.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      await importSession(session(["https://a.com/"]));
+      vi.setSystemTime(Date.now() + RESTORE_PENDING_MS + 1000);
+      await whileLoadingOnFirefox(() => importSession(session(["https://a.com/"])));
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(await openUrls()).toEqual(["https://a.com/", "https://a.com/"]);
   });
 
   it("still opens everything when this browser withholds the open tabs' URLs", async () => {
