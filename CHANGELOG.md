@@ -40,6 +40,11 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **Setup tidies up after itself.** An error from the last step stayed on screen after you
+  went Back from it. The final screen named WebDAV for Koofr, Nutstore and the other cards
+  built on it, instead of the card you picked, and a line in its checklist that ran onto a
+  second line was centred while the others were not. On Firefox for Android the Bookmarks
+  row's icon was squeezed to a dot beside its explanation.
 - **The storage cards speak your language all the way through.** In Settings the badge on
   your storage card read "active" and the Google Drive card's button "Disconnect" in every
   language, and the catch-all card was "WebDAV (other)" in setup too. They now follow the
