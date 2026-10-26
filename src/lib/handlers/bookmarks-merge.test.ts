@@ -750,6 +750,39 @@ describe("importBookmarks — folder repositions", () => {
     expect(await localUrls()).toEqual(["https://a.com", "https://b.com", "https://g.com"]); // no churn
   });
 
+  it.each(["lww", "prefer-remote"] as const)(
+    "keeps the loose bookmarks a peer moved a folder in front of in their order (%s, QA AX 4)",
+    async (strategy) => {
+      // Found headless with two Chromium profiles, and the same on 1.4.0. Prefer Remote
+      // re-places every bookmark by its peer anchor, and s0's anchor is the folder the peer
+      // moved in front of it, which here was still at the end of the bar: with the reposition
+      // only after the fold, s0, s1 and s2 followed that folder to the end.
+      for (const s of ["s0", "s1", "s2"]) await seed(s, `https://${s}.example/`);
+      await seedFolderWithLink("Docs", "https://h.example/");
+      await seedFolderWithLink("Other", "https://i.example/");
+
+      const p: BookmarkPayload = {
+        ...payload([
+          folder("Other", [link("Other", "https://i.example/")]),
+          link("s0", "https://s0.example/"), link("s1", "https://s1.example/"), link("s2", "https://s2.example/"),
+          folder("Docs", [link("Docs", "https://h.example/")]),
+        ]),
+        folderMoves: [{ path: ["bar", "Other"], index: 0, at: Date.now() + 60_000, next: "u:https://s0.example/" }],
+      };
+      await importBookmarks(p, "merge", strategy);
+
+      const order = (await chrome.bookmarks.getChildren("1")).map((c) => c.title);
+      expect(order).toEqual(["Other", "s0", "s1", "s2", "Docs"]);
+      // And the Activity line says what happened: one folder moved, no bookmark. Read from a
+      // snapshot taken before the folder moved, s0 to s2 counted as "moved 3" while staying put.
+      await new Promise((r) => setTimeout(r, 0)); // logger fires appendAudit unawaited
+      const entries = ((await chrome.storage.local.get(KEYS.AUDIT_LOG))[KEYS.AUDIT_LOG] ?? []) as { detail?: string }[];
+      const summary = entries.map((e) => e.detail).find((d) => d?.startsWith("Merged "));
+      expect(summary).toContain("moved 0 /");
+      expect(summary).toContain("folders 1 /");
+    },
+  );
+
   it("does NOT reposition a folder without a newer folder-move (stale record)", async () => {
     await seedFolderWithLink("A", "https://a.com");
     await seedFolderWithLink("Docs", "https://g.com");
