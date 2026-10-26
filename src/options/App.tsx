@@ -1395,6 +1395,9 @@ export default function OptionsApp() {
                   // persisted provider earns the "active" badge.
                   const isActive = selectedProvider === p.id;
                   const isSaved = savedProvider === p.id;
+                  // No Google sign-in here at all (Firefox for Android has no identity API):
+                  // said on the card itself, as an unsupported data type is, not only once picked.
+                  const driveOff = p.id === "gdrive" && !DRIVE_AVAILABLE;
 
                   return (
                     <div
@@ -1404,6 +1407,7 @@ export default function OptionsApp() {
                       tabIndex={0}
                       aria-pressed={isActive}
                       aria-label={t("opt_use_provider", providerLabel(p))}
+                      style={driveOff ? { opacity: 0.55 } : undefined}
                       onClick={() => pickProvider(p.id)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
@@ -1419,7 +1423,7 @@ export default function OptionsApp() {
                             {providerLabel(p)}
                             {isSaved && <span className="badge-active">{t("opt_provider_active")}</span>}
                           </div>
-                          <div className="backend-desc">{t(p.descKey)}</div>
+                          <div className="backend-desc">{driveOff ? t("opt_drive_unavailable") : t(p.descKey)}</div>
                         </div>
                         <div className={`radio-circle ${isActive ? "checked" : ""}`} />
                       </div>
@@ -1440,8 +1444,7 @@ export default function OptionsApp() {
                             </div>
                           ) : !DRIVE_AVAILABLE ? (
                             <div className="error-row">
-                              <XCircle size={12} /> Google sign-in isn't available in
-                              this browser. Use GitHub or WebDAV instead.
+                              <XCircle size={12} /> {t("opt_drive_unavailable")}
                             </div>
                           ) : (
                             <div>

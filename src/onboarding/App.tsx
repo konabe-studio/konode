@@ -616,10 +616,13 @@ export default function OnboardingApp() {
           <div style={S.backendList}>
             {providerCards(t("locale_bcp47")).map((p) => {
               const on = provider === p.id;
+              // No Google sign-in here at all (Firefox for Android has no identity API): said on
+              // the card itself, as the unsupported Bookmarks row is, not only once it is picked.
+              const driveOff = p.id === "gdrive" && !DRIVE_AVAILABLE;
               return (
                 <div
                   key={p.id}
-                  style={{ ...S.backendCard, ...(on ? S.backendSelected : {}) }}
+                  style={{ ...S.backendCard, ...(on ? S.backendSelected : {}), ...(driveOff ? { opacity: 0.55 } : {}) }}
                   role="button" tabIndex={0} aria-pressed={on} aria-label={t("onb_use_provider", providerLabel(p))}
                   onClick={() => pickProvider(p.id)}
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickProvider(p.id); } }}
@@ -628,7 +631,7 @@ export default function OnboardingApp() {
                     <ProviderLogo id={p.id} size={18} color={on ? "var(--text-primary)" : "var(--text-secondary)"} />
                     <div>
                       <div style={S.backendName}>{providerLabel(p)}</div>
-                      <div style={S.backendDesc}>{t(p.descKey)}</div>
+                      <div style={S.backendDesc}>{driveOff ? t("onb_drive_unavailable") : t(p.descKey)}</div>
                     </div>
                     <div style={{ ...S.radio, ...(on ? S.radioChecked : {}) }} />
                   </div>

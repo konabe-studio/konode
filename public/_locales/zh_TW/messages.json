@@ -332,6 +332,9 @@
   "opt_drive_disconnect": {
     "message": "中斷連線"
   },
+  "opt_drive_unavailable": {
+    "message": "這個瀏覽器無法使用 Google 登入。請選擇其他選項。"
+  },
   "provider_webdav_other": {
     "message": "WebDAV（其他）"
   },

@@ -40,6 +40,10 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **The Google Drive card says up front when this browser cannot sign in to Google.** On
+  Firefox for Android, which has no way to, the card looked like any other until you picked
+  it, and in Settings the explanation was in English only. In setup and in Settings the card
+  is now dimmed and gives the reason in your language.
 - **Setup tidies up after itself.** An error from the last step stayed on screen after you
   went Back from it. The final screen named WebDAV for Koofr, Nutstore and the other cards
   built on it, instead of the card you picked, and a line in its checklist that ran onto a

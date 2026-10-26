@@ -332,6 +332,9 @@
   "opt_drive_disconnect": {
     "message": "Disconnetti"
   },
+  "opt_drive_unavailable": {
+    "message": "L'accesso con Google non è disponibile in questo browser. Scegli un'altra opzione."
+  },
   "provider_webdav_other": {
     "message": "WebDAV (altro)"
   },

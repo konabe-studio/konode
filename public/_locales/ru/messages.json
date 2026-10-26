@@ -332,6 +332,9 @@
   "opt_drive_disconnect": {
     "message": "Отключить"
   },
+  "opt_drive_unavailable": {
+    "message": "Вход через Google в этом браузере недоступен. Выберите другой вариант."
+  },
   "provider_webdav_other": {
     "message": "WebDAV (другой)"
   },

@@ -391,6 +391,10 @@
     "message": "Disconnect",
     "description": "Button on the Google Drive card: this device forgets its Google sign-in. Nothing in Drive is deleted."
   },
+  "opt_drive_unavailable": {
+    "message": "Google sign-in isn't available in this browser. Pick another option.",
+    "description": "On the Google Drive card in Settings, on a browser with no way to sign in to Google (Firefox for Android has no identity API). The same sentence as setup's."
+  },
   "provider_webdav_other": {
     "message": "WebDAV (other)",
     "description": "Name of the storage card for any other WebDAV server. WebDAV is not translated, only the word in brackets."

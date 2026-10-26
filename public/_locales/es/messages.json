@@ -320,6 +320,9 @@
   "opt_drive_disconnect": {
     "message": "Desconectar"
   },
+  "opt_drive_unavailable": {
+    "message": "El inicio de sesión con Google no está disponible en este navegador. Elige otra opción."
+  },
   "provider_webdav_other": {
     "message": "WebDAV (otro)"
   },
