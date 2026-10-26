@@ -40,6 +40,12 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **Setup can finish on Firefox for Android.** Firefox for Android has no history, but
+  Konode offered History as a switch there, in setup and in Settings. Switched on, it made
+  setup ask for a permission that Firefox for Android does not have, so **Finish & Sync**
+  sent you to Firefox's extension settings again and again, where there was nothing to
+  switch on. History now reads as not available there, as Bookmarks already did, and open
+  tabs and the extension list set up as they should.
 - **Folders that share a name stay separate (#51).** Konode tells folders apart by their
   name, so several folders of one name side by side, unnamed ones most often, were merged
   into the first of them on your other devices, with all their bookmarks in it. The same
