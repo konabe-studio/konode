@@ -270,6 +270,33 @@ describe("events inside an excluded folder (#54)", () => {
     expect(published.dateAdded).toBeGreaterThan(Date.now() - 60_000);
   });
 
+  it("brings back a bookmark saved a moment ago, after a trip into the excluded folder and out", async () => {
+    // QA AT 5, found headless with two Chromium profiles: a bookmark under a minute old was
+    // let through by the arrival check meant for bookmarks the user just made, so it went out
+    // with a dateAdded older than the tombstone its trip in had left. The peer holding that
+    // tombstone refused it on every sync after, while this device kept it.
+    const l = capture(() => {});
+    const ext = await folderWith("Ext", []);
+    const a = await chrome.bookmarks.create({ parentId: "1", title: "a", url: "https://a.com/" });
+    await exclude([{ path: ["bar", "Ext"] }]);
+
+    await chrome.bookmarks.move(a.id, { parentId: ext });
+    l.moved!(a.id, { parentId: ext, oldParentId: "1", index: 0, oldIndex: 0 });
+    await settle();
+    const [tombstone] = await getTombstones();
+    expect(tombstone.url).toBe("https://a.com/");
+
+    await new Promise((r) => setTimeout(r, 5)); // a later moment than the deletion
+    await chrome.bookmarks.move(a.id, { parentId: "1" });
+    l.moved!(a.id, { parentId: "1", oldParentId: ext, index: 1, oldIndex: 0 });
+    await settle();
+
+    const { tree, tombstones } = await exportBookmarkPayload();
+    const published = tree[0].children![0].children!.find((n) => n.url === "https://a.com/");
+    expect(published?.dateAdded).toBeGreaterThan(tombstone.deletedAt);
+    expect(tombstones).toEqual([]); // back in the tree, so its own deletion is not published
+  });
+
   it("deleting a synced folder does not ask the peers to delete an excluded one inside it", async () => {
     const l = capture(() => {});
     const parent = await folderWith("Parent", ["https://a.com/"]);

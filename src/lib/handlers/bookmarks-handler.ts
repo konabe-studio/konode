@@ -2155,12 +2155,16 @@ async function recordLeftSync(id: string, oldParentId: string): Promise<void> {
  * Something excluded was moved out into the synced tree (#54). It reaches the peers as new,
  * but it keeps its old dateAdded, and a deletion recorded when it went in would read as
  * newer and remove it again: the same trap a restored backup falls into (#27).
+ *
+ * Every bookmark in it is recorded, however recently it was saved. `recordAppeared` lets a
+ * bookmark dated in the last minute go, since one the user just made needs no record, but
+ * here the deletion to outdate can be newer than that: save a bookmark, drag it into the
+ * excluded folder and back out within the minute, and its dateAdded was older than the
+ * tombstone its trip in left, so every peer refused it for good (QA AT 5, found headless).
  */
 async function recordJoinedSync(id: string): Promise<void> {
   const now = Date.now();
-  const urls = (await subtreeNodes(id))
-    .filter((n) => n.url && now - (n.dateAdded ?? now) >= APPEARED_SLACK_MS)
-    .map((n) => n.url as string);
+  const urls = (await subtreeNodes(id)).filter((n) => n.url).map((n) => n.url as string);
   if (urls.length) await updateAppeared((current) => gcAppeared([...current, ...urls.map((url) => ({ url, at: now }))]));
 }
 
