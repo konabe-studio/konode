@@ -32,6 +32,10 @@ All notable changes to Konode. Format loosely follows
 
 ### Changed
 
+- **Settings fits a phone better.** A row whose button cannot fit beside its text now puts
+  the button underneath, instead of squeezing the text into a narrow column: in Hungarian,
+  Copy log's explanation ran to fourteen lines at phone width. Switches stay beside their
+  labels.
 - **Nutstore comes first when Konode is in Simplified Chinese.** The storage picker in setup
   and in Settings led with Google Drive for everyone, and from mainland China Drive answers
   only through a VPN that every sync would need open. In Simplified Chinese the first card

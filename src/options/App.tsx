@@ -2647,7 +2647,10 @@ const STYLES = `
   .settings-card-head .head-sub { display: block; font-size: var(--fs-xs); font-weight: 400; color: var(--text-secondary); margin-top: var(--sp-3xs); line-height: 1.45; }
 
   .settings-section { background: transparent; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; margin-bottom: var(--sp-lg); }
-  .settings-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-lg); padding: var(--sp-xl); border-bottom: 1px solid var(--border); min-height: 52px; background: transparent; transition: background .1s; }
+  /* A row wraps when its control cannot fit beside 14rem of text: a switch stays beside its
+     label on a phone, a wide button such as Copy log goes under the description instead of
+     squeezing it into a column (QA AN, Hungarian at 375 px). */
+  .settings-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-lg); padding: var(--sp-xl); border-bottom: 1px solid var(--border); min-height: 52px; background: transparent; transition: background .1s; }
   .settings-row:last-child { border-bottom: none; }
   .settings-row:hover:not(.row-disabled) { background: var(--bg-hover); }
   .settings-row.radio-row { cursor: pointer; }
@@ -2656,7 +2659,7 @@ const STYLES = `
      LABEL dims — the sentence explaining why is the entire content of the row and has to
      stay properly readable, which is exactly what a blanket opacity would ruin. */
   .settings-row.is-unavailable .row-label { color: var(--text-secondary); }
-  .settings-row-left { display: flex; align-items: flex-start; gap: var(--sp-md); flex: 1; min-width: 0; }
+  .settings-row-left { display: flex; align-items: flex-start; gap: var(--sp-md); flex: 1 1 14rem; min-width: 0; }
   .row-icon { color: var(--text-secondary); margin-top: 1px; flex-shrink: 0; }
   .row-label { font-size: var(--fs-sm); color: var(--text-primary); }
   .row-desc { font-size: var(--fs-xs); color: var(--text-secondary); margin-top: var(--sp-3xs); line-height: 1.45; }
