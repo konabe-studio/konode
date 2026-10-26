@@ -28,7 +28,8 @@ All notable changes to Konode. Format loosely follows
   changes it, and changes inside it no longer start a sync. A ticked folder stays excluded
   when you rename it, and so does whatever the extension adds to it later. Excluding deletes
   nothing, so copies your other devices already have stay there. Moving a bookmark into an
-  excluded folder takes it off your other devices, as deleting it would.
+  excluded folder takes it off your other devices, as deleting it would, and moving it back
+  out brings it back to them, even one you saved a moment ago.
 
 ### Changed
 
