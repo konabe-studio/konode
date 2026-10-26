@@ -317,6 +317,27 @@
       }
     }
   },
+  "opt_use_provider": {
+    "message": "Использовать $PROVIDER$",
+    "placeholders": {
+      "provider": {
+        "example": "Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "opt_provider_active": {
+    "message": "активно"
+  },
+  "opt_drive_disconnect": {
+    "message": "Отключить"
+  },
+  "opt_drive_unavailable": {
+    "message": "Вход через Google в этом браузере недоступен. Выберите другой вариант."
+  },
+  "provider_webdav_other": {
+    "message": "WebDAV (другой)"
+  },
   "onb_drive_unavailable": {
     "message": "Вход через Google в этом браузере недоступен. Выберите другой вариант."
   },

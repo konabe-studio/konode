@@ -317,6 +317,27 @@
       }
     }
   },
+  "opt_use_provider": {
+    "message": "$PROVIDER$ használata",
+    "placeholders": {
+      "provider": {
+        "example": "Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "opt_provider_active": {
+    "message": "aktív"
+  },
+  "opt_drive_disconnect": {
+    "message": "Leválasztás"
+  },
+  "opt_drive_unavailable": {
+    "message": "A Google-bejelentkezés ebben a böngészőben nem működik. Válassz másik lehetőséget."
+  },
+  "provider_webdav_other": {
+    "message": "WebDAV (egyéb)"
+  },
   "onb_drive_unavailable": {
     "message": "A Google-bejelentkezés ebben a böngészőben nem működik. Válassz másik lehetőséget."
   },

@@ -317,6 +317,27 @@
       }
     }
   },
+  "opt_use_provider": {
+    "message": "$PROVIDER$ verwenden",
+    "placeholders": {
+      "provider": {
+        "example": "Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "opt_provider_active": {
+    "message": "aktiv"
+  },
+  "opt_drive_disconnect": {
+    "message": "Trennen"
+  },
+  "opt_drive_unavailable": {
+    "message": "Die Google-Anmeldung ist in diesem Browser nicht verfügbar. Wähle eine andere Option."
+  },
+  "provider_webdav_other": {
+    "message": "WebDAV (andere)"
+  },
   "onb_drive_unavailable": {
     "message": "Die Google-Anmeldung ist in diesem Browser nicht verfügbar. Wähle eine andere Option."
   },

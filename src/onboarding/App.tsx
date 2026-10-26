@@ -30,7 +30,7 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
 import {
-  providerCards, providerById, nextcloudUrl, pcloudRegionOf, webdavUrlForCard,
+  providerCards, providerById, providerLabel, nextcloudUrl, pcloudRegionOf, webdavUrlForCard,
   type ProviderId,
 } from "@/lib/storage-providers";
 import { ProviderLogo } from "@/lib/provider-logos";
@@ -616,19 +616,22 @@ export default function OnboardingApp() {
           <div style={S.backendList}>
             {providerCards(t("locale_bcp47")).map((p) => {
               const on = provider === p.id;
+              // No Google sign-in here at all (Firefox for Android has no identity API): said on
+              // the card itself, as the unsupported Bookmarks row is, not only once it is picked.
+              const driveOff = p.id === "gdrive" && !DRIVE_AVAILABLE;
               return (
                 <div
                   key={p.id}
-                  style={{ ...S.backendCard, ...(on ? S.backendSelected : {}) }}
-                  role="button" tabIndex={0} aria-pressed={on} aria-label={t("onb_use_provider", p.label)}
+                  style={{ ...S.backendCard, ...(on ? S.backendSelected : {}), ...(driveOff ? { opacity: 0.55 } : {}) }}
+                  role="button" tabIndex={0} aria-pressed={on} aria-label={t("onb_use_provider", providerLabel(p))}
                   onClick={() => pickProvider(p.id)}
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickProvider(p.id); } }}
                 >
                   <div style={S.backendHeader}>
                     <ProviderLogo id={p.id} size={18} color={on ? "var(--text-primary)" : "var(--text-secondary)"} />
                     <div>
-                      <div style={S.backendName}>{p.label}</div>
-                      <div style={S.backendDesc}>{t(p.descKey)}</div>
+                      <div style={S.backendName}>{providerLabel(p)}</div>
+                      <div style={S.backendDesc}>{driveOff ? t("onb_drive_unavailable") : t(p.descKey)}</div>
                     </div>
                     <div style={{ ...S.radio, ...(on ? S.radioChecked : {}) }} />
                   </div>
@@ -773,7 +776,7 @@ export default function OnboardingApp() {
           </div>
 
           <div style={S.navRow}>
-            <button style={S.btnSecondary} onClick={() => setStep("welcome")}>{t("common_back")}</button>
+            <button style={S.btnSecondary} onClick={() => { setSetupError(null); setStep("welcome"); }}>{t("common_back")}</button>
             <button
               style={{ ...S.btnPrimary, flex: 1, opacity: canProceedBackend() ? 1 : 0.45, cursor: canProceedBackend() ? "pointer" : "not-allowed" }}
               onClick={next}
@@ -821,7 +824,7 @@ export default function OnboardingApp() {
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleData(key); } }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <Icon size={16} color={dataTypes[key] ? "var(--accent)" : "var(--text-secondary)"} />
+                  <Icon size={16} style={{ flexShrink: 0 }} color={dataTypes[key] ? "var(--accent)" : "var(--text-secondary)"} />
                   <div>
                     <div style={{ fontSize: 14, color: "var(--text-primary)" }}>{label}</div>
                     <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
@@ -894,7 +897,7 @@ export default function OnboardingApp() {
             <div style={{ ...S.errorRow, marginTop: 12, marginBottom: 12 }}><XCircle size={12} /> {setupError}</div>
           )}
           <div style={S.navRow}>
-            <button style={S.btnSecondary} onClick={() => setStep("backend")}>{t("common_back")}</button>
+            <button style={S.btnSecondary} onClick={() => { setSetupError(null); setStep("backend"); }}>{t("common_back")}</button>
             <button style={{ ...S.btnPrimary, flex: 1 }} onClick={() => setStep("encrypt")}>
               {t("common_continue")} <ArrowRight size={14} />
             </button>
@@ -997,7 +1000,7 @@ export default function OnboardingApp() {
             </div>
           )}
           <div style={S.navRow}>
-            <button style={S.btnSecondary} onClick={() => { finishSeq.current++; setAwaitingPerm(false); setPermSlow(false); setSaving(false); setStep("data"); }}>{t("common_back")}</button>
+            <button style={S.btnSecondary} onClick={() => { finishSeq.current++; setAwaitingPerm(false); setPermSlow(false); setSaving(false); setSetupError(null); setStep("data"); }}>{t("common_back")}</button>
             <button style={{ ...S.btnPrimary, flex: 1 }} onClick={finish} disabled={saving}>
               {saving ? <Loader2 size={14} className="spin" /> : <CheckCircle2 size={14} />}
               {awaitingPerm && saving ? t("onb_waiting_permission") : saving ? t("onb_setting_up") : t("onb_finish_sync")}
@@ -1068,7 +1071,7 @@ export default function OnboardingApp() {
           <h1 style={S.h1}>{t("onb_done_title")}</h1>
           <p style={S.subtitle}>
             {doneNote[0]}
-            <strong>{backend === "gdrive" ? "Google Drive" : backend === "github" ? "GitHub" : "WebDAV"}</strong>
+            <strong>{provider ? providerLabel(providerById(provider)) : backend === "gdrive" ? "Google Drive" : backend === "github" ? "GitHub" : "WebDAV"}</strong>
             {doneNote[1]}
           </p>
           <div style={{ ...S.featureList, marginBottom: 24 }}>
@@ -1123,7 +1126,7 @@ const S: Record<string, React.CSSProperties> = {
   h1: { fontSize: 24, fontWeight: 600, letterSpacing: "-0.02em", color: "var(--text-primary)", margin: "0 0 8px" },
   subtitle: { fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.55, margin: "0 0 24px" },
   featureList: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 28 },
-  featureRow: { display: "flex", alignItems: "center", gap: 10 },
+  featureRow: { display: "flex", alignItems: "center", gap: 10, textAlign: "left" },
   btnPrimary: {
     display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
     width: "100%", height: 44, padding: "0 20px", borderRadius: 14, border: "none",

@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { SyncState, SyncSettings, DataType, SyncExtension, RemoteSessionEntry } from "@/lib/types";
-import { providerFromConfig, providerById } from "@/lib/storage-providers";
+import { providerFromConfig, providerById, providerLabel } from "@/lib/storage-providers";
 import { sendMessage, request } from "@/lib/utils/messaging";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl } from "@/lib/utils/extensions-match";
 import { KEYS, getSettings, getState, normalizeRemoteSessions, normalizeRemoteExtensions, getRateProgress, getRateAnswered, setRateAnswered } from "@/lib/utils/storage";
 import { rateCardDue, stateNeedsUser } from "@/lib/rate-prompt";
-import { openTabUrl, tabsToRestore } from "@/lib/session-restore";
+import { openTabUrls, tabsToRestore } from "@/lib/session-restore";
 import { reviewPageFor } from "@/lib/store-review";
 import { STATE_UPDATE } from "@/lib/constants";
 import { streamState, streamInputFor, streamColor, streamLabelKey } from "@/popup/stream-state";
@@ -153,7 +153,7 @@ export default function PopupApp() {
    */
   const loadOpenTabs = useCallback(async () => {
     try {
-      setOpenUrls((await browser.tabs.query({})).map(openTabUrl));
+      setOpenUrls(await openTabUrls(await browser.tabs.query({})));
     } catch {
       setOpenUrls([]); // no tabs API: every session tab counts as not open, as before
     }
@@ -363,7 +363,7 @@ export default function PopupApp() {
     if (!settings?.active_backend) return t("popup_backend_none");
     const dav = settings.backends.find((b) => b.type === "webdav")?.webdav;
     const pid = providerFromConfig(settings.active_backend, dav?.url, dav?.username);
-    return pid ? providerById(pid).label : settings.active_backend;
+    return pid ? providerLabel(providerById(pid)) : settings.active_backend;
   })();
   const pulsing = status === "syncing" || status === "success";
   const conflictGroups = groupConflictsByDevice(state?.pending_conflicts ?? []);
