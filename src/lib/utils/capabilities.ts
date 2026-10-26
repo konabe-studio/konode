@@ -96,7 +96,11 @@ export function dataTypeApiPresent(type: DataType): boolean {
  * Telling them apart takes a permission check, because an optional-permission API is
  * `undefined` until its permission is granted — so a missing `browser.history` means
  * "not granted yet" on Chrome and "never implemented" on Firefox for Android, and only
- * `permissions.contains()` says which.
+ * `permissions.contains()` says which. It says so by THROWING: Firefox for Android has no
+ * `history` permission in its schema at all, so the question is rejected as a type error
+ * rather than answered "no". Read as a plain "no", that offered History as a switch whose
+ * permission no settings screen could ever grant, and setup could not finish while it
+ * was on (seen on Firefox 158).
  */
 export type Availability =
   | { state: "ready" }
@@ -117,8 +121,13 @@ export async function dataTypeAvailability(type: DataType): Promise<Availability
   //
   // The data was never at risk (`isPayloadEmpty` refuses to publish a tab-less session
   // over a good one, and says why). What was missing is that anyone was told.
-  if (permission && !(await hasPermission({ permissions: [permission] }))) {
-    return { state: "needs-permission", permission };
+  if (permission) {
+    const held = await permissionState(permission);
+    // A permission the browser has never heard of, with no API either, is never coming.
+    // The API check stays, so a contains() that fails for some other reason on a browser
+    // that does have the API still reads as a permission to ask for, as it always did.
+    if (held === "unknown" && !dataTypeApiPresent(type)) return { state: "unsupported" };
+    if (held !== "held") return { state: "needs-permission", permission };
   }
 
   if (dataTypeApiPresent(type)) return { state: "ready" };
@@ -173,6 +182,20 @@ export async function hasPermission(req: chrome.permissions.Permissions): Promis
     return await browser.permissions.contains(req);
   } catch {
     return false;
+  }
+}
+
+/**
+ * `permissions.contains()` for one API permission, keeping apart the "no" that
+ * `hasPermission` folds together: `unknown` is the browser refusing the question, which
+ * is what it does with a permission name its schema lacks (Firefox for Android with
+ * `history`, `bookmarks` or `tabGroups`).
+ */
+export async function permissionState(permission: string): Promise<"held" | "not-held" | "unknown"> {
+  try {
+    return (await browser.permissions.contains({ permissions: [permission] })) ? "held" : "not-held";
+  } catch {
+    return "unknown";
   }
 }
 

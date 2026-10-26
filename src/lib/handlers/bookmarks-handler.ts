@@ -1565,6 +1565,79 @@ async function mergeBookmarks(
     }
   };
 
+  // ── Step C: apply folder REPOSITIONS (path-keyed LWW). A folder reordered among
+  //    its siblings on a peer carries no URL, so Step B never touches its position —
+  //    replay the peer's folder-move here. Placement is ANCHOR-based: position the
+  //    folder immediately after the peer's `prev` sibling (or before `next`),
+  //    identified by url/title so it maps across devices with different local
+  //    siblings; the absolute `index` is only a last-resort fallback. Path
+  //    resolution fails safe (skips) when the root kind or a path segment is absent,
+  //    so no confidence gate is needed.
+  //
+  //    It runs TWICE: before the fold, for the folders already here, and after it, for
+  //    the ones the fold made and for anything the fold moved out from under an anchor.
+  //    Only after, it let Prefer Remote place the loose bookmarks a peer had moved a folder
+  //    in front of against that folder's OLD position: the fold re-places every bookmark
+  //    there, s0's anchor was the folder still at the end of the bar here, so s0, s1 and s2
+  //    followed it to the end, and the late reposition then put the folder in front of them
+  //    (QA AX 4, found headless; the same on 1.4.0). A folder already in place is left
+  //    alone, so the second pass costs nothing where the first one did the work. ──
+  const localFolderMoveAt = toFolderMoveMap(logs.folderMoves.local);
+  let folderMoved = 0;
+  const applyFolderRepositions = async (): Promise<void> => {
+    for (const rec of logs.folderMoves.remote) {
+      const winsLWW = strategy === "prefer-local" ? false
+        : strategy === "prefer-remote" ? true
+        : rec.at > (localFolderMoveAt.get(folderMoveKey(rec)) ?? 0);
+      if (!winsLWW) continue;
+      let folderId: string | null | undefined;
+      if (rec.holds && rec.path.length > 1) {
+        // One of several folders of this name (#51): the one holding the bookmark it names.
+        const parentId = await resolveFolderPath(rec.path.slice(0, -1), localRoots);
+        const folders = parentId
+          ? (await browser.bookmarks.getChildren(parentId).catch(() => [] as BookmarkNode[])).filter((c) => !c.url && !excluded.has(c.id))
+          : [];
+        const title = rec.path[rec.path.length - 1];
+        folderId = (await markedFolder(folders, folders.filter((c) => c.title === title), localKeys(canonicalUrlKey(rec.holds))))?.id;
+      } else {
+        folderId = await resolveFolderPath(rec.path, localRoots);
+      }
+      if (!folderId || excluded.has(folderId)) continue;
+      try {
+        const [node] = await browser.bookmarks.get(folderId);
+        if (!node || node.parentId == null) continue;
+        const siblings = await browser.bookmarks.getChildren(node.parentId);
+        // The order WITHOUT this folder is the frame the anchors are resolved against.
+        const rest = siblings.filter((s) => s.id !== folderId);
+        let target: number | null = null;
+        if (rec.prev !== undefined) {
+          const p = rest.findIndex((s) => siblingKey(s) === rec.prev);
+          if (p >= 0) target = p + 1;               // immediately after `prev`
+        }
+        if (target === null && rec.next !== undefined) {
+          const n = rest.findIndex((s) => siblingKey(s) === rec.next);
+          if (n >= 0) target = n;                    // immediately before `next`
+        }
+        if (target === null && rec.prev === undefined) target = 0; // peer had it first
+        if (target === null) target = Math.min(rec.index, siblings.length - 1); // fallback
+        if (node.index !== target) {
+          await moveToIndex(folderId, node.parentId, target);
+          folderMoved++;
+        }
+      } catch (err) {
+        logger.error(`Folder reposition: ${rec.path.join("/")}`, err);
+      }
+    }
+  };
+  await applyFolderRepositions();
+  // The fold reads where each bookmark sits from `placement`, taken before this pass. A folder
+  // it moved shifted its siblings' indexes, and a stale snapshot would "move" a bookmark to the
+  // place it already holds and count it in the Activity line.
+  if (folderMoved > 0) {
+    placement.clear();
+    indexLocal(await exportBookmarks());
+  }
+
   const remoteRoots = remoteTree[0]?.children ?? remoteTree;
   for (let r = 0; r < remoteRoots.length; r++) {
     const remoteRoot = remoteRoots[r];
@@ -1581,59 +1654,8 @@ async function mergeBookmarks(
     }
   }
 
-  // ── Step C: apply folder REPOSITIONS (path-keyed LWW). A folder reordered among
-  //    its siblings on a peer carries no URL, so Step B never touches its position —
-  //    replay the peer's folder-move here. Placement is ANCHOR-based: position the
-  //    folder immediately after the peer's `prev` sibling (or before `next`),
-  //    identified by url/title so it maps across devices with different local
-  //    siblings; the absolute `index` is only a last-resort fallback. Path
-  //    resolution fails safe (skips) when the root kind or a path segment is absent,
-  //    so no confidence gate is needed. ──
-  const localFolderMoveAt = toFolderMoveMap(logs.folderMoves.local);
-  let folderMoved = 0;
-  for (const rec of logs.folderMoves.remote) {
-    const winsLWW = strategy === "prefer-local" ? false
-      : strategy === "prefer-remote" ? true
-      : rec.at > (localFolderMoveAt.get(folderMoveKey(rec)) ?? 0);
-    if (!winsLWW) continue;
-    let folderId: string | null | undefined;
-    if (rec.holds && rec.path.length > 1) {
-      // One of several folders of this name (#51): the one holding the bookmark it names.
-      const parentId = await resolveFolderPath(rec.path.slice(0, -1), localRoots);
-      const folders = parentId
-        ? (await browser.bookmarks.getChildren(parentId).catch(() => [] as BookmarkNode[])).filter((c) => !c.url && !excluded.has(c.id))
-        : [];
-      const title = rec.path[rec.path.length - 1];
-      folderId = (await markedFolder(folders, folders.filter((c) => c.title === title), localKeys(canonicalUrlKey(rec.holds))))?.id;
-    } else {
-      folderId = await resolveFolderPath(rec.path, localRoots);
-    }
-    if (!folderId || excluded.has(folderId)) continue;
-    try {
-      const [node] = await browser.bookmarks.get(folderId);
-      if (!node || node.parentId == null) continue;
-      const siblings = await browser.bookmarks.getChildren(node.parentId);
-      // The order WITHOUT this folder is the frame the anchors are resolved against.
-      const rest = siblings.filter((s) => s.id !== folderId);
-      let target: number | null = null;
-      if (rec.prev !== undefined) {
-        const p = rest.findIndex((s) => siblingKey(s) === rec.prev);
-        if (p >= 0) target = p + 1;               // immediately after `prev`
-      }
-      if (target === null && rec.next !== undefined) {
-        const n = rest.findIndex((s) => siblingKey(s) === rec.next);
-        if (n >= 0) target = n;                    // immediately before `next`
-      }
-      if (target === null && rec.prev === undefined) target = 0; // peer had it first
-      if (target === null) target = Math.min(rec.index, siblings.length - 1); // fallback
-      if (node.index !== target) {
-        await moveToIndex(folderId, node.parentId, target);
-        folderMoved++;
-      }
-    } catch (err) {
-      logger.error(`Folder reposition: ${rec.path.join("/")}`, err);
-    }
-  }
+  // Step C again, now that the fold has made what was missing (see above).
+  await applyFolderRepositions();
 
   // ── Step D: prune the shells this merge left. Two kinds, on different evidence:
   //    - a folder a cross-parent MOVE emptied (see emptiedParents): its bookmarks went
@@ -2155,12 +2177,16 @@ async function recordLeftSync(id: string, oldParentId: string): Promise<void> {
  * Something excluded was moved out into the synced tree (#54). It reaches the peers as new,
  * but it keeps its old dateAdded, and a deletion recorded when it went in would read as
  * newer and remove it again: the same trap a restored backup falls into (#27).
+ *
+ * Every bookmark in it is recorded, however recently it was saved. `recordAppeared` lets a
+ * bookmark dated in the last minute go, since one the user just made needs no record, but
+ * here the deletion to outdate can be newer than that: save a bookmark, drag it into the
+ * excluded folder and back out within the minute, and its dateAdded was older than the
+ * tombstone its trip in left, so every peer refused it for good (QA AT 5, found headless).
  */
 async function recordJoinedSync(id: string): Promise<void> {
   const now = Date.now();
-  const urls = (await subtreeNodes(id))
-    .filter((n) => n.url && now - (n.dateAdded ?? now) >= APPEARED_SLACK_MS)
-    .map((n) => n.url as string);
+  const urls = (await subtreeNodes(id)).filter((n) => n.url).map((n) => n.url as string);
   if (urls.length) await updateAppeared((current) => gcAppeared([...current, ...urls.map((url) => ({ url, at: now }))]));
 }
 
