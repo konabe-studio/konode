@@ -11,22 +11,39 @@ import {
   getTitles, setTitles, updateTitles,
   getFolderRenames, setFolderRenames, updateFolderRenames,
 } from "@/lib/utils/storage";
-import { defaultOtherRootId, matchLocalRoot, matchLocalRootEx, rootKind } from "@/lib/utils/bookmark-roots";
+import {
+  asRootKind, defaultOtherRootId, findLocalRootByKind, matchLocalRoot, matchLocalRootEx,
+  rootKindOf,
+} from "@/lib/utils/bookmark-roots";
 import { canonicalUrlKey } from "@/lib/utils/url";
 import { browser } from "@/lib/utils/ext";
 import { assertDataTypeApi, eventPresent } from "@/lib/utils/capabilities";
 
-type BookmarkNode = chrome.bookmarks.BookmarkTreeNode;
+// Chromium 134+ types its permanent folders on the node (`folderType`) and tells an
+// account root from a local-only one (`syncing`); @types/chrome doesn't carry either yet.
+// Both are optional, so a plain BookmarkTreeNode still satisfies this.
+type BookmarkNode = chrome.bookmarks.BookmarkTreeNode & {
+  folderType?: string;
+  syncing?: boolean;
+};
 
 // ─── Read ─────────────────────────────────────────────────────────────────
 
 export async function exportBookmarks(): Promise<SyncBookmark[]> {
   assertDataTypeApi("bookmarks");
   const tree = await browser.bookmarks.getTree();
-  return tree.map(mapNode);
+  return tree.map((node) => mapNode(node, 0));
 }
 
-function mapNode(node: BookmarkNode): SyncBookmark {
+// `depth` exists only to spot the ROOTS — the virtual root's own children — so each one
+// can carry its kind to the peer. It is NOT an array index: this used to be called as
+// `tree.map(mapNode)`, which would have handed the index to a second parameter.
+function mapNode(node: BookmarkNode, depth: number): SyncBookmark {
+  // A root travels with its resolved kind, so the receiver never has to re-derive it from
+  // an id that only meant something on this profile. Edge 142 renumbered every bookmark id
+  // (crbug 456225717), so the Favorites bar stopped being "1" and a peer had nothing left
+  // to match on — the whole tree landed in "Other favorites" (#66).
+  const kind = depth === 1 ? rootKindOf(node) : undefined;
   return {
     id: node.id,
     parentId: node.parentId ?? null,
@@ -36,10 +53,11 @@ function mapNode(node: BookmarkNode): SyncBookmark {
     // payload/checksum every time — the root node carries no dateAdded, and a moving
     // value there would defeat upload de-dup and cross-device checksum matching.
     dateAdded: node.dateAdded ?? 0,
+    ...(kind ? { rootKind: kind } : {}),
     // NOTE: node.dateGroupModified is deliberately NOT synced — it's a per-folder
     // local mod-time that differs across devices for the same logical tree, so
     // including it only churned the payload/checksum. Nothing in the merge reads it.
-    children: node.children?.map(mapNode),
+    children: node.children?.map((child) => mapNode(child, depth + 1)),
   };
 }
 
@@ -313,15 +331,27 @@ function siblingKey(node: { url?: string; title: string }): string {
  *  — by walking up the parent chain to a known root. Returns null if the chain
  *  never reaches a mappable root (so the caller fails safe). */
 async function folderPath(id: string): Promise<string[] | null> {
+  // Which nodes are roots is a question about the TREE, not about a node's id or title:
+  // on a renumbered profile (Edge 142) a root's id matches no table, while a folder the
+  // user named "Favorites bar" matches the title table perfectly — and typing that one as
+  // a root would truncate every path through it. The tree's own top level settles it.
+  const roots = new Map(
+    ((await browser.bookmarks.getTree())[0]?.children ?? []).map((r) => [r.id, r as BookmarkNode] as const)
+  );
   const path: string[] = [];
   let currentId: string | undefined = id;
   // Bound the walk so a malformed parent chain can't loop forever.
   for (let hops = 0; hops < 64 && currentId; hops++) {
+    const root = roots.get(currentId);
+    if (root) {
+      // Reached a root. Its kind comes from the engine's folderType where there is one,
+      // so it survives renumbering; an unmappable root fails safe, as before.
+      const kind = rootKindOf(root);
+      return kind ? [kind, ...path] : null;
+    }
     let node: BookmarkNode | undefined;
     try { [node] = await browser.bookmarks.get(currentId); } catch { return null; }
     if (!node) return null;
-    const kind = rootKind(node.id);
-    if (kind) { path.unshift(kind); return path; } // reached a root → done
     path.unshift(node.title);
     currentId = node.parentId;
   }
@@ -758,6 +788,10 @@ async function mergeBookmarks(
     logger.warn("mergeBookmarks", "No writable root folder found");
     return;
   }
+  // "Is this a root?" by identity rather than by id-table lookup. On a renumbered profile
+  // (Edge 142, crbug 456225717) a root's id matches no table, and mistaking a root for an
+  // ordinary folder would put it on the shell-prune queue in Step D.
+  const localRootIds = new Set(localRoots.map((r) => r.id));
 
   let renamedFolders = 0;
 
@@ -840,7 +874,7 @@ async function mergeBookmarks(
               moved++;
               // Track the folder we moved this bookmark OUT of, so an emptied shell
               // (left by a cross-parent folder move on the peer) is cleaned up below.
-              if (from && from !== targetId && !rootKind(from)) emptiedParents.add(from);
+              if (from && from !== targetId && !localRootIds.has(from)) emptiedParents.add(from);
             }
           } catch (err) {
             logger.error(`Bookmark move: ${node.title}`, err);
@@ -969,7 +1003,7 @@ async function mergeBookmarks(
   const seen = new Set<string>();
   while (queue.length) {
     const id = queue.shift()!;
-    if (seen.has(id) || rootKind(id)) continue; // never remove a root
+    if (seen.has(id) || localRootIds.has(id)) continue; // never remove a root
     seen.add(id);
     try {
       const [node] = await browser.bookmarks.get(id);
@@ -1000,8 +1034,10 @@ async function resolveFolderPath(path: string[], localRoots: BookmarkNode[]): Pr
   // and a folder sitting directly in the bookmarks bar has exactly ["bar"] as its parent.
   // Rejecting that silently dropped the most common rename there is.
   if (path.length < 1) return null;
-  const [kind, ...titles] = path;
-  const root = localRoots.find((r) => rootKind(r.id) === kind);
+  const [segment, ...titles] = path;
+  const kind = asRootKind(segment);
+  if (!kind) return null;
+  const root = findLocalRootByKind(localRoots, kind);
   if (!root) return null;
   let currentId = root.id;
   for (const title of titles) {
