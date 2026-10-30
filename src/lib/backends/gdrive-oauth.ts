@@ -53,22 +53,39 @@ function redirectUri(): string {
 const DRIVE_UNSUPPORTED_MSG =
   "Google Drive sign-in isn't available in this browser. Use GitHub or WebDAV instead.";
 
-/**
- * Shown when the flow started but didn't come back with a code. Deliberately does NOT
- * claim the browser is at fault: every non-cancel failure used to be reported as
- * DRIVE_UNSUPPORTED_MSG, which is wrong for the most likely real cause — a redirect URI
- * the Google OAuth client doesn't know about. Only the chromiumapp.org redirect is
- * registered, so on any other engine (Firefox hands out a `*.extensions.allizom.org`
- * URL) Google answers `redirect_uri_mismatch`, shows its own error page in the auth
- * window, and never redirects back. Telling the user their browser is unsupported sent
- * them chasing the wrong thing — including whoever is trying to register that redirect.
+/*
+ * What the user is told when a sign-in ends without a session (#40). Each says only what
+ * the code can know, and each names the two backends that need no Google sign-in, which is
+ * true whatever went wrong.
+ *
+ * They used to say more than that. A closed window was "Sign-in cancelled", told to people
+ * who had approved: the engine's cancel-shaped rejection means only that the window closed
+ * before the browser saw the redirect, and a redirect_uri_mismatch on Google's error page or
+ * a browser that navigates to the redirect instead of catching it ends exactly the same way.
+ * And every other failure blamed an unregistered redirect URL, the right guess until the
+ * bare `https://<extension-id>.chromiumapp.org/` form was registered on 2026-09-08 and a
+ * wrong one since, which is part of why #24 ran for a week.
  */
-const DRIVE_SIGNIN_FAILED_MSG =
-  "Google sign-in didn't complete. If it keeps failing in this browser, its redirect " +
-  "URL may not be registered with Konode's Google client — use GitHub or WebDAV instead.";
 
-/** Messages every engine uses for "the user closed the window / declined". */
-const CANCELLED_RE = /cancel|denied|did not approve/i;
+/** The window closed before the sign-in came back. Declining, a Google error page and a
+ *  browser that never hands the redirect back all end here, so it names none of them. */
+const DRIVE_WINDOW_CLOSED_MSG =
+  "The Google sign-in window closed before the sign-in came back to Konode. Try again, or " +
+  "use GitHub or WebDAV, which need no Google sign-in.";
+
+/** The flow failed some other way. The browser's own words go to the log, not the screen. */
+const DRIVE_SIGNIN_FAILED_MSG =
+  "Google sign-in didn't complete. What the browser reported is in Settings → Activity. " +
+  "Try again, or use GitHub or WebDAV, which need no Google sign-in.";
+
+/** The one case where someone certainly declined: Google says so in the redirect. */
+const DRIVE_DECLINED_MSG =
+  "Sign-in was cancelled on Google's consent screen. Try again to connect Google Drive, or " +
+  "use GitHub or WebDAV, which need no Google sign-in.";
+
+/** How Chromium ("The user did not approve access.") and Firefox ("User cancelled or denied
+ *  access.") reject when the auth window closes before a redirect they recognise. */
+const WINDOW_CLOSED_RE = /cancel|denied|did not approve/i;
 
 /** An engine whose auth bridge refuses the call outright, rather than a flow that ran
  *  and failed. iOS WebKit (Orion) exposes launchWebAuthFlow but throws a native
@@ -172,6 +189,19 @@ async function fetchUserInfo(accessToken: string): Promise<{ email: string; disp
 
 // ─── Interactive sign-in (one-time consent → refresh token) ───────────────────
 
+/**
+ * One Activity line for every way a sign-in ends without a session, saying which way.
+ *
+ * Only two of the five exits used to log, with the same words, so a user asked to check
+ * Settings → Activity could not tell us which one they had hit, and neither could we. The
+ * redirect URI goes in every line: it is the exact string Google's client must have
+ * registered, it is invisible anywhere else, and it is what settled #24. The engine's own
+ * words stay here and out of the UI.
+ */
+function logSignInEnd(branch: string, detail: string): void {
+  logger.warn("GDrive.oauth", `Sign-in ended (${branch}) for redirect ${redirectUri()}: ${detail}`);
+}
+
 export async function interactiveSignIn(): Promise<GDriveSession> {
   if (!isDriveAuthAvailable()) throw new Error(DRIVE_UNSUPPORTED_MSG);
   // Whatever session is already stored survives until this flow SUCCEEDS. It used to be
@@ -200,24 +230,33 @@ export async function interactiveSignIn(): Promise<GDriveSession> {
     responseUrl = await browser.identity.launchWebAuthFlow({ url: authUrl, interactive: true });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    // Closing the consent window or declining is normal, and it's also what a
-    // `redirect_uri_mismatch` looks like from here: Google shows its own error page and
-    // never redirects, so the user closes the window.
-    if (CANCELLED_RE.test(msg)) throw new Error("Sign-in cancelled");
-    // The raw engine text stays out of the UI, but not out of the log — and log the
-    // redirect URI with it: that's the exact string that has to be registered with the
-    // Google OAuth client, and it's otherwise invisible.
-    logger.warn("GDrive.oauth", `Sign-in failed for redirect ${redirectUri()}: ${msg}`);
     // Only claim the platform is unsupported when the auth bridge itself refused.
-    if (err instanceof TypeError || UNSUPPORTED_RE.test(msg)) throw new Error(DRIVE_UNSUPPORTED_MSG);
+    if (err instanceof TypeError || UNSUPPORTED_RE.test(msg)) {
+      logSignInEnd("browser refused", msg);
+      throw new Error(DRIVE_UNSUPPORTED_MSG);
+    }
+    if (WINDOW_CLOSED_RE.test(msg)) {
+      logSignInEnd("window closed", msg);
+      throw new Error(DRIVE_WINDOW_CLOSED_MSG);
+    }
+    logSignInEnd("flow failed", msg);
     throw new Error(DRIVE_SIGNIN_FAILED_MSG);
   }
-  if (!responseUrl) throw new Error("Sign-in cancelled");
+  // An engine that resolves with nothing has the same thing to tell us as a closed window.
+  if (!responseUrl) {
+    logSignInEnd("no redirect", "the browser returned no URL");
+    throw new Error(DRIVE_WINDOW_CLOSED_MSG);
+  }
 
   const parsed = new URL(responseUrl);
   const code = parsed.searchParams.get("code");
   if (!code) {
-    throw new Error(`Google sign-in failed: ${parsed.searchParams.get("error") ?? "no code"}`);
+    const error = parsed.searchParams.get("error");
+    logSignInEnd("Google answered", error ? `error=${error}` : "no code and no error");
+    if (error === "access_denied") throw new Error(DRIVE_DECLINED_MSG);
+    throw new Error(
+      `Google sign-in failed: ${error ?? "no code"}. Try again, or use GitHub or WebDAV, which need no Google sign-in.`
+    );
   }
 
   const tok = await exchange({

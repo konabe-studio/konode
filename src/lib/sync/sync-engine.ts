@@ -4,12 +4,14 @@ import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncEx
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { normalizeRepoSlug } from "@/lib/backends/github-backend";
 import { createSnapshot as writeSnapshot, listSnapshots as readSnapshots, restoreSnapshot as applySnapshot, deleteSnapshot as dropSnapshot, type SnapshotMeta } from "@/lib/sync/snapshots";
-import { exportBookmarkPayload, importBookmarks, type BulkDeleteBlock } from "@/lib/handlers/bookmarks-handler";
+import {
+  bookmarkContent, exportBookmarkPayload, importBookmarks, type BulkDeleteBlock,
+} from "@/lib/handlers/bookmarks-handler";
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
 import { exportHistory, importHistory, buildLocalHistoryIndex } from "@/lib/handlers/history-handler";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
 import { dataTypeAvailability, unsupportedReason, hasPermission } from "@/lib/utils/capabilities";
-import { HttpError } from "@/lib/utils/retry";
+import { HttpError, rateLimitMessage } from "@/lib/utils/retry";
 import {
   getState,
   setState,
@@ -38,6 +40,8 @@ import {
   dropRemoteDevices,
 } from "@/lib/utils/storage";
 import { logger } from "@/lib/utils/logger";
+import { noteCleanSync } from "@/lib/rate-prompt";
+import { PERMISSION_LOST_PREFIX } from "@/lib/constants";
 import { encrypt, decrypt, sha256, verifyPassphrase } from "@/lib/crypto/encryption";
 import { ConflictResolver, notifyConflict, orderPeersByTime } from "./conflict-resolver";
 
@@ -186,6 +190,20 @@ export function backendOrigins(cfg: BackendConfig | undefined): string[] {
   }
 }
 
+/** The storage as a sentence can name it: the WebDAV host, or the service. */
+export function storageName(cfg: BackendConfig | undefined): string {
+  switch (cfg?.type) {
+    case "webdav":
+      try { return new URL(cfg.webdav!.url).host; } catch { return "your storage"; }
+    case "gdrive":
+      return "Google Drive";
+    case "github":
+      return "GitHub";
+    default:
+      return "your storage";
+  }
+}
+
 /**
  * Say why a sync failed, when a bare failure does not.
  *
@@ -201,6 +219,7 @@ export function backendOrigins(cfg: BackendConfig | undefined): string[] {
  */
 export async function explainSyncFailure(err: unknown, cfg: BackendConfig | undefined): Promise<string> {
   const msg = err instanceof Error ? err.message : "Unknown error";
+  if (err instanceof HttpError && err.status === 429) return rateLimitMessage(storageName(cfg));
   // Only for the failure shape a blocked request actually has. An HttpError carries a
   // status, which means the request did leave and the permission is not the story.
   if (err instanceof HttpError || !/network|failed to fetch|load failed/i.test(msg)) return msg;
@@ -213,7 +232,7 @@ export async function explainSyncFailure(err: unknown, cfg: BackendConfig | unde
     : "your storage provider";
   // Cause and cure FIRST, original last. The popup clamps this to two lines, and it was
   // clamping away the half that says what to do about it.
-  return `Konode no longer has permission to reach ${where}. Open Settings → Storage and press Save to grant it again. The request never left the browser: ${msg}`;
+  return `${PERMISSION_LOST_PREFIX}${where}. Open Settings → Storage and press Save to grant it again. The request never left the browser: ${msg}`;
 }
 
 export function statusAfterSync(problems: number, pendingConflicts: number): SyncState["status"] {
@@ -260,6 +279,12 @@ export class SyncEngine {
   // accumulated across data types and folded into the cumulative `bytes_transferred`
   // stat at the end. Reset per sync so it's a per-run tally, not a running double-count.
   private bytesThisSync = 0;
+  // The other devices whose files this sync read, across every type. Only the rating
+  // card asks (lib/rate-prompt.ts): a sync with no other device has nothing to show yet.
+  private peersThisSync = new Set<string>();
+  // Set once the rating card has counted all the syncs it needs, so the rest of this
+  // worker's life does not even read the counter.
+  private rateCountDone = false;
   // Types whose own file is missing from the folder this sync, so the upload must go out
   // even though the local checksum record says this content already went. Rebuilt every
   // sync by `findOwnMissingFiles` and consumed by `uploadIfChanged`.
@@ -380,7 +405,10 @@ export class SyncEngine {
     this.isSyncing = true;
 
     if (!this.settings.active_backend) {
-      logger.warn("SyncEngine", "No active backend configured");
+      // Console only. This is every device before setup finishes, with the alarm already
+      // running, so as a warning it opened a new device's Activity log, once a minute for
+      // as long as setup stayed open, which can now be a day.
+      logger.info("SyncEngine", "No active backend configured");
       this.isSyncing = false;
       return "no-backend";
     }
@@ -411,10 +439,12 @@ export class SyncEngine {
     if (typesToSync.length === 0) {
       logger.info("SyncEngine", "No data types are turned on, so there is nothing to sync");
       const prev = await getState();
-      const newState = await setState({
-        status: prev.pending_conflicts.length > 0 ? "conflict" : "idle",
-      });
-      this.onStateChange(newState);
+      const status = prev.pending_conflicts.length > 0 ? "conflict" : "idle";
+      // Only when that is news. Every alarm used to write the same status back and broadcast
+      // it, which rewrote the state and woke an open popup once a minute to say nothing had
+      // changed (checklist O). The first cycle after everything was switched off still moves
+      // "Synced" or an old error to "Ready".
+      if (prev.status !== status) this.onStateChange(await setState({ status }));
       this.isSyncing = false;
       return "nothing-enabled";
     }
@@ -438,6 +468,7 @@ export class SyncEngine {
     this.encryptionWarnings.clear();
     this.failedTypes.clear();
     this.bytesThisSync = 0;
+    this.peersThisSync.clear();
     this.bulkBlockedThisSync = null;
     this.historyIndexThisSync = null;
     const backend = createBackend(backendConfig);
@@ -469,7 +500,9 @@ export class SyncEngine {
       // Encryption disagreements and per-type failures share one surface: both mean
       // "the sync ran and published what it could, but something needs the user's
       // attention". Neither aborts the cycle.
-      const problems = [...this.encryptionWarnings.values(), ...typeErrors];
+      // Each distinct message once. The encryption ones are kept per peer but name no
+      // device, so a folder with two encrypted peers printed the same sentence twice.
+      const problems = [...new Set([...this.encryptionWarnings.values(), ...typeErrors])];
       const prevState = await getState();
       // Drop a queued conflict for a type that cannot have one. Before CONFLICTABLE_TYPES
       // narrowed the gate, sessions and extensions went through it like bookmarks, so a
@@ -504,6 +537,10 @@ export class SyncEngine {
       });
       this.onStateChange(newState);
       logger.info("SyncEngine", problems.length ? `Sync complete with ${problems.length} problem(s)` : "Sync complete");
+      // `noteCleanSync` never throws, so it cannot turn this sync into a failed one.
+      if (!this.rateCountDone && newState.status === "success" && !recovery && this.peersThisSync.size > 0) {
+        this.rateCountDone = await noteCleanSync();
+      }
 
     } catch (err) {
       const msg = await explainSyncFailure(err, backendConfig);
@@ -607,7 +644,14 @@ export class SyncEngine {
         await this.syncType(dataType, backend, state);
       } catch (err) {
         // syncType already logged it — just collect the message.
-        errors.push(`${dataType}: ${err instanceof Error ? err.message : String(err)}`);
+        // A rate limit is said without the type: it is one fact about the storage, so every
+        // type hitting it folds into a single sentence instead of one per type.
+        if (err instanceof HttpError && err.status === 429) {
+          const cfg = this.settings.backends.find((b) => b.type === this.settings.active_backend);
+          errors.push(rateLimitMessage(storageName(cfg)));
+        } else {
+          errors.push(`${dataType}: ${err instanceof Error ? err.message : String(err)}`);
+        }
         this.failedTypes.add(dataType);
       }
     }
@@ -729,10 +773,15 @@ export class SyncEngine {
       // identical pair a minute (#20). Naming the peer and the total is what makes it
       // actionable rather than alarming (#18).
       const who = blocked.device_label ? ` asked for by ${blocked.device_label}` : "";
+      // A piece under the cap on its own is held back for what came before it (#41), and
+      // the line has to say so, or "10 of your 40, cap 30" reads as the guard misfiring.
+      const recent = blocked.recent
+        ? `, counting the ${blocked.recent} that other devices removed here in the last day`
+        : "";
       logger.warn(
         "mergeBookmarks",
         `Blocked a deletion of ${blocked.blocked} of your ${blocked.localTotal} bookmarks` +
-          `${who} (cap ${blocked.cap}, ${blocked.pct}% of the tree). Nothing was removed and a ` +
+          `${who} (cap ${blocked.cap}, ${blocked.pct}% of the tree${recent}). Nothing was removed and a ` +
           "restore point was saved. Apply it or keep them in Settings → Activity."
       );
       try {
@@ -751,6 +800,7 @@ export class SyncEngine {
       blocked: blocked.blocked,
       cap: blocked.cap,
       local_total: blocked.localTotal,
+      recent: blocked.recent,
       device_id: blocked.device_id,
       device_label: blocked.device_label ?? null,
     };
@@ -774,11 +824,12 @@ export class SyncEngine {
   /**
    * Every device with files in the sync folder.
    *
-   * Deliberately cheap. The inventory comes from the file NAMES, and then ONE file per
-   * device is fetched for its name and its timestamp — the smallest type that device has,
-   * because a history packet can be megabytes and a device list has no business downloading
-   * it. Both fields sit outside the encrypted payload, so this works with E2EE on and
-   * without the passphrase.
+   * Deliberately cheap. The inventory comes from the file listing, and then ONE file per
+   * device is fetched for its name: the smallest type that device has, because a history
+   * packet can be megabytes and a device list has no business downloading it. The last upload
+   * comes from the listing's modification times where the backend has them, and from that
+   * one packet's timestamp where it does not (GitHub). The name and the timestamp sit outside
+   * the encrypted payload, so this works with E2EE on and without the passphrase.
    *
    * An unreadable file costs that device its name, not the whole list: the same rule as
    * downloadAll, and for the same reason.
@@ -787,9 +838,16 @@ export class SyncEngine {
     const cfg = this.activeBackendConfig();
     if (!cfg) return [];
     return this.withBackend(async (b) => {
-      const names = await b.listFiles("konode_");
+      // Where the listing carries modification times, a device's last upload is the newest of
+      // them across its files (#30). The packet read below still names the device, but its
+      // timestamp is only the date of whichever file was cheapest to read, and an extension
+      // list unchanged for days froze the row of a device that uploads bookmarks every minute.
+      const listed = b.listFilesWithTimes
+        ? await b.listFilesWithTimes("konode_")
+        : (await b.listFiles("konode_")).map((name) => ({ name, modified: null }));
       const types = new Map<string, Set<DataType>>();
-      for (const name of names) {
+      const newestUpload = new Map<string, number>();
+      for (const { name, modified } of listed) {
         // konode_snap_* files live alongside these and are not per-device, so match the
         // four data types by name rather than accepting anything with an id in it.
         const m = /^konode_(bookmarks|history|sessions|extensions)_(.+)\.json$/.exec(name);
@@ -797,6 +855,7 @@ export class SyncEngine {
         const set = types.get(m[2]) ?? new Set<DataType>();
         set.add(m[1] as DataType);
         types.set(m[2], set);
+        if (modified !== null) newestUpload.set(m[2], Math.max(newestUpload.get(m[2]) ?? 0, modified));
       }
 
       // Smallest first: an extension list is a few KB, a session a few more, a bookmark
@@ -828,6 +887,8 @@ export class SyncEngine {
             logger.warn("listDevices", `Couldn't read ${name} (${err instanceof Error ? err.message : err}), so that device has no name here`);
           }
         }
+        const uploadedAt = newestUpload.get(device_id);
+        if (uploadedAt !== undefined) lastSeen = new Date(uploadedAt).toISOString();
         out.push({
           device_id, label, lastSeen,
           types: [...set].sort(),
@@ -1000,6 +1061,7 @@ export class SyncEngine {
       );
       // Count pulled bytes (the serialized peer payloads) toward the transfer stat.
       for (const p of peers) this.bytesThisSync += p.payload?.length ?? 0;
+      for (const p of peers) this.peersThisSync.add(p.device_id);
 
       // A device we hold a cached session / extension list for, that did NOT arrive here,
       // may simply be gone from the folder — someone forgot it on another machine. Runs
@@ -1033,16 +1095,37 @@ export class SyncEngine {
         const already = new Set(
           currentState.pending_conflicts.map((c) => `${c.data_type}:${c.device_id}`)
         );
+        // Whether the two devices hold the same BOOKMARKS, rather than the same bytes (#34).
+        // The checksum covers this device's ids, every dateAdded and the four per-device
+        // logs, so it never matched and Manual asked about every pair of devices on first
+        // contact. See bookmarkContent. History keeps the checksum: it has no such notion.
+        const contentOf = async (payload: unknown) => sha256(bookmarkContent(payload));
+        const localContent = dataType === "bookmarks" ? await contentOf(localPayload) : null;
+        // Pending cards whose peer turns out to hold what we hold. Either answer to them
+        // would change nothing, so they go, which is also what clears the cards this bug
+        // raised before the upgrade.
+        const settled = new Set<string>();
         // A resolution (keep-local OR keep-remote) doesn't rewrite the peer's file,
         // so the peer still diverges from us next cycle. Skip a peer we've already
-        // resolved against *this exact content* (matched by checksum) so the same
-        // conflict doesn't re-queue and re-notify forever. A genuine later change on
-        // the peer yields a new checksum, so a fresh conflict still surfaces.
+        // resolved against *this exact content* so the same conflict doesn't re-queue and
+        // re-notify forever: for bookmarks the content is what the peer HOLDS (#34), since
+        // its checksum moves with every date and log entry; otherwise the checksum. A
+        // genuine later change on the peer still surfaces a fresh conflict.
         const resolved = await getResolvedConflicts();
         const fresh: ConflictItem[] = [];
         for (const peer of peers) {
           const key = `${dataType}:${peer.device_id}`;
-          if (already.has(key)) continue;
+          if (already.has(key)) {
+            // A card is already up for this peer. It stays unless the two now hold the same
+            // bookmarks, which is only worth a decrypt when there is a card to take down.
+            if (localContent && this.encryptionBarrier(peer) === null) {
+              const same = await this.openPacket(peer)
+                .then((p) => contentOf(p))
+                .then((c) => c === localContent, () => false);
+              if (same) settled.add(key);
+            }
+            continue;
+          }
           if (resolved[key] === peer.checksum) continue;
           // Don't queue a conflict for a peer we couldn't consume even if the user picked
           // it. `manual` never reaches applyRemote, so this was the one path where an
@@ -1053,20 +1136,46 @@ export class SyncEngine {
             this.encryptionWarnings.set(peer.device_id, barrier);
             continue;
           }
+          let peerContent: string | undefined;
+          if (localContent) {
+            try {
+              peerContent = await contentOf(await this.openPacket(peer));
+            } catch {
+              // Unreadable here (a legacy peer without a verifier on another passphrase, a
+              // corrupt file): the checksum decides, as it always did, and choosing that
+              // peer's version reports the reason.
+            }
+            if (peerContent === localContent) continue;
+            if (peerContent && resolved[key] === peerContent) continue;
+          }
           const { conflict } = this.resolver.resolve(localPacket, peer);
           if (conflict) {
+            if (peerContent) conflict.content_key = peerContent;
             fresh.push(conflict);
             // Park the raw peer packet OUTSIDE konode_state — "use remote" needs it to
             // decrypt and verify, but it must not ride along on every status broadcast.
             await putConflictPacket(conflict.id, peer);
           }
         }
-        if (fresh.length) {
+        const pending = [
+          ...currentState.pending_conflicts.filter((c) => !settled.has(`${c.data_type}:${c.device_id}`)),
+          ...fresh,
+        ];
+        if (settled.size) {
+          // Every card still up keeps its packet, the ones just queued included.
+          await pruneConflictPackets(pending.map((c) => c.id));
+          logger.event(
+            "SyncEngine",
+            `Dropped ${settled.size} pending ${dataType} conflict(s): those devices now hold the same bookmarks as this one`
+          );
+        }
+        if (fresh.length || settled.size) {
+          // The status at the end of the sync is sync()'s to set, from what is left pending.
           await setState({
-            status: "conflict",
-            pending_conflicts: [...currentState.pending_conflicts, ...fresh],
+            ...(fresh.length ? { status: "conflict" as const } : {}),
+            pending_conflicts: pending,
           });
-          if (this.settings.notifications_enabled) notifyConflict(dataType);
+          if (fresh.length && this.settings.notifications_enabled) notifyConflict(dataType);
         }
         // Publish our own file anyway. `manual` gates what we IMPORT — it was never
         // meant to stop us EXPORTING: every device writes its own
@@ -1379,6 +1488,24 @@ export class SyncEngine {
     packet: SyncPacket,
     isLocalEmpty = false
   ): Promise<void> {
+    const payload = await this.openPacket(packet);
+    await this.applyPayload(dataType, payload, {
+      device_id: packet.device_id,
+      timestamp: packet.timestamp,
+      // Outside the encrypted payload, so it reads even with E2EE on. It is what the
+      // recovery notice shows instead of a truncated id when the guard blocks.
+      device_label: packet.device_label ?? null,
+    }, isLocalEmpty);
+  }
+
+  /**
+   * A peer's packet, decrypted and verified, as the payload it carries.
+   *
+   * Everything applyRemote checks before importing, so the manual gate can read a peer
+   * under exactly the same rules (#34): it has to see what a peer holds to know whether the
+   * two devices disagree at all.
+   */
+  private async openPacket(packet: SyncPacket): Promise<unknown> {
     const localE2ee = this.e2eeActive;
     // Refuse to import a plaintext peer while E2EE is active here. The auto-merge
     // path already skips plaintext peers before calling applyRemote (they're stale/
@@ -1432,14 +1559,7 @@ export class SyncEngine {
     if (packet.checksum?.length !== 64 || actual !== packet.checksum) {
       throw new Error("Sync packet checksum invalid or missing. Refusing to import unverified data.");
     }
-    const payload = JSON.parse(raw);
-    await this.applyPayload(dataType, payload, {
-      device_id: packet.device_id,
-      timestamp: packet.timestamp,
-      // Outside the encrypted payload, so it reads even with E2EE on. It is what the
-      // recovery notice shows instead of a truncated id when the guard blocks.
-      device_label: packet.device_label ?? null,
-    }, isLocalEmpty);
+    return JSON.parse(raw);
   }
 
   /** Applies an already-decrypted, already-parsed payload for a data type. */
@@ -1600,11 +1720,11 @@ export class SyncEngine {
     // Remember the peer content we just resolved against so the same conflict
     // doesn't re-queue every cycle (the resolution doesn't rewrite the peer's file,
     // so it keeps diverging from ours). Keyed by data_type:device_id → peer checksum.
-    if (remotePacket?.checksum) {
-      await setResolvedConflict(
-        `${conflict.data_type}:${conflict.device_id}`,
-        remotePacket.checksum
-      );
+    // What the peer's bookmarks held, when the card knows (#34): the checksum moves with every
+    // date and log entry the peer writes, and the same question came back each time it did.
+    const memo = conflict.content_key ?? remotePacket?.checksum;
+    if (memo) {
+      await setResolvedConflict(`${conflict.data_type}:${conflict.device_id}`, memo);
     }
 
     const remaining = state.pending_conflicts.filter((c) => c.id !== id);

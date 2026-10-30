@@ -1,15 +1,17 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { sendMessage, request } from "@/lib/utils/messaging";
 import { browser } from "@/lib/utils/ext";
 import { t, tParts } from "@/lib/utils/i18n";
-import { interactiveSignIn, isDriveAuthAvailable } from "@/lib/backends/gdrive-oauth";
+import { interactiveSignIn, isDriveAuthAvailable, getStoredGDriveUser } from "@/lib/backends/gdrive-oauth";
+import { loadDraft, saveDraft, clearDraft, type DraftStep } from "@/lib/onboarding-draft";
 
 // Some engines (notably iOS WebKit, e.g. Orion) don't support interactive Google
 // sign-in; gate the Drive option so users aren't sent into a dead end.
 const DRIVE_AVAILABLE = isDriveAuthAvailable();
-import type { BackendType, DataType, SyncSettings } from "@/lib/types";
+import type { BackendType, BookmarkExclusion, DataType, SyncSettings } from "@/lib/types";
+import { BookmarkExclusionTree } from "@/lib/ui/bookmark-exclusion-tree";
 import {
-  allDataTypeAvailability, ensurePermission, unsupportedReason,
+  allDataTypeAvailability, ensurePermissionWatched, unsupportedReason,
   PERMISSION_FOR_TYPE, type Availability,
 } from "@/lib/utils/capabilities";
 import {
@@ -28,7 +30,7 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
 import {
-  PROVIDERS, providerById, nextcloudUrl, pcloudRegionOf, webdavUrlForCard,
+  providerCards, providerById, providerLabel, nextcloudUrl, pcloudRegionOf, webdavUrlForCard,
   type ProviderId,
 } from "@/lib/storage-providers";
 import { ProviderLogo } from "@/lib/provider-logos";
@@ -59,6 +61,13 @@ export default function OnboardingApp() {
   // from it below (several cards map to the WebDAV backend).
   const [provider, setProvider] = useState<ProviderId | null>(null);
   const [saving, setSaving] = useState(false);
+  // Finish is waiting on the browser's permission prompt, and whether that wait has run
+  // long enough to suggest there is no prompt at all (see ensurePermissionWatched).
+  const [awaitingPerm, setAwaitingPerm] = useState(false);
+  const [permSlow, setPermSlow] = useState(false);
+  // Each Finish press takes a number. A prompt that never answered may still answer after
+  // the user has pressed again, and only the latest press may carry on from there.
+  const finishSeq = useRef(0);
 
   // Google Drive
   const [gdriveUser, setGdriveUser] = useState<{ email: string; displayName: string } | null>(null);
@@ -92,6 +101,10 @@ export default function OnboardingApp() {
     history: false,
     sessions: false,
   });
+  // Bookmarks this device keeps out of sync (#54), offered here because the first sync is
+  // the one that would otherwise push an extension's whole folder to every device.
+  const [exclusions, setExclusions] = useState<BookmarkExclusion[]>([]);
+  const [excludeOpen, setExcludeOpen] = useState(false);
 
   /**
    * What this browser can actually sync — see lib/utils/capabilities.
@@ -105,20 +118,28 @@ export default function OnboardingApp() {
 
   useEffect(() => {
     void (async () => {
-      const found = await allDataTypeAvailability();
-      setAvailability(found);
-      // Bookmarks ships on by default, so on a browser with no bookmarks API the wizard
-      // would otherwise finish with a data type that cannot produce a single byte — and
-      // the progress step would sit there waiting for a count that never moves.
-      setDataTypes((p) => {
-        const next = { ...p };
-        for (const key of Object.keys(next) as DataType[]) {
-          if (found[key]?.state === "unsupported") next[key] = false;
-        }
-        return next;
-      });
+      setAvailability(await allDataTypeAvailability());
     })();
   }, []);
+
+  // Whether the draft has been read back yet (#38). Nothing is written until it has, or the
+  // wizard's blank first render would overwrite the very answers it is about to restore.
+  const [restored, setRestored] = useState(false);
+  // Set once the settings are saved. From then on the draft is only ever removed: a save
+  // still waiting out its debounce would otherwise land after the removal and put the
+  // credentials back for a setup that has already finished.
+  const draftClosed = useRef(false);
+
+  // Bookmarks ships on by default, so on a browser with no bookmarks API the wizard would
+  // otherwise finish with a data type that cannot produce a single byte, and the progress
+  // step would sit there waiting for a count that never moves. Run again once the draft is
+  // back, because a restored choice must not switch a type on that this browser lacks.
+  useEffect(() => {
+    setDataTypes((p) => {
+      const off = (Object.keys(p) as DataType[]).filter((k) => p[k] && availability[k]?.state === "unsupported");
+      return off.length ? { ...p, ...Object.fromEntries(off.map((k) => [k, false])) } : p;
+    });
+  }, [availability, restored]);
 
   const toggleData = (key: keyof typeof dataTypes) => {
     if (unavailable(key)) return;
@@ -222,13 +243,68 @@ export default function OnboardingApp() {
   // offline, so a short passphrase would hollow out the E2EE promise.
   const passTooShort = confirmNeeded && encPass.length < MIN_PASSPHRASE_LENGTH;
 
-  // Read the name the extension detected for this device, so the field starts filled.
+  // Pick up where the wizard was (#38): the draft if there is one, the Drive session if a
+  // sign-in already completed, and otherwise the name the extension detected for this
+  // device, so the field starts filled.
   useEffect(() => {
     void (async () => {
-      const res = await request({ type: "GET_SETTINGS" });
-      if (res.ok && res.res.type === "SETTINGS") setDeviceLabel(res.res.payload.device_label ?? "");
+      try {
+        const [res, draft, driveUser] = await Promise.all([
+          request({ type: "GET_SETTINGS" }),
+          loadDraft().catch(() => null),
+          getStoredGDriveUser().catch(() => null),
+        ]);
+        const detected = res.ok && res.res.type === "SETTINGS" ? res.res.payload.device_label ?? "" : "";
+        // interactiveSignIn stores the session as it completes, so a sign-in that finished
+        // before the page went away is still here. The wizard used to know about it only
+        // from its own state, showed a signed-in user as signed out, and sent them back
+        // through Google's consent: on a phone, the same trip that lost the page.
+        if (driveUser) setGdriveUser(driveUser);
+        if (!draft) {
+          setDeviceLabel(detected);
+          return;
+        }
+        setDeviceLabel(draft.deviceLabel || detected);
+        // Set directly, not through pickProvider, which would swap these very fields out.
+        setProvider(draft.provider);
+        setGithubToken(draft.githubToken);
+        setGithubRepo(draft.githubRepo);
+        setGithubBranch(draft.githubBranch);
+        setWebdavUrl(draft.webdavUrl);
+        setWebdavUser(draft.webdavUser);
+        setWebdavPass(draft.webdavPass);
+        setNcHost(draft.ncHost);
+        setDataTypes(draft.dataTypes);
+        setExclusions(draft.bookmarkExclusions);
+        setExcludeOpen(draft.bookmarkExclusions.length > 0);
+        setStep(draft.step);
+        // The token was checked before the reload, but only the check sets who it belongs
+        // to, and Continue waits for that.
+        if (draft.provider === "github" && draft.githubToken) scheduleVerify(draft.githubToken);
+      } finally {
+        setRestored(true);
+      }
     })();
+    // Mount only: this reads back what the rest of the wizard then owns.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keep the draft as the answers change, from the moment it has been read back until the
+  // settings are saved. Debounced, since the text fields change on every keystroke.
+  useEffect(() => {
+    if (!restored || !(["welcome", "backend", "data", "encrypt"] as string[]).includes(step)) return;
+    const id = setTimeout(() => {
+      if (draftClosed.current) return;
+      void saveDraft({
+        step: step as DraftStep, deviceLabel, provider,
+        githubToken, githubRepo, githubBranch,
+        webdavUrl, webdavUser, webdavPass, ncHost,
+        dataTypes, bookmarkExclusions: exclusions,
+      }).catch(() => { /* a draft that cannot be written costs a retype, nothing more */ });
+    }, 300);
+    return () => clearTimeout(id);
+  }, [restored, step, deviceLabel, provider, githubToken, githubRepo, githubBranch,
+    webdavUrl, webdavUser, webdavPass, ncHost, dataTypes, exclusions]);
 
   useEffect(() => {
     if (step !== "syncing") return;
@@ -312,11 +388,24 @@ export default function OnboardingApp() {
       }
     }
 
+    const seq = ++finishSeq.current;
     if (optPerms.length || origins.length) {
-      const outcome = await ensurePermission({
-        ...(optPerms.length ? { permissions: optPerms } : {}),
-        ...(origins.length ? { origins } : {}),
-      });
+      setPermSlow(false);
+      setAwaitingPerm(true);
+      setSaving(true);
+      const outcome = await ensurePermissionWatched(
+        {
+          ...(optPerms.length ? { permissions: optPerms } : {}),
+          ...(origins.length ? { origins } : {}),
+        },
+        // Give the button back with the hint, so a press after granting the permissions
+        // in the browser's settings can go through.
+        () => { if (seq === finishSeq.current) { setPermSlow(true); setSaving(false); } },
+      );
+      if (seq !== finishSeq.current) return;
+      setAwaitingPerm(false);
+      setPermSlow(false);
+      setSaving(false);
       if (outcome !== "granted") {
         // Two different situations, and telling them apart is the whole point. On a
         // browser that can't show the prompt at all (Firefox for Android), "please
@@ -365,6 +454,7 @@ export default function OnboardingApp() {
         type: "SAVE_SETTINGS",
         payload: {
           ...current, active_backend: backend, backends, enabled_types,
+          excluded_bookmarks: exclusions,
           // Blank falls back to what was detected: an unnamed device is worse than a
           // generically named one, and the field is optional by design.
           device_label: deviceLabel.trim() || current.device_label,
@@ -377,6 +467,10 @@ export default function OnboardingApp() {
         setSetupError(t("onb_err_save", saved.error));
         return;
       }
+      // Everything in the draft is in the settings now, the credentials included, so the
+      // copy goes: a token left behind there is one the user no longer knows about.
+      draftClosed.current = true;
+      await clearDraft().catch(() => {});
 
       // Capture pre-sync counts, show the live progress step, then start the first
       // sync WITHOUT awaiting — the "syncing" step polls GET_STATE and moves to
@@ -520,21 +614,24 @@ export default function OnboardingApp() {
           <p style={S.subtitle}>{t("onb_backend_subtitle")}</p>
 
           <div style={S.backendList}>
-            {PROVIDERS.map((p) => {
+            {providerCards(t("locale_bcp47")).map((p) => {
               const on = provider === p.id;
+              // No Google sign-in here at all (Firefox for Android has no identity API): said on
+              // the card itself, as the unsupported Bookmarks row is, not only once it is picked.
+              const driveOff = p.id === "gdrive" && !DRIVE_AVAILABLE;
               return (
                 <div
                   key={p.id}
-                  style={{ ...S.backendCard, ...(on ? S.backendSelected : {}) }}
-                  role="button" tabIndex={0} aria-pressed={on} aria-label={t("onb_use_provider", p.label)}
+                  style={{ ...S.backendCard, ...(on ? S.backendSelected : {}), ...(driveOff ? { opacity: 0.55 } : {}) }}
+                  role="button" tabIndex={0} aria-pressed={on} aria-label={t("onb_use_provider", providerLabel(p))}
                   onClick={() => pickProvider(p.id)}
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickProvider(p.id); } }}
                 >
                   <div style={S.backendHeader}>
                     <ProviderLogo id={p.id} size={18} color={on ? "var(--text-primary)" : "var(--text-secondary)"} />
                     <div>
-                      <div style={S.backendName}>{p.label}</div>
-                      <div style={S.backendDesc}>{t(p.descKey)}</div>
+                      <div style={S.backendName}>{providerLabel(p)}</div>
+                      <div style={S.backendDesc}>{driveOff ? t("onb_drive_unavailable") : t(p.descKey)}</div>
                     </div>
                     <div style={{ ...S.radio, ...(on ? S.radioChecked : {}) }} />
                   </div>
@@ -572,8 +669,9 @@ export default function OnboardingApp() {
                     </div>
                   )}
 
-                  {/* Koofr / Fastmail (fixed endpoint) */}
-                  {on && (p.id === "koofr" || p.id === "fastmail") && (
+                  {/* Koofr / Fastmail / Nutstore: any preset with a fixed endpoint, keyed on
+                      `fixedUrl` so a new one cannot be left without its fields again. */}
+                  {on && p.fixedUrl && (
                     <div style={S.authPanel} onClick={(e) => e.stopPropagation()}>
                       <div style={hintStyle}>{syncingTo(p.fixedUrl!)}{p.noteKey ? ` ${t(p.noteKey)}` : null}</div>
                       {webdavCreds()}
@@ -678,7 +776,7 @@ export default function OnboardingApp() {
           </div>
 
           <div style={S.navRow}>
-            <button style={S.btnSecondary} onClick={() => setStep("welcome")}>{t("common_back")}</button>
+            <button style={S.btnSecondary} onClick={() => { setSetupError(null); setStep("welcome"); }}>{t("common_back")}</button>
             <button
               style={{ ...S.btnPrimary, flex: 1, opacity: canProceedBackend() ? 1 : 0.45, cursor: canProceedBackend() ? "pointer" : "not-allowed" }}
               onClick={next}
@@ -714,8 +812,8 @@ export default function OnboardingApp() {
               // one thing this user needs to know is that it's the browser, not Konode.
               const off = unavailable(key);
               return (
+              <Fragment key={key}>
               <label
-                key={key}
                 style={{ ...S.dataRow, ...(off ? { opacity: 0.55, cursor: "not-allowed" } : null) }}
                 role="switch"
                 aria-checked={dataTypes[key]}
@@ -726,7 +824,7 @@ export default function OnboardingApp() {
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleData(key); } }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <Icon size={16} color={dataTypes[key] ? "var(--accent)" : "var(--text-secondary)"} />
+                  <Icon size={16} style={{ flexShrink: 0 }} color={dataTypes[key] ? "var(--accent)" : "var(--text-secondary)"} />
                   <div>
                     <div style={{ fontSize: 14, color: "var(--text-primary)" }}>{label}</div>
                     <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
@@ -746,6 +844,33 @@ export default function OnboardingApp() {
                   </div>
                 )}
               </label>
+              {/* Under Bookmarks, while it is on: the first sync is the one that would push an
+                  extension's whole folder to every device, so this is the moment to say no
+                  to it (#54). Outside the row's label, which toggles the type on a click. */}
+              {key === "bookmarks" && !off && dataTypes.bookmarks && (
+                <div style={S.excludeBox}>
+                  <label style={S.excludeToggle}>
+                    <input
+                      type="checkbox" checked={excludeOpen}
+                      style={{ margin: "2px 0 0", accentColor: "var(--accent)", cursor: "pointer", flexShrink: 0 }}
+                      onChange={(e) => {
+                        setExcludeOpen(e.target.checked);
+                        if (!e.target.checked) setExclusions([]);
+                      }}
+                    />
+                    <span>
+                      <span style={{ display: "block", fontSize: 13, color: "var(--text-primary)" }}>{t("bm_exclude_label")}</span>
+                      <span style={{ display: "block", fontSize: 12, color: "var(--text-secondary)" }}>{t("bm_exclude_desc")}</span>
+                    </span>
+                  </label>
+                  {excludeOpen && (
+                    <div style={{ marginTop: 10 }}>
+                      <BookmarkExclusionTree value={exclusions} onChange={setExclusions} />
+                    </div>
+                  )}
+                </div>
+              )}
+              </Fragment>
               );
             })}
           </div>
@@ -760,6 +885,7 @@ export default function OnboardingApp() {
             <div style={{ ...S.backendDesc, marginBottom: 8 }}>{t("onb_device_name_desc")}</div>
             <input
               style={S.input}
+              dir="auto"
               value={deviceLabel}
               onChange={(e) => setDeviceLabel(e.target.value)}
               placeholder={t("onb_device_name_placeholder")}
@@ -771,7 +897,7 @@ export default function OnboardingApp() {
             <div style={{ ...S.errorRow, marginTop: 12, marginBottom: 12 }}><XCircle size={12} /> {setupError}</div>
           )}
           <div style={S.navRow}>
-            <button style={S.btnSecondary} onClick={() => setStep("backend")}>{t("common_back")}</button>
+            <button style={S.btnSecondary} onClick={() => { setSetupError(null); setStep("backend"); }}>{t("common_back")}</button>
             <button style={{ ...S.btnPrimary, flex: 1 }} onClick={() => setStep("encrypt")}>
               {t("common_continue")} <ArrowRight size={14} />
             </button>
@@ -868,11 +994,16 @@ export default function OnboardingApp() {
           {setupError && (
             <div style={{ ...S.errorRow, marginBottom: 12 }}><XCircle size={12} /> {setupError}</div>
           )}
+          {permSlow && (
+            <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 12, lineHeight: 1.5 }}>
+              {t("onb_perm_prompt_slow")}
+            </div>
+          )}
           <div style={S.navRow}>
-            <button style={S.btnSecondary} onClick={() => setStep("data")}>{t("common_back")}</button>
+            <button style={S.btnSecondary} onClick={() => { finishSeq.current++; setAwaitingPerm(false); setPermSlow(false); setSaving(false); setSetupError(null); setStep("data"); }}>{t("common_back")}</button>
             <button style={{ ...S.btnPrimary, flex: 1 }} onClick={finish} disabled={saving}>
               {saving ? <Loader2 size={14} className="spin" /> : <CheckCircle2 size={14} />}
-              {saving ? t("onb_setting_up") : t("onb_finish_sync")}
+              {awaitingPerm && saving ? t("onb_waiting_permission") : saving ? t("onb_setting_up") : t("onb_finish_sync")}
             </button>
           </div>
         </div>
@@ -940,7 +1071,7 @@ export default function OnboardingApp() {
           <h1 style={S.h1}>{t("onb_done_title")}</h1>
           <p style={S.subtitle}>
             {doneNote[0]}
-            <strong>{backend === "gdrive" ? "Google Drive" : backend === "github" ? "GitHub" : "WebDAV"}</strong>
+            <strong>{provider ? providerLabel(providerById(provider)) : backend === "gdrive" ? "Google Drive" : backend === "github" ? "GitHub" : "WebDAV"}</strong>
             {doneNote[1]}
           </p>
           <div style={{ ...S.featureList, marginBottom: 24 }}>
@@ -995,7 +1126,7 @@ const S: Record<string, React.CSSProperties> = {
   h1: { fontSize: 24, fontWeight: 600, letterSpacing: "-0.02em", color: "var(--text-primary)", margin: "0 0 8px" },
   subtitle: { fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.55, margin: "0 0 24px" },
   featureList: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 28 },
-  featureRow: { display: "flex", alignItems: "center", gap: 10 },
+  featureRow: { display: "flex", alignItems: "center", gap: 10, textAlign: "left" },
   btnPrimary: {
     display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
     width: "100%", height: 44, padding: "0 20px", borderRadius: 14, border: "none",
@@ -1062,6 +1193,10 @@ const S: Record<string, React.CSSProperties> = {
   errorRow: { display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--danger)" },
   dataList: { display: "flex", flexDirection: "column", gap: 0, marginBottom: 24,
     borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 2px rgba(17,21,26,.04), 0 0 0 1px rgba(17,21,26,.07)" },
+  excludeBox: {
+    padding: "12px 16px 14px 44px", borderBottom: "1px solid var(--border)", background: "var(--bg-card)",
+  },
+  excludeToggle: { display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer" },
   dataRow: {
     display: "flex", alignItems: "center", justifyContent: "space-between",
     padding: "14px 16px", borderBottom: "1px solid var(--border)",

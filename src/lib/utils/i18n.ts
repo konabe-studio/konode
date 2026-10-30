@@ -42,6 +42,24 @@ export function plural(baseKey: string, count: number, subs?: string | string[])
 }
 
 /**
+ * A value the user (or another program) named, made safe to substitute into a sentence.
+ *
+ * A device called "מחשב 2" dropped into "Asked for by $DEVICE$." is laid out by the
+ * Unicode bidi algorithm together with the sentence around it: its digit and the full stop
+ * join the Hebrew run and land on the wrong side. Wrapping the value in FIRST STRONG
+ * ISOLATE / POP DIRECTIONAL ISOLATE makes it one opaque unit that takes its direction from
+ * its own first strong letter and leaves the sentence alone, in both directions: an Arabic
+ * catalogue gets a Latin device name back intact too. Both marks are invisible.
+ *
+ * Only for text that is DISPLAYED. A value written back into an input or into storage
+ * would carry the marks with it. A value rendered as its own element uses `<bdi>`, which is
+ * the same isolation done by the markup.
+ */
+export function isolate(value: string): string {
+  return `⁨${value}⁩`;
+}
+
+/**
  * A one-placeholder message split into the text before and after the placeholder, so the
  * value can be rendered as its own element — `<code>` for a URL, `<b>` for an emphasised
  * word — instead of being flattened into the sentence.
@@ -59,4 +77,37 @@ export function tParts(key: string): [string, string] {
   const SENTINEL = "\u0000";
   const [before, after = ""] = t(key, SENTINEL).split(SENTINEL);
   return [before, after];
+}
+
+/**
+ * Label `<html lang>` with the language the page is ACTUALLY rendered in.
+ *
+ * The three HTML entry points ship `lang="en"`, because that is what they are before React
+ * runs. Once it has, the page is whatever language the catalogues answered in, and a page
+ * that says English while showing Chinese is not a cosmetic inaccuracy. Chrome reads that
+ * mismatch as a page worth translating, and a user with "always translate English" set
+ * gets it done silently, with no bar and no click.
+ *
+ * Machine translation replaces React's own text nodes with `<font>` wrappers. The next
+ * render then tries to remove a node whose parent is no longer the one React recorded, and
+ * the whole surface dies with "Failed to execute 'removeChild' on 'Node'" (#36: the
+ * wizard, on the click that swaps the Google button's icon for a spinner). `translate="no"`
+ * on `<html>` is the guarantee that stops it; this function removes the reason Chrome
+ * wanted to translate in the first place, and is the part screen readers care about, since
+ * they otherwise pronounce every language with English phonetics.
+ *
+ * **The tag comes from the catalogue, not from `i18n.getUILanguage()`.** That API reports
+ * the BROWSER's language, which is only the same thing when we ship that language: set to
+ * French, it says `fr` while `chrome.i18n` falls back to English per message and the user
+ * reads English. Labelling that page `fr` would invite exactly the translation this is
+ * here to prevent, from the other direction. `locale_bcp47` is a message like any other,
+ * so it rides the same per-message fallback as the text beside it and can only name the
+ * catalogue that actually answered.
+ */
+export function applyDocumentLanguage(): void {
+  const tag = t("locale_bcp47");
+  // `t()` answers an unknown key with the key itself, which is a deliberate choice for a
+  // visible label and a bad one for an attribute. Only a plausible tag gets written; the
+  // markup's `lang="en"` is the right thing to leave alone otherwise.
+  if (/^[a-z]{2,3}(-[A-Za-z]{2,8})*$/.test(tag)) document.documentElement.lang = tag;
 }

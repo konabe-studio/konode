@@ -8,6 +8,19 @@ export class HttpError extends Error {
   }
 }
 
+/**
+ * What to say when the storage answers 429 Too Many Requests.
+ *
+ * Every backend said "HTTP 429" or "WebDAV PUT failed: 429" and nothing else, which tells
+ * someone it failed and not what to do (reported on appinn, 2026-09-10: "keeps returning
+ * HTTP 429, tried several, none work"). A provider that meters requests, Nutstore's 600 per
+ * 30 minutes the best known, is the usual reason, and the one lever the user holds is the
+ * sync interval. Cure first, status last: the popup shows two lines of this.
+ */
+export function rateLimitMessage(where: string): string {
+  return `Too many requests: ${where} is turning Konode away for a while. Raise Sync interval in Settings → Device to stay under its limit. (HTTP 429)`;
+}
+
 /** Retry only transient failures: network errors and HTTP 408/423/429/5xx. */
 export function defaultShouldRetry(err: Error): boolean {
   if (err instanceof HttpError) {

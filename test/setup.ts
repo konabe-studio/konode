@@ -10,6 +10,8 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const store = new Map();
+// chrome.storage.session: in memory on a real browser too, gone when the browser closes.
+const sessionStore = new Map();
 
 // ─── chrome.bookmarks in-memory fake ───────────────────────────────────────
 // Flat node map (id → node); the tree is materialized on demand. Models Chrome's
@@ -138,6 +140,14 @@ function bmChildren(parentId) {
     .sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
 }
 
+// The browser keeps a folder's children at contiguous indices, so a removal closes the gap.
+// The fake used to leave it open, and an index read from getChildren (a position) then landed
+// somewhere else in a later create: the #29 restore run put `L4` before `F2 renamed` here
+// while the device, correctly, put it after. `move` has always re-packed.
+function bmRepack(parentId) {
+  bmChildren(parentId).forEach((s, i) => { s.index = i; });
+}
+
 function bmBuild(id) {
   const n = bmNodes.get(id);
   const node = { id: n.id, parentId: n.parentId, title: n.title, dateAdded: n.dateAdded, index: n.index };
@@ -176,15 +186,19 @@ function makeBookmarks() {
       return Promise.resolve(bmBuild(id));
     },
     remove: (id) => {
+      const parentId = bmNodes.get(id)?.parentId;
       bmNodes.delete(id);
+      if (parentId) bmRepack(parentId);
       return Promise.resolve();
     },
     removeTree: (id) => {
+      const parentId = bmNodes.get(id)?.parentId;
       const collect = (pid) => {
         for (const c of bmChildren(pid)) { collect(c.id); bmNodes.delete(c.id); }
       };
       collect(id);
       bmNodes.delete(id);
+      if (parentId) bmRepack(parentId);
       return Promise.resolve();
     },
     move: (id, dest) => {
@@ -280,6 +294,23 @@ function makeChrome() {
           return Promise.resolve();
         },
       },
+      session: {
+        get: (keys) => {
+          const out = {};
+          for (const k of typeof keys === "string" ? [keys] : Array.isArray(keys) ? keys : [...sessionStore.keys()]) {
+            if (sessionStore.has(k)) out[k] = sessionStore.get(k);
+          }
+          return Promise.resolve(out);
+        },
+        set: (obj) => {
+          for (const [k, v] of Object.entries(obj)) sessionStore.set(k, v);
+          return Promise.resolve();
+        },
+        remove: (key) => {
+          sessionStore.delete(key);
+          return Promise.resolve();
+        },
+      },
     },
     bookmarks: makeBookmarks(),
     tabs: tabsApi,
@@ -336,8 +367,48 @@ if (typeof navigator === "undefined") {
 
 beforeEach(() => {
   store.clear();
+  sessionStore.clear();
   resetBookmarks();
   resetHistory();
   resetTabs();
   alarmStore = new Map();
 });
+
+// ─── Device switching, for the three-device tests ──────────────────────────
+//
+// A group bug needs a group. #31 took three devices, a blocked deletion and several
+// cycles before anyone could see it, and a suite that can only ever BE one browser
+// cannot produce that shape at all, which is why the rules were provable in isolation
+// while the loop they describe went on running in the field for weeks.
+//
+// What makes a device a device here is its bookmark tree, its `chrome.storage.local`
+// and its history, so a device IS a snapshot of those three and switching is a swap.
+// The raw maps are cloned rather than replayed through the chrome API on purpose: a
+// replay hands every bookmark a new local id, and the id-keyed caches (the bookmark
+// cache behind folder renames, the move logs) would then be describing a tree that no
+// longer exists. Ids have to survive the switch for the same reason they survive a
+// browser restart.
+(globalThis as any).__konodeDevices = {
+  snapshot: () => ({
+    store: new Map([...store].map(([k, v]) => [k, structuredClone(v)])),
+    bookmarks: new Map([...bmNodes].map(([k, v]) => [k, { ...v }])),
+    seq: bmSeq,
+    history: new Map([...histEntries].map(([k, v]) => [k, { ...v }])),
+  }),
+  restore: (snap) => {
+    store.clear();
+    for (const [k, v] of snap.store) store.set(k, structuredClone(v));
+    bmNodes = new Map([...snap.bookmarks].map(([k, v]) => [k, { ...v }]));
+    bmSeq = snap.seq;
+    histEntries = new Map([...snap.history].map(([k, v]) => [k, { ...v }]));
+  },
+  // A brand-new browser. `seq` starts each device's local ids in its own range, so no
+  // assertion can pass by accident on two devices agreeing about an id. Real ones never
+  // do, and a cross-device id match in this suite would be a fake's artefact.
+  fresh: (seq) => {
+    store.clear();
+    resetBookmarks();
+    resetHistory();
+    bmSeq = seq;
+  },
+};

@@ -6,6 +6,7 @@
 // format changes, so switching a card is not a breaking change.
 
 import type { BackendType } from "@/lib/types";
+import { t } from "@/lib/utils/i18n";
 
 export type ProviderId =
   | "gdrive" | "koofr" | "pcloud" | "nextcloud" | "fastmail" | "jianguoyun" | "webdav" | "github";
@@ -14,9 +15,11 @@ export interface ProviderDef {
   id: ProviderId;
   backend: BackendType;
   label: string;
+  /** Message key for a name with a word in it to translate. Read names through `providerLabel()`. */
+  labelKey?: string;
   /** Message key, not text — resolve with `t()` at the render site. */
   descKey: string;
-  fixedUrl?: string;                                        // koofr, fastmail
+  fixedUrl?: string;                                        // koofr, fastmail, jianguoyun
   regions?: { id: string; label: string; url: string }[];  // pcloud (EU/US)
   needsHost?: boolean;                                      // nextcloud/ownCloud
   custom?: boolean;                                         // generic WebDAV (Synology, kDrive, …)
@@ -30,6 +33,7 @@ export interface ProviderDef {
 // host, so they take a host field (Nextcloud) or a full custom URL (WebDAV) instead.
 // Card order (2026-07): Google Drive leads (most familiar entry point), then the
 // privacy-friendly own-storage options, GitHub, and the generic WebDAV catch-all last.
+// Simplified Chinese moves Nutstore to the front: see `providerCards()`.
 export const PROVIDERS: ProviderDef[] = [
   {
     id: "gdrive", backend: "gdrive", label: "Google Drive",
@@ -87,10 +91,36 @@ export const PROVIDERS: ProviderDef[] = [
     descKey: "provider_github_desc",
   },
   {
-    id: "webdav", backend: "webdav", label: "WebDAV (other)", custom: true,
+    id: "webdav", backend: "webdav", label: "WebDAV (other)", labelKey: "provider_webdav_other", custom: true,
     descKey: "provider_webdav_desc",
   },
 ];
+
+/** The cards in the order a picker shows them, for the language the page is rendered in.
+ *
+ *  Simplified Chinese puts Nutstore first. It is the language most Konode users read the
+ *  UI in (2026-10), and from the mainland Google Drive answers only through a VPN, which a
+ *  background sync every minute would need held open for good. Nutstore is the backend
+ *  that works there without one, and leading with Drive sent that audience to the one card
+ *  that fails for it. Traditional Chinese keeps the default order: Taiwan and Hong Kong
+ *  reach Drive directly.
+ *
+ *  Pass `t("locale_bcp47")`, the CATALOGUE's own tag, not the browser's language, for the
+ *  reason `applyDocumentLanguage()` gives: it names the language the page is actually in. */
+export function providerCards(localeTag: string): ProviderDef[] {
+  if (localeTag !== "zh-CN") return PROVIDERS;
+  return [
+    ...PROVIDERS.filter((p) => p.id === "jianguoyun"),
+    ...PROVIDERS.filter((p) => p.id !== "jianguoyun"),
+  ];
+}
+
+/** A card's name as the page shows it: the brand name, which is never translated, or for the
+ *  catch-all WebDAV card its catalogue entry, since "(other)" is a word like any other. It
+ *  stayed English in every language until QA AR (2026-10-26). */
+export function providerLabel(p: ProviderDef): string {
+  return p.labelKey ? t(p.labelKey) : p.label;
+}
 
 export function providerById(id: ProviderId): ProviderDef {
   const p = PROVIDERS.find((x) => x.id === id);
@@ -143,10 +173,32 @@ export function webdavUrlForCard(id: ProviderId, keptUrl: string): string {
   return keptUrl; // custom WebDAV — the user's own URL, restored as typed
 }
 
-/** Which provider card matches a saved config (for seeding the selected card). */
+/**
+ * Does `url` read exactly as the Nextcloud / ownCloud card would build it for `username`?
+ *
+ * That card does not keep a URL, it rebuilds one from the host and the username every time
+ * either changes. A server URL whose `files/<name>/` is not the login name (a Nextcloud app
+ * password created while signed in with an email address only works with that email as the
+ * username, #51), or one that points into a subfolder, can only be kept by the WebDAV card.
+ */
+export function isNextcloudCardUrl(url: string, username: string | undefined): boolean {
+  const base = nextcloudBaseFromUrl(url);
+  return !!base && sameUrl(nextcloudUrl(base, username ?? ""), url);
+}
+
+/**
+ * Which provider card matches a saved config (for seeding the selected card).
+ *
+ * A files-DAV address counts as Nextcloud only when the Nextcloud card would build that very
+ * address from the saved username. It used to count whenever the address merely contained
+ * `/remote.php/dav/`, so a setup made on the WebDAV card showed up as the Nextcloud card, and
+ * changing the username or the server there silently rewrote the address into one that no
+ * longer worked.
+ */
 export function providerFromConfig(
   backend: BackendType | null | undefined,
-  webdavUrl: string | undefined
+  webdavUrl: string | undefined,
+  webdavUsername?: string,
 ): ProviderId | null {
   if (backend === "gdrive") return "gdrive";
   if (backend === "github") return "github";
@@ -157,7 +209,7 @@ export function providerFromConfig(
       if (p.fixedUrl && sameUrl(p.fixedUrl, url)) return p.id;
       if (p.regions?.some((r) => sameUrl(r.url, url))) return p.id;
     }
-    if (/\/remote\.php\/dav\//i.test(url)) return "nextcloud";
+    if (isNextcloudCardUrl(url, webdavUsername)) return "nextcloud";
     return "webdav";
   }
   return null;

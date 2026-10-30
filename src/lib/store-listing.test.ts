@@ -10,11 +10,14 @@ import { PROVIDERS } from "@/lib/storage-providers";
 // the honest place for "we have one ready for Koofr": the store page says what Konode
 // connects to, which is three backends, and the wizard says which servers have a card.
 //
-// The copy itself is NOT in the repo (`store-listing/` is gitignored along with the other
-// submission material, which carries an OAuth secret placeholder). So this suite skips
-// where the directory is absent, on CI and on a fresh clone, and runs on the machine the
-// submission is actually made from, which is the only one where the mistake can be made.
-const DIR = resolve(__dirname, "../../store-listing");
+// The copy itself is NOT in the repo. It sits with the other submission material, which
+// carries an OAuth secret placeholder, in a private checkout of the working docs at
+// `internal/`. It used to sit at the root, gitignored, and a setup step now moves it into
+// that checkout on every machine, so a path still pointing at the root would make this suite
+// skip everywhere, including where the copy is. It skips where the directory is absent, on
+// CI and on a clone without that checkout, and runs wherever the copy is edited and pasted
+// from, which is the only place the mistake can be made.
+const DIR = resolve(__dirname, "../../internal/store-listing");
 const SHIPPED = JSON.parse(
   readFileSync(resolve(__dirname, "../../shipped-languages.json"), "utf8")
 ) as string[];
@@ -51,9 +54,9 @@ const descriptionFile = (loc: string): string => `cws-${loc}-description.txt`;
 
 describe.skipIf(!existsSync(DIR))("Chrome Web Store listing copy", () => {
   it("has a summary and a description for every listing language", () => {
-    // The store keeps them per language, so a copy change is five edits. A language left
-    // behind goes on serving the old text to everyone whose browser is set to it, which is
-    // invisible from the dashboard's default view.
+    // The store keeps them per language, so a copy change is one edit per language. A
+    // language left behind goes on serving the old text to everyone whose browser is set to
+    // it, which is invisible from the dashboard's default view.
     for (const loc of LOCALES) {
       expect(existsSync(join(DIR, summaryFile(loc))), summaryFile(loc)).toBe(true);
       expect(existsSync(join(DIR, descriptionFile(loc))), descriptionFile(loc)).toBe(true);

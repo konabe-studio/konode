@@ -1,7 +1,7 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { SyncEngine, statusAfterSync, conflictsThatCanExist, conflictsStillOpen, explainSyncFailure, backendOrigins } from "@/lib/sync/sync-engine";
 import { HttpError } from "@/lib/utils/retry";
-import { BADGE_TEXT, BADGE_COLORS } from "@/lib/constants";
+import { BADGE_TEXT, BADGE_COLORS, PERMISSION_LOST_PREFIX } from "@/lib/constants";
 import { createKeyVerifier } from "@/lib/crypto/encryption";
 import { DEFAULT_SETTINGS, DEFAULT_STATE, getState, setState, setTombstones, acquireSyncLock, KEYS, getRemoteSessions, normalizeRemoteExtensions, getBulkDeleteApproval, setBulkDeleteApproval, getListFailureNoted } from "@/lib/utils/storage";
 import type {
@@ -432,6 +432,28 @@ describe("SyncEngine — one data type's failure must not abort the others", () 
     expect(backend.uploads.map((u) => u.data_type)).toEqual(["bookmarks"]);
   });
 
+  it("says a rate limit once, with what to do, instead of once per type", async () => {
+    // "WebDAV PUT failed: 429" per type told the user it failed and nothing else.
+    class RateLimitedBackend extends FakeBackend {
+      downloadAll(): Promise<SyncPacket[]> {
+        return Promise.reject(new HttpError(429, "WebDAV list failed: 429"));
+      }
+    }
+    const engine = new SyncEngine({
+      ...DEFAULT_SETTINGS,
+      device_id: "me",
+      active_backend: "webdav",
+      backends: [{ type: "webdav", label: "Nutstore", enabled: true, webdav: { url: "https://dav.jianguoyun.com/dav/", username: "u", password: "p" } }],
+    }, () => {});
+
+    const problems = await priv(engine).syncAllTypes(["history", "bookmarks"], new RateLimitedBackend(), DEFAULT_STATE);
+
+    expect(new Set(problems).size).toBe(1);
+    expect(problems[0]).toContain("dav.jianguoyun.com");
+    expect(problems[0]).toContain("Sync interval");
+    expect(problems[0]).not.toContain("history:");
+  });
+
   it("reports EVERY failing type, not just the first", async () => {
     const engine = makeEngine();
     const backend = new FailingBackend(["history", "extensions"]);
@@ -514,6 +536,33 @@ describe("SyncEngine — one data type's failure must not abort the others", () 
     } finally {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (chrome as any).bookmarks = bookmarks;
+    }
+  });
+
+  it("skips History where the browser does not know the permission, rather than asking for it", async () => {
+    // Firefox for Android (158, from the device): no history API, and contains() THROWS
+    // for `history` because the name is not in its schema. That is the case above, not the
+    // missing-permission one: no settings screen there can grant it, so a "permission"
+    // problem would sit in the popup for good over something nobody can fix.
+    const engine = makeEngine();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    const history = chrome.history;
+    const permissions = chrome.permissions;
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    delete (chrome as any).history;
+    (chrome as any).permissions = {
+      contains: () => Promise.reject(new Error('Type error for parameter permissions (Error processing permissions.0: Value "history" must either: …)')),
+      request: () => Promise.resolve(false),
+    };
+    try {
+      const problems = await priv(engine).syncAllTypes(["history", "bookmarks"], backend, DEFAULT_STATE);
+      expect(problems).toEqual([]);
+      expect(backend.uploads.map((u) => u.data_type)).toEqual(["bookmarks"]);
+    } finally {
+      (chrome as any).history = history;
+      (chrome as any).permissions = permissions;
+      /* eslint-enable @typescript-eslint/no-explicit-any */
     }
   });
 });
@@ -1108,6 +1157,20 @@ describe("SyncEngine.sync — reports whether it actually ran", () => {
     expect(await makeEngine().sync()).toBe("no-backend");
   });
 
+  it("keeps a device that is still being set up out of the Activity log", async () => {
+    // The sync alarm runs from install, so every minute of an unfinished setup wrote
+    // "No active backend configured" as a warning, and it was the first thing a new
+    // device's log showed. Nothing is wrong yet; the console still says it.
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    await makeEngine().sync();
+    await makeEngine().sync();
+    await new Promise((r) => setTimeout(r, 0)); // logger fires appendAudit unawaited
+
+    const entries = ((await chrome.storage.local.get(KEYS.AUDIT_LOG))[KEYS.AUDIT_LOG] ?? []) as
+      { detail?: string }[];
+    expect(entries.filter((e) => e.detail?.includes("No active backend"))).toHaveLength(0);
+  });
+
   it("reports no-backend when active_backend has no matching config", async () => {
     const engine = new SyncEngine(
       { ...DEFAULT_SETTINGS, device_id: "me", active_backend: "github", backends: [] },
@@ -1155,6 +1218,31 @@ describe("SyncEngine.sync — reports whether it actually ran", () => {
 
     expect(await engine.sync()).toBe("nothing-enabled");
     expect((await getState()).status).toBe("conflict");
+  });
+
+  it("says so once, not on every alarm, while everything stays switched off", async () => {
+    // Checklist O: the early return made no request, which is the part that matters, but it
+    // wrote the same status back and broadcast it every minute, waking an open popup to say
+    // nothing had changed.
+    await setState({ status: "success" });
+    const broadcasts: string[] = [];
+    const engine = new SyncEngine(
+      {
+        ...DEFAULT_SETTINGS,
+        device_id: "me",
+        active_backend: "github",
+        backends: [{ type: "github", label: "GitHub", enabled: true, github: { token: "t", repo: "o/r" } }],
+        enabled_types: [],
+      },
+      (st) => broadcasts.push(st.status)
+    );
+    const writes = vi.spyOn(chrome.storage.local, "set");
+
+    for (let i = 0; i < 3; i++) expect(await engine.sync()).toBe("nothing-enabled");
+
+    expect(broadcasts).toEqual(["idle"]); // "Synced" becomes "Ready" once
+    expect(writes.mock.calls.filter(([items]) => KEYS.STATE in (items as object))).toHaveLength(1);
+    writes.mockRestore();
   });
 
   it("still runs for an explicitly named type, which is how the approval path syncs", async () => {
@@ -1816,6 +1904,20 @@ describe("explainSyncFailure: a request that never left the browser", () => {
     expect(msg).toContain("NetworkError");
   });
 
+  it("begins the way Settings recognises, so it adds no second piece of advice", async () => {
+    // The device list and the restore points followed this with "Check the connection in
+    // Storage and reopen this tab", the same instruction twice in two different voices.
+    // Settings leaves that line out for a message starting with the shared prefix, so the
+    // two only work together while this holds.
+    permissionsHeld(false);
+    const lost = await explainSyncFailure(new TypeError("NetworkError when attempting to fetch resource"), webdav);
+    expect(lost.startsWith(PERMISSION_LOST_PREFIX)).toBe(true);
+
+    permissionsHeld(true);
+    const network = await explainSyncFailure(new TypeError("NetworkError when attempting to fetch resource"), webdav);
+    expect(network.startsWith(PERMISSION_LOST_PREFIX)).toBe(false);
+  });
+
   it("leaves the message alone when the permission IS held", async () => {
     // Then the network really is the problem, and blaming a permission would send the user
     // to the wrong screen.
@@ -1831,6 +1933,16 @@ describe("explainSyncFailure: a request that never left the browser", () => {
     const msg = await explainSyncFailure(new HttpError(401, "WebDAV PUT failed: 401"), webdav);
 
     expect(msg).toBe("WebDAV PUT failed: 401");
+  });
+
+  it("turns a 429 into the advice to raise the sync interval, naming the host", async () => {
+    permissionsHeld(true);
+    const msg = await explainSyncFailure(new HttpError(429, "WebDAV PUT failed: 429"), webdav);
+
+    // Cure first: the popup shows two lines of this.
+    expect(msg.startsWith("Too many requests: app.koofr.net")).toBe(true);
+    expect(msg).toContain("Sync interval");
+    expect(msg).toContain("HTTP 429");
   });
 
   it("knows which origins each backend needs", () => {

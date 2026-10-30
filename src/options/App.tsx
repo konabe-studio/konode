@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef, Fragment } from "react";
 import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, SyncExtension, SnapshotMeta, DeviceInfo } from "@/lib/types";
 import { sendMessage, request } from "@/lib/utils/messaging";
-import { t, tParts, plural } from "@/lib/utils/i18n";
+import { t, tParts, plural, isolate } from "@/lib/utils/i18n";
 import { interactiveSignIn, isDriveAuthAvailable, clearGDriveSession } from "@/lib/backends/gdrive-oauth";
 import {
   allDataTypeAvailability, dataTypeAvailability, dataTypeApiPresent, ensurePermission,
@@ -30,11 +30,16 @@ import {
   Puzzle, AlertTriangle, CheckCircle2, XCircle,
   Loader2, ExternalLink, User, LogOut, Eye, EyeOff,
   Pencil, Key, Copy, Check, ArrowRight,
-  Trash2, RotateCcw, Camera, Mail,
+  Trash2, RotateCcw, Camera, Mail, Star,
 } from "lucide-react";
+import { BookmarkExclusionTree } from "@/lib/ui/bookmark-exclusion-tree";
 // Shown in the About section. The manifest is the single source of truth for the
 // version — bump `package.json` and the build stamps it into the manifest.
 const APP_VERSION = browser.runtime.getManifest().version;
+// The store this install came from, for the rating row under Feedback. The row is always
+// there; following it also ends the popup's one-time card (lib/rate-prompt.ts), so nobody
+// is asked for a rating they already gave. Null on a build no store knows.
+const REVIEW_PAGE = reviewPageFor(browser.runtime.id);
 
 function useScrollEdges<T extends HTMLElement>(axis: "x" | "y", revision: unknown = 0) {
   // A CALLBACK ref, not useRef, and that distinction was the whole bug. The audit list
@@ -82,18 +87,20 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 }
 
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
-import { KEYS, normalizeRemoteExtensions, type AuditEntry } from "@/lib/utils/storage";
+import { KEYS, normalizeRemoteExtensions, setRateAnswered, type AuditEntry } from "@/lib/utils/storage";
+import { auditLogText } from "@/lib/utils/audit-text";
 import { isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl, storeUrlFor, inferStore, STORE_NAME, type LocalExtLike } from "@/lib/utils/extensions-match";
-import { BACKEND_LABEL } from "@/lib/constants";
+import { BACKEND_LABEL, PERMISSION_LOST_PREFIX, STATE_UPDATE } from "@/lib/constants";
 import {
-  PROVIDERS, providerById, providerFromConfig, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf,
+  providerCards, providerById, providerFromConfig, providerLabel, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf,
   webdavUrlForCard,
   type ProviderId,
 } from "@/lib/storage-providers";
 import { ProviderLogo } from "@/lib/provider-logos";
+import { reviewPageFor } from "@/lib/store-review";
 
 // ─── Secret field ───────────────────────────────────────────────────────────
 // Masks a *saved* secret (token / password / passphrase): once a value exists, the
@@ -249,6 +256,13 @@ const formatBytes = (n: number): string => {
   return `${(n / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 };
 
+// When an Activity entry was written, to the second, in the reader's own locale.
+const auditTime = (iso: string): string =>
+  new Date(iso).toLocaleString([], {
+    month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+
 // Backend label stamped on a newly created BackendConfig. The user-facing card
 // copy and icons live in the shared storage-providers module.
 
@@ -265,6 +279,13 @@ export default function OptionsApp() {
     const hash = window.location.hash.replace("#", "");
     return NAV.some((n) => n.id === hash) ? (hash as NavSection) : "backend";
   });
+  // And written back, so a reload lands on the tab you were reading. Only the popup's deep
+  // link ever set the hash, so every other visit had none, and F5 on Activity went back to
+  // Storage: exactly the refresh somebody makes while waiting for a sync to show up there.
+  // replaceState rather than assigning the hash, so switching tabs does not fill up Back.
+  useEffect(() => {
+    if (window.location.hash !== `#${activeNav}`) history.replaceState(null, "", `#${activeNav}`);
+  }, [activeNav]);
   const [saving, setSaving]       = useState(false);
   const [saveOk, setSaveOk]       = useState(false);
   const [testStatus, setTestStatus] = useState<{ ok: boolean; message: string } | null>(null);
@@ -279,6 +300,9 @@ export default function OptionsApp() {
   // next to the row they belong to — see toggleDataType and the Data Types tab.
   const [availability, setAvailability] = useState<Partial<Record<DataType, Availability>>>({});
   const [typeError, setTypeError] = useState<{ type: DataType; message: string } | null>(null);
+  // Whether the bookmark picker is open (#54). Null until the user touches the switch: it
+  // then follows the stored list, so a device with exclusions opens with them on show.
+  const [excludeOpen, setExcludeOpen] = useState<boolean | null>(null);
 
   /**
    * Read on mount, and again whenever a permission changes.
@@ -391,6 +415,7 @@ export default function OptionsApp() {
   // the Restore points card ninety lines above the button that produced it: the one place
   // nobody who just clicked Clear log is looking.
   const [auditMsg, setAuditMsg] = useState<string | null>(null);
+  const [logCopied, setLogCopied] = useState(false);
   // "loading" | "ok" | an error message — so an empty list can be told apart from a
   // list we never managed to read. See the Activity effect below.
   const [snapLoad, setSnapLoad] = useState<"loading" | "ok" | string>("loading");
@@ -431,9 +456,19 @@ export default function OptionsApp() {
       setSettings(res.payload);
       setSavedFingerprint(settingsFingerprint(res.payload));
       setInitialPass(res.payload.encryption_passphrase ?? "");
-      const url = res.payload.backends.find((b) => b.type === "webdav")?.webdav?.url;
-      setSavedProvider(providerFromConfig(res.payload.active_backend, url));
+      const dav = res.payload.backends.find((b) => b.type === "webdav")?.webdav;
+      setSavedProvider(providerFromConfig(res.payload.active_backend, dav?.url, dav?.username));
     }
+  }, []);
+
+  // Read on mount and again after every sync, which is what writes it.
+  const loadRemoteExtensions = useCallback(() => {
+    void browser.storage.local.get(KEYS.REMOTE_EXTENSIONS).then((r) => {
+      // Use the normalizer: the value is a device-keyed map now, not the legacy
+      // single object — reading `.extensions` off the map returned nothing, so the
+      // options "missing on this device" list stayed empty (the popup was correct).
+      setRemoteExtensions(normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]));
+    }).catch(() => { /* the peer cache is a display nicety; a read failure must not blank Settings */ });
   }, []);
 
   useEffect(() => {
@@ -444,13 +479,8 @@ export default function OptionsApp() {
       const s = r[KEYS.GDRIVE_SESSION];
       if (s) setGdriveUser({ email: s.email ?? "", displayName: s.displayName ?? "" });
     }).catch(() => { /* no session to show is the normal case, not an error */ });
-    void browser.storage.local.get(KEYS.REMOTE_EXTENSIONS).then((r) => {
-      // Use the normalizer: the value is a device-keyed map now, not the legacy
-      // single object — reading `.extensions` off the map returned nothing, so the
-      // options "missing on this device" list stayed empty (the popup was correct).
-      setRemoteExtensions(normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]));
-    }).catch(() => { /* the peer cache is a display nicety; a read failure must not blank Settings */ });
-  }, [load]);
+    loadRemoteExtensions();
+  }, [load, loadRemoteExtensions]);
 
   // Keyed on the availability the permission listener already refreshes rather than on the
   // mount, because the permission can come and go while Settings is open: read once, this
@@ -510,8 +540,8 @@ export default function OptionsApp() {
   // the user's own selection.
   useEffect(() => {
     if (selectedProvider !== null || !settings) return;
-    const url = settings.backends.find((b) => b.type === "webdav")?.webdav?.url;
-    setSelectedProvider(providerFromConfig(settings.active_backend, url));
+    const dav = settings.backends.find((b) => b.type === "webdav")?.webdav;
+    setSelectedProvider(providerFromConfig(settings.active_backend, dav?.url, dav?.username));
   }, [settings, selectedProvider]);
 
   // Devices come from the backend too, so they wait for the tab as well. Reused by the
@@ -551,20 +581,88 @@ export default function OptionsApp() {
   };
 
   // Load restore points when the Activity tab opens (LIST_SNAPSHOTS hits the backend,
-  // so don't fetch it until the user actually looks).
+  // so don't fetch it until the user actually looks). `quiet` is a refresh of a list that
+  // is already on screen, which keeps it there instead of blinking to "loading" each cycle.
+  const loadSnapshots = useCallback(async (quiet = false) => {
+    if (!quiet) setSnapLoad("loading");
+    // "No restore points yet" must never stand in for "the list failed to load" — on a
+    // recovery screen that is the worst possible lie. The ERROR response used to be
+    // dropped and the rejection was unhandled, so both read as "you have no backups".
+    const r = await request({ type: "LIST_SNAPSHOTS" });
+    if (!r.ok) { setSnapLoad(r.error); return; }
+    if (r.res.type === "SNAPSHOTS") setSnapshots(r.res.payload);
+    setSnapLoad("ok");
+  }, []);
+
   useEffect(() => {
     if (activeNav !== "activity") return;
-    void (async () => {
-      setSnapLoad("loading");
-      // "No restore points yet" must never stand in for "the list failed to load" — on a
-      // recovery screen that is the worst possible lie. The ERROR response used to be
-      // dropped and the rejection was unhandled, so both read as "you have no backups".
-      const r = await request({ type: "LIST_SNAPSHOTS" });
-      if (!r.ok) { setSnapLoad(r.error); return; }
-      if (r.res.type === "SNAPSHOTS") setSnapshots(r.res.payload);
-      setSnapLoad("ok");
-    })();
-  }, [activeNav]);
+    void loadSnapshots();
+  }, [activeNav, loadSnapshots]);
+
+  /**
+   * Settings follows the sync while it is open, the way the popup does.
+   *
+   * Everything on Activity was read once: the stats and the Blocked deletion card on mount,
+   * the device list and the restore points when the tab opened. So with Settings open, a
+   * deletion blocked on the next cycle rang the popup's banner and left this page saying
+   * "No restore points yet", under a device list still quoting the peer's upload from before
+   * it. Only F5 caught up, and F5 also threw you back to Storage (see the hash above).
+   *
+   * The state comes with every STATE_UPDATE the worker already broadcasts, and the log is
+   * followed in storage as each line is written, so both cost nothing. Devices and restore
+   * points live on the backend, a listing plus a read per device, so they are re-read when a
+   * sync FINISHES, which is what changes them, and only while Activity is on screen: a
+   * Settings tab left open in the background would otherwise spend requests every minute,
+   * and a free Nutstore account counts every one.
+   */
+  useEffect(() => {
+    const handler = (msg: { type: string; payload: SyncState }) => {
+      if (msg.type === STATE_UPDATE) setSyncState(msg.payload);
+    };
+    browser.runtime.onMessage.addListener(handler);
+    return () => browser.runtime.onMessage.removeListener(handler);
+  }, []);
+
+  useEffect(() => {
+    if (!eventPresent("storage", "onChanged")) return;
+    const handler = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area !== "local" || !changes[KEYS.AUDIT_LOG]) return;
+      setAudit((changes[KEYS.AUDIT_LOG].newValue as AuditEntry[] | undefined) ?? []);
+    };
+    browser.storage.onChanged.addListener(handler);
+    return () => browser.storage.onChanged.removeListener(handler);
+  }, []);
+
+  const lastStatus = useRef<SyncState["status"] | null>(null);
+  // A sync that finished while Activity was open but hidden, owed a re-read on the way back.
+  // Skipping the read while hidden is what keeps a background tab from spending requests; not
+  // making it up afterwards is what left the device list quoting a peer's old upload time,
+  // with the page in plain view, until the next sync or a reload. Seen with Settings behind
+  // another browser's window during the 1.4.0 pass.
+  const missedWhileHidden = useRef(false);
+  useEffect(() => {
+    const status = syncState?.status ?? null;
+    const finished = lastStatus.current === "syncing" && status !== "syncing";
+    lastStatus.current = status;
+    if (!finished) return;
+    loadRemoteExtensions();
+    if (activeNav !== "activity") return;
+    if (document.visibilityState !== "visible") { missedWhileHidden.current = true; return; }
+    void loadDevices();
+    void loadSnapshots(true);
+  }, [syncState?.status, activeNav, loadDevices, loadSnapshots, loadRemoteExtensions]);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible" || !missedWhileHidden.current) return;
+      if (activeNav !== "activity") return; // opening Activity reads both anyway
+      missedWhileHidden.current = false;
+      void loadDevices();
+      void loadSnapshots(true);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [activeNav, loadDevices, loadSnapshots]);
 
   // Latch onboarding_completed the first time a working config is seen (backend
   // configured + a data type on), so the setup card doesn't reappear when the user
@@ -706,6 +804,20 @@ export default function OptionsApp() {
         </div>
       </div>
     );
+  };
+
+  // The whole log, word for word, whatever the errors-only switch shows: a bug report needs
+  // the context around a failure as much as the failure. See auditLogText.
+  const copyAudit = async () => {
+    setAuditMsg(null);
+    try {
+      const text = auditLogText(audit, { version: browser.runtime.getManifest().version, browser: navigator.userAgent });
+      await navigator.clipboard.writeText(text);
+      setLogCopied(true);
+      setTimeout(() => setLogCopied(false), 1500);
+    } catch {
+      setAuditMsg(t("opt_log_copy_failed"));
+    }
   };
 
   const clearAudit = async () => {
@@ -858,10 +970,8 @@ export default function OptionsApp() {
       return;
     }
     // The staged provider is now the live one — move the "active" badge onto it.
-    setSavedProvider(providerFromConfig(
-      settings.active_backend,
-      settings.backends.find((b) => b.type === "webdav")?.webdav?.url,
-    ));
+    const dav = settings.backends.find((b) => b.type === "webdav")?.webdav;
+    setSavedProvider(providerFromConfig(settings.active_backend, dav?.url, dav?.username));
     setSavedFingerprint(settingsFingerprint(settings));
     setSaving(false); setSaveOk(true);
     setTimeout(() => setSaveOk(false), 2500);
@@ -1280,11 +1390,14 @@ export default function OptionsApp() {
               <p className="page-subtitle">{t("opt_backend_head_sub")}</p>
 
               <div className="card-list">
-                {PROVIDERS.map((p) => {
+                {providerCards(t("locale_bcp47")).map((p) => {
                   // Selection drives the card UI (expanded config, radio); only the
                   // persisted provider earns the "active" badge.
                   const isActive = selectedProvider === p.id;
                   const isSaved = savedProvider === p.id;
+                  // No Google sign-in here at all (Firefox for Android has no identity API):
+                  // said on the card itself, as an unsupported data type is, not only once picked.
+                  const driveOff = p.id === "gdrive" && !DRIVE_AVAILABLE;
 
                   return (
                     <div
@@ -1293,7 +1406,8 @@ export default function OptionsApp() {
                       role="button"
                       tabIndex={0}
                       aria-pressed={isActive}
-                      aria-label={`Use ${p.label}`}
+                      aria-label={t("opt_use_provider", providerLabel(p))}
+                      style={driveOff ? { opacity: 0.55 } : undefined}
                       onClick={() => pickProvider(p.id)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
@@ -1306,10 +1420,10 @@ export default function OptionsApp() {
                         <div className="backend-icon-wrap"><ProviderLogo id={p.id} size={16} /></div>
                         <div className="backend-info">
                           <div className="backend-name">
-                            {p.label}
-                            {isSaved && <span className="badge-active">active</span>}
+                            {providerLabel(p)}
+                            {isSaved && <span className="badge-active">{t("opt_provider_active")}</span>}
                           </div>
-                          <div className="backend-desc">{t(p.descKey)}</div>
+                          <div className="backend-desc">{driveOff ? t("opt_drive_unavailable") : t(p.descKey)}</div>
                         </div>
                         <div className={`radio-circle ${isActive ? "checked" : ""}`} />
                       </div>
@@ -1325,13 +1439,12 @@ export default function OptionsApp() {
                                 <div className="account-email">{gdriveUser.email}</div>
                               </div>
                               <button className="btn-disconnect" onClick={disconnectGDrive}>
-                                <LogOut size={12} /> Disconnect
+                                <LogOut size={12} /> {t("opt_drive_disconnect")}
                               </button>
                             </div>
                           ) : !DRIVE_AVAILABLE ? (
                             <div className="error-row">
-                              <XCircle size={12} /> Google sign-in isn't available in
-                              this browser. Use GitHub or WebDAV instead.
+                              <XCircle size={12} /> {t("opt_drive_unavailable")}
                             </div>
                           ) : (
                             <div>
@@ -1364,8 +1477,10 @@ export default function OptionsApp() {
                         </div>
                       )}
 
-                      {/* ── Koofr / Fastmail (fixed endpoint) ── */}
-                      {isActive && (p.id === "koofr" || p.id === "fastmail") && (
+                      {/* ── Koofr / Fastmail / Nutstore: any preset with a fixed endpoint. Keyed on
+                          `fixedUrl` rather than on ids, because a list of ids is what left the
+                          Nutstore card with nothing to type into but Test Connection. ── */}
+                      {isActive && p.fixedUrl && (
                         <div className="backend-config" onClick={(e) => e.stopPropagation()}>
                           <InfoHint>
                             {syncingTo(p.fixedUrl!)}{p.noteKey ? ` ${t(p.noteKey)}` : null}
@@ -1486,7 +1601,7 @@ export default function OptionsApp() {
                             />
                             {githubChecking && <div className="verify-row"><Loader2 size={12} className="spin" /> {t("onb_verifying")}</div>}
                             {githubUser && !githubChecking && (
-                              <div className="verify-row ok"><CheckCircle2 size={12} /> @{githubUser.login} · {githubUser.name}</div>
+                              <div className="verify-row ok"><CheckCircle2 size={12} /> @{githubUser.login} · <bdi>{githubUser.name}</bdi></div>
                             )}
                           </div>
                           <div className="field-row-2">
@@ -1736,6 +1851,42 @@ export default function OptionsApp() {
                 })}
               </div>
 
+              {/* Bookmarks this device keeps to itself (#54), for an extension that keeps a huge
+                  folder of its own. Off unless asked for: the tree only opens behind the
+                  switch, and switching it off again puts everything back into the sync. */}
+              {availability.bookmarks?.state !== "unsupported" && (() => {
+                const excluded = settings.excluded_bookmarks ?? [];
+                const shown = excludeOpen ?? excluded.length > 0;
+                return (
+                  <div className="settings-section">
+                    <div className="settings-card-head">{t("datatype_bookmarks")}</div>
+                    <div className="settings-row">
+                      <div className="settings-row-left">
+                        <div>
+                          <div className="row-label">{t("bm_exclude_label")}</div>
+                          <div className="row-desc">{t("bm_exclude_desc")}</div>
+                        </div>
+                      </div>
+                      <label className="toggle-wrap">
+                        <input type="checkbox" className="toggle-input" checked={shown}
+                          aria-label={t("bm_exclude_label")}
+                          onChange={(e) => {
+                            setExcludeOpen(e.target.checked);
+                            if (!e.target.checked) update({ excluded_bookmarks: [] });
+                          }} />
+                        <span className="toggle-track"><span className="toggle-thumb" /></span>
+                      </label>
+                    </div>
+                    {shown && (
+                      <div style={{ padding: "0 var(--sp-xl) var(--sp-xl)" }}>
+                        <BookmarkExclusionTree value={excluded} onChange={(next) => update({ excluded_bookmarks: next })} />
+                        <InfoHint>{t("bm_exclude_hint")}</InfoHint>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* Nothing to configure when the browser has no history API — the row above
                   already explains why, and a live "days to sync" slider under it would
                   only suggest the feature is one setting away. */}
@@ -1776,10 +1927,10 @@ export default function OptionsApp() {
                           <Puzzle size={16} className="row-icon" />
                           <div>
                             <div className="row-label">
-                              {ext.name}{" "}
+                              <bdi>{ext.name}</bdi>{" "}
                               <span className="row-desc">{t("opt_ext_from", STORE_NAME[inferStore(ext)])}</span>
                             </div>
-                            {ext.description && <div className="row-desc">{ext.description.slice(0, 80)}</div>}
+                            {ext.description && <div className="row-desc" dir="auto">{ext.description.slice(0, 80)}</div>}
                           </div>
                         </div>
                         <a href={installOrSearchUrl(ext, currentStore())} target="_blank" rel="noreferrer" className="btn-install">
@@ -1818,7 +1969,7 @@ export default function OptionsApp() {
                       <div className="row-desc">{t("opt_device_name_desc")}</div>
                     </div>
                   </div>
-                  <input className="field-input-inline"
+                  <input className="field-input-inline" dir="auto"
                     value={settings.device_label}
                     onChange={(e) => update({ device_label: e.target.value })}
                     placeholder={t("opt_device_name_placeholder")} />
@@ -1964,7 +2115,7 @@ export default function OptionsApp() {
                     <div className="settings-row">
                       <div className="settings-row-left">
                         <div className="row-desc">
-                          {plural("opt_forget_result", forgetResult.removed, [String(forgetResult.removed), forgetResult.label])}
+                          {plural("opt_forget_result", forgetResult.removed, [String(forgetResult.removed), isolate(forgetResult.label)])}
                         </div>
                       </div>
                       <button className="btn-secondary" style={{ flexShrink: 0 }}
@@ -1976,6 +2127,7 @@ export default function OptionsApp() {
                       <div className="settings-row-left">
                         <div className="row-desc" style={{ color: "var(--danger)" }}>
                           {t("opt_devices_error", devicesError)}
+                          {!devicesError.startsWith(PERMISSION_LOST_PREFIX) && <> {t("opt_error_check_connection")}</>}
                         </div>
                       </div>
                     </div>
@@ -2000,7 +2152,7 @@ export default function OptionsApp() {
                         <div className="settings-row-left">
                           <div>
                             <div className="row-label">
-                              {d.label ?? t("opt_device_unnamed", d.device_id.slice(0, 8))}
+                              {d.label != null ? <bdi>{d.label}</bdi> : t("opt_device_unnamed", d.device_id.slice(0, 8))}
                               {d.isSelf && <span className="badge-active" style={{ marginLeft: 8 }}>{t("opt_this_device")}</span>}
                             </div>
                             <div className="row-desc">
@@ -2067,10 +2219,18 @@ export default function OptionsApp() {
                           </div>
                           <div className="row-desc">
                             {syncState.recovery_notice.device_label
-                              ? t("opt_blocked_from", syncState.recovery_notice.device_label)
+                              ? t("opt_blocked_from", isolate(syncState.recovery_notice.device_label))
                               : t("opt_blocked_from_unknown")}{" "}
                             {t("opt_blocked_saved")}
                           </div>
+                          {/* A deletion under the cap on its own, held back for what other
+                              devices removed here just before it (#41). Without this line
+                              "10 of your 40" at a 60% limit reads as the guard misfiring. */}
+                          {(syncState.recovery_notice.recent ?? 0) > 0 && (
+                            <div className="row-desc">
+                              {plural("opt_blocked_recent", syncState.recovery_notice.recent ?? 0)}
+                            </div>
+                          )}
                         </div>
                       </div>
                       {confirmApply ? (
@@ -2131,7 +2291,11 @@ export default function OptionsApp() {
                         <div className="error-row" role="alert">
                           <AlertTriangle size={12} /> {t("opt_snap_error", snapLoad)}
                         </div>
-                        <div className="row-desc">{t("opt_snap_error_desc")}</div>
+                        <div className="row-desc">
+                          {t("opt_snap_error_desc")}
+                          {/* The permission message says what to do already, and where. */}
+                          {!snapLoad.startsWith(PERMISSION_LOST_PREFIX) && <> {t("opt_error_check_connection")}</>}
+                        </div>
                       </div>
                     </div>
                   ) : snapshots.length === 0 ? (
@@ -2211,6 +2375,22 @@ export default function OptionsApp() {
                     </div>
                   )}
 
+                  {/* Word for word, and it says so here: the log names the storage host and
+                      the pages that would not sync, and a report is usually public. */}
+                  {audit.length > 0 && (
+                    <div className="settings-row">
+                      <div className="settings-row-left">
+                        <div>
+                          <div className="row-label">{t("opt_log_copy_label")}</div>
+                          <div className="row-desc">{t("opt_log_copy_desc")}</div>
+                        </div>
+                      </div>
+                      <button className="btn-secondary" style={{ flexShrink: 0 }} onClick={copyAudit}>
+                        {logCopied ? <Check size={12} /> : <Copy size={12} />} {logCopied ? t("opt_secret_copied") : t("opt_log_copy")}
+                      </button>
+                    </div>
+                  )}
+
                   {auditMsg && (
                     <div className="settings-row">
                       <div className="settings-row-left">
@@ -2241,15 +2421,20 @@ export default function OptionsApp() {
                               ? <AlertTriangle size={13} className="audit-icon notice" />
                               : <XCircle size={13} className="audit-icon fail" />}
                           <div className="audit-main">
-                            <div className="audit-action">{e.action}</div>
+                            <div className="audit-action">
+                              {e.action}
+                              {/* A warning that kept coming back is one entry with a count,
+                                  first time on top and last time under it (appendAudit). */}
+                              {(e.count ?? 1) > 1 && <span className="audit-count">×{e.count}</span>}
+                            </div>
                             {e.detail && <div className="audit-detail">{e.detail}</div>}
                           </div>
-                          <time className="audit-time" dateTime={e.timestamp}>
-                            {new Date(e.timestamp).toLocaleString([], {
-                              month: "short", day: "numeric",
-                              hour: "2-digit", minute: "2-digit", second: "2-digit",
-                            })}
-                          </time>
+                          <div className="audit-time">
+                            <time dateTime={e.timestamp}>{auditTime(e.timestamp)}</time>
+                            {(e.count ?? 1) > 1 && e.last && (
+                              <time dateTime={e.last}>– {auditTime(e.last)}</time>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -2332,6 +2517,20 @@ export default function OptionsApp() {
                     <Mail size={12} /> konabe@proton.me
                   </a>
                 </div>
+                {REVIEW_PAGE && (
+                  <div className="settings-row">
+                    <div className="settings-row-left">
+                      <div>
+                        <div className="row-label">{t("opt_rate_label")}</div>
+                        <div className="row-desc">{t("opt_rate_desc")}</div>
+                      </div>
+                    </div>
+                    <a className="link-external" href={REVIEW_PAGE.url} target="_blank" rel="noreferrer"
+                      onClick={() => void setRateAnswered(new Date().toISOString())}>
+                      <Star size={12} /> {REVIEW_PAGE.store} <ExternalLink size={10} />
+                    </a>
+                  </div>
+                )}
               </div>
 
               <div className="settings-section">
@@ -2448,7 +2647,10 @@ const STYLES = `
   .settings-card-head .head-sub { display: block; font-size: var(--fs-xs); font-weight: 400; color: var(--text-secondary); margin-top: var(--sp-3xs); line-height: 1.45; }
 
   .settings-section { background: transparent; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; margin-bottom: var(--sp-lg); }
-  .settings-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-lg); padding: var(--sp-xl); border-bottom: 1px solid var(--border); min-height: 52px; background: transparent; transition: background .1s; }
+  /* A row wraps when its control cannot fit beside 14rem of text: a switch stays beside its
+     label on a phone, a wide button such as Copy log goes under the description instead of
+     squeezing it into a column (QA AN, Hungarian at 375 px). */
+  .settings-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-lg); padding: var(--sp-xl); border-bottom: 1px solid var(--border); min-height: 52px; background: transparent; transition: background .1s; }
   .settings-row:last-child { border-bottom: none; }
   .settings-row:hover:not(.row-disabled) { background: var(--bg-hover); }
   .settings-row.radio-row { cursor: pointer; }
@@ -2457,7 +2659,7 @@ const STYLES = `
      LABEL dims — the sentence explaining why is the entire content of the row and has to
      stay properly readable, which is exactly what a blanket opacity would ruin. */
   .settings-row.is-unavailable .row-label { color: var(--text-secondary); }
-  .settings-row-left { display: flex; align-items: flex-start; gap: var(--sp-md); flex: 1; min-width: 0; }
+  .settings-row-left { display: flex; align-items: flex-start; gap: var(--sp-md); flex: 1 1 14rem; min-width: 0; }
   .row-icon { color: var(--text-secondary); margin-top: 1px; flex-shrink: 0; }
   .row-label { font-size: var(--fs-sm); color: var(--text-primary); }
   .row-desc { font-size: var(--fs-xs); color: var(--text-secondary); margin-top: var(--sp-3xs); line-height: 1.45; }
@@ -2676,6 +2878,8 @@ const STYLES = `
   .audit-action { font-size: var(--fs-sm); color: var(--text-primary); }
   .audit-detail { font-size: var(--fs-xs); color: var(--text-secondary); margin-top: 1px; word-break: break-word; }
   .audit-time { flex-shrink: 0; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-secondary); font-variant-numeric: tabular-nums; padding-top: 1px; }
+  .audit-time time { display: block; }
+  .audit-count { margin-left: var(--sp-xs); font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 
   /* Stat tiles: a hairline grid inside a titled card (the card clips the 1px gaps). */
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 1px; background: var(--border); }

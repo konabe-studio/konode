@@ -1,5 +1,8 @@
-import { describe, it, expect } from "vitest";
-import { importBookmarks, exportBookmarkPayload, registerBookmarkListeners } from "@/lib/handlers/bookmarks-handler";
+import { describe, it, expect, vi } from "vitest";
+import {
+  importBookmarks, exportBookmarkPayload, registerBookmarkListeners, resetDeletionLog,
+  type BulkDeleteBlock,
+} from "@/lib/handlers/bookmarks-handler";
 import { getTombstones, setTombstones, getBulkDeleteApproval, setBulkDeleteApproval, KEYS } from "@/lib/utils/storage";
 import type { BookmarkPayload, SyncBookmark } from "@/lib/types";
 
@@ -115,6 +118,74 @@ describe("tombstones — duplicate-URL safety", () => {
   });
 });
 
+describe("tombstones: a bulk delete is one line in the Activity log", () => {
+  // The browser fires onRemoved once per node. Selecting 25 bookmarks and pressing Delete
+  // wrote 25 identical "Recorded 1 deletion(s)" events in the same second, so a 200-bookmark
+  // cleanup filled the whole log and evicted everything a bug report would need.
+  let onRemoved: ((id: string, info: { node: chrome.bookmarks.BookmarkTreeNode }) => void) | undefined;
+
+  async function recordedLines(): Promise<string[]> {
+    const entries = ((await chrome.storage.local.get(KEYS.AUDIT_LOG))[KEYS.AUDIT_LOG] ?? []) as
+      { action: string; detail?: string }[];
+    return entries.filter((e) => e.action === "Tombstones").map((e) => e.detail ?? "");
+  }
+  let made: chrome.bookmarks.BookmarkTreeNode[] = [];
+  async function make(n: number): Promise<void> {
+    made = [];
+    for (let i = 0; i < n; i++) {
+      made.push(await chrome.bookmarks.create({ parentId: "1", title: `W${i}`, url: `https://w${i}.com` }));
+    }
+  }
+  async function deleteBookmarks(from: number, to: number): Promise<void> {
+    for (const node of made.slice(from, to)) {
+      await chrome.bookmarks.remove(node.id);
+      onRemoved!(node.id, { node });
+    }
+  }
+
+  function setUp(): void {
+    // Before the fake clock, so a real timer an earlier test left running is really cleared.
+    resetDeletionLog();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (chrome.bookmarks.onRemoved as any).addListener = (cb: never) => { onRemoved = cb; };
+    registerBookmarkListeners(() => {});
+  }
+
+  it("records every deletion at once, and says so once for the whole burst", async () => {
+    setUp();
+    try {
+      await make(25);
+      await deleteBookmarks(0, 25);
+      await vi.advanceTimersByTimeAsync(0);
+
+      // The records are not held back: the sync a second from now publishes them.
+      expect(await getTombstones()).toHaveLength(25);
+      expect(await recordedLines()).toEqual([]);
+
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(await recordedLines()).toEqual(["Recorded 25 deletion(s)"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("gives a deletion after a quiet second a line of its own", async () => {
+    setUp();
+    try {
+      await make(3);
+      await deleteBookmarks(0, 2);
+      await vi.advanceTimersByTimeAsync(1500);
+      await deleteBookmarks(2, 3);
+      await vi.advanceTimersByTimeAsync(1500);
+
+      expect(await recordedLines()).toEqual(["Recorded 1 deletion(s)", "Recorded 2 deletion(s)"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("importBookmarks — merge", () => {
   it("additively adds new remote bookmarks without duplicating existing ones", async () => {
     await seed("A", "https://a.com");
@@ -180,6 +251,68 @@ describe("importBookmarks — merge", () => {
     const barChildren = await chrome.bookmarks.getChildren("1");
     const workFolders = barChildren.filter((c) => !c.url && c.title === "Work");
     expect(workFolders).toHaveLength(1);
+  });
+});
+
+describe("importBookmarks — folders that share a name (#51)", () => {
+  // Folders have no id that crosses devices and were matched by title alone, so every folder
+  // of one name under a parent went into the first: a tree with several unnamed folders came
+  // out with one, holding the bookmarks of all of them.
+
+  /** The bar as "title" for a bookmark and "[title] children" for a folder. */
+  async function bar(): Promise<string[]> {
+    return Promise.all((await chrome.bookmarks.getChildren("1")).map(async (c) =>
+      c.url ? c.title : `[${c.title}] ${(await chrome.bookmarks.getChildren(c.id)).map((k) => k.title).join(",")}`
+    ));
+  }
+
+  it("keeps each of the peer's same-named folders apart, in the peer's order", async () => {
+    await seed("Mine", "https://mine.com"); // not empty, so this is a merge and not a replace
+    const p = payload([
+      folder("", [link("A", "https://a.com"), link("B", "https://b.com")]),
+      folder("", [link("C", "https://c.com")]),
+      folder("News", [link("D", "https://d.com")]),
+      folder("News", [link("E", "https://e.com")]),
+    ]);
+
+    await importBookmarks(p, "merge", "lww");
+    await importBookmarks(p, "merge", "lww"); // and the next sync finds them again
+
+    expect(await bar()).toEqual(["[] A,B", "[] C", "[News] D", "[News] E", "Mine"]);
+  });
+
+  it("files a new bookmark into the same-named folder that holds its neighbours", async () => {
+    await seed("Mine", "https://mine.com");
+    const a = folder("", [link("A", "https://a.com")]);
+    await importBookmarks(payload([a, folder("", [link("C", "https://c.com")])]), "merge", "lww");
+
+    await importBookmarks(
+      payload([a, folder("", [link("C", "https://c.com"), link("X", "https://x.com")])]), "merge", "lww"
+    );
+
+    expect(await bar()).toEqual(["[] A", "[] C,X", "Mine"]);
+  });
+
+  it("does not file a new folder's bookmarks into one that holds a same-named sibling's", async () => {
+    await seed("Mine", "https://mine.com");
+    const a = folder("", [link("A", "https://a.com")]);
+    await importBookmarks(payload([a]), "merge", "lww");
+
+    // The peer adds a second unnamed folder. The one here is the first one's, by what is in it.
+    await importBookmarks(payload([a, folder("", [link("X", "https://x.com")])]), "merge", "lww");
+
+    expect(await bar()).toEqual(["[] A", "[] X", "Mine"]);
+  });
+
+  it("still merges into a same-named folder of this device's own", async () => {
+    // Two devices that each had a Work folder end up with one: the title is unique on both
+    // sides, so there is nothing to tell apart.
+    const work = await chrome.bookmarks.create({ parentId: "1", title: "Work" });
+    await seed("Mine", "https://mine.com", work.id);
+
+    await importBookmarks(payload([folder("Work", [link("W", "https://work.com")])]), "merge", "lww");
+
+    expect(await bar()).toEqual(["[Work] W,Mine"]);
   });
 });
 
@@ -295,6 +428,95 @@ describe("importBookmarks — mass-delete guard (configurable percent)", () => {
 
     await importBookmarks(payload([], tombstonesFor(98)), "merge", "lww", 95, 98);
     expect((await localUrls()).length).toBe(2);
+  });
+
+  // #41, the first gap: the guard judged each merge alone, so a deletion that arrived in
+  // pieces went through piece by piece. A peer's log grows as it deletes, which is why each
+  // payload below carries every tombstone so far.
+  it("holds a deletion that arrives in pieces against the total", async () => {
+    await seedMany(100);
+    await importBookmarks(payload([], tombstonesFor(30)), "merge", "lww");
+    await importBookmarks(payload([], tombstonesFor(60)), "merge", "lww");
+    // 60 of 100 is the cap exactly, so both pieces were allowed.
+    expect((await localUrls()).length).toBe(40);
+
+    // Ten more is 70 of the 100 there were. On its own it is 10 of 40, which the old guard
+    // (cap max(20, 24)) let through.
+    let info: BulkDeleteBlock | undefined;
+    await importBookmarks(payload([], tombstonesFor(70)), "merge", "lww", 60, 0, (i) => { info = i; });
+
+    expect((await localUrls()).length).toBe(40);
+    expect(info).toEqual({ blocked: 10, cap: 60, localTotal: 40, pct: 60, recent: 60 });
+  });
+
+  it("forgets what peers removed more than a day ago", async () => {
+    await seedMany(100);
+    const start = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+    try {
+      await importBookmarks(payload([], tombstonesFor(30)), "merge", "lww");
+      await importBookmarks(payload([], tombstonesFor(60)), "merge", "lww");
+      clock.mockReturnValue(start + 25 * 60 * 60 * 1000);
+      // The same ten as above, a day later: 10 of 40 again, and nothing to add it to.
+      await importBookmarks(payload([], tombstonesFor(70)), "merge", "lww");
+    } finally {
+      clock.mockRestore();
+    }
+    expect((await localUrls()).length).toBe(30);
+  });
+
+  it("starts the window over once the user approves", async () => {
+    await seedMany(100);
+    await importBookmarks(payload([], tombstonesFor(30)), "merge", "lww");
+    await importBookmarks(payload([], tombstonesFor(60)), "merge", "lww");
+    // Blocked as above, then approved for the ten the card showed.
+    await importBookmarks(payload([], tombstonesFor(70)), "merge", "lww", 60, 10);
+    expect((await localUrls()).length).toBe(30);
+
+    // The card showed the 60 before it too, and the user said yes to all of it. Counted
+    // again, five more would be 65 of 90 and blocked a second time for the same cleanup.
+    await importBookmarks(payload([], tombstonesFor(75)), "merge", "lww");
+    expect((await localUrls()).length).toBe(25);
+  });
+
+  it("no longer counts a bookmark that came back as gone", async () => {
+    await seedMany(100);
+    await importBookmarks(payload([], tombstonesFor(30)), "merge", "lww");
+    await importBookmarks(payload([], tombstonesFor(60)), "merge", "lww");
+    // The user restores the first thirty (a restore point, or the browser's own backup).
+    for (let i = 0; i < 30; i++) await seed(`S${i}`, `https://s${i}.com`);
+
+    // 25 more from another peer: 25 + the 30 still gone = 55 of 100, under 60. Counting the
+    // restored thirty as gone as well would make it 85 of 130 and block it.
+    const more = Array.from({ length: 25 }, (_, i) => ({ url: `https://s${60 + i}.com`, deletedAt: 9e15 }));
+    await importBookmarks(payload([], more), "merge", "lww");
+
+    expect((await localUrls()).length).toBe(45);
+  });
+
+  // #41, the second gap: the guard counted bookmark nodes, so a pile of duplicates (Norton
+  // Neo made thousands of one New Tab bookmark) inflated the tree it measured against.
+  it("counts a bookmark held in many copies once when sizing the tree", async () => {
+    await seedMany(40);
+    for (let i = 0; i < 200; i++) await seed("New Tab", "neo://newtab/");
+
+    // 30 of 41 bookmarks. Counted as nodes it was 30 of 240, well under 60%.
+    let info: BulkDeleteBlock | undefined;
+    await importBookmarks(payload([], tombstonesFor(30)), "merge", "lww", 60, 0, (i) => { info = i; });
+
+    expect((await localUrls()).length).toBe(240);
+    expect(info).toMatchObject({ blocked: 30, localTotal: 41, cap: 24, recent: 0 });
+  });
+
+  it("counts a bookmark held in many copies once when deleting it", async () => {
+    await seedMany(30);
+    for (let i = 0; i < 50; i++) await seed("New Tab", "neo://newtab/");
+
+    // One bookmark deleted on the peer. Counted as nodes it was 50 of 80, over the cap of
+    // 48, and the user was asked to approve deleting "50 bookmarks" that were one.
+    await importBookmarks(payload([], [{ url: "neo://newtab/", deletedAt: 9e15 }]), "merge", "lww");
+
+    expect((await localUrls()).length).toBe(30);
   });
 
   it("refuses to spend an approval on a deletion bigger than the one approved", async () => {
@@ -527,6 +749,39 @@ describe("importBookmarks — folder repositions", () => {
     expect(order).toEqual(["Docs", "A", "B"]);
     expect(await localUrls()).toEqual(["https://a.com", "https://b.com", "https://g.com"]); // no churn
   });
+
+  it.each(["lww", "prefer-remote"] as const)(
+    "keeps the loose bookmarks a peer moved a folder in front of in their order (%s, QA AX 4)",
+    async (strategy) => {
+      // Found headless with two Chromium profiles, and the same on 1.4.0. Prefer Remote
+      // re-places every bookmark by its peer anchor, and s0's anchor is the folder the peer
+      // moved in front of it, which here was still at the end of the bar: with the reposition
+      // only after the fold, s0, s1 and s2 followed that folder to the end.
+      for (const s of ["s0", "s1", "s2"]) await seed(s, `https://${s}.example/`);
+      await seedFolderWithLink("Docs", "https://h.example/");
+      await seedFolderWithLink("Other", "https://i.example/");
+
+      const p: BookmarkPayload = {
+        ...payload([
+          folder("Other", [link("Other", "https://i.example/")]),
+          link("s0", "https://s0.example/"), link("s1", "https://s1.example/"), link("s2", "https://s2.example/"),
+          folder("Docs", [link("Docs", "https://h.example/")]),
+        ]),
+        folderMoves: [{ path: ["bar", "Other"], index: 0, at: Date.now() + 60_000, next: "u:https://s0.example/" }],
+      };
+      await importBookmarks(p, "merge", strategy);
+
+      const order = (await chrome.bookmarks.getChildren("1")).map((c) => c.title);
+      expect(order).toEqual(["Other", "s0", "s1", "s2", "Docs"]);
+      // And the Activity line says what happened: one folder moved, no bookmark. Read from a
+      // snapshot taken before the folder moved, s0 to s2 counted as "moved 3" while staying put.
+      await new Promise((r) => setTimeout(r, 0)); // logger fires appendAudit unawaited
+      const entries = ((await chrome.storage.local.get(KEYS.AUDIT_LOG))[KEYS.AUDIT_LOG] ?? []) as { detail?: string }[];
+      const summary = entries.map((e) => e.detail).find((d) => d?.startsWith("Merged "));
+      expect(summary).toContain("moved 0 /");
+      expect(summary).toContain("folders 1 /");
+    },
+  );
 
   it("does NOT reposition a folder without a newer folder-move (stale record)", async () => {
     await seedFolderWithLink("A", "https://a.com");
@@ -874,6 +1129,166 @@ describe("renames reach the other devices", () => {
     const out = await exportBookmarkPayload();
     expect(out.titles?.map((t) => t.title)).toEqual(["New"]);
     expect(out.folderRenames?.map((r) => `${r.from}->${r.to}`)).toEqual(["Work->Job"]);
+  });
+});
+
+describe("renames and repositions of folders that share a name (#51)", () => {
+  // A folder rename or reposition is filed under the folder's path, and the receiver took
+  // the first folder of that name under the parent. With several unnamed folders, renaming
+  // the second one renamed the first one everywhere else. A record now carries a bookmark
+  // the folder held (`holds`) when it has same-named siblings, and the receiver goes by it.
+
+  const A = "https://a.com/";
+  const C = "https://c.com/";
+
+  /** The bar as "title" for a bookmark and "[title] children" for a folder. */
+  async function bar(): Promise<string[]> {
+    return Promise.all((await chrome.bookmarks.getChildren("1")).map(async (c) =>
+      c.url ? c.title : `[${c.title}] ${(await chrome.bookmarks.getChildren(c.id)).map((k) => k.title).join(",")}`
+    ));
+  }
+
+  /** Two unnamed folders on the bar, A in the first and C in the second. */
+  async function twins(): Promise<[string, string]> {
+    const first = await chrome.bookmarks.create({ parentId: "1", title: "" });
+    await chrome.bookmarks.create({ parentId: first.id, title: "A", url: A });
+    const second = await chrome.bookmarks.create({ parentId: "1", title: "" });
+    await chrome.bookmarks.create({ parentId: second.id, title: "C", url: C });
+    return [first.id, second.id];
+  }
+
+  /** Registers the real listeners and hands back the ones the handler installed. */
+  function capture(): {
+    changed: (id: string, info: { title: string }) => void;
+    moved: (id: string, info: chrome.bookmarks.BookmarkMoveInfo) => void;
+  } {
+    const l: { changed?: (...a: never[]) => void; moved?: (...a: never[]) => void } = {};
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    (chrome.bookmarks.onChanged as any).addListener = (fn: never) => { l.changed = fn; };
+    (chrome.bookmarks.onMoved as any).addListener = (fn: never) => { l.moved = fn; };
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+    registerBookmarkListeners(() => {});
+    return {
+      changed: (id, info) => (l.changed as (i: string, c: { title: string }) => void)(id, info),
+      moved: (id, info) => (l.moved as (i: string, m: chrome.bookmarks.BookmarkMoveInfo) => void)(id, info),
+    };
+  }
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+
+  it("marks a rename with a bookmark of the folder when it has same-named siblings, and only then", async () => {
+    const on = capture();
+    const [, second] = await twins();
+    const work = await chrome.bookmarks.create({ parentId: "1", title: "Work" });
+    await chrome.bookmarks.create({ parentId: work.id, title: "W", url: "https://w.com/" });
+    await exportBookmarkPayload(); // the last synced state: what the peers still hold
+
+    await chrome.bookmarks.update(second, { title: "Dev" });
+    on.changed(second, { title: "Dev" });
+    await chrome.bookmarks.update(work.id, { title: "Job" });
+    on.changed(work.id, { title: "Job" });
+    await settle();
+
+    const renames = (await exportBookmarkPayload()).folderRenames ?? [];
+    expect(renames.map((r) => [r.from, r.to, r.holds])).toEqual([["", "Dev", C], ["Work", "Job", undefined]]);
+  });
+
+  it("records the rename of an unnamed folder at all", async () => {
+    // Its old title is "", which the recorder took for no title and dropped the rename.
+    const on = capture();
+    const f = await chrome.bookmarks.create({ parentId: "1", title: "" });
+    await chrome.bookmarks.create({ parentId: f.id, title: "A", url: A });
+    await exportBookmarkPayload();
+
+    await chrome.bookmarks.update(f.id, { title: "Dev" });
+    on.changed(f.id, { title: "Dev" });
+    await settle();
+
+    const renames = (await exportBookmarkPayload()).folderRenames ?? [];
+    expect(renames.map((r) => [r.from, r.to, r.holds])).toEqual([["", "Dev", undefined]]);
+  });
+
+  it("keeps both renames when two same-named folders are renamed", async () => {
+    const on = capture();
+    const [first, second] = await twins();
+    await exportBookmarkPayload();
+
+    await chrome.bookmarks.update(first, { title: "Work" });
+    on.changed(first, { title: "Work" });
+    await settle();
+    await chrome.bookmarks.update(second, { title: "Dev" });
+    on.changed(second, { title: "Dev" });
+    await settle();
+
+    const renames = (await exportBookmarkPayload()).folderRenames ?? [];
+    expect(renames.map((r) => `${r.from}->${r.to}`).sort()).toEqual(["->Dev", "->Work"]);
+  });
+
+  it("renames the folder the record marks, not the first one of that name", async () => {
+    await twins();
+
+    await importBookmarks({
+      ...payload([folder("", [link("A", A)]), folder("Dev", [link("C", C)])]),
+      folderRenames: [{ path: ["bar"], from: "", to: "Dev", at: Date.now(), holds: C }],
+    }, "merge", "lww");
+
+    expect(await bar()).toEqual(["[] A", "[Dev] C"]);
+  });
+
+  it("does not pass the rename on to the sibling that kept the name, sync after sync", async () => {
+    // prefer-remote replays a peer's renames on every sync, and the first folder of the old
+    // name was there for the taking each time, until every one of them had the new name.
+    // The folders themselves, by id: prefer-remote also moves bookmarks after the peer, which
+    // would put A and C back where they belong in whatever folders were left.
+    const [first, second] = await twins();
+    const p: BookmarkPayload = {
+      ...payload([folder("", [link("A", A)]), folder("Dev", [link("C", C)])]),
+      folderRenames: [{ path: ["bar"], from: "", to: "Dev", at: Date.now(), holds: C }],
+    };
+
+    await importBookmarks(p, "merge", "prefer-remote");
+    await importBookmarks(p, "merge", "prefer-remote");
+
+    const title = async (id: string) => (await chrome.bookmarks.get(id))[0]?.title;
+    expect([await title(first), await title(second)]).toEqual(["", "Dev"]);
+    expect(await bar()).toEqual(["[] A", "[Dev] C"]);
+  });
+
+  it("renames nothing when no folder holds the mark and it can't tell which one was meant", async () => {
+    await twins();
+
+    await importBookmarks({
+      ...payload([folder("", [link("A", A)]), folder("", [link("C", C)])]),
+      folderRenames: [{ path: ["bar"], from: "", to: "Dev", at: Date.now(), holds: "https://gone.com/" }],
+    }, "merge", "lww");
+
+    expect(await bar()).toEqual(["[] A", "[] C"]);
+  });
+
+  it("marks a reposition, and moves the folder the record marks", async () => {
+    const on = capture();
+    const [, second] = await twins();
+    await exportBookmarkPayload();
+    await chrome.bookmarks.move(second, { parentId: "1", index: 0 });
+    on.moved(second, { parentId: "1", oldParentId: "1", index: 0, oldIndex: 1 });
+    await settle();
+    const out = await exportBookmarkPayload();
+    expect(out.folderMoves?.map((r) => [r.path.join("/"), r.holds])).toEqual([["bar/", C]]);
+
+    // The other device still has them the old way round.
+    const { setFolderMoves, setMoves } = await import("@/lib/utils/storage");
+    await chrome.bookmarks.removeTree(second);
+    const [first] = (await chrome.bookmarks.getChildren("1")).filter((c) => !c.url);
+    await chrome.bookmarks.removeTree(first.id);
+    await setFolderMoves([]);
+    await setMoves([]);
+    await twins();
+
+    await importBookmarks({
+      ...payload([folder("", [link("C", C)]), folder("", [link("A", A)])]),
+      folderMoves: (out.folderMoves ?? []).map((r) => ({ ...r, at: Date.now() + 60_000 })),
+    }, "merge", "lww");
+
+    expect(await bar()).toEqual(["[] C", "[] A"]);
   });
 });
 

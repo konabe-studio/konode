@@ -10,6 +10,8 @@ const h = vi.hoisted(() => ({
   files: new Map<string, string>(),
   fetched: [] as string[],
   unreadable: new Set<string>(),
+  // null models a backend whose listing has no times (GitHub): no listFilesWithTimes at all.
+  modified: null as Map<string, number> | null,
 }));
 
 vi.mock("@/lib/backends/abstract-backend", () => ({
@@ -19,6 +21,11 @@ vi.mock("@/lib/backends/abstract-backend", () => ({
     connect: async () => {},
     disconnect: async () => {},
     listFiles: async (prefix: string) => [...h.files.keys()].filter((n) => n.startsWith(prefix)),
+    listFilesWithTimes: h.modified
+      ? async (prefix: string) => [...h.files.keys()]
+        .filter((n) => n.startsWith(prefix))
+        .map((name) => ({ name, modified: h.modified!.get(name) ?? null }))
+      : undefined,
     getFile: async (name: string) => {
       h.fetched.push(name);
       if (h.unreadable.has(name)) throw new Error("403");
@@ -65,6 +72,7 @@ beforeEach(() => {
   h.files.clear();
   h.fetched.length = 0;
   h.unreadable.clear();
+  h.modified = null;
 });
 
 describe("listDevices", () => {
@@ -125,6 +133,48 @@ describe("listDevices", () => {
 
     expect(d.label).toBeNull();
     expect(d.device_id).toBe("peer1");
+  });
+
+  it("takes the last upload from the listing, not from the file it read for the name (#30)", async () => {
+    // The field report: a device that had just published a deletion of 80 bookmarks was
+    // listed as last uploading two days earlier, because the date shown was its extension
+    // list's, and an unchanged extension list is never uploaded again.
+    h.modified = new Map([
+      ["konode_extensions_peer1.json", Date.parse("2026-09-08T09:00:00Z")],
+      ["konode_bookmarks_peer1.json", Date.parse("2026-09-10T09:18:00Z")],
+    ]);
+    h.files.set("konode_extensions_peer1.json", packet("peer1", "extensions", "Helium", "2026-09-08T09:00:00.000Z"));
+    h.files.set("konode_bookmarks_peer1.json", packet("peer1", "bookmarks", "Helium", "2026-09-10T09:18:00.000Z"));
+
+    const [d] = await new SyncEngine(settings(), () => {}).listDevices();
+
+    expect(d.label).toBe("Helium");
+    expect(d.lastSeen).toBe("2026-09-10T09:18:00.000Z");
+    expect(h.fetched).toEqual(["konode_extensions_peer1.json"]); // still one small read
+  });
+
+  it("orders the list by that last upload", async () => {
+    h.modified = new Map([
+      ["konode_extensions_stale.json", Date.parse("2026-09-01T10:00:00Z")],
+      ["konode_bookmarks_stale.json", Date.parse("2026-09-17T10:00:00Z")],
+      ["konode_extensions_quiet.json", Date.parse("2026-09-12T10:00:00Z")],
+    ]);
+    h.files.set("konode_extensions_stale.json", packet("stale", "extensions", "Busy, old extension list", "2026-09-01T10:00:00.000Z"));
+    h.files.set("konode_bookmarks_stale.json", packet("stale", "bookmarks", "Busy, old extension list", "2026-09-17T10:00:00.000Z"));
+    h.files.set("konode_extensions_quiet.json", packet("quiet", "extensions", "Quiet", "2026-09-12T10:00:00.000Z"));
+
+    const devices = await new SyncEngine(settings(), () => {}).listDevices();
+
+    expect(devices.map((d) => d.label)).toEqual(["Busy, old extension list", "Quiet"]);
+  });
+
+  it("falls back to the packet's timestamp when the listing has no time for a device", async () => {
+    h.modified = new Map();
+    h.files.set("konode_extensions_peer1.json", packet("peer1", "extensions", "No times", "2026-08-01T09:30:00.000Z"));
+
+    const [d] = await new SyncEngine(settings(), () => {}).listDevices();
+
+    expect(d.lastSeen).toBe("2026-08-01T09:30:00.000Z");
   });
 
   it("ignores the snapshot files sitting in the same folder", async () => {

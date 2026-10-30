@@ -7,6 +7,203 @@ All notable changes to Konode. Format loosely follows
 
 ### Added
 
+- **Copy the Activity log for a bug report.** Settings → Activity has a **Copy log** button
+  that puts the whole log on the clipboard as plain text, oldest first, with the Konode
+  version and your browser at the top, ready to paste into an issue. Until now that meant
+  selecting up to 200 rows by hand. The copy is word for word, so it includes the address of
+  your storage server and of any pages Konode couldn't sync, and the button says so: read it
+  before you post it anywhere public.
+- **Rate Konode from Settings.** Settings → Advanced → Feedback has a row that opens Konode's
+  page in the store you installed it from, the Chrome Web Store or Firefox Add-ons.
+- **Konode asks for a rating once, and only once it has earned it.** After two weeks and
+  200 syncs that went through cleanly with another device in your storage, the popup shows
+  a small card at the bottom. Never during setup and never next to an error, a conflict or a
+  held-back deletion. Rate it or say no thanks, and either way it is gone for good; rating
+  from the Settings row counts too. Nothing about it leaves your device.
+- **Keep bookmarks out of sync (#54).** An extension that keeps a big bookmark folder of its
+  own had Konode syncing every entry in it, and the browser froze until it was done. Under
+  Bookmarks, in setup and in Settings → Data Types, **Exclude bookmarks from sync** opens
+  your bookmark tree with a box in front of every folder and bookmark. Whatever you tick
+  stays on this device untouched: it is never uploaded, nothing your other devices do
+  changes it, and changes inside it no longer start a sync. A ticked folder stays excluded
+  when you rename it, and so does whatever the extension adds to it later. Excluding deletes
+  nothing, so copies your other devices already have stay there. Moving a bookmark into an
+  excluded folder takes it off your other devices, as deleting it would, and moving it back
+  out brings it back to them, even one you saved a moment ago.
+
+### Changed
+
+- **Settings fits a phone better.** A row whose button cannot fit beside its text now puts
+  the button underneath, instead of squeezing the text into a narrow column: in Hungarian,
+  Copy log's explanation ran to fourteen lines at phone width. Switches stay beside their
+  labels.
+- **Nutstore comes first when Konode is in Simplified Chinese.** The storage picker in setup
+  and in Settings led with Google Drive for everyone, and from mainland China Drive answers
+  only through a VPN that every sync would need open. In Simplified Chinese the first card
+  is now Nutstore / 坚果云, which works there without one. Every other language, Traditional
+  Chinese included, keeps the order it had.
+
+### Fixed
+
+- **Setup can finish on Firefox for Android.** Firefox for Android has no history, but
+  Konode offered History as a switch there, in setup and in Settings. Switched on, it made
+  setup ask for a permission that Firefox for Android does not have, so **Finish & Sync**
+  sent you to Firefox's extension settings again and again, where there was nothing to
+  switch on. History now reads as not available there, as Bookmarks already did, and open
+  tabs and the extension list set up as they should.
+- **Prefer Remote keeps your bookmarks in order when a folder moves in front of them.** On a
+  device set to Prefer Remote, dragging a folder in front of loose bookmarks on another
+  device sent those bookmarks to the end of the bar here, behind the folder. The folder now
+  takes its new place first, and the bookmarks around it stay where they were. The Activity
+  line no longer counts them as moved either.
+- **The Google Drive card says up front when this browser cannot sign in to Google.** On
+  Firefox for Android, which has no way to, the card looked like any other until you picked
+  it, and in Settings the explanation was in English only. In setup and in Settings the card
+  is now dimmed and gives the reason in your language.
+- **Setup tidies up after itself.** An error from the last step stayed on screen after you
+  went Back from it. The final screen named WebDAV for Koofr, Nutstore and the other cards
+  built on it, instead of the card you picked, and a line in its checklist that ran onto a
+  second line was centred while the others were not. On Firefox for Android the Bookmarks
+  row's icon was squeezed to a dot beside its explanation.
+- **The storage cards speak your language all the way through.** In Settings the badge on
+  your storage card read "active" and the Google Drive card's button "Disconnect" in every
+  language, and the catch-all card was "WebDAV (other)" in setup too. They now follow the
+  language Konode is in, and so does the name a screen reader gives each card in Settings.
+- **Folders that share a name stay separate (#51).** Konode tells folders apart by their
+  name, so several folders of one name side by side, unnamed ones most often, were merged
+  into the first of them on your other devices, with all their bookmarks in it. The same
+  happened when you brought bookmarks back from a restore point. Such folders now stay
+  separate and in their order: each one is matched by the bookmarks it holds, and a new
+  bookmark goes into the folder that holds the bookmarks around it. A folder that was
+  already merged stays that way until you split it up again on that device; the bookmarks
+  you move out of it go to the right folder on your other devices too.
+- **Renaming or reordering one of several folders that share a name reaches the right folder
+  (#51).** A folder rename travels as "the folder called X here is now called Y", and your
+  other devices gave the new name to the first folder called X, which with several of them
+  was not always the one you renamed. Moving such a folder among its neighbours went wrong
+  the same way, and renaming an unnamed folder never reached your other devices at all. Now
+  a folder that shares its name with a neighbour sends one of its bookmarks along, and your
+  other devices rename or move the folder that holds it. Both devices need this version; with
+  an older one on either side, it works as it did before.
+- **A Nextcloud server set up on the WebDAV card stays on the WebDAV card (#51).** Settings
+  marked the Nextcloud / ownCloud card as active for any address with `/remote.php/dav/` in
+  it. That card rebuilds the address from the username, so changing the username or the
+  server there could quietly break a setup that only the WebDAV card can hold: a Nextcloud
+  app password created while signed in with an email address needs the email as the
+  username, while the address keeps the plain account name. Now the Nextcloud card counts as
+  active only when the address is exactly the one it would build itself.
+- **Restoring a session no longer opens tabs you already have open.** Every restore opened
+  the whole session again, so restoring another device's 10 tabs, letting it open an 11th
+  and restoring once more left you with 21. A restore now opens only the tabs that aren't
+  open in this browser yet, and the popup says how many of a session's tabs are already open
+  here. When all of them are, the button reads **All open** instead of opening them again,
+  in Firefox too while the tabs a restore just opened are still loading.
+- **A deletion that arrives in pieces no longer slips past the bulk-delete limit.** The
+  limit on how much of your bookmarks another device may delete judged each sync on its own,
+  so a large deletion that reached this device a piece at a time went through piece by
+  piece, every one of them under the limit, and could empty the tree just the same. Konode
+  now adds up what other devices removed here over the last 24 hours and holds back the
+  piece that takes the total over, with a restore point saved first and the usual choice in
+  Settings → Activity, where the card now says how many went before it. Approve it and the
+  rest of a cleanup you meant goes through without asking again.
+  The limit also counts bookmarks now, not copies of them. A pile of duplicates, such as the
+  New Tab copies Norton Neo made before 1.4.0, made your tree look many times its size, so a
+  deletion of most of your real bookmarks could stay under the limit. And a bookmark you hold in
+  several copies counts once when another device deletes it, instead of asking you to approve
+  "50 bookmarks" that were one. Only the device receiving the deletion needs this version.
+- **A warning that lasts no longer fills the Activity log.** Most warnings describe
+  something Konode checks again on every sync, such as a permission you took away, a device
+  on a different passphrase, or a file that will not download, and each one wrote a new line
+  every sync for as long as it lasted. A passphrase mismatch wrote one per device per data
+  type, so three devices filled the whole log in about a quarter of an hour and pushed out
+  the entries that explained what had gone wrong. A warning that keeps coming back is now one
+  entry that says how many times it happened (×120) and when it last did, under the time it
+  began. Anything else happening in between, such as a merge or a restore, starts a new entry,
+  so the log still reads in the order things happened. A device whose setup is not finished
+  yet also no longer starts its log with a warning that it has no storage, written every
+  minute until setup was done.
+- **Deleting many bookmarks at once is one line in the Activity log.** The browser reports
+  every deleted bookmark separately, and Konode wrote a line for each, so selecting 25
+  bookmarks and pressing Delete left 25 identical lines, and a large cleanup pushed everything
+  else out of the log. It now waits until the deletions stop and writes one line with the
+  total. The deletions themselves are recorded straight away, as before.
+- **A Google Drive sign-in that fails no longer tells you something untrue.** When the
+  sign-in window closed before the sign-in came back, Konode said "Sign-in cancelled", even
+  to people who had approved it: a Google error page, or a browser that never hands the
+  result back, ends the same way as closing the window yourself. It now says the window
+  closed before the sign-in came back, and says you cancelled only when Google itself reports
+  that you did. Other failures no longer suggest a redirect address that "may not be
+  registered", which stopped being a likely cause in September. Every message now names
+  GitHub and WebDAV, which need no Google sign-in, and Settings → Activity records which way
+  the sign-in ended, with the address the browser was asked to return to.
+- **Setup no longer forgets your answers when the page reloads.** Reload the setup page, or
+  let a phone put it to sleep while you sign in to Google, and it used to come back at the
+  start with everything you had entered gone, a GitHub token GitHub will not show you twice
+  included. It now comes back to the step you were on, with your storage choice, its
+  address and sign-in, the data types and the device name as you left them, for up to a
+  day. A Google Drive sign-in that finished before the reload is recognised instead of asked
+  for again. The encryption step is the exception: your passphrase is never written down,
+  so that step asks again. What setup kept is removed as soon as setup completes, and after
+  a day if you never finish.
+- **Clicking the conflict notification opens Konode.** The notification says "Open Konode to
+  resolve it", and clicking it did nothing. It now brings your browser window to the front
+  and opens Konode's popup there, where conflicts are answered. Where the browser does not
+  let an extension open its popup, the same screen opens in a small window of its own, or in
+  a tab on a phone.
+- **Manual conflict resolution asks only when your bookmarks really differ.** With
+  **Settings → Device → Conflict resolution** on **Manual**, Konode asked which bookmarks
+  to keep on the first sync between any two devices, and asked again whenever the other
+  device changed anything at all, because it compared the files rather than the bookmarks
+  in them. Each browser gives a bookmark its own ID and the date it arrived, so two devices
+  never had identical files even with identical bookmarks. It now compares the bookmarks
+  themselves: the folder each is in, its address and its title. Two devices that hold the
+  same bookmarks are not asked about, and once you answer, the question stays answered
+  until the other device's bookmarks change. Cards already waiting for devices that turn
+  out to agree go away on the next sync. The order of bookmarks within a folder is not
+  counted, since Konode does not carry it reliably between browsers.
+- **Settings gives one piece of advice, not two, when it cannot list your devices.** With
+  Konode's permission to reach your storage taken away, the device list and the restore
+  points said to open Storage and press Save, and then added "Check the connection in
+  Storage and reopen this tab" as well. That second line now appears only when the error
+  gives no advice of its own. In Simplified Chinese the restore-point message also said you
+  had no devices, and the device list left "Storage" untranslated. Both are corrected.
+- **An encryption warning appears once, not once per device.** A device without end-to-end
+  encryption, joining a folder where several devices use it, finished setup with "Some of
+  your devices are end-to-end encrypted..." printed once for each of them, the same sentence
+  two or three times in a row. The popup and the setup screen now show each message once.
+- **"Too many requests" now says what to do about it.** Some storage providers limit how
+  many requests an account may make, Nutstore's free plan the best known, and when Konode
+  went over, all it said was "HTTP 429". It now names the server, says it is turning Konode
+  away for a while, and points you to **Sync interval** in **Settings → Device**, the one
+  setting that keeps you under the limit. The same goes for **Test connection**, and when
+  every data type hits the limit at once, it is said once rather than once per type.
+- **A large session asks before it opens.** Restoring another device's session with more
+  than 20 tabs used to open them all on the first click. The button now changes to "Open
+  142 tabs", and only a second click opens them; Cancel leaves it. Smaller sessions still
+  restore in one click.
+- **Setup no longer looks frozen when the browser shows no permission prompt.** Vivaldi on
+  Android neither showed the prompt for the permissions Konode asks for at the last step nor
+  answered the request, so **Finish & Sync** did nothing at all. The button now says it is
+  waiting for permission as soon as you press it, and if no answer comes within a few seconds,
+  a note explains that some browsers show no prompt: allow Konode's permissions in the
+  browser's extension settings and press the button again, or go back and turn off the data
+  types that need them. A prompt that is on screen can still be answered as before.
+- **Names in Hebrew, Arabic or Persian no longer scramble the text around them.** A device
+  called "מחשב 2" shown inside a sentence such as "Asked for by …" took the sentence's
+  full stop and number into its own right-to-left run, so they appeared on the wrong side.
+  Device names, extension names and your GitHub name are now kept apart from the text around
+  them, in the popup, Settings and setup, and the device name field lines up with what you
+  type in it.
+
+## [1.4.0] - 2026-09-29
+
+### Added
+
+- **Konode now speaks Italian, Russian and Traditional Chinese.** Every screen is translated,
+  and Konode picks the language your browser is set to, as it already did for English,
+  Hungarian, German, Spanish and Simplified Chinese. Traditional Chinese is its own
+  translation, with the words used in Taiwan, rather than Simplified Chinese converted
+  character by character, and a native speaker reviewed it.
 - **Nutstore (坚果云) has a storage card.** The dominant hosted-WebDAV provider in mainland
   China, and the one that matters most there for a reason that has nothing to do with
   Nutstore: Google Drive cannot be reached from the mainland, so the backend Konode's setup
@@ -44,7 +241,80 @@ All notable changes to Konode. Format loosely follows
   second set of roots for the account alongside the local ones, arriving bookmarks now
   consistently go to the account's bar instead of whichever of the two the browser happened
   to list first — the same tearing-in-half that Orion used to cause.
-
+- **A bookmark to a browser's own page no longer multiplies on Norton Neo.** Neo stores a
+  `chrome://` address under its own `neo://` name, so a New Tab bookmark synced from Chrome
+  arrived as `neo://newtab/`, Konode did not recognise it on the next sync, and added it
+  again, about twice a minute, until the list held thousands. Konode now checks what the
+  browser actually stored and treats the two addresses as one bookmark, and Settings →
+  Activity says so when it happens. Your other devices go on seeing the `chrome://` address,
+  so deleting New Tab on either side removes it from both. The copies already made stay
+  until you delete them: keep one and delete the rest, because deleting every copy deletes
+  New Tab on your other devices too, as it is the same bookmark. A bookmark a browser does
+  not keep at all is no longer added again on every sync either. Only the browser that
+  changes the address needs this version.
+- **Firefox no longer takes the same history again on every sync.** Firefox stores the time
+  of a visit in whole milliseconds, while Chrome, Brave, Helium and the other Chromium-based
+  browsers report fractions of one. Konode rounded the time when it saved a visit but not when
+  it checked whether a visit was new, so about half of the pages from a Chromium-based
+  device always looked newer than Firefox's copy, and Firefox added the same visits again,
+  every minute, since 1.0.2. Each visit now arrives once. Only Firefox needs this version.
+- **A folder deleted on another device no longer stays behind, empty.** Deleting a folder
+  together with its bookmarks removed the bookmarks everywhere and left the folder standing
+  on every other device, for good. Approving a blocked deletion did the same, so saying yes
+  to deleting 80 bookmarks left their ten folders behind with nothing in them. Konode now
+  records the folder deletion too, and a device removes a folder the deletion emptied when
+  the other device deleted that folder, or when you approved the deletion. A folder the other
+  device only emptied and kept stays, and so does one you created here afterwards. Empty a
+  folder first and delete it later, and it goes from your other devices too; an empty folder
+  you made on one device is never removed because of another. For a
+  deleted folder to follow, the device you delete it on needs this version; approving a
+  blocked deletion clears the folders whatever version the other device runs.
+- **Deleting a folder in Firefox sticks.** Firefox reports a deleted folder without what was
+  inside it, so Konode recorded no deletion for the folder's bookmarks, and the next sync
+  brought the folder straight back, contents and all, from any other device that still had
+  it. Konode now takes the folder's contents from the last state it synced. Deleting
+  bookmarks one at a time was never affected, and neither was deleting a folder in a
+  Chromium-based browser such as Chrome, Brave or Helium.
+- **Settings keeps up while it is open.** The Activity tab read everything once, so with
+  Settings open a blocked deletion showed up in the popup and nowhere on the page, the restore
+  point it saved was missing, and the device list went on quoting the old upload times until
+  you reloaded. The log, the numbers and the blocked-deletion card now follow each sync as it
+  happens, and the devices and restore points are read again when a sync finishes while you
+  are looking at them, or as soon as you come back to the tab if one finished while it was
+  hidden behind another window. Reloading Settings also keeps the tab you were on instead of
+  going back to Storage.
+- **A momentary Google Drive error no longer fails a whole sync.** Konode looks up its
+  folder on Drive at the start of every sync, and that one request gave up on the first
+  error, so a brief hiccup on Google's side cost a sync and put an error in Settings →
+  Activity. It now tries again, as every other Drive request already did.
+- **Restoring bookmarks from your browser's own backup is no longer undone.** Import an
+  exported bookmarks file after deleting some of them, and the next sync deleted them again,
+  without asking, for up to 90 days. The import keeps each bookmark's original date, so
+  Konode took the restored bookmarks for older than the deletion. It now notes when a
+  bookmark actually arrived on the device, and the restore reaches your other devices too
+  instead of stopping on this one.
+- **Restoring a restore point puts bookmarks back where they were.** The bookmarks it brought
+  back were added at the end of their folder, so wherever something had survived they came
+  back out of order: a folder that used to be last on the bookmarks bar ended up ahead of
+  bookmarks that used to come before it. Each one now goes back right after the bookmark it
+  used to follow.
+- **The device list shows when each device really uploaded last.** Settings → Activity could
+  say a device last uploaded days ago while it synced every minute, because the date came
+  from its extension list, which is only uploaded when it changes. On Google Drive and WebDAV
+  the date is now the newest upload across all of that device's files, and the list is
+  ordered by it. A GitHub folder has no cheap way to tell, so it shows what it did before.
+- **Several Spanish labels said something other than what they do.** A restore point whose
+  bookmark count could not be read was labelled with the verb "mark", a snapshot was called
+  an "imagen", and the bulk-delete limit read as a number of items when it is a share of
+  your bookmarks. The Spanish text is corrected throughout.
+- **Konode's own pages could fail to draw if your browser is not set to English.** They
+  declared themselves English while showing your language, so Chrome treated them as pages
+  worth translating, and anyone who has told it to always translate English got that done
+  silently, with no prompt. Machine translation rewrites a page while Konode is still
+  drawing it, and the setup wizard is where the two collided most often: clicking "Sign in
+  with Google" left you looking at "Konode couldn't show this screen" instead. Your synced
+  data and your storage were never part of this. Every Konode page now declares the
+  language it is actually in, and asks the browser not to translate it.
 - **Cancelling Google Drive sign-in signed you out of Drive.** Pressing the Google
   button in Settings and then closing the consent window left the device with no Drive
   session at all, while Settings went on showing the account as connected. Sign-in used

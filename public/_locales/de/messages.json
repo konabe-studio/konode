@@ -1,4 +1,7 @@
 {
+  "locale_bcp47": {
+    "message": "de"
+  },
   "extension_name": {
     "message": "Konode | Privater Lesezeichen- und Tab-Sync"
   },
@@ -137,6 +140,54 @@
   "popup_restore": {
     "message": "Wiederherstellen"
   },
+  "popup_rate_body": {
+    "message": "Konode synchronisiert deine Geräte jetzt schon eine Weile. Wenn es für dich funktioniert, hilft eine Bewertung im Store anderen, es zu finden."
+  },
+  "popup_rate_yes": {
+    "message": "Bewerten"
+  },
+  "popup_rate_no": {
+    "message": "Nein, danke"
+  },
+  "popup_restore_confirm_one": {
+    "message": "$COUNT$ Tab öffnen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_restore_confirm_other": {
+    "message": "$COUNT$ Tabs öffnen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "142"
+      }
+    }
+  },
+  "popup_tabs_open_here_one": {
+    "message": "$COUNT$ hier offen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_tabs_open_here_other": {
+    "message": "$COUNT$ hier offen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "popup_restore_all_open": {
+    "message": "Alle offen"
+  },
   "popup_backend_label": {
     "message": "Speicher"
   },
@@ -266,6 +317,27 @@
       }
     }
   },
+  "opt_use_provider": {
+    "message": "$PROVIDER$ verwenden",
+    "placeholders": {
+      "provider": {
+        "example": "Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "opt_provider_active": {
+    "message": "aktiv"
+  },
+  "opt_drive_disconnect": {
+    "message": "Trennen"
+  },
+  "opt_drive_unavailable": {
+    "message": "Die Google-Anmeldung ist in diesem Browser nicht verfügbar. Wähle eine andere Option."
+  },
+  "provider_webdav_other": {
+    "message": "WebDAV (andere)"
+  },
   "onb_drive_unavailable": {
     "message": "Die Google-Anmeldung ist in diesem Browser nicht verfügbar. Wähle eine andere Option."
   },
@@ -379,6 +451,12 @@
   },
   "onb_finish_sync": {
     "message": "Fertigstellen & synchronisieren"
+  },
+  "onb_waiting_permission": {
+    "message": "Warte auf Berechtigung…"
+  },
+  "onb_perm_prompt_slow": {
+    "message": "Keine Berechtigungsabfrage zu sehen? Manche Browser zeigen keine an. Erteile Konode die Berechtigungen in den Erweiterungseinstellungen deines Browsers und tippe erneut auf „Fertigstellen & synchronisieren“, oder gehe zurück und schalte die Datentypen aus, die sie brauchen."
   },
   "onb_err_bad_webdav_url": {
     "message": "Diese WebDAV-Adresse sieht nicht wie eine gültige URL aus."
@@ -791,6 +869,108 @@
   "opt_bulk_delete_desc": {
     "message": "Ein Sicherheitsnetz: Würden die Löschungen eines anderen Geräts mehr als diesen Anteil deiner lokalen Lesezeichen entfernen, überspringt die Zusammenführung sie (das schützt deinen Baum vor einer fehlerhaften Synchronisierung). Erhöhe den Wert, wenn du regelmäßig in großen Mengen löschst."
   },
+  "bm_exclude_label": {
+    "message": "Lesezeichen von der Synchronisierung ausschließen"
+  },
+  "bm_exclude_desc": {
+    "message": "Hake die Ordner und Lesezeichen an, die dieses Gerät für sich behält. Sie bleiben hier unverändert, und nichts, was deine anderen Geräte tun, ändert sie."
+  },
+  "bm_exclude_hint": {
+    "message": "Ausschließen löscht nichts: Kopien, die deine anderen Geräte schon haben, bleiben dort. Verschiebst du später ein Lesezeichen in einen ausgeschlossenen Ordner, verschwindet es von deinen anderen Geräten, als hättest du es gelöscht."
+  },
+  "bm_exclude_loading": {
+    "message": "Lesezeichen werden geladen…"
+  },
+  "bm_exclude_error": {
+    "message": "Deine Lesezeichen konnten nicht gelesen werden: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Bookmarks API unavailable"
+      }
+    }
+  },
+  "bm_exclude_empty": {
+    "message": "Auf diesem Gerät gibt es noch keine Lesezeichen."
+  },
+  "bm_exclude_untitled": {
+    "message": "(ohne Namen)"
+  },
+  "bm_exclude_expand": {
+    "message": "$NAME$ öffnen",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_collapse": {
+    "message": "$NAME$ schließen",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_count_one": {
+    "message": "$COUNT$ Lesezeichen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_count_other": {
+    "message": "$COUNT$ Lesezeichen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4182"
+      }
+    }
+  },
+  "bm_exclude_more_one": {
+    "message": "$COUNT$ weiteres anzeigen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_more_other": {
+    "message": "$COUNT$ weitere anzeigen",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "bm_exclude_summary_one": {
+    "message": "$COUNT$ Eintrag wird nicht synchronisiert",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_summary_other": {
+    "message": "$COUNT$ Einträge werden nicht synchronisiert",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "bm_exclude_none": {
+    "message": "Noch ist nichts ausgeschlossen."
+  },
   "opt_activity_head": {
     "message": "Aktivität"
   },
@@ -841,13 +1021,16 @@
     "message": "Ausblenden"
   },
   "opt_devices_error": {
-    "message": "Deine Geräte konnten nicht gelesen werden: $ERROR$. Das bedeutet nicht, dass du keine hast. Prüfe die Verbindung unter Speicher und öffne diesen Tab erneut.",
+    "message": "Deine Geräte konnten nicht gelesen werden: $ERROR$. Das bedeutet nicht, dass du keine hast.",
     "placeholders": {
       "error": {
         "content": "$1",
         "example": "404 Not Found"
       }
     }
+  },
+  "opt_error_check_connection": {
+    "message": "Prüfe die Verbindung unter Speicher und öffne diesen Tab erneut."
   },
   "opt_devices_loading": {
     "message": "Synchronisierungsordner wird gelesen…"
@@ -975,6 +1158,24 @@
   "opt_blocked_saved": {
     "message": "Es wurde nichts entfernt, und vorher wurde ein Wiederherstellungspunkt gespeichert."
   },
+  "opt_blocked_recent_one": {
+    "message": "Andere Geräte haben hier in den letzten 24 Stunden bereits $COUNT$ Lesezeichen entfernt, und zusammen damit würde diese Löschung dein Limit für Massenlöschungen überschreiten.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_recent_other": {
+    "message": "Andere Geräte haben hier in den letzten 24 Stunden bereits $COUNT$ Lesezeichen entfernt, und zusammen damit würde diese Löschung dein Limit für Massenlöschungen überschreiten.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
   "opt_blocked_apply": {
     "message": "Löschvorgang übernehmen"
   },
@@ -1012,7 +1213,7 @@
     }
   },
   "opt_snap_error_desc": {
-    "message": "Das bedeutet nicht, dass du keine hast. Sie liegen in deinem Speicher und konnten gerade nicht aufgelistet werden. Prüfe die Verbindung unter Speicher und öffne diesen Tab erneut."
+    "message": "Das bedeutet nicht, dass du keine hast. Sie liegen in deinem Speicher und konnten gerade nicht aufgelistet werden."
   },
   "opt_snap_empty": {
     "message": "Noch keine Wiederherstellungspunkte. Erstelle oben einen, oder es wird automatisch einer gespeichert, falls jemals eine ungewöhnliche Löschung blockiert wird."
@@ -1097,6 +1298,18 @@
   },
   "opt_log_clear": {
     "message": "Protokoll löschen"
+  },
+  "opt_log_copy_label": {
+    "message": "Für einen Fehlerbericht kopieren"
+  },
+  "opt_log_copy_desc": {
+    "message": "Wortgetreu, älteste zuerst, mit der Konode-Version und deinem Browser. Das schließt die Adresse deines Speicherservers ein und die von Seiten, die Konode nicht synchronisieren konnte. Lies es also durch, bevor du es irgendwo öffentlich postest."
+  },
+  "opt_log_copy": {
+    "message": "Protokoll kopieren"
+  },
+  "opt_log_copy_failed": {
+    "message": "Dieser Browser hat Konode das Kopieren des Protokolls nicht erlaubt. Markiere die Einträge unten und kopiere sie von Hand."
   },
   "opt_log_nothing": {
     "message": "Noch nichts protokolliert. Führe eine Synchronisierung aus, dann erscheint sie hier."
@@ -1243,6 +1456,12 @@
   },
   "opt_email_desc": {
     "message": "Für alles, was du nicht öffentlich posten möchtest."
+  },
+  "opt_rate_label": {
+    "message": "Im Store bewerten"
+  },
+  "opt_rate_desc": {
+    "message": "Wenn Konode für dich funktioniert, hilft eine Bewertung anderen, es zu finden (öffentlich, mit deinem Store-Konto verknüpft)."
   },
   "opt_developer_section": {
     "message": "Entwickler"

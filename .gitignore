@@ -14,6 +14,11 @@ QA_CHECKLIST.md
 STORE_LISTING.md
 TODO.md
 
+# The private checkout those docs now live in, cloned to internal/ on each machine. Ignored
+# as a whole, so nothing in it can be staged here, its own scaffolding included, not even
+# on a fresh clone where its setup has not run yet.
+internal/
+
 # The listing copy STORE_LISTING.md points at: one file per language, plus the AMO
 # submission fields. Submission notes rather than product source, and the reviewer-notes
 # template has a line meant to be filled with the Google OAuth client secret at paste

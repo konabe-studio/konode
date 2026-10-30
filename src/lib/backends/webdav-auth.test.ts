@@ -129,6 +129,16 @@ describe("WebDAV 401: a refused SCHEME is not a wrong password", () => {
     expect(res.message).toContain("PROXY_ENABLE_APP_AUTH");
   });
 
+  it("answers a 429 on Test connection with the interval advice, not a bare status", async () => {
+    stub401(429, {});
+
+    const res = await new WebDAVBackend(config("ben", "correct-password")).testConnection();
+
+    expect(res.ok).toBe(false);
+    expect(res.message).toContain("cloud.example.com");
+    expect(res.message).toContain("Sync interval");
+  });
+
   it("still blames the credentials when the server does offer Basic", async () => {
     stub401(401, { "WWW-Authenticate": 'Basic realm="Nextcloud"' });
 

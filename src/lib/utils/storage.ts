@@ -1,6 +1,12 @@
 import type {
+  AppearedRecord,
+  BookmarkExclusion,
+  KeptShellRecord,
+  CreatedRecord,
+  PeerRemovalRecord,
   DataType,
   SyncPacket,
+  FolderDeleteRecord,
   FolderMoveRecord,
   FolderRenameRecord,
   MoveRecord,
@@ -16,6 +22,7 @@ import { browser } from "@/lib/utils/ext";
 import { BACKEND_LABEL } from "@/lib/constants";
 import { inferStore, storeUrlFor } from "@/lib/utils/extensions-match";
 import { canonicalUrlKey } from "@/lib/utils/url";
+import { sanitizeExclusions } from "@/lib/utils/bookmark-exclusions";
 
 // ─── Device name detection ─────────────────────────────────────────────────
 
@@ -68,6 +75,7 @@ export const DEFAULT_SETTINGS: SyncSettings = {
   conflict_strategy: "lww",
   history_days_limit: 30,
   bulk_delete_percent: 60,
+  excluded_bookmarks: [],
   auto_sync: true,
   sync_on_change: true,
   notifications_enabled: true,
@@ -103,6 +111,11 @@ export const KEYS = {
   BOOKMARK_FOLDER_MOVES: "konode_bm_folder_moves",
   BOOKMARK_TITLES: "konode_bm_titles",
   BOOKMARK_FOLDER_RENAMES: "konode_bm_folder_renames",
+  BOOKMARK_FOLDER_DELETES: "konode_bm_folder_deletes",
+  BOOKMARK_APPEARED: "konode_bm_appeared",
+  BOOKMARK_KEPT_SHELLS: "konode_bm_kept_shells",
+  BOOKMARK_CREATED: "konode_bm_created",
+  BOOKMARK_PEER_REMOVED: "konode_bm_peer_removed",
   // Superseded by the backend-side `konode_snap_index.json`, which every device can
   // read. Kept only so the one-time migration in sync/snapshots.ts can drain the
   // counts this device recorded before dropping the key.
@@ -122,6 +135,11 @@ export const KEYS = {
   SYNC_LOCK: "konode_sync_lock",
   GDRIVE_SESSION: "konode_gdrive_session",
   GDRIVE_FOLDER: "konode_gdrive_folder",
+  ONBOARDING_DRAFT: "konode_onboarding_draft",
+  // The one-time rating card (lib/rate-prompt.ts). Two keys because two contexts write:
+  // the service worker counts into PROGRESS, the popup records the answer in ANSWERED.
+  RATE_PROGRESS: "konode_rate_progress",
+  RATE_ANSWERED: "konode_rate_answered",
 } as const;
 
 // ─── Generic Helpers ───────────────────────────────────────────────────────
@@ -224,6 +242,17 @@ export async function getSettings(): Promise<SyncSettings> {
   return ensureActiveBackendConfig({ ...DEFAULT_SETTINGS, ...settled });
 }
 
+/**
+ * The bookmarks this device keeps out of sync (#54), straight from the stored settings.
+ *
+ * Not through getSettings(): the bookmark listeners ask on every event, and getSettings()
+ * mints a device id when there is none, which is no business of a bookmark recorder.
+ */
+export async function getBookmarkExclusions(): Promise<BookmarkExclusion[]> {
+  const stored = await get<Partial<SyncSettings>>(KEYS.SETTINGS, {});
+  return sanitizeExclusions(stored.excluded_bookmarks);
+}
+
 export async function saveSettings(partial: Partial<SyncSettings>): Promise<SyncSettings> {
   const current = await getSettings();
   const next = { ...current, ...partial };
@@ -267,12 +296,58 @@ export interface AuditEntry {
   detail?: string;
   ok: boolean;
   level?: AuditLevel;
+  /** How many times this line was written, when more than once (see appendAudit). */
+  count?: number;
+  /** When it was written last, when more than once. `timestamp` stays the first time. */
+  last?: string;
 }
+
+const AUDIT_CAP = 200;
+
+/**
+ * A warning or error written again within this long of its last time is the same condition
+ * still going on, not a new one.
+ *
+ * Most of what reaches the log as a warning is a state, re-checked every sync: a permission
+ * taken away, a peer whose passphrase differs, a file that will not download, a server that
+ * redirects. Each wrote a line per cycle for as long as it lasted, and a passphrase mismatch
+ * one per peer per data type, so three peers filled all 200 entries in about 17 minutes and
+ * evicted the very event that explained them. An hour is several syncs at the longest
+ * interval (600s), so a condition that is still there keeps its one entry, and one that
+ * comes back after the browser was closed for the evening gets a new one.
+ */
+const AUDIT_REPEAT_MS = 60 * 60 * 1000;
 
 export async function appendAudit(entry: AuditEntry): Promise<void> {
   // Serialized: the logger calls this without awaiting, so a sync emits several
   // overlapping appends and a plain get→set pair dropped all but the last.
-  await updateKey<AuditEntry[]>(KEYS.AUDIT_LOG, (log) => [entry, ...log].slice(0, 200), []);
+  await updateKey<AuditEntry[]>(KEYS.AUDIT_LOG, (log) => {
+    // Only warnings and errors fold. Events and Debug-mode lines are a timeline, where the
+    // same words at two different moments are two different things to see.
+    if (entry.level === "notice" || entry.level === "error") {
+      // The newest entry with the same words, reached across other warnings and errors only.
+      // Those are the rest of the same cycles (three peers each on the wrong passphrase
+      // interleave), but an event in between means something happened: a merge, a restore,
+      // the folder readable again. Folding across it would put the repeat before the thing
+      // it came after, so the event ends the run and the warning starts a new entry. The
+      // folded entry keeps its place, so the log reads in the order things began.
+      let i = -1;
+      for (let k = 0; k < log.length; k++) {
+        const e = log[k];
+        if (e.level === entry.level && e.action === entry.action && e.detail === entry.detail) { i = k; break; }
+        if ((e.level ?? (e.ok ? "ok" : "error")) === "ok") break;
+      }
+      const prev = i >= 0 ? log[i] : undefined;
+      const at = Date.parse(entry.timestamp);
+      const seen = prev ? Date.parse(prev.last ?? prev.timestamp) : NaN;
+      if (prev && at - seen <= AUDIT_REPEAT_MS) {
+        const next = [...log];
+        next[i] = { ...prev, count: (prev.count ?? 1) + 1, last: at >= seen ? entry.timestamp : prev.last };
+        return next;
+      }
+    }
+    return [entry, ...log].slice(0, AUDIT_CAP);
+  }, []);
 }
 
 // ─── Caches ────────────────────────────────────────────────────────────────
@@ -356,6 +431,61 @@ export function updateFolderRenames(
   mutate: (current: FolderRenameRecord[]) => FolderRenameRecord[]
 ): Promise<FolderRenameRecord[]> {
   return updateKey<FolderRenameRecord[]>(KEYS.BOOKMARK_FOLDER_RENAMES, mutate, []);
+}
+
+// Folders THIS device deleted, path-keyed (see FolderDeleteRecord). Only our own are kept:
+// a peer's arrive in its packet and are read from there, because the one question they
+// answer is whether that peer meant to delete the folder its tombstones just emptied.
+export async function getFolderDeletes(): Promise<FolderDeleteRecord[]> {
+  return get<FolderDeleteRecord[]>(KEYS.BOOKMARK_FOLDER_DELETES, []);
+}
+export function updateFolderDeletes(
+  mutate: (current: FolderDeleteRecord[]) => FolderDeleteRecord[]
+): Promise<FolderDeleteRecord[]> {
+  return updateKey<FolderDeleteRecord[]>(KEYS.BOOKMARK_FOLDER_DELETES, mutate, []);
+}
+
+// Bookmarks that arrived here carrying an older `dateAdded` than the moment they appeared,
+// which is what a browser's own bookmark import does (see AppearedRecord). Local-only.
+export async function getAppeared(): Promise<AppearedRecord[]> {
+  return get<AppearedRecord[]>(KEYS.BOOKMARK_APPEARED, []);
+}
+export function updateAppeared(
+  mutate: (current: AppearedRecord[]) => AppearedRecord[]
+): Promise<AppearedRecord[]> {
+  return updateKey<AppearedRecord[]>(KEYS.BOOKMARK_APPEARED, mutate, []);
+}
+
+// Empty folders a merge left standing here (see KeptShellRecord). Local-only.
+export async function getKeptShells(): Promise<KeptShellRecord[]> {
+  return get<KeptShellRecord[]>(KEYS.BOOKMARK_KEPT_SHELLS, []);
+}
+export function updateKeptShells(
+  mutate: (current: KeptShellRecord[]) => KeptShellRecord[]
+): Promise<KeptShellRecord[]> {
+  return updateKey<KeptShellRecord[]>(KEYS.BOOKMARK_KEPT_SHELLS, mutate, []);
+}
+
+// Bookmarks a merge created here, and what the browser made of them (see CreatedRecord).
+// Local-only.
+export async function getCreated(): Promise<CreatedRecord[]> {
+  return get<CreatedRecord[]>(KEYS.BOOKMARK_CREATED, []);
+}
+export function updateCreated(
+  mutate: (current: CreatedRecord[]) => CreatedRecord[]
+): Promise<CreatedRecord[]> {
+  return updateKey<CreatedRecord[]>(KEYS.BOOKMARK_CREATED, mutate, []);
+}
+
+// What peers' deletions removed here lately, for the mass-delete guard's window (see
+// PeerRemovalRecord). Local-only.
+export async function getPeerRemovals(): Promise<PeerRemovalRecord[]> {
+  return get<PeerRemovalRecord[]>(KEYS.BOOKMARK_PEER_REMOVED, []);
+}
+export function updatePeerRemovals(
+  mutate: (current: PeerRemovalRecord[]) => PeerRemovalRecord[]
+): Promise<PeerRemovalRecord[]> {
+  return updateKey<PeerRemovalRecord[]>(KEYS.BOOKMARK_PEER_REMOVED, mutate, []);
 }
 
 // ─── Imported history (CO-6) ─────────────────────────────────────────────────
@@ -895,4 +1025,30 @@ export async function getResolvedConflicts(): Promise<Record<string, string>> {
 export async function setResolvedConflict(key: string, checksum: string): Promise<void> {
   const map = { ...(await getResolvedConflicts()), [key]: checksum };
   await set(KEYS.RESOLVED_CONFLICTS, map);
+}
+
+// ─── Rating card ────────────────────────────────────────────────────────────
+// See lib/rate-prompt.ts for what these mean and when the card shows.
+
+export interface RateProgress {
+  /** ISO-8601 of the first sync that counted. */
+  first_at: string;
+  /** Syncs that counted, up to the threshold: counting stops there. */
+  syncs: number;
+}
+
+export async function getRateProgress(): Promise<RateProgress | null> {
+  const v = await get<RateProgress | null>(KEYS.RATE_PROGRESS, null);
+  return v && typeof v.first_at === "string" && typeof v.syncs === "number" ? v : null;
+}
+export async function setRateProgress(p: RateProgress): Promise<void> {
+  await set(KEYS.RATE_PROGRESS, p);
+}
+
+export async function getRateAnswered(): Promise<string | null> {
+  const v = await get<string | null>(KEYS.RATE_ANSWERED, null);
+  return typeof v === "string" ? v : null;
+}
+export async function setRateAnswered(at: string): Promise<void> {
+  await set(KEYS.RATE_ANSWERED, at);
 }

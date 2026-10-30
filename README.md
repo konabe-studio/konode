@@ -85,6 +85,17 @@ Chrome's built-in sync encrypts passwords by default and the rest once you set a
 passphrase, with some categories left out; Firefox Sync is end-to-end encrypted by
 default.
 
+**Running Konode alongside your browser's own sync.** You can, and people do, but it is
+untested rather than known to work, so here is what to expect. The concern isn't that the
+two will fight over your data. It's churn. The bookmarks API tells an extension that a
+bookmark appeared, changed or was removed, and never who did it, so a bookmark that Chrome
+Sync or Brave Sync has just brought in looks exactly like one you added yourself. Konode
+publishes it, the other system carries it to its own devices, and the same change travels
+twice. If both systems cover the same devices, you end up where you would have with either
+one alone, just with more writes to your storage along the way. If they cover different
+sets of devices, they bridge those sets together, deletions included, which may not be what
+you had in mind. Picking one system for bookmarks is the simple answer.
+
 ## Privacy & security
 
 - **No Konode servers exist.** Your data goes only to the backend you configure, and
@@ -120,13 +131,13 @@ default.
 
 ## Translations
 
-Konode speaks **English, Hungarian, German, Spanish and Chinese (Simplified)**, and
-follows your browser's language. Every screen is translated: the popup, the setup wizard,
-and Settings. Dates and numbers follow your browser's locale everywhere.
+Konode speaks **English, Hungarian, German, Spanish, Italian, Russian and Chinese
+(Simplified and Traditional)**, and follows your browser's language. Every screen is
+translated: the popup, the setup wizard, and Settings. Dates and numbers follow your
+browser's locale everywhere.
 
-**Japanese**, **Italian** and **Estonian** have been started. A language reaches a release
-once it is complete, because a screen that is half translated reads worse than an English
-one.
+**Japanese** and **Estonian** have been started. A language reaches a release once it is
+complete, because a screen that is half translated reads worse than an English one.
 
 Translations are edited on
 [Hosted Weblate](https://hosted.weblate.org/projects/konode/). You don't need git, a
@@ -233,10 +244,10 @@ use a dedicated manager like [Bitwarden](https://bitwarden.com),
   GitHub + WebDAV · WebDAV provider presets · multi-device merge · per-item conflict
   resolution · opt-in E2EE · Drive OAuth refresh (PKCE) · cross-browser extension
   matching · **Chrome Web Store listing** · **Firefox Add-ons listing** · **translated
-  interface** (English, Hungarian, German, Spanish, Chinese (Simplified)).
+  interface** (English, Hungarian, German, Spanish, Italian, Russian, Chinese (Simplified
+  and Traditional)).
 - **Next**: more backends, cheapest sign-in first (Dropbox token and S3-compatible, then
-  Dropbox OAuth and OneDrive) · faster history sync · more languages (Japanese, Italian,
-  Estonian).
+  Dropbox OAuth and OneDrive) · faster history sync · more languages (Japanese, Estonian).
 - **Later**: MEGA · incremental diff for very large bookmark trees · diffs between
   restore points.
 

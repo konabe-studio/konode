@@ -156,3 +156,146 @@ describe("what an audit entry MEANS, not just whether it went well", () => {
     expect(e.ok).toBe(false); // a notice is still not a success
   });
 });
+
+describe("a warning that lasts is one entry, not one per sync", () => {
+  // Most warnings are a STATE re-checked every sync: a permission taken away, a peer whose
+  // passphrase differs, a file that will not download. Each wrote a line per cycle for as
+  // long as it lasted, and a passphrase mismatch one per peer per data type, so three peers
+  // filled all 200 entries in about 17 minutes and evicted whatever explained them.
+  type Entry = { action: string; detail?: string; level?: string; timestamp: string; count?: number; last?: string };
+  const entries = async (): Promise<Entry[]> => {
+    await new Promise((r) => setTimeout(r, 0));
+    const r = await chrome.storage.local.get(KEYS.AUDIT_LOG);
+    return (r[KEYS.AUDIT_LOG] as Entry[]) ?? [];
+  };
+  const T0 = Date.parse("2026-09-29T10:00:00.000Z");
+  const minutes = (n: number): number => T0 + n * 60_000;
+  const REVOKED = "No extension-management API here, so the extension list isn't published this sync";
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+  function quiet(): void {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.useFakeTimers({ toFake: ["Date"] });
+  }
+
+  it("counts a warning repeated every sync on its first entry", async () => {
+    quiet();
+    for (let i = 0; i < 12; i++) {
+      vi.setSystemTime(minutes(i));
+      logger.warn("exportExtensions", REVOKED);
+    }
+
+    const log = await entries();
+    expect(log).toHaveLength(1);
+    expect(log[0]).toMatchObject({
+      count: 12, timestamp: new Date(minutes(0)).toISOString(), last: new Date(minutes(11)).toISOString(),
+    });
+  });
+
+  it("keeps one entry per peer, which is what the reader needs to tell them apart", async () => {
+    quiet();
+    // Three peers on another passphrase, four data types, five syncs: 60 lines before.
+    for (let cycle = 0; cycle < 5; cycle++) {
+      vi.setSystemTime(minutes(cycle));
+      for (let type = 0; type < 4; type++) {
+        for (const peer of ["p1", "p2", "p3"]) {
+          logger.warn("SyncEngine", `Encryption mismatch, skipping peer ${peer}: wrong passphrase`);
+        }
+      }
+    }
+
+    const log = await entries();
+    expect(log.map((e) => e.detail).sort()).toEqual([
+      "Encryption mismatch, skipping peer p1: wrong passphrase",
+      "Encryption mismatch, skipping peer p2: wrong passphrase",
+      "Encryption mismatch, skipping peer p3: wrong passphrase",
+    ]);
+    expect(log.every((e) => e.count === 20)).toBe(true);
+  });
+
+  it("can no longer evict the event that explains the warning", async () => {
+    quiet();
+    vi.setSystemTime(minutes(0));
+    logger.event("Settings", "Encryption turned on");
+    // A day of syncs at the default minute. Before, the event was gone after 200 of them.
+    for (let i = 1; i <= 1440; i++) {
+      vi.setSystemTime(minutes(i));
+      logger.warn("SyncEngine", "Encryption mismatch, skipping peer p1: wrong passphrase");
+    }
+
+    const log = await entries();
+    expect(log.map((e) => e.action)).toEqual(["SyncEngine", "Settings"]);
+    expect(log[0].count).toBe(1440);
+  });
+
+  it("stays where the warning began, below the other warnings of the same syncs", async () => {
+    quiet();
+    for (let i = 0; i < 3; i++) {
+      vi.setSystemTime(minutes(i));
+      logger.warn("exportExtensions", REVOKED);
+      logger.warn("GDrive", "2 copies of konode_history_x.json in the Konode folder; updating the oldest.");
+    }
+
+    const log = await entries();
+    expect(log.map((e) => [e.action, e.count])).toEqual([["GDrive", 3], ["exportExtensions", 3]]);
+  });
+
+  it("starts a new entry once something has happened in between", async () => {
+    // The listing failed, worked again (an event says so), and failed again: a new incident,
+    // which folded into the first would read as having come before the recovery.
+    quiet();
+    vi.setSystemTime(minutes(0));
+    logger.warn("findOwnMissingFiles", "Couldn't list the sync folder");
+    vi.setSystemTime(minutes(1));
+    logger.event("findOwnMissingFiles", "The sync folder can be listed again");
+    vi.setSystemTime(minutes(2));
+    logger.warn("findOwnMissingFiles", "Couldn't list the sync folder");
+
+    const log = await entries();
+    expect(log.map((e) => e.level)).toEqual(["notice", "ok", "notice"]);
+    expect(log.some((e) => e.count !== undefined)).toBe(false);
+  });
+
+  it("starts a new entry when the warning comes back after an hour without it", async () => {
+    quiet();
+    vi.setSystemTime(minutes(0));
+    logger.warn("exportExtensions", REVOKED);
+    vi.setSystemTime(minutes(61));
+    logger.warn("exportExtensions", REVOKED);
+
+    const log = await entries();
+    expect(log).toHaveLength(2);
+    expect(log.every((e) => e.count === undefined)).toBe(true);
+  });
+
+  it("folds errors the same way, and never into a warning with the same words", async () => {
+    quiet();
+    for (let i = 0; i < 3; i++) {
+      vi.setSystemTime(minutes(i));
+      logger.error("SyncEngine.sync", new Error("Can't reach the server"));
+      logger.warn("SyncEngine.sync", "Can't reach the server");
+    }
+
+    const log = await entries();
+    expect(log.map((e) => [e.level, e.count])).toEqual([["notice", 3], ["error", 3]]);
+  });
+
+  it("leaves events and Debug-mode lines as a timeline", async () => {
+    quiet();
+    vi.spyOn(console, "debug").mockImplementation(() => {});
+    setLoggerDebug(true);
+    for (let i = 0; i < 3; i++) {
+      vi.setSystemTime(minutes(i));
+      logger.event("Tombstones", "Recorded 1 deletion(s)");
+      logger.debug("SyncEngine", "Syncing: bookmarks");
+    }
+
+    const log = await entries();
+    expect(log).toHaveLength(6);
+    expect(log.some((e) => e.count !== undefined)).toBe(false);
+  });
+});

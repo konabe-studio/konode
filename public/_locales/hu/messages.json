@@ -1,4 +1,7 @@
 {
+  "locale_bcp47": {
+    "message": "hu"
+  },
   "extension_name": {
     "message": "Konode | Privát könyvjelző- és lapszinkron"
   },
@@ -137,6 +140,54 @@
   "popup_restore": {
     "message": "Visszaállítás"
   },
+  "popup_rate_body": {
+    "message": "A Konode már egy ideje szinkronizálja az eszközeidet. Ha beválik neked, egy értékelés az áruházban segít másoknak rátalálni."
+  },
+  "popup_rate_yes": {
+    "message": "Értékelem"
+  },
+  "popup_rate_no": {
+    "message": "Nem, köszönöm"
+  },
+  "popup_restore_confirm_one": {
+    "message": "$COUNT$ lap megnyitása",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_restore_confirm_other": {
+    "message": "$COUNT$ lap megnyitása",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "142"
+      }
+    }
+  },
+  "popup_tabs_open_here_one": {
+    "message": "$COUNT$ már nyitva",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_tabs_open_here_other": {
+    "message": "$COUNT$ már nyitva",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "popup_restore_all_open": {
+    "message": "Mind nyitva"
+  },
   "popup_backend_label": {
     "message": "Tárhely"
   },
@@ -210,7 +261,7 @@
     "message": "Felhasználónévként a teljes Fastmail e-mail címedet add meg, jelszóként pedig egy olyan alkalmazásjelszót, amely rendelkezik Files (WebDAV) jogosultsággal."
   },
   "provider_jianguoyun_desc": {
-    "message": "Nutstore (坚果云) felhőtárhely, Kínában széles körben használt."
+    "message": "Nutstore felhőtárhely, Kínában széles körben használt."
   },
   "provider_jianguoyun_note": {
     "message": "Felhasználónévként a Nutstore e-mail címedet add meg, jelszóként pedig egy harmadik féltől származó alkalmazásjelszót. Ingyenes fióknál három eszköztől emeld a Szinkronizálási időköz értékét legalább 120 másodpercre: a Nutstore 30 percenként 600 WebDAV-kérést enged."
@@ -265,6 +316,27 @@
         "content": "$1"
       }
     }
+  },
+  "opt_use_provider": {
+    "message": "$PROVIDER$ használata",
+    "placeholders": {
+      "provider": {
+        "example": "Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "opt_provider_active": {
+    "message": "aktív"
+  },
+  "opt_drive_disconnect": {
+    "message": "Leválasztás"
+  },
+  "opt_drive_unavailable": {
+    "message": "A Google-bejelentkezés ebben a böngészőben nem működik. Válassz másik lehetőséget."
+  },
+  "provider_webdav_other": {
+    "message": "WebDAV (egyéb)"
   },
   "onb_drive_unavailable": {
     "message": "A Google-bejelentkezés ebben a böngészőben nem működik. Válassz másik lehetőséget."
@@ -379,6 +451,12 @@
   },
   "onb_finish_sync": {
     "message": "Befejezés és szinkronizálás"
+  },
+  "onb_waiting_permission": {
+    "message": "Várakozás az engedélyre…"
+  },
+  "onb_perm_prompt_slow": {
+    "message": "Nem jelent meg engedélykérő ablak? Egyes böngészők nem mutatják. Engedélyezd a Konode jogosultságait a böngésző bővítménybeállításaiban, és nyomd meg újra a Befejezés és szinkronizálás gombot, vagy lépj vissza, és kapcsold ki az ezeket igénylő adattípusokat."
   },
   "onb_err_bad_webdav_url": {
     "message": "Ez a WebDAV-cím nem tűnik érvényes URL-nek."
@@ -791,6 +869,108 @@
   "opt_bulk_delete_desc": {
     "message": "Védőháló: ha egy másik eszköz törlései a helyi könyvjelzőidnek ennél nagyobb részét vinnék el, az összefésülés kihagyja őket (ez védi a könyvjelzőfádat egy hibás szinkronizálástól). Növeld, ha rendszeresen törölsz nagy tételben."
   },
+  "bm_exclude_label": {
+    "message": "Könyvjelzők kizárása a szinkronból"
+  },
+  "bm_exclude_desc": {
+    "message": "Jelöld be azokat a mappákat és könyvjelzőket, amelyeket ez az eszköz megtart magának. Itt érintetlenül maradnak, és a többi eszközöd semmit nem változtat rajtuk."
+  },
+  "bm_exclude_hint": {
+    "message": "A kizárás nem töröl semmit: a többi eszközödön már meglévő példányok ott maradnak. Ha később egy könyvjelzőt kizárt mappába helyezel át, az eltűnik a többi eszközödről, mintha törölted volna."
+  },
+  "bm_exclude_loading": {
+    "message": "Könyvjelzők betöltése…"
+  },
+  "bm_exclude_error": {
+    "message": "Nem sikerült beolvasni a könyvjelzőket: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Bookmarks API unavailable"
+      }
+    }
+  },
+  "bm_exclude_empty": {
+    "message": "Ezen az eszközön még nincsenek könyvjelzők."
+  },
+  "bm_exclude_untitled": {
+    "message": "(névtelen)"
+  },
+  "bm_exclude_expand": {
+    "message": "$NAME$ kinyitása",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_collapse": {
+    "message": "$NAME$ becsukása",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_count_one": {
+    "message": "$COUNT$ könyvjelző",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_count_other": {
+    "message": "$COUNT$ könyvjelző",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4182"
+      }
+    }
+  },
+  "bm_exclude_more_one": {
+    "message": "További $COUNT$ megjelenítése",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_more_other": {
+    "message": "További $COUNT$ megjelenítése",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "bm_exclude_summary_one": {
+    "message": "$COUNT$ elem kimarad a szinkronból",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_summary_other": {
+    "message": "$COUNT$ elem kimarad a szinkronból",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "bm_exclude_none": {
+    "message": "Még semmi sincs kizárva."
+  },
   "opt_activity_head": {
     "message": "Aktivitás"
   },
@@ -841,13 +1021,16 @@
     "message": "Elvetés"
   },
   "opt_devices_error": {
-    "message": "Nem sikerült beolvasni az eszközeidet: $ERROR$. Ez nem azt jelenti, hogy nincs egy sem. Ellenőrizd a kapcsolatot a Tárhely fülön, és nyisd meg újra ezt a fület.",
+    "message": "Nem sikerült beolvasni az eszközeidet: $ERROR$. Ez nem azt jelenti, hogy nincs egy sem.",
     "placeholders": {
       "error": {
         "content": "$1",
         "example": "404 Not Found"
       }
     }
+  },
+  "opt_error_check_connection": {
+    "message": "Ellenőrizd a kapcsolatot a Tárhely fülön, és nyisd meg újra ezt a fület."
   },
   "opt_devices_loading": {
     "message": "Szinkronizálási mappa beolvasása…"
@@ -975,6 +1158,24 @@
   "opt_blocked_saved": {
     "message": "Semmi nem lett törölve, és előtte mentettünk egy visszaállítási pontot."
   },
+  "opt_blocked_recent_one": {
+    "message": "Más eszközök az elmúlt 24 órában már $COUNT$ könyvjelzőt töröltek itt, és ezzel együtt ez a törlés átlépné a beállított felső határt.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_recent_other": {
+    "message": "Más eszközök az elmúlt 24 órában már $COUNT$ könyvjelzőt töröltek itt, és ezzel együtt ez a törlés átlépné a beállított felső határt.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
   "opt_blocked_apply": {
     "message": "Törlés alkalmazása"
   },
@@ -1012,7 +1213,7 @@
     }
   },
   "opt_snap_error_desc": {
-    "message": "Ez nem azt jelenti, hogy nincs egy sem. A tárhelyeden vannak, csak most nem sikerült listázni őket. Ellenőrizd a kapcsolatot a Tárhely fülön, és nyisd meg újra ezt a fület."
+    "message": "Ez nem azt jelenti, hogy nincs egy sem. A tárhelyeden vannak, csak most nem sikerült listázni őket."
   },
   "opt_snap_empty": {
     "message": "Még nincs visszaállítási pont. Készíts egyet fent, vagy automatikusan mentődik, ha a Konode egyszer blokkol egy szokatlan törlést."
@@ -1097,6 +1298,18 @@
   },
   "opt_log_clear": {
     "message": "Napló törlése"
+  },
+  "opt_log_copy_label": {
+    "message": "Másolás hibajelentéshez"
+  },
+  "opt_log_copy_desc": {
+    "message": "Szó szerint, a legrégebbitől kezdve, a Konode verziójával és a böngésződdel együtt. Benne van a tárhelyszervered címe, és azoknak az oldalaknak a címe is, amelyeket a Konode nem tudott szinkronizálni, ezért nézd át, mielőtt bárhol nyilvánosan közzéteszed."
+  },
+  "opt_log_copy": {
+    "message": "Napló másolása"
+  },
+  "opt_log_copy_failed": {
+    "message": "A böngésző nem engedte, hogy a Konode kimásolja a naplót. Jelöld ki az alábbi bejegyzéseket, és másold ki őket kézzel."
   },
   "opt_log_nothing": {
     "message": "Még nincs naplózva semmi. Futtass egy szinkronizálást, és itt megjelenik."
@@ -1243,6 +1456,12 @@
   },
   "opt_email_desc": {
     "message": "Bármit, amit inkább nem tennél közzé nyilvánosan."
+  },
+  "opt_rate_label": {
+    "message": "Értékelés az áruházban"
+  },
+  "opt_rate_desc": {
+    "message": "Ha a Konode beválik neked, egy értékelés segít másoknak rátalálni (nyilvános, az áruházi fiókodhoz kötve)."
   },
   "opt_developer_section": {
     "message": "Fejlesztői"

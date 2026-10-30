@@ -1,4 +1,7 @@
 {
+  "locale_bcp47": {
+    "message": "zh-CN"
+  },
   "extension_description": {
     "message": "隐私优先的浏览器同步，支持同步至个人存储空间：Google Drive、WebDAV、GitHub。"
   },
@@ -125,6 +128,54 @@
   "popup_restore": {
     "message": "还原"
   },
+  "popup_rate_body": {
+    "message": "Konode 已经为您的设备同步了一段时间。如果它对您有用，在商店里评个分可以帮助更多人找到它。"
+  },
+  "popup_rate_yes": {
+    "message": "去评分"
+  },
+  "popup_rate_no": {
+    "message": "不用了"
+  },
+  "popup_restore_confirm_one": {
+    "message": "打开 $COUNT$ 个标签页",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_restore_confirm_other": {
+    "message": "打开 $COUNT$ 个标签页",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "142"
+      }
+    }
+  },
+  "popup_tabs_open_here_one": {
+    "message": "$COUNT$ 个已打开",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_tabs_open_here_other": {
+    "message": "$COUNT$ 个已打开",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "popup_restore_all_open": {
+    "message": "已全部打开"
+  },
   "popup_backend_label": {
     "message": "后端"
   },
@@ -198,7 +249,7 @@
     "message": "使用您的 Fastmail 完整邮箱地址作为用户名，并使用具备文件（WebDAV）访问权限的应用专用密码。"
   },
   "provider_jianguoyun_desc": {
-    "message": "坚果云云端存储。"
+    "message": "坚果云云端存储，在中国大陆广泛使用。"
   },
   "provider_jianguoyun_note": {
     "message": "使用您的坚果云账号邮箱作为用户名，并使用在安全选项中生成的第三方应用密码作为密码。免费账户在三台及以上设备时，请将同步间隔调高到 120 秒以上：坚果云每 30 分钟允许 600 次 WebDAV 请求。"
@@ -253,6 +304,27 @@
         "content": "$1"
       }
     }
+  },
+  "opt_use_provider": {
+    "message": "使用 $PROVIDER$",
+    "placeholders": {
+      "provider": {
+        "example": "Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "opt_provider_active": {
+    "message": "使用中"
+  },
+  "opt_drive_disconnect": {
+    "message": "断开连接"
+  },
+  "opt_drive_unavailable": {
+    "message": "此浏览器不支持 Google 登录。请选择其他选项。"
+  },
+  "provider_webdav_other": {
+    "message": "WebDAV（其他）"
   },
   "onb_drive_unavailable": {
     "message": "此浏览器不支持 Google 登录。请选择其他选项。"
@@ -367,6 +439,12 @@
   },
   "onb_finish_sync": {
     "message": "完成并同步"
+  },
+  "onb_waiting_permission": {
+    "message": "正在等待授权…"
+  },
+  "onb_perm_prompt_slow": {
+    "message": "没有看到权限提示？有些浏览器不会显示。请在浏览器的扩展设置中为 Konode 授予权限，然后再次点击“完成并同步”，或返回并关闭需要这些权限的数据类型。"
   },
   "onb_err_bad_webdav_url": {
     "message": "那个 WebDAV 地址看起来不像是有效的 URL。"
@@ -782,6 +860,108 @@
   "opt_bulk_delete_desc": {
     "message": "安全机制：如果来自节点的删除操作影响到超过此比例的本地书签，合并过程将跳过这些删除（防止因同步异常而清空您的书签树）。如果您经常批量删除，可调高此数值。"
   },
+  "bm_exclude_label": {
+    "message": "将书签排除在同步之外"
+  },
+  "bm_exclude_desc": {
+    "message": "勾选此设备要自己保留的文件夹和书签。它们会原样留在这里，您其他设备上的任何操作都不会改动它们。"
+  },
+  "bm_exclude_hint": {
+    "message": "排除不会删除任何内容：您其他设备上已有的副本会继续保留。之后如果把书签移入已排除的文件夹，它会从您的其他设备上消失，就像您删除了它一样。"
+  },
+  "bm_exclude_loading": {
+    "message": "正在加载书签…"
+  },
+  "bm_exclude_error": {
+    "message": "无法读取书签：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Bookmarks API unavailable"
+      }
+    }
+  },
+  "bm_exclude_empty": {
+    "message": "此设备上还没有书签。"
+  },
+  "bm_exclude_untitled": {
+    "message": "（未命名）"
+  },
+  "bm_exclude_expand": {
+    "message": "展开 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_collapse": {
+    "message": "收起 $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_count_one": {
+    "message": "$COUNT$ 个书签",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_count_other": {
+    "message": "$COUNT$ 个书签",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4182"
+      }
+    }
+  },
+  "bm_exclude_more_one": {
+    "message": "再显示 $COUNT$ 个",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_more_other": {
+    "message": "再显示 $COUNT$ 个",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "bm_exclude_summary_one": {
+    "message": "$COUNT$ 项不参与同步",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_summary_other": {
+    "message": "$COUNT$ 项不参与同步",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "bm_exclude_none": {
+    "message": "尚未排除任何内容。"
+  },
   "opt_activity_head": {
     "message": "活动"
   },
@@ -832,13 +1012,16 @@
     "message": "忽略"
   },
   "opt_devices_error": {
-    "message": "无法读取您的设备：$ERROR$。这并不意味着您没有设备。请检查 Storage 中的连接，然后重新打开此标签页。",
+    "message": "无法读取您的设备：$ERROR$。这并不意味着您没有设备。",
     "placeholders": {
       "error": {
         "content": "$1",
         "example": "404 Not Found"
       }
     }
+  },
+  "opt_error_check_connection": {
+    "message": "请检查“存储”中的连接，然后重新打开此标签页。"
   },
   "opt_devices_loading": {
     "message": "正在读取您的同步文件夹…"
@@ -966,6 +1149,24 @@
   "opt_blocked_saved": {
     "message": "没有删除任何内容，并已事先保存恢复点。"
   },
+  "opt_blocked_recent_one": {
+    "message": "其他设备在过去 24 小时内已在此删除了 $COUNT$ 条书签，加上这次删除将超过你设置的批量删除上限。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "opt_blocked_recent_other": {
+    "message": "其他设备在过去 24 小时内已在此删除了 $COUNT$ 条书签，加上这次删除将超过你设置的批量删除上限。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
+  },
   "opt_blocked_apply": {
     "message": "应用此删除"
   },
@@ -1003,7 +1204,7 @@
     }
   },
   "opt_snap_error_desc": {
-    "message": "这并不意味着您没有设备。它们保存在您的存储空间中，刚才无法列出。请检查“存储”中的连接，然后重新打开此标签页。"
+    "message": "这并不意味着您没有恢复点。它们保存在您的存储空间中，刚才无法列出。"
   },
   "opt_snap_empty": {
     "message": "尚未创建任何恢复点。请在上方创建，或在出现异常删除被阻止时自动保存一个。"
@@ -1088,6 +1289,18 @@
   },
   "opt_log_clear": {
     "message": "清除日志"
+  },
+  "opt_log_copy_label": {
+    "message": "复制用于错误报告"
+  },
+  "opt_log_copy_desc": {
+    "message": "逐字复制，按时间从旧到新，并附上 Konode 版本和你的浏览器信息。其中包括你的存储服务器地址，以及 Konode 无法同步的页面地址，公开发布前请先检查一遍。"
+  },
+  "opt_log_copy": {
+    "message": "复制日志"
+  },
+  "opt_log_copy_failed": {
+    "message": "此浏览器不允许 Konode 复制日志。请选中下方的条目后手动复制。"
   },
   "opt_log_nothing": {
     "message": "暂无日志。运行一次同步后即可在此显示。"
@@ -1213,6 +1426,12 @@
   },
   "opt_email_desc": {
     "message": "适用于不便公开的内容。"
+  },
+  "opt_rate_label": {
+    "message": "在商店中评分"
+  },
+  "opt_rate_desc": {
+    "message": "如果 Konode 对您有用，评分可以帮助更多人找到它（公开，关联至您的商店账号）。"
   },
   "opt_developer_section": {
     "message": "开发者"

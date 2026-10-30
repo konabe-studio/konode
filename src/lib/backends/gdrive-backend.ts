@@ -1,5 +1,5 @@
-import type { IBackend, BackendConfig, DataType, SyncPacket } from "@/lib/types";
-import { withRetry, HttpError } from "@/lib/utils/retry";
+import type { IBackend, BackendConfig, DataType, ListedFile, SyncPacket } from "@/lib/types";
+import { withRetry, HttpError, rateLimitMessage } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 import { getAccessToken, getStoredGDriveUser } from "./gdrive-oauth";
 import { clearUploadChecksums, getLastDriveFolder, setLastDriveFolder } from "@/lib/utils/storage";
@@ -80,9 +80,13 @@ export class GDriveBackend implements IBackend {
   /** Every non-trashed "Konode" folder this app can see. */
   private async findFolders(h: HeadersInit): Promise<DriveFileRef[]> {
     const q = encodeURIComponent(`name='${KONODE_FOLDER}' and mimeType='${FOLDER_MIME}' and trashed=false`);
-    const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,createdTime)`, { headers: h });
-    if (!res.ok) throw new HttpError(res.status, `Drive folder lookup failed: ${res.status}`);
-    return ((await res.json()).files ?? []) as DriveFileRef[];
+    // connect() runs this on every sync, and it was the one Drive call outside withRetry, so
+    // a single transient 500 failed the whole cycle and put an error in the Activity log.
+    return withRetry(async () => {
+      const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,createdTime)`, { headers: h });
+      if (!res.ok) throw new HttpError(res.status, `Drive folder lookup failed: ${res.status}`);
+      return ((await res.json()).files ?? []) as DriveFileRef[];
+    });
   }
 
   private async ensureFolder(): Promise<string> {
@@ -328,6 +332,23 @@ export class GDriveBackend implements IBackend {
     });
   }
 
+  async listFilesWithTimes(prefix: string): Promise<ListedFile[]> {
+    return withRetry(async () => {
+      const folderId = this.folderId ?? (await this.ensureFolder());
+      const h = await this.authHeaders();
+      const q = encodeURIComponent(`name contains '${prefix}' and '${folderId}' in parents and trashed=false`);
+      const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(name,modifiedTime)`, { headers: h, cache: "no-store" });
+      if (!res.ok) throw new HttpError(res.status, `Drive list failed: ${res.status}`);
+      const { files } = await res.json();
+      return ((files ?? []) as Array<{ name: string; modifiedTime?: string }>)
+        .filter(f => f.name.startsWith(prefix))
+        .map(f => {
+          const t = f.modifiedTime ? Date.parse(f.modifiedTime) : NaN;
+          return { name: f.name, modified: Number.isNaN(t) ? null : t };
+        });
+    });
+  }
+
   async deleteFile(name: string): Promise<void> {
     await withRetry(async () => {
       const folderId = this.folderId ?? (await this.ensureFolder());
@@ -355,6 +376,7 @@ export class GDriveBackend implements IBackend {
       if (res.status === 401 || res.status === 403) {
         return { ok: false, message: "Google rejected the saved access. Sign in again." };
       }
+      if (res.status === 429) return { ok: false, message: rateLimitMessage("Google Drive") };
       if (!res.ok) return { ok: false, message: `Drive check failed (HTTP ${res.status})` };
       const d = await res.json();
       const name = d.user?.displayName ?? stored.displayName;

@@ -96,7 +96,11 @@ export function dataTypeApiPresent(type: DataType): boolean {
  * Telling them apart takes a permission check, because an optional-permission API is
  * `undefined` until its permission is granted — so a missing `browser.history` means
  * "not granted yet" on Chrome and "never implemented" on Firefox for Android, and only
- * `permissions.contains()` says which.
+ * `permissions.contains()` says which. It says so by THROWING: Firefox for Android has no
+ * `history` permission in its schema at all, so the question is rejected as a type error
+ * rather than answered "no". Read as a plain "no", that offered History as a switch whose
+ * permission no settings screen could ever grant, and setup could not finish while it
+ * was on (seen on Firefox 158).
  */
 export type Availability =
   | { state: "ready" }
@@ -117,8 +121,13 @@ export async function dataTypeAvailability(type: DataType): Promise<Availability
   //
   // The data was never at risk (`isPayloadEmpty` refuses to publish a tab-less session
   // over a good one, and says why). What was missing is that anyone was told.
-  if (permission && !(await hasPermission({ permissions: [permission] }))) {
-    return { state: "needs-permission", permission };
+  if (permission) {
+    const held = await permissionState(permission);
+    // A permission the browser has never heard of, with no API either, is never coming.
+    // The API check stays, so a contains() that fails for some other reason on a browser
+    // that does have the API still reads as a permission to ask for, as it always did.
+    if (held === "unknown" && !dataTypeApiPresent(type)) return { state: "unsupported" };
+    if (held !== "held") return { state: "needs-permission", permission };
   }
 
   if (dataTypeApiPresent(type)) return { state: "ready" };
@@ -177,6 +186,20 @@ export async function hasPermission(req: chrome.permissions.Permissions): Promis
 }
 
 /**
+ * `permissions.contains()` for one API permission, keeping apart the "no" that
+ * `hasPermission` folds together: `unknown` is the browser refusing the question, which
+ * is what it does with a permission name its schema lacks (Firefox for Android with
+ * `history`, `bookmarks` or `tabGroups`).
+ */
+export async function permissionState(permission: string): Promise<"held" | "not-held" | "unknown"> {
+  try {
+    return (await browser.permissions.contains({ permissions: [permission] })) ? "held" : "not-held";
+  } catch {
+    return "unknown";
+  }
+}
+
+/**
  * The result of trying to obtain a permission.
  *
  * `cannot-prompt` is the one that earns its place: Firefox for Android does not implement
@@ -230,6 +253,33 @@ export async function ensurePermission(req: chrome.permissions.Permissions): Pro
   if (await hasPermission(req)) return "granted";
 
   return (await promptsForPermissions()) ? "denied" : "cannot-prompt";
+}
+
+/** How long a permission prompt may stay unanswered before the caller is told. */
+export const PERMISSION_SLOW_MS = 8000;
+
+/**
+ * `ensurePermission`, with word when the answer is slow in coming.
+ *
+ * Vivaldi on Android (8.2) neither showed the prompt nor answered the request, so the
+ * setup's Finish waited on a promise that never settled and looked like a dead button
+ * (reported on Reddit, fixed in Vivaldi Snapshot). The request is not abandoned, since a
+ * real prompt may simply be read slowly; `onSlow` runs once it has gone unanswered for
+ * `slowMs`, so the caller can say what to do if no prompt is on screen.
+ *
+ * The request itself is made before anything is awaited, so it keeps the click's gesture.
+ */
+export async function ensurePermissionWatched(
+  req: chrome.permissions.Permissions,
+  onSlow: () => void,
+  slowMs = PERMISSION_SLOW_MS,
+): Promise<PermissionOutcome> {
+  const timer = setTimeout(onSlow, slowMs);
+  try {
+    return await ensurePermission(req);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**

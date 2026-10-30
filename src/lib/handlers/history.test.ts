@@ -52,6 +52,21 @@ describe("history import/export", () => {
     expect(entry.lastVisitTime).toBe(1783492571152);
   });
 
+  it("takes a Chromium visit once when its time rounds DOWN, not again every sync", async () => {
+    // The test above rounds up, so it could never see this. A fraction under .5 went in as
+    // 151 while the comparison next cycle still read the peer's 151.4, which is "newer", and
+    // the same visit was added again on every sync. Seen on Firefox as the same
+    // "Added 56 new history entries" line every minute, 56 being the Chromium peer's visits
+    // with a fraction under .5.
+    const item = { url: "https://down.com", lastVisitTime: 1783492571151.4, visitCount: 1 };
+    await importHistory([item]);
+    await importHistory([item]);
+    await importHistory([item]);
+    const [entry] = (await chrome.history.search({ text: "", startTime: 0, maxResults: 100 }))
+      .filter((h) => h.url === "https://down.com/");
+    expect(entry.visitCount).toBe(1);
+  });
+
   it("does NOT export a URL carrying an auth token (privacy — no tokens on the backend)", async () => {
     await chrome.history.addUrl({ url: "https://ok.com/article" });
     await chrome.history.addUrl({ url: "https://site.com/callback#access_token=eyJhbGciOiJ" });

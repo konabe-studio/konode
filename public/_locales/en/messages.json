@@ -1,4 +1,8 @@
 {
+  "locale_bcp47": {
+    "message": "en",
+    "description": "NOT a sentence: the BCP 47 tag for THIS catalogue, written into <html lang> so the browser and screen readers know what language the page is in. Replace it with your own tag and nothing else, lowercase language and uppercase region: de, es, pt-BR, zh-CN. Do not translate the word."
+  },
   "extension_name": {
     "message": "Konode | Private Bookmark & Tab Sync",
     "description": "The extension's name. This IS the Chrome Web Store listing title, so it carries the search terms people actually type: bookmark, tab, sync. Keep 'Konode' first and keep the whole thing under 45 characters. Translate the part after the bar into what someone would search for in your language; leave 'Konode' alone, it is the product name."
@@ -173,6 +177,59 @@
     "message": "Restore",
     "description": "Opens the tabs of a peer device's session. Adds tabs; removes nothing."
   },
+  "popup_rate_body": {
+    "message": "Konode has been syncing your devices for a while now. If it works for you, a rating in the store helps other people find it."
+  },
+  "popup_rate_yes": {
+    "message": "Rate it"
+  },
+  "popup_rate_no": {
+    "message": "No thanks"
+  },
+  "popup_restore_confirm_one": {
+    "message": "Open $COUNT$ tab",
+    "description": "The Restore button after a first press, on a session large enough to ask first: the second press opens this many tabs. Exactly one; never shown in practice, since only large sessions ask.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_restore_confirm_other": {
+    "message": "Open $COUNT$ tabs",
+    "description": "The Restore button after a first press, on a session large enough to ask first: the second press opens this many tabs. Keep it short, it is a button. In languages that use the singular after a numeral, this is the same wording as the _one form.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "142"
+      }
+    }
+  },
+  "popup_tabs_open_here_one": {
+    "message": "$COUNT$ open here",
+    "description": "Beside a peer's session in the popup: how many of its tabs are already open in this browser, so Restore will not open them again. In the case of exactly one.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "popup_tabs_open_here_other": {
+    "message": "$COUNT$ open here",
+    "description": "Beside a peer's session in the popup: how many of its tabs are already open in this browser, so Restore will not open them again. In languages that use the singular after a numeral, this is the same wording as the _one form.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "popup_restore_all_open": {
+    "message": "All open",
+    "description": "The Restore button, disabled, when every tab of the session is already open in this browser. Keep it short, it is a button."
+  },
   "popup_backend_label": {
     "message": "Backend",
     "description": "Footer label before the storage provider's name."
@@ -316,6 +373,32 @@
       }
     }
   },
+  "opt_use_provider": {
+    "message": "Use $PROVIDER$",
+    "description": "Accessible name of a storage card in Settings, as in the setup wizard. $PROVIDER$ is a brand name and is never translated.",
+    "placeholders": {
+      "provider": {
+        "example": "Koofr",
+        "content": "$1"
+      }
+    }
+  },
+  "opt_provider_active": {
+    "message": "active",
+    "description": "Badge on the storage card that is saved and in use. Shown in capitals."
+  },
+  "opt_drive_disconnect": {
+    "message": "Disconnect",
+    "description": "Button on the Google Drive card: this device forgets its Google sign-in. Nothing in Drive is deleted."
+  },
+  "opt_drive_unavailable": {
+    "message": "Google sign-in isn't available in this browser. Pick another option.",
+    "description": "On the Google Drive card in Settings, on a browser with no way to sign in to Google (Firefox for Android has no identity API). The same sentence as setup's."
+  },
+  "provider_webdav_other": {
+    "message": "WebDAV (other)",
+    "description": "Name of the storage card for any other WebDAV server. WebDAV is not translated, only the word in brackets."
+  },
   "onb_drive_unavailable": {
     "message": "Google sign-in isn't available in this browser. Pick another option."
   },
@@ -434,6 +517,14 @@
   },
   "onb_finish_sync": {
     "message": "Finish & Sync"
+  },
+  "onb_waiting_permission": {
+    "message": "Waiting for permission…",
+    "description": "The Finish & Sync button while the browser's permission prompt is open."
+  },
+  "onb_perm_prompt_slow": {
+    "message": "No permission prompt on screen? Some browsers don't show one. Allow Konode's permissions in your browser's extension settings and press Finish & Sync again, or go back and turn off the data types that need them.",
+    "description": "Shown under Finish & Sync when the permission prompt has gone unanswered for several seconds, because some browsers never show it. Name the button as it reads in your translation."
   },
   "onb_err_bad_webdav_url": {
     "message": "That WebDAV address doesn't look like a valid URL."
@@ -892,6 +983,124 @@
   "opt_bulk_delete_desc": {
     "message": "A safety net: if a peer's deletions would remove more than this share of your local bookmarks, the merge skips them (guards against a corrupt sync wiping your tree). Raise it if you routinely delete in bulk."
   },
+  "bm_exclude_label": {
+    "message": "Exclude bookmarks from sync",
+    "description": "The switch, under Bookmarks in Settings and in the setup wizard, that opens a tree of this browser's bookmarks for picking what stays out of sync."
+  },
+  "bm_exclude_desc": {
+    "message": "Tick the folders and bookmarks this device keeps to itself. They stay here untouched, and nothing your other devices do changes them.",
+    "description": "Explains the switch above it."
+  },
+  "bm_exclude_hint": {
+    "message": "Excluding something deletes nothing: copies your other devices already have stay there. Moving a bookmark into an excluded folder later removes it from your other devices, as if you had deleted it.",
+    "description": "Shown under the bookmark tree in Settings."
+  },
+  "bm_exclude_loading": {
+    "message": "Loading your bookmarks…",
+    "description": "Shown while the bookmark tree is being read."
+  },
+  "bm_exclude_error": {
+    "message": "Couldn't read your bookmarks: $ERROR$",
+    "description": "The browser refused to hand over the bookmark tree. $ERROR$ is its own message, usually English.",
+    "placeholders": {
+      "error": {
+        "content": "$1",
+        "example": "Bookmarks API unavailable"
+      }
+    }
+  },
+  "bm_exclude_empty": {
+    "message": "There are no bookmarks on this device yet.",
+    "description": "Shown instead of the tree when there are no bookmarks at all."
+  },
+  "bm_exclude_untitled": {
+    "message": "(untitled)",
+    "description": "A folder with no name, in the bookmark tree."
+  },
+  "bm_exclude_expand": {
+    "message": "Open $NAME$",
+    "description": "Screen-reader label of the arrow that opens a folder in the bookmark tree.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_collapse": {
+    "message": "Close $NAME$",
+    "description": "Screen-reader label of the arrow that closes a folder in the bookmark tree.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Reading list"
+      }
+    }
+  },
+  "bm_exclude_count_one": {
+    "message": "$COUNT$ bookmark",
+    "description": "How many bookmarks a folder holds, beside it in the tree, in the case of exactly one.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_count_other": {
+    "message": "$COUNT$ bookmarks",
+    "description": "How many bookmarks a folder holds, beside it in the tree. In languages that use the singular after a numeral, this is the same wording as the _one form.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4182"
+      }
+    }
+  },
+  "bm_exclude_more_one": {
+    "message": "Show $COUNT$ more",
+    "description": "A button at the end of a long folder in the bookmark tree, showing the next entries.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_more_other": {
+    "message": "Show $COUNT$ more",
+    "description": "A button at the end of a long folder in the bookmark tree, showing the next entries.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "200"
+      }
+    }
+  },
+  "bm_exclude_summary_one": {
+    "message": "$COUNT$ item kept out of sync",
+    "description": "Under the bookmark tree: how many folders and bookmarks are ticked, in the case of exactly one.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_exclude_summary_other": {
+    "message": "$COUNT$ items kept out of sync",
+    "description": "Under the bookmark tree: how many folders and bookmarks are ticked.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "bm_exclude_none": {
+    "message": "Nothing is excluded yet.",
+    "description": "Under the bookmark tree, when nothing is ticked."
+  },
   "opt_activity_head": {
     "message": "Activity",
     "description": "Heading of the Activity tab. Separate from the nav label opt_nav_activity, which has to fit a narrow strip."
@@ -945,7 +1154,7 @@
     "message": "Dismiss"
   },
   "opt_devices_error": {
-    "message": "Couldn't read your devices: $ERROR$. This does not mean you have none. Check the connection in Storage and reopen this tab.",
+    "message": "Couldn't read your devices: $ERROR$. This does not mean you have none.",
     "description": "An empty list must never stand in for a list that failed to load. $ERROR$ is the technical message and is not translated.",
     "placeholders": {
       "error": {
@@ -953,6 +1162,10 @@
         "example": "404 Not Found"
       }
     }
+  },
+  "opt_error_check_connection": {
+    "message": "Check the connection in Storage and reopen this tab.",
+    "description": "Follows the device-list and restore-point errors when the error itself gives no advice. Left out after the lost-permission message, which already says to open Settings → Storage and press Save. 'Storage' names the tab, so it must match the tab's own translation."
   },
   "opt_devices_loading": {
     "message": "Reading your sync folder…"
@@ -1070,6 +1283,16 @@
     "message": "Nothing was removed, and a restore point was saved first.",
     "description": "The reassurance. Sits right after opt_blocked_from in the same paragraph."
   },
+  "opt_blocked_recent_one": {
+    "message": "Other devices already removed $COUNT$ bookmark here in the last 24 hours, and this would take the total past your bulk-delete limit.",
+    "description": "Under the blocked-deletion headline, only when earlier deletions from other devices are why a deletion smaller than the limit was held back: the guard adds up what peers removed here over a day (#41). The limit is the 'Max bulk delete from a peer' setting.",
+    "placeholders": { "count": { "content": "$1", "example": "1" } }
+  },
+  "opt_blocked_recent_other": {
+    "message": "Other devices already removed $COUNT$ bookmarks here in the last 24 hours, and this would take the total past your bulk-delete limit.",
+    "description": "Plural of opt_blocked_recent_one.",
+    "placeholders": { "count": { "content": "$1", "example": "30" } }
+  },
   "opt_blocked_apply": {
     "message": "Apply the deletion",
     "description": "Button. First step of two, because applying removes bookmarks."
@@ -1110,7 +1333,7 @@
     }
   },
   "opt_snap_error_desc": {
-    "message": "This does not mean you have none. They live on your storage and could not be listed just now. Check the connection in Storage and reopen this tab.",
+    "message": "This does not mean you have none. They live on your storage and could not be listed just now.",
     "description": "On a recovery screen, 'you have no backups' is the worst possible thing to say by mistake."
   },
   "opt_snap_empty": {
@@ -1200,6 +1423,22 @@
   },
   "opt_log_clear": {
     "message": "Clear log"
+  },
+  "opt_log_copy_label": {
+    "message": "Copy for a bug report",
+    "description": "Row label next to the Copy log button in Settings → Activity."
+  },
+  "opt_log_copy_desc": {
+    "message": "Word for word, oldest first, with the Konode version and your browser. That includes your storage server's address and those of pages Konode couldn't sync, so read it before posting it anywhere public.",
+    "description": "Says the copy is not redacted, and why that matters. The log lines themselves stay in English on purpose."
+  },
+  "opt_log_copy": {
+    "message": "Copy log",
+    "description": "Button. Puts the whole Activity log on the clipboard as text."
+  },
+  "opt_log_copy_failed": {
+    "message": "This browser wouldn't let Konode copy the log. Select the entries below and copy them by hand.",
+    "description": "Shown when the clipboard refuses the copy."
   },
   "opt_log_nothing": {
     "message": "Nothing logged yet. Run a sync and it'll show up here."
@@ -1352,6 +1591,12 @@
   },
   "opt_email_desc": {
     "message": "For anything you'd rather not post publicly."
+  },
+  "opt_rate_label": {
+    "message": "Rate it in the store"
+  },
+  "opt_rate_desc": {
+    "message": "If Konode works for you, a rating helps other people find it (public, tied to your store account)."
   },
   "opt_developer_section": {
     "message": "Developer"

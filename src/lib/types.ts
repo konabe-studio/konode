@@ -121,6 +121,9 @@ export interface FolderRenameRecord {
   from: string;
   to: string;
   at: number; // epoch ms
+  /** A bookmark the folder holds (canonical url), when same-named siblings make the path
+   *  name more than one folder (#51). Peers on an older build neither send nor read it. */
+  holds?: string;
 }
 
 export interface FolderMoveRecord {
@@ -129,6 +132,107 @@ export interface FolderMoveRecord {
   at: number;      // epoch ms
   prev?: string;   // sibling key immediately before the folder (undefined = it's first)
   next?: string;   // sibling key immediately after the folder (undefined = it's last)
+  holds?: string;  // as FolderRenameRecord.holds
+}
+
+/**
+ * When a bookmark appeared on THIS device, for the case where `dateAdded` says otherwise (#27).
+ *
+ * The merge decides "is this bookmark newer than that deletion" from `dateAdded`, which is
+ * right until an import sets it: a browser restoring a bookmark export honours the saved
+ * ADD_DATE, so the restored bookmark reads as months old and an older deletion undid the
+ * restore. Local-only; what peers need of it travels as the exported `dateAdded`.
+ */
+export interface AppearedRecord {
+  url: string;
+  at: number; // epoch ms
+}
+
+/**
+ * A folder was deleted on the device that published this (#26).
+ *
+ * A tombstone is URL-keyed, so it can say that a folder's bookmarks went but never that the
+ * folder did, and every device that applied the tombstones kept the folder as an empty shell.
+ * A folder has no cross-device id, so this is keyed the way FolderMoveRecord is:
+ * `path` = `[rootKind, …ancestorTitles, folderTitle]`.
+ */
+export interface FolderDeleteRecord {
+  path: string[];
+  at: number; // epoch ms
+  // Local bookkeeping, as on Tombstone: set on a deletion this device made, stripped before
+  // publishing. Only a device's own folder deletions ever leave it.
+  own?: boolean;
+}
+
+/**
+ * A folder that a merge emptied on THIS device and had to leave standing (#26).
+ *
+ * Emptying a folder is not deleting it, so when a peer's deletions empty a folder here and
+ * the peer has not recorded deleting the folder, it stays. If the peer deletes it later,
+ * nothing empties it here a second time, so the merge remembers which empty folders are its
+ * own doing: only those may be taken by a deletion record that arrives afterwards. An empty
+ * folder made here was never synced (empty folders never are), and a peer's record for the
+ * same path says nothing about it. Local-only, by local id; an entry goes when its folder
+ * does, or once something has been put back in it.
+ */
+export interface KeptShellRecord {
+  id: string;
+  at: number; // epoch ms, when a merge left it standing; for diagnosis, nothing expires by it
+}
+
+/**
+ * A bookmark a merge created on THIS device, for the case where the browser did not keep it
+ * as given (#41).
+ *
+ * The merge decides "do we have this already" by URL, so a browser that stores a different
+ * URL than it was handed never matches the peer's bookmark, and every merge added another
+ * copy. Norton Neo appears to keep a peer's `chrome://newtab/` as `neo://newtab/`, and one
+ * bookmark became thousands, one per sync.
+ *
+ * `kept` says what became of it. Absent: created as given, not yet confirmed by a later
+ * merge. A string: the browser keeps it under that URL, and the merge treats the two as one
+ * bookmark. `null`: it was gone by the next merge although nobody deleted it, so creating it
+ * again would only repeat that. Local-only, keyed by the peer's URL.
+ */
+export interface CreatedRecord {
+  url: string;
+  at: number; // epoch ms, when the merge created it
+  kept?: string | null;
+}
+
+/**
+ * A bookmark a PEER's deletion removed here, for the mass-delete guard's window (#41).
+ *
+ * The guard used to judge each merge on its own, so a deletion that arrived in several
+ * smaller pieces passed piece by piece, every one of them under the cap, and the tree
+ * emptied just the same. The merge now remembers what peers removed here recently and holds
+ * the next piece against the total. Keyed by canonical URL, the unit the guard counts in.
+ * Local-only; an entry leaves when it ages out of the window, and the whole list goes when
+ * the user approves a blocked deletion, which settles everything the card showed.
+ */
+export interface PeerRemovalRecord {
+  url: string;
+  at: number; // epoch ms, when the merge removed it
+}
+
+/**
+ * A folder or a single bookmark this device keeps out of sync (#54).
+ *
+ * An extension that maintains a huge bookmark folder of its own made every sync crawl and
+ * froze the browser while Konode pushed thousands of bookmarks it had no business with.
+ * Excluded nodes stay here untouched: they are never published, and nothing a peer sends
+ * creates, moves, renames or deletes anything inside them.
+ *
+ * Keyed the way folders are everywhere else, by path, because the peer's copy of the same
+ * folder has to be recognised too. `path` is `[rootKind, …ancestorTitles, folderTitle]` for
+ * a folder, and the PARENT folder's path for a bookmark, which also carries `url`. `id` is
+ * the local id when it was excluded: it keeps a folder excluded here after a rename or a
+ * move, which a path alone would lose. Local-only, like the rest of the settings.
+ */
+export interface BookmarkExclusion {
+  path: string[];
+  url?: string;
+  id?: string;
 }
 
 // Bookmark sync payload: the live tree plus the device's deletion log.
@@ -139,6 +243,7 @@ export interface BookmarkPayload {
   moves?: MoveRecord[]; // optional for back-compat with packets written before move-sync
   folderMoves?: FolderMoveRecord[]; // optional for back-compat (added with folder-reorder sync)
   titles?: TitleRecord[]; // optional for back-compat (added with rename sync)
+  folderDeletes?: FolderDeleteRecord[]; // optional for back-compat (added with folder-deletion sync)
   folderRenames?: FolderRenameRecord[]; // optional for back-compat (added with rename sync)
 }
 
@@ -242,6 +347,9 @@ export interface SyncSettings {
   // than this % of local bookmarks (guards against a corrupt/oversized tombstone
   // log wiping the tree). Default 60; raise it if you routinely delete in bulk.
   bulk_delete_percent: number;
+  // Bookmarks this device keeps to itself (#54). Optional: settings stored by an older
+  // build have none, which means nothing is excluded.
+  excluded_bookmarks?: BookmarkExclusion[];
   auto_sync: boolean;
   sync_on_change: boolean;       // trigger sync immediately on bookmark change
   notifications_enabled: boolean;
@@ -284,11 +392,14 @@ export interface SyncState {
   // does not carry it, and this object is read back from storage. The device is the
   // useful half: a bare count says 48 bookmarks without saying 48 of what, or which
   // machine asked, and both are needed before anyone can decide to approve it (#18).
+  // `recent` is what other devices' deletions already removed here within the guard's
+  // window: when it is not 0, that is why a deletion smaller than the cap was held back.
   recovery_notice?: {
     at: string;
     blocked: number;
     cap?: number;
     local_total?: number;
+    recent?: number;
     device_id?: string;
     device_label?: string | null;
   } | null;
@@ -323,6 +434,14 @@ export interface ConflictItem {
   local_version?: unknown;
   remote_version?: unknown;
   remote_packet?: SyncPacket;
+  /**
+   * What the peer's bookmarks held when this was queued, as a hash of `bookmarkContent`
+   * (#34). Resolving remembers it rather than the peer's checksum, which moves with every
+   * date and log entry the peer writes, so the same question stops coming back while the
+   * peer's bookmarks stay the same. Absent for history, and for a peer this device could
+   * not read.
+   */
+  content_key?: string;
   timestamp: string;
   resolved: boolean;
 }
@@ -353,7 +472,18 @@ export interface IBackend {
   putFile(name: string, content: string): Promise<void>;
   getFile(name: string): Promise<string | null>;
   listFiles(prefix: string): Promise<string[]>;
+  // The same listing with each file's modification time, where the backend's listing
+  // already carries one: Drive's `modifiedTime`, WebDAV's `getlastmodified`. The GitHub
+  // contents API has no such field, and one commits query per file is not "for free", so
+  // that backend leaves this out and callers fall back to what they did before (#30).
+  listFilesWithTimes?(prefix: string): Promise<ListedFile[]>;
   deleteFile(name: string): Promise<void>;
+}
+
+export interface ListedFile {
+  name: string;
+  /** epoch ms, or null when the listing gave no parseable time for this file */
+  modified: number | null;
 }
 
 // ─── Snapshots (bookmark restore points) ────────────────────────────────────
@@ -399,7 +529,11 @@ export interface DeviceInfo {
   device_id: string;
   /** null when every packet we could read came from a build that didn't carry a name. */
   label: string | null;
-  /** ISO-8601 of the newest packet we read for this device, or null if none was readable. */
+  /**
+   * ISO-8601 of this device's last upload: the newest modification time among its files when
+   * the backend's listing reports them, else the timestamp of the one packet we read for its
+   * name. null if neither was available.
+   */
   lastSeen: string | null;
   types: DataType[];
   isSelf: boolean;
