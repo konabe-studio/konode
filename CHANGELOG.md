@@ -218,6 +218,29 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **On Edge, everything arriving from your other devices landed in "Other favorites".**
+  Konode worked out which root an arriving bookmark belonged in — the bar, other, mobile —
+  from the number the browser gives that folder, which on Chromium has been 1, 2 and 3 for
+  as long as there has been a bookmarks API. Edge 142 renumbered every bookmark on the
+  profile, once and permanently, so the Favorites bar stopped being 1. With nothing left to
+  recognise, Konode fell back to the one root it knows is always writable, and your bar,
+  your folders and your mobile bookmarks all came down into "Other favorites" together.
+  Syncing between other browsers was unaffected, which is why it looked like Edge was
+  simply unsupported.
+  Konode now asks the browser what each folder *is* rather than inferring it from a number,
+  which is renumbering-proof and the same answer on Chrome, Edge, Brave and Opera. Each
+  device also publishes that answer alongside its roots, so your other devices never have
+  to guess from ids that only ever meant anything on the machine that wrote them, and an
+  Edge whose titles are in your own language maps correctly too. Bookmarks already sitting
+  in "Other favorites" are not moved back for you — Konode has no record of where they came
+  from — but nothing new will be put there.
+  Two things found alongside it are fixed as well. A "Managed bookmarks" root, the one your
+  employer's policy fills, is never written to any more: it rejects every write, so anything
+  routed there was quietly lost, and a peer's managed bookmarks now arrive in the ordinary
+  "Other bookmarks" instead. And on a Chrome signed in to a Google account, which keeps a
+  second set of roots for the account alongside the local ones, arriving bookmarks now
+  consistently go to the account's bar instead of whichever of the two the browser happened
+  to list first — the same tearing-in-half that Orion used to cause.
 - **A bookmark to a browser's own page no longer multiplies on Norton Neo.** Neo stores a
   `chrome://` address under its own `neo://` name, so a New Tab bookmark synced from Chrome
   arrived as `neo://newtab/`, Konode did not recognise it on the next sync, and added it

@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { rootKind, rootKindFromTitle, defaultOtherRootId, matchLocalRoot, matchLocalRootEx } from "./bookmark-roots";
+import {
+  rootKind, rootKindFromTitle, rootKindFromFolderType, rootKindOf, asRootKind,
+  defaultOtherRootId, findLocalRootByKind, matchLocalRoot, matchLocalRootEx,
+} from "./bookmark-roots";
 
 // Chrome numbers its roots; Firefox uses stable guids.
 const CHROME_ROOTS = [
@@ -177,5 +180,175 @@ describe("matchLocalRootEx — confidence", () => {
   it("a Firefox-only menu root on Chrome is not a confident match", () => {
     // no "menu" kind on Chrome, title differs → position/default → not confident
     expect(matchLocalRootEx(FIREFOX_ROOTS[1], CHROME_ROOTS, 1).confident).toBe(false);
+  });
+});
+
+// ── Edge, after the renumbering (issue #66) ────────────────────────────────────────
+//
+// crbug 456225717 reassigned every bookmark id on every profile, and it shipped in Edge
+// 142 as a one-time permanent renumbering. The Favorites bar is some arbitrary id
+// afterwards, and Edge's English root titles never matched Chrome's anyway — so a Chrome
+// peer's bar matched nothing and its whole tree was dropped into "Other favorites".
+// Chromium 134+ (every build that could renumber) types the roots on the node itself.
+const EDGE_142_ROOTS = [
+  { id: "17", title: "Favorites bar", folderType: "bookmarks-bar" },
+  { id: "18", title: "Other favorites", folderType: "other" },
+  { id: "19", title: "Mobile favorites", folderType: "mobile" },
+  { id: "20", title: "Managed favorites", folderType: "managed" },
+];
+
+describe("rootKindFromFolderType", () => {
+  it("maps Chromium's folder types", () => {
+    expect(rootKindFromFolderType("bookmarks-bar")).toBe("bar");
+    expect(rootKindFromFolderType("other")).toBe("other");
+    expect(rootKindFromFolderType("mobile")).toBe("mobile");
+    expect(rootKindFromFolderType("managed")).toBe("managed");
+  });
+  it("is undefined when the engine reports none", () => {
+    expect(rootKindFromFolderType(undefined)).toBeUndefined();
+    expect(rootKindFromFolderType("something-new")).toBeUndefined();
+  });
+});
+
+describe("rootKindOf — strongest signal wins", () => {
+  it("types a renumbered root from its folderType, whatever the id says", () => {
+    expect(rootKindOf(EDGE_142_ROOTS[0])).toBe("bar");
+    expect(rootKindOf(EDGE_142_ROOTS[3])).toBe("managed");
+    // "2" is Chrome's OTHER root by id — folderType has to outrank that, or a renumbered
+    // profile whose bar happens to land on a known numeric id is actively misfiled.
+    expect(rootKindOf({ id: "2", title: "Favorites bar", folderType: "bookmarks-bar" })).toBe("bar");
+  });
+
+  it("takes the peer's own answer over everything else", () => {
+    expect(rootKindOf({ id: "2", title: "Other bookmarks", rootKind: "bar" })).toBe("bar");
+  });
+
+  it("falls back to the id table when there is no folderType", () => {
+    expect(rootKindOf({ id: "1", title: "Bookmarks bar" })).toBe("bar");
+    expect(rootKindOf({ id: "unfiled_____" })).toBe("other");
+  });
+
+  it("falls back to a known English root title when the id means nothing", () => {
+    expect(rootKindOf({ id: "17", title: "Favorites bar" })).toBe("bar");
+    expect(rootKindOf({ id: "18", title: "Other favorites" })).toBe("other");
+    expect(rootKindOf({ id: "99", title: "Bookmarks Toolbar" })).toBe("bar");
+  });
+
+  it("stays undefined for a localized title it cannot know", () => {
+    // Root titles are localized, so the title table only ever rescues English UIs.
+    expect(rootKindOf({ id: "17", title: "Kedvencek sávja" })).toBeUndefined();
+  });
+
+  it("does not type an ordinary folder", () => {
+    expect(rootKindOf({ id: "4242", title: "Work" })).toBeUndefined();
+  });
+});
+
+describe("matchLocalRoot — Edge 142 renumbering (issue #66)", () => {
+  it("lands a Chrome peer's bar in the Favorites bar, not Other favorites", () => {
+    const m = matchLocalRootEx(CHROME_ROOTS[0], EDGE_142_ROOTS, 0);
+    expect(m.id).toBe("17");       // this was "18" — the whole of #66
+    expect(m.confident).toBe(true); // and confident, so moves apply too
+  });
+
+  it("maps the rest of the Chrome roots by kind as well", () => {
+    expect(matchLocalRoot(CHROME_ROOTS[1], EDGE_142_ROOTS, 1)).toBe("18");
+    expect(matchLocalRoot(CHROME_ROOTS[2], EDGE_142_ROOTS, 2)).toBe("19");
+  });
+
+  it("maps a renumbered Edge root back onto Chrome", () => {
+    expect(matchLocalRoot(EDGE_142_ROOTS[0], CHROME_ROOTS, 0)).toBe("1");
+    expect(matchLocalRoot(EDGE_142_ROOTS[0], FIREFOX_ROOTS, 0)).toBe("toolbar_____");
+  });
+
+  it("uses the kind the peer published, even when its id reads as another root", () => {
+    // What a renumbered peer now sends: the kind travels with the root, so the receiver
+    // never has to touch an id that only meant something on the sender's profile.
+    const remote = { id: "2", title: "Kedvencek sávja", rootKind: "bar" as const };
+    expect(matchLocalRoot(remote, CHROME_ROOTS, 0)).toBe("1");
+  });
+
+  it("still rescues a renumbered peer that sent no kind, by its English title", () => {
+    expect(matchLocalRoot({ id: "17", title: "Favorites bar" }, CHROME_ROOTS, 0)).toBe("1");
+  });
+
+  it("is honest about the case with nothing left to match on", () => {
+    // Renumbered id, localized title, no folderType, no published kind: #66 with every
+    // signal removed. Position is all that remains — here it happens to land on the bar,
+    // but it is a guess, so it must not be confident (no move may act on it).
+    const m = matchLocalRootEx({ id: "17", title: "Kedvencek sávja" }, CHROME_ROOTS, 0);
+    expect(m.id).toBe("1");
+    expect(m.confident).toBe(false);
+  });
+});
+
+describe("the managed root is never a sync target", () => {
+  // "Managed bookmarks" is enterprise policy and rejects every write, so a bookmark
+  // routed there is simply lost (create throws, the handler logs and moves on).
+  it("is not the default writable root", () => {
+    expect(defaultOtherRootId(EDGE_142_ROOTS)).toBe("18");
+    expect(defaultOtherRootId([EDGE_142_ROOTS[3], EDGE_142_ROOTS[0]])).toBe("17");
+  });
+
+  it("is not reachable by a positional guess", () => {
+    expect(matchLocalRoot({ id: "nonstandard" }, EDGE_142_ROOTS, 3)).toBe("18");
+  });
+
+  it("sends a peer's managed root to the default writable root instead", () => {
+    const m = matchLocalRootEx(EDGE_142_ROOTS[3], EDGE_142_ROOTS, 3);
+    expect(m.id).toBe("18"); // not "20", the local managed root
+    expect(m.confident).toBe(false);
+    expect(matchLocalRoot(EDGE_142_ROOTS[3], CHROME_ROOTS, 3)).toBe("2");
+  });
+});
+
+// Chromium 134+ states it outright: "There may be zero, one or multiple nodes of each
+// folder type." A signed-in profile carries an ACCOUNT bar and a local-only bar, told
+// apart by `syncing` — the same hazard as Orion's two bars, and it must not be settled
+// by whichever one the browser happens to enumerate first.
+const ACCOUNT_AND_LOCAL_ROOTS = [
+  { id: "1", title: "Bookmarks bar", folderType: "bookmarks-bar", syncing: false },
+  { id: "2", title: "Other bookmarks", folderType: "other", syncing: false },
+  { id: "7", title: "Bookmarks bar", folderType: "bookmarks-bar", syncing: true },
+  { id: "8", title: "Other bookmarks", folderType: "other", syncing: true },
+];
+
+describe("two local roots of the same kind (account + local-only)", () => {
+  it("resolves to the same root whatever order they are enumerated in", () => {
+    const forward = matchLocalRoot(CHROME_ROOTS[0], ACCOUNT_AND_LOCAL_ROOTS, 0);
+    const reversed = matchLocalRoot(CHROME_ROOTS[0], [...ACCOUNT_AND_LOCAL_ROOTS].reverse(), 0);
+    expect(forward).toBe(reversed);
+  });
+
+  it("picks the account root — where a signed-in user's bookmarks actually are", () => {
+    expect(matchLocalRoot(CHROME_ROOTS[0], ACCOUNT_AND_LOCAL_ROOTS, 0)).toBe("7");
+    expect(defaultOtherRootId(ACCOUNT_AND_LOCAL_ROOTS)).toBe("8");
+  });
+});
+
+describe("findLocalRootByKind", () => {
+  it("returns the single root of a kind", () => {
+    expect(findLocalRootByKind(CHROME_ROOTS, "bar")?.id).toBe("1");
+    expect(findLocalRootByKind(EDGE_142_ROOTS, "other")?.id).toBe("18");
+  });
+  it("is undefined when the browser has no such root", () => {
+    expect(findLocalRootByKind(CHROME_ROOTS, "menu")).toBeUndefined();
+  });
+  it("prefers a root typed by the engine over one rescued by its title", () => {
+    const roots = [{ id: "3", title: "Favorites" }, { id: "9", folderType: "bookmarks-bar" }];
+    expect(findLocalRootByKind(roots, "bar")?.id).toBe("9");
+  });
+});
+
+describe("asRootKind", () => {
+  // The first segment of a stored folder path is a kind; it comes back as a bare string.
+  it("narrows a stored path segment", () => {
+    expect(asRootKind("bar")).toBe("bar");
+    expect(asRootKind("managed")).toBe("managed");
+  });
+  it("rejects anything that isn't a kind", () => {
+    expect(asRootKind("Bookmarks bar")).toBeUndefined();
+    expect(asRootKind("")).toBeUndefined();
+    expect(asRootKind(undefined)).toBeUndefined();
   });
 });

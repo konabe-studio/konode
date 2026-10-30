@@ -1,3 +1,5 @@
+import type { RootKind } from "@/lib/utils/bookmark-roots";
+
 // ─── Core Types ────────────────────────────────────────────────────────────
 
 export type DataType = "bookmarks" | "history" | "sessions" | "extensions";
@@ -43,6 +45,11 @@ export interface SyncBookmark {
   dateAdded: number;
   children?: SyncBookmark[];
   _deleted?: boolean;
+  // Top-level roots only, and optional for back-compat with packets written before
+  // root-kind sync: the sender's own answer to "which root is this?" (bar/other/…), so
+  // the receiver doesn't have to guess from an id that is only meaningful on the sender's
+  // profile. Edge 142 renumbered every bookmark id, which is what made the guess fail.
+  rootKind?: RootKind;
 }
 
 // A deletion marker so a removed bookmark propagates (and doesn't resurrect from

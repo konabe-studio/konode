@@ -12,7 +12,7 @@
  */
 
 import type { BookmarkExclusion } from "@/lib/types";
-import { rootKind, rootKindFromTitle } from "@/lib/utils/bookmark-roots";
+import { rootKindOf, type RootLike } from "@/lib/utils/bookmark-roots";
 import { canonicalUrlKey } from "@/lib/utils/url";
 
 /** The shape every function here walks: a browser bookmark node and a SyncBookmark both fit. */
@@ -24,12 +24,13 @@ export interface ExclusionNode {
 }
 
 /**
- * The first segment of a path: a root's kind, the way the merge matches roots (the title
- * override first, so WebKit's "Favorites" is the bar). A root nobody recognises keeps its
- * title, which is at least stable on the device that has it.
+ * The first segment of a path: a root's kind, resolved the way the merge resolves it — the
+ * engine's own folderType first, so a renumbered Edge profile (#66) keys its paths the same
+ * as every other browser instead of falling through to a title. A root nobody recognises
+ * keeps its title, which is at least stable on the device that has it.
  */
-export function rootKey(root: { id: string; title?: string }): string {
-  return rootKindFromTitle(root.title) ?? rootKind(root.id) ?? `root:${(root.title ?? "").trim()}`;
+export function rootKey(root: RootLike): string {
+  return rootKindOf(root) ?? `root:${(root.title ?? "").trim()}`;
 }
 
 function samePath(a: string[], b: string[]): boolean {
