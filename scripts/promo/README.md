@@ -60,38 +60,50 @@ The product shots drive a real browser, which cannot be seeked. Each beat gets a
 frame budget instead, so the timeline holds even when the browser is half a second slower
 than last time.
 
-## The product shots
+## Shot 4, the one that has to be true
 
-Shots 4, 5 and 6 show the extension itself. The pieces they need are built and proven;
-what is left is the choreography, which wants an eye rather than more plumbing.
+Shot 4 is the claim the video stands on: a bookmark saved on one machine is already on
+the other. It is shot, and nothing in it is staged.
 
-**The sync in shot 4 is real.** `lib/webdav-server.mjs` is a small WebDAV server, enough
-of one for the five requests `src/lib/backends/webdav-backend.ts` makes, holding
-everything in memory. Two throwaway profiles sync through it with no account, no network
-and no secrets, which is what keeps the shoot repeatable on anyone's machine.
-`lib/webdav-server.test.ts` points the shipped WebDAV client at it and checks that a
-packet written by one device is what the other one reads back, so the server cannot
-quietly drift away from what the extension expects.
+`lib/devices.mjs` starts two throwaway Chrome profiles with the extension loaded, points
+both at `lib/webdav-server.mjs` (a WebDAV server small enough to live here, in memory, no
+account and no network), and lets the second device reach the shared shelf the way a real
+second device would: by syncing, not by being set up the same. Then the bookmark is
+created on the first device and the stills are taken from Chrome's own bookmark manager,
+in dark mode, before and after. If the sync failed, the capture refuses to go on rather
+than cutting a video of something that did not happen.
 
-**The capture runs a patched copy of `dist/`.** Konode asks for loopback access only when
-you point it at a WebDAV server, and that request is a Chrome dialog, which is browser UI
-that no script can click. So `capture.mjs` copies the build into `promo-out/.dist` and
-moves `http://127.0.0.1/*` from `optional_host_permissions` into `host_permissions`,
-where loading unpacked grants it silently. Same code, same pixels, one permission
-pre-granted instead of clicked. `dist/` itself is never touched.
+Those four stills are then animated by `kinetic/`, the same seekable engine that draws
+the type shots, which is what makes shot 4 as repeatable as the rest. A browser cannot be
+seeked; a photograph of one can.
 
-**What still has to be decided.** Playwright records the page, never the browser around
-it, so the bookmarks bar and the toolbar icon cannot appear in frame. Chrome's own
-bookmark manager can: `chrome://bookmarks` screenshots cleanly, which makes
-"device A's bookmarks beside device B's, and the new one lands on B" shootable with real
-browser UI rather than a drawn mock-up. It renders light, so either the shot owns that or
-the context is forced dark.
+Two details worth knowing, because both cost an afternoon:
 
-The other open end is that `src/` carries no `data-testid`, so anything that clicks
-through onboarding leans on button text. `node scripts/promo/capture.mjs --probe` loads
-the extension and writes every button and heading of `popup.html`, `onboarding.html` and
+- **The device is configured with the extension's own `SAVE_SETTINGS` message**, not by
+  writing `konode_settings` into storage. Writing storage directly looks like it works
+  and does not: the sync engine reads its backend when the worker boots, so Sync now
+  keeps answering "No storage backend is set up yet" over a storage entry that is plainly
+  correct.
+- **The capture runs a patched copy of `dist/`.** Konode asks for loopback access only
+  when you point it at a WebDAV server, and that request is a Chrome dialog that no
+  script can click. `capture.mjs` copies the build into `promo-out/.dist` and moves
+  `http://127.0.0.1/*` into `host_permissions`, where loading unpacked grants it
+  silently. Same code, same pixels; `dist/` is untouched.
+
+## Still open: shots 5 and 6
+
+The backend picker and the popup. Playwright records the page and never the browser
+around it, so these have to be composed the way shot 4 is, out of stills in a frame.
+The obstacle is that `src/` carries no `data-testid`, so anything that clicks through
+onboarding leans on button text. `node scripts/promo/capture.mjs --probe` loads the
+extension and writes every button and heading of `popup.html`, `onboarding.html` and
 `options.html` to `promo-out/probe.json`, with a screenshot of each. Read that before
 deciding whether the video pins selectors that may rot or the UI gains a few stable hooks.
+
+Where a label is needed in a language the shoot runs in, take it from the extension's own
+translations the way `devices.mjs` takes the Sync now button
+(`chrome.i18n.getMessage("popup_sync_now")`), rather than keeping a list of strings per
+locale in the promo tooling.
 
 ## Output
 

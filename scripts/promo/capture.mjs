@@ -18,10 +18,14 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { serve } from "./lib/serve.mjs";
+import { shootStills } from "./lib/devices.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const KINETIC_SHOTS = [1, 2, 3, 7, 8];
-const PRODUCT_SHOTS = [4, 5, 6];
+// Shot 4 is drawn like the kinetic ones, out of stills shot from two real profiles:
+// the browser cannot be seeked, a still can, and the sync behind it is real either way.
+const KINETIC_SHOTS = [1, 2, 3, 4, 7, 8];
+const STILLS_SHOT = 4;
+const PRODUCT_SHOTS = [5, 6];
 
 const args = Object.fromEntries(
   process.argv.slice(2).map((a) => {
@@ -187,7 +191,25 @@ async function main() {
 
   warnAboutGlyphs();
   await mkdir(outRoot, { recursive: true });
-  const { origin, close } = await serve(ROOT);
+
+  if (wanted(STILLS_SHOT)) {
+    console.log("two profiles, one real sync:");
+    const result = await shootStills({
+      dist: await promoDist(),
+      outDir: outRoot,
+      workDir: resolve(ROOT, "promo-out", ".profiles"),
+      text: text.shots[String(STILLS_SHOT)],
+      locale: text.chromeLocale ?? lang,
+      scale,
+    });
+    const hero = text.shots[String(STILLS_SHOT)].bookmark;
+    if (!result.onB.includes(hero)) {
+      throw new Error(`the bookmark never reached the second device, so there is no shot 4 to cut: ${JSON.stringify(result.onB)}`);
+    }
+    console.log(`  "${hero}" reached ${text.shots[String(STILLS_SHOT)].deviceB} through ${result.files.length} file(s) on the server`);
+  }
+
+  const { origin, close } = await serve(ROOT, { "/stills": resolve(outRoot, "stills") });
   const browser = await chromium.launch({ channel: "chromium", headless: true });
   console.log(`kinetic shots, ${lang}, ${fps}fps @${scale}x:`);
   try {
@@ -199,7 +221,7 @@ async function main() {
 
   const pending = PRODUCT_SHOTS.filter(wanted);
   if (pending.length) {
-    console.log(`\n  product shots ${pending.join(", ")} are not wired up yet.`);
+    console.log(`\n  shots ${pending.join(" and ")} (the backend picker and the popup) are not wired up yet.`);
     console.log("  Run --probe first: the extension's UI has no test hooks, so the");
     console.log("  selectors have to be read off the real thing before they can be driven.");
   }

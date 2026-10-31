@@ -263,3 +263,63 @@ body {
   justify-content: center;
   height: 220px;
 }
+
+/* Shot 4: two devices, each one a still shot from a real profile. */
+.frame {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+}
+
+.devices {
+  display: flex;
+  gap: 60px;
+}
+
+.device {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  opacity: 0;
+}
+
+.panel {
+  position: relative;
+  width: 580px;
+  height: 249px;
+  border: 1px solid var(--hair);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #111118;
+}
+
+.panel img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+}
+
+.panel img.after {
+  opacity: 0;
+}
+
+.plabel {
+  font-size: 19px;
+  color: var(--muted);
+}
+
+.hop {
+  position: relative;
+  width: 620px;
+  height: 2px;
+  background: linear-gradient(90deg, #6ee7b700, #6ee7b759, #6ee7b700);
+  opacity: 0;
+}

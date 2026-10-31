@@ -10,7 +10,7 @@
 //
 // Open it by hand while designing: /kinetic/?lang=en&shot=3&t=1240
 
-const DURATION = { 1: 5000, 2: 7000, 3: 6000, 7: 8000, 8: 6000 };
+const DURATION = { 1: 5000, 2: 7000, 3: 6000, 4: 14000, 7: 8000, 8: 6000 };
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const at = (t, start, dur) => clamp((t - start) / dur, 0, 1);
@@ -183,6 +183,73 @@ const SHOTS = {
     });
   },
 
+  // The only shot built out of photographs. The browser cannot be seeked, so the two
+  // profiles are shot once as stills and animated here, which makes shot 4 as repeatable
+  // as the drawn ones. What the stills show is a real sync: see lib/devices.mjs.
+  4(scene, s) {
+    const frame = el("div", "frame");
+    const devices = el("div", "devices");
+
+    const device = (side, label) => {
+      const wrap = el("div", "device");
+      const panel = el("div", "panel");
+      const before = el("img");
+      before.src = `/stills/${side}-before.png`;
+      const after = el("img", "after");
+      after.src = `/stills/${side}-after.png`;
+      panel.append(before, after);
+      wrap.append(panel, el("div", "plabel mono", label));
+      devices.append(wrap);
+      return { wrap, panel, after };
+    };
+
+    const a = device("a", s.deviceA);
+    const b = device("b", s.deviceB);
+    const hop = el("div", "hop");
+    const pip = el("div", "pip");
+    hop.append(pip);
+    const caption = el("div", "caption", s.caption);
+    frame.append(devices, hop, caption);
+    scene.append(frame);
+
+    const hopBox = hop.getBoundingClientRect();
+    const panelB = b.panel.getBoundingClientRect();
+
+    return (t) => {
+      rise(a.wrap, at(t, 0, 800), 22);
+      rise(b.wrap, at(t, 250, 800), 22);
+
+      // The bookmark is made on the left device.
+      a.after.style.opacity = String(easeInOut(at(t, 1300, 700)));
+      const litA = Math.sin(Math.PI * at(t, 1300, 1100));
+      a.panel.style.borderColor = `rgba(110, 231, 183, ${0.1 + 0.5 * litA})`;
+
+      // It goes out to the storage and comes back down on the right one.
+      hop.style.opacity = String(easeOut(at(t, 2300, 500)));
+      const run = at(t, 2600, 2200);
+      if (run > 0 && run < 1) {
+        pip.style.opacity = "1";
+        pip.style.left = `${easeInOut(run) * hopBox.width}px`;
+      } else {
+        pip.style.opacity = "0";
+      }
+
+      b.after.style.opacity = String(easeInOut(at(t, 5000, 800)));
+      const litB = Math.sin(Math.PI * at(t, 4900, 1200));
+      b.panel.style.borderColor = `rgba(110, 231, 183, ${0.1 + 0.5 * litB})`;
+
+      rise(caption, at(t, 6200, 900), 14);
+
+      // Then in, on the device that did nothing but receive it.
+      const zoom = easeInOut(at(t, 8000, 2600));
+      const scale = lerp(1, 1.45, zoom);
+      const cx = panelB.left + panelB.width / 2 - 640;
+      const cy = panelB.top + panelB.height / 2 - 360;
+      frame.style.transform = `scale(${scale}) translate(${-cx * zoom}px, ${-cy * zoom}px)`;
+      caption.style.opacity = String(Number(caption.style.opacity || 0) * (1 - zoom));
+    };
+  },
+
   7(scene, s) {
     const col = el("div", "col");
     const list = el("div", "claims");
@@ -247,6 +314,8 @@ window.__load = async function load(lang, shot) {
   if (!section) throw new Error(`${lang}.json has no text for shot ${shot}`);
   current = await build(scene, section);
   await document.fonts.ready;
+  await Promise.all([...scene.querySelectorAll("img")].map((img) =>
+    img.complete ? img.decode().catch(() => {}) : new Promise((ok) => { img.onload = ok; img.onerror = ok; })));
   window.__duration = DURATION[shot];
   current(0);
   return window.__duration;

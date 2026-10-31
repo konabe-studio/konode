@@ -15,12 +15,13 @@ const TYPES = {
   ".png": "image/png",
 };
 
-export async function serve(root) {
+export async function serve(root, extra = {}) {
   const mounts = {
     "/kinetic": resolve(root, "scripts/promo/kinetic"),
     "/text": resolve(root, "scripts/promo/text"),
     "/fonts": resolve(root, "public/fonts"),
     "/icons": resolve(root, "public/icons"),
+    ...extra,
   };
 
   const server = createServer(async (req, res) => {

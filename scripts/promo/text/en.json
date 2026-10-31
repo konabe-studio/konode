@@ -3,7 +3,11 @@
   "chromeLocale": "en-US",
   "shots": {
     "1": {
-      "lines": ["Your bookmarks.", "Your tabs.", "Your history."],
+      "lines": [
+        "Your bookmarks.",
+        "Your tabs.",
+        "Your history."
+      ],
       "kicker": "Who else has a copy?"
     },
     "2": {
@@ -14,8 +18,18 @@
       "own": "your storage",
       "headline": "Sync to storage you already own."
     },
+    "4": {
+      "deviceA": "Desk",
+      "deviceB": "Laptop",
+      "bookmark": "Konode, sync you own",
+      "caption": "Saved here. Already there."
+    },
     "7": {
-      "claims": ["No account.", "No Konode server.", "Optional end-to-end encryption."],
+      "claims": [
+        "No account.",
+        "No Konode server.",
+        "Optional end-to-end encryption."
+      ],
       "footnote": "Open source, MPL-2.0"
     },
     "8": {

@@ -3,7 +3,11 @@
   "chromeLocale": "hu",
   "shots": {
     "1": {
-      "lines": ["A könyvjelzőid.", "A füleid.", "Az előzményeid."],
+      "lines": [
+        "A könyvjelzőid.",
+        "A füleid.",
+        "Az előzményeid."
+      ],
       "kicker": "Kinél van még egy másolat?"
     },
     "2": {
@@ -14,8 +18,18 @@
       "own": "a te tárhelyed",
       "headline": "Szinkron a saját tárhelyedre."
     },
+    "4": {
+      "deviceA": "Asztali",
+      "deviceB": "Laptop",
+      "bookmark": "Konode, a saját tárhelyedre",
+      "caption": "Itt mented. Ott már ott van."
+    },
     "7": {
-      "claims": ["Nincs fiók.", "Nincs Konode-szerver.", "Opcionális végpontok közti titkosítás."],
+      "claims": [
+        "Nincs fiók.",
+        "Nincs Konode-szerver.",
+        "Opcionális végpontok közti titkosítás."
+      ],
       "footnote": "Nyílt forráskódú, MPL-2.0"
     },
     "8": {
