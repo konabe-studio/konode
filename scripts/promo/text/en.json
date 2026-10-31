@@ -1,0 +1,36 @@
+{
+  "lang": "en",
+  "chromeLocale": "en-US",
+  "shots": {
+    "1": {
+      "lines": ["Your bookmarks.", "Your tabs.", "Your history."],
+      "kicker": "Who else has a copy?"
+    },
+    "2": {
+      "box": "someone else's server",
+      "caption": "Every sync tool routes it through here."
+    },
+    "3": {
+      "own": "your storage",
+      "headline": "Sync to storage you already own."
+    },
+    "7": {
+      "claims": ["No account.", "No Konode server.", "Optional end-to-end encryption."],
+      "footnote": "Open source, MPL-2.0"
+    },
+    "8": {
+      "stores": "Chrome Web Store · Firefox Add-ons",
+      "url": "github.com/konabe-studio/konode"
+    }
+  },
+  "narration": {
+    "1": "Every sync tool asks you to trust a server.",
+    "2": "Your bookmarks, your tabs, your history, all of it through a company's machines, and you take their word for what happens there.",
+    "3": "Konode syncs the same things. It just doesn't route them through anyone.",
+    "4": "Add a bookmark on one browser, and it's on the other. Not because we copied it, because your own Drive did.",
+    "5": "You pick where it lands. Your Google Drive, a private GitHub repository, or any WebDAV server.",
+    "6": "Bookmarks, open tabs, history, and which extensions are missing on the machine you're sitting at.",
+    "7": "No account to create. No Konode server to trust. End-to-end encryption if you want it.",
+    "8": "Konode. Open source, and yours."
+  }
+}

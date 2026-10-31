@@ -1,0 +1,36 @@
+{
+  "lang": "hu",
+  "chromeLocale": "hu",
+  "shots": {
+    "1": {
+      "lines": ["A könyvjelzőid.", "A füleid.", "Az előzményeid."],
+      "kicker": "Kinél van még egy másolat?"
+    },
+    "2": {
+      "box": "valaki más szervere",
+      "caption": "Minden szinkroneszköz ezen vezeti át."
+    },
+    "3": {
+      "own": "a te tárhelyed",
+      "headline": "Szinkron a saját tárhelyedre."
+    },
+    "7": {
+      "claims": ["Nincs fiók.", "Nincs Konode-szerver.", "Opcionális végpontok közti titkosítás."],
+      "footnote": "Nyílt forráskódú, MPL-2.0"
+    },
+    "8": {
+      "stores": "Chrome Web Store · Firefox Add-ons",
+      "url": "github.com/konabe-studio/konode"
+    }
+  },
+  "narration": {
+    "1": "Minden szinkroneszköz azt kéri, hogy bízz meg egy szerverben.",
+    "2": "A könyvjelzőid, a füleid, az előzményeid, mind egy cég gépein keresztül, és el kell hinned, amit arról mondanak.",
+    "3": "A Konode ugyanezeket szinkronizálja. Csak nem vezeti át senkin.",
+    "4": "Elmentesz egy könyvjelzőt az egyik böngészőben, és ott van a másikban. Nem azért, mert mi másoltuk át, hanem mert a saját tárhelyed tette.",
+    "5": "Te döntöd el, hová kerül. A Google Drive-odra, egy privát GitHub-repóba, vagy bármilyen WebDAV-szerverre.",
+    "6": "Könyvjelzők, nyitott fülek, előzmények, és hogy melyik kiegészítő hiányzik arról a gépről, amelyik előtt ülsz.",
+    "7": "Nincs fiók, amit létre kell hozni. Nincs Konode-szerver, amiben meg kell bízni. Titkosítás, ha kéred.",
+    "8": "Konode. Nyílt forráskódú, és a tiéd."
+  }
+}
