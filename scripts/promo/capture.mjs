@@ -11,7 +11,7 @@
 // another language the same film with different words. The product ones drive a real
 // Chrome with the real extension loaded, which no amount of care makes frame-exact, so
 // each beat is given a fixed frame budget instead and the timeline stays put.
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
@@ -37,8 +37,7 @@ const outRoot = resolve(ROOT, args.out ?? "promo-out", lang);
 const only = args.only ? args.only.split(",").map(Number) : null;
 const wanted = (shot) => !only || only.includes(shot);
 
-const text = JSON.parse(await (await import("node:fs/promises")).readFile(
-  resolve(ROOT, "scripts/promo/text", `${lang}.json`), "utf8"));
+const text = JSON.parse(await readFile(resolve(ROOT, "scripts/promo/text", `${lang}.json`), "utf8"));
 
 // Inter carries no CJK glyphs, so a Chinese cut on a machine with no CJK font installed
 // renders a screen of empty boxes and nobody notices until the video is out.
@@ -81,15 +80,48 @@ async function captureKinetic(browser, origin) {
   await page.close();
 }
 
-// The extension as the browser really runs it. MV3 needs a headed persistent context,
-// and the id is only knowable once its service worker is up.
-async function openExtension(profile) {
+// The shipped build, with one line of its manifest changed.
+//
+// Konode asks for loopback access only when the user points it at a WebDAV server, and
+// that request is a Chrome dialog, which is browser UI that nothing in a page can click.
+// So the capture runs a copy of dist/ with http://127.0.0.1/* moved from
+// optional_host_permissions into host_permissions, where loading unpacked grants it
+// without asking. Same code, same pixels, one permission pre-granted instead of clicked.
+// The copy lives in the ignored output directory and dist/ is never touched.
+async function promoDist() {
   const dist = resolve(ROOT, "dist");
   if (!existsSync(resolve(dist, "manifest.json"))) {
     throw new Error("dist/ is not built. Run npm run build first.");
   }
+  const out = resolve(ROOT, "promo-out", ".dist");
+  await rm(out, { recursive: true, force: true });
+  await cp(dist, out, { recursive: true });
+
+  const file = resolve(out, "manifest.json");
+  const manifest = JSON.parse(await readFile(file, "utf8"));
+  const loopback = ["http://127.0.0.1/*", "http://localhost/*"];
+  manifest.host_permissions = [...new Set([...(manifest.host_permissions ?? []), ...loopback])];
+  manifest.optional_host_permissions = (manifest.optional_host_permissions ?? [])
+    .filter((h) => !loopback.includes(h));
+  await writeFile(file, JSON.stringify(manifest, null, 2));
+  return out;
+}
+
+// The extension as the browser really runs it.
+//
+// Chrome for Testing rather than the Chrome on this machine, and not for convenience:
+// stable Chrome has stopped honouring --load-extension altogether, so the extension
+// simply never loads and every page under chrome-extension:// answers
+// ERR_BLOCKED_BY_CLIENT. Chrome for Testing is the same build without that refusal, and
+// pinning it also means the shoot does not change when the machine's Chrome updates.
+// Install it once with: npx playwright install chromium
+//
+// MV3 needs a headed persistent context, and the id is only knowable once its service
+// worker is up.
+async function openExtension(profile) {
+  const dist = await promoDist();
   const context = await chromium.launchPersistentContext(profile, {
-    channel: "chrome",
+    channel: "chromium",
     headless: false,
     viewport: { width: 1280, height: 720 },
     deviceScaleFactor: scale,
@@ -156,7 +188,7 @@ async function main() {
   warnAboutGlyphs();
   await mkdir(outRoot, { recursive: true });
   const { origin, close } = await serve(ROOT);
-  const browser = await chromium.launch({ channel: "chrome", headless: true });
+  const browser = await chromium.launch({ channel: "chromium", headless: true });
   console.log(`kinetic shots, ${lang}, ${fps}fps @${scale}x:`);
   try {
     await captureKinetic(browser, origin);

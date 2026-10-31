@@ -16,8 +16,13 @@ node scripts/promo/assemble.mjs --lang=en        # frames into a video
 
 ## What you need
 
-- **Google Chrome**, installed normally. `playwright-core` drives the copy already on the
-  machine, so nothing downloads a second browser.
+- **Chrome for Testing**, once: `npx playwright install chromium`. Not the Chrome on
+  your machine: stable Chrome no longer honours `--load-extension` at all, so the
+  extension never loads and every `chrome-extension://` page answers
+  `ERR_BLOCKED_BY_CLIENT`. Pinning the testing build also means the shoot does not change
+  under you when Chrome updates. On a distribution Playwright does not recognise, the
+  download needs `PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64` in front of it;
+  running needs nothing.
 - **ffmpeg** for the cutting step: `sudo apt install ffmpeg`. The capture step does not
   need it.
 - A font covering the language you are shooting. Inter carries no CJK glyphs, so a
@@ -55,31 +60,38 @@ The product shots drive a real browser, which cannot be seeked. Each beat gets a
 frame budget instead, so the timeline holds even when the browser is half a second slower
 than last time.
 
-## Still open: the product shots
+## The product shots
 
-Shots 4, 5 and 6 are the ones that show the extension itself, and they are not wired up
-yet. Two things stand in the way, and both want a decision rather than more code:
+Shots 4, 5 and 6 show the extension itself. The pieces they need are built and proven;
+what is left is the choreography, which wants an eye rather than more plumbing.
 
-**The UI has no test hooks.** There is not a single `data-testid` in `src/`, so a script
-that clicks through onboarding has to rely on text or class names, which break the next
-time either changes. `node scripts/promo/capture.mjs --probe` loads the extension, dumps
-every button and heading of `popup.html`, `onboarding.html` and `options.html` into
-`promo-out/probe.json`, and screenshots each one. Read that first and decide whether the
-video pins selectors that may rot, or the UI gains a few stable hooks.
+**The sync in shot 4 is real.** `lib/webdav-server.mjs` is a small WebDAV server, enough
+of one for the five requests `src/lib/backends/webdav-backend.ts` makes, holding
+everything in memory. Two throwaway profiles sync through it with no account, no network
+and no secrets, which is what keeps the shoot repeatable on anyone's machine.
+`lib/webdav-server.test.ts` points the shipped WebDAV client at it and checks that a
+packet written by one device is what the other one reads back, so the server cannot
+quietly drift away from what the extension expects.
 
-**Shot 4 needs a backend.** It shows a bookmark made in one browser arriving in another,
-which is not something that can be faked without the video becoming a lie. Three ways to
-get a real sync between two throwaway profiles:
+**The capture runs a patched copy of `dist/`.** Konode asks for loopback access only when
+you point it at a WebDAV server, and that request is a Chrome dialog, which is browser UI
+that no script can click. So `capture.mjs` copies the build into `promo-out/.dist` and
+moves `http://127.0.0.1/*` from `optional_host_permissions` into `host_permissions`,
+where loading unpacked grants it silently. Same code, same pixels, one permission
+pre-granted instead of clicked. `dist/` itself is never touched.
 
-- A local WebDAV server, written for this. Needs no credentials and no network, and it
-  would be reusable for manual QA. The backend speaks `MKCOL`, `PROPFIND`, `PUT`, `GET`
-  and `DELETE`, so it is a small server rather than a full WebDAV implementation.
-- A private GitHub repository and a fine-grained token, kept out of the repo.
-- Google Drive, which means a real sign-in inside the capture and is the worst of the
-  three to automate.
+**What still has to be decided.** Playwright records the page, never the browser around
+it, so the bookmarks bar and the toolbar icon cannot appear in frame. Chrome's own
+bookmark manager can: `chrome://bookmarks` screenshots cleanly, which makes
+"device A's bookmarks beside device B's, and the new one lands on B" shootable with real
+browser UI rather than a drawn mock-up. It renders light, so either the shot owns that or
+the context is forced dark.
 
-The local server is the one that keeps the shoot reproducible by anyone, on any machine,
-without secrets.
+The other open end is that `src/` carries no `data-testid`, so anything that clicks
+through onboarding leans on button text. `node scripts/promo/capture.mjs --probe` loads
+the extension and writes every button and heading of `popup.html`, `onboarding.html` and
+`options.html` to `promo-out/probe.json`, with a screenshot of each. Read that before
+deciding whether the video pins selectors that may rot or the UI gains a few stable hooks.
 
 ## Output
 
