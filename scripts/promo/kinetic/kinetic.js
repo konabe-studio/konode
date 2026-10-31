@@ -10,7 +10,7 @@
 //
 // Open it by hand while designing: /kinetic/?lang=en&shot=3&t=1240
 
-const DURATION = { 1: 5000, 2: 7000, 3: 6000, 4: 14000, 7: 8000, 8: 6000 };
+const DURATION = { 1: 5000, 2: 7000, 3: 6000, 4: 14000, 5: 8000, 6: 8000, 7: 8000, 8: 6000 };
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const at = (t, start, dur) => clamp((t - start) / dur, 0, 1);
@@ -247,6 +247,64 @@ const SHOTS = {
       const cy = panelB.top + panelB.height / 2 - 360;
       frame.style.transform = `scale(${scale}) translate(${-cx * zoom}px, ${-cy * zoom}px)`;
       caption.style.opacity = String(Number(caption.style.opacity || 0) * (1 - zoom));
+    };
+  },
+
+  // Shot 5: the storage list, shot full-page and panned, because the backends the
+  // narration names sit past the fold of any single screen.
+  5(scene, s) {
+    const col = el("div", "col");
+    const window_ = el("div", "window");
+    const shot = el("img");
+    shot.src = "/stills/storage.png";
+    window_.append(shot);
+    const under = el("div", "under");
+    const caption = el("div", "caption", s.caption);
+    under.append(caption);
+    col.append(window_, under);
+    scene.append(col);
+
+    return (t) => {
+      rise(window_, at(t, 0, 800), 24);
+      // The still is one tall page; the window is a moving slot over it.
+      const travel = Math.max(0, shot.clientHeight - window_.clientHeight);
+      shot.style.transform = `translateY(${-travel * easeInOut(at(t, 1200, 5000))}px)`;
+      rise(caption, at(t, 1400, 900), 14);
+    };
+  },
+
+  // Shot 6: the popup as it stands on a device that has been running a while, with the
+  // streams named beside it one at a time.
+  6(scene, s) {
+    const col = el("div", "col");
+    const row = el("div", "popup-shot");
+    const window_ = el("div", "window");
+    const shot = el("img");
+    shot.src = "/stills/popup.png";
+    window_.append(shot);
+    const list = el("div", "streams");
+    const streams = s.streams.map((name) => {
+      const line = el("div", "stream");
+      line.append(el("div", "tick"), el("div", null, name));
+      list.append(line);
+      return line;
+    });
+    row.append(window_, list);
+    const under = el("div", "under");
+    const caption = el("div", "caption", s.caption);
+    under.append(caption);
+    col.append(row, under);
+    scene.append(col);
+
+    return (t) => {
+      rise(window_, at(t, 0, 800), 22);
+      streams.forEach((line, i) => {
+        const p = at(t, 900 + i * 700, 650);
+        const e = easeOut(p);
+        line.style.opacity = String(e);
+        line.style.transform = `translateX(${(1 - e) * -20}px)`;
+      });
+      rise(caption, at(t, 4600, 900), 14);
     };
   },
 

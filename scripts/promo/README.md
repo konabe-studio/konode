@@ -90,20 +90,39 @@ Two details worth knowing, because both cost an afternoon:
   `http://127.0.0.1/*` into `host_permissions`, where loading unpacked grants it
   silently. Same code, same pixels; `dist/` is untouched.
 
-## Still open: shots 5 and 6
+## Shots 5 and 6
 
-The backend picker and the popup. Playwright records the page and never the browser
-around it, so these have to be composed the way shot 4 is, out of stills in a frame.
-The obstacle is that `src/` carries no `data-testid`, so anything that clicks through
-onboarding leans on button text. `node scripts/promo/capture.mjs --probe` loads the
-extension and writes every button and heading of `popup.html`, `onboarding.html` and
-`options.html` to `promo-out/probe.json`, with a screenshot of each. Read that before
-deciding whether the video pins selectors that may rot or the UI gains a few stable hooks.
+Both come off the same run as shot 4 and are composed the same way, as stills in a frame,
+because Playwright records the page and never the browser around it.
 
-Where a label is needed in a language the shoot runs in, take it from the extension's own
-translations the way `devices.mjs` takes the Sync now button
-(`chrome.i18n.getMessage("popup_sync_now")`), rather than keeping a list of strings per
-locale in the promo tooling.
+**Shot 5, the storage picker**, is shot on a third profile that has not configured
+anything, which is both the honest state for "you pick where it lands" and the only one
+that does not put the promo's own throwaway credentials on screen. Two framing decisions
+are baked into the capture, and both are visible in `lib/devices.mjs`: the provider list
+scrolls inside its own box, so every inner scroller is grown to its content before the
+shot, and the still then ends at the last provider card. The page carries on past the
+list into the encryption panel, which is Settings doing its job honestly and the wrong
+note to end a promo shot on. The anchor for that cut is the last card's radio, not a
+heading, because headings are translated and this is not.
+
+**Shot 6, the popup**, is shot on the first device after the second one has left a few
+tabs open and published them, so the session it offers to restore is a real session from
+a real peer, with a real tab count. The four stream names appear beside it from the
+language file.
+
+## Still open
+
+Nothing blocking. Worth doing when the video is otherwise settled:
+
+- The bottom third of several shots is empty, an artefact of a fixed block under each
+  composition. It reads as deliberate space at a glance and as a gap once you look.
+- `src/` carries no `data-testid`. Nothing in the pipeline clicks through onboarding
+  today, so nothing depends on fragile selectors, but anything that does later will.
+  `node scripts/promo/capture.mjs --probe` writes what each extension page offers to
+  `promo-out/probe.json`. Where a label is needed, take it from the extension's own
+  translations the way `devices.mjs` takes the Sync now button
+  (`chrome.i18n.getMessage("popup_sync_now")`), rather than keeping a list of strings
+  per locale in the promo tooling.
 
 ## Output
 

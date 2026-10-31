@@ -23,9 +23,8 @@ import { shootStills } from "./lib/devices.mjs";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 // Shot 4 is drawn like the kinetic ones, out of stills shot from two real profiles:
 // the browser cannot be seeked, a still can, and the sync behind it is real either way.
-const KINETIC_SHOTS = [1, 2, 3, 4, 7, 8];
-const STILLS_SHOT = 4;
-const PRODUCT_SHOTS = [5, 6];
+const KINETIC_SHOTS = [1, 2, 3, 4, 5, 6, 7, 8];
+const STILLS_SHOTS = [4, 5, 6];
 
 const args = Object.fromEntries(
   process.argv.slice(2).map((a) => {
@@ -107,6 +106,12 @@ async function promoDist() {
   manifest.host_permissions = [...new Set([...(manifest.host_permissions ?? []), ...loopback])];
   manifest.optional_host_permissions = (manifest.optional_host_permissions ?? [])
     .filter((h) => !loopback.includes(h));
+
+  // Same reason for the data types. History, tabs and the extension list are asked for
+  // only when the user switches those streams on, and each ask is a dialog. The video
+  // shows all four streams running, so the promo build has them from the start.
+  manifest.permissions = [...new Set([...(manifest.permissions ?? []), ...(manifest.optional_permissions ?? [])])];
+  delete manifest.optional_permissions;
   await writeFile(file, JSON.stringify(manifest, null, 2));
   return out;
 }
@@ -192,21 +197,21 @@ async function main() {
   warnAboutGlyphs();
   await mkdir(outRoot, { recursive: true });
 
-  if (wanted(STILLS_SHOT)) {
+  if (STILLS_SHOTS.some(wanted)) {
     console.log("two profiles, one real sync:");
     const result = await shootStills({
       dist: await promoDist(),
       outDir: outRoot,
       workDir: resolve(ROOT, "promo-out", ".profiles"),
-      text: text.shots[String(STILLS_SHOT)],
+      text: text.shots["4"],
       locale: text.chromeLocale ?? lang,
       scale,
     });
-    const hero = text.shots[String(STILLS_SHOT)].bookmark;
+    const hero = text.shots["4"].bookmark;
     if (!result.onB.includes(hero)) {
       throw new Error(`the bookmark never reached the second device, so there is no shot 4 to cut: ${JSON.stringify(result.onB)}`);
     }
-    console.log(`  "${hero}" reached ${text.shots[String(STILLS_SHOT)].deviceB} through ${result.files.length} file(s) on the server`);
+    console.log(`  "${hero}" reached ${text.shots["4"].deviceB} through ${result.files.length} file(s) on the server`);
   }
 
   const { origin, close } = await serve(ROOT, { "/stills": resolve(outRoot, "stills") });
@@ -219,12 +224,6 @@ async function main() {
     await close();
   }
 
-  const pending = PRODUCT_SHOTS.filter(wanted);
-  if (pending.length) {
-    console.log(`\n  shots ${pending.join(" and ")} (the backend picker and the popup) are not wired up yet.`);
-    console.log("  Run --probe first: the extension's UI has no test hooks, so the");
-    console.log("  selectors have to be read off the real thing before they can be driven.");
-  }
 }
 
 await main();
