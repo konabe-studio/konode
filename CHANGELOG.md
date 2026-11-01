@@ -5,6 +5,8 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-01
+
 ### Added
 
 - **Copy the Activity log for a bug report.** Settings → Activity has a **Copy log** button
