@@ -30,6 +30,14 @@ All notable changes to Konode. Format loosely follows
   nothing, so copies your other devices already have stay there. Moving a bookmark into an
   excluded folder takes it off your other devices, as deleting it would, and moving it back
   out brings it back to them, even one you saved a moment ago.
+- **Open tabs keep their tab groups (#11).** A session now carries which of its tabs share a
+  group, and Restore puts them back together. Allow group names and colours when Konode
+  asks for open tabs, or later in Settings → Data Types, and those come back too; without
+  that, the groups come back unnamed and your browser picks the colours. Chrome, Edge,
+  Brave and the other Chromium browsers have groups, and so does Firefox from version 138
+  (names and colours from 139). Where a browser has none, a session restores as before.
+  Pinned tabs stay pinned and are never grouped, and a group's collapsed state is not
+  synced: a restore shows you everything it brought back.
 
 ### Changed
 

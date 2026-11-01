@@ -38,7 +38,8 @@
   "optional_permissions": [
     "history",
     "tabs",
-    "management"
+    "management",
+    "tabGroups"
   ],
   "host_permissions": [
     "https://www.googleapis.com/*",
