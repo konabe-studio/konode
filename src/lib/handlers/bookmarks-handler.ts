@@ -1433,7 +1433,19 @@ async function mergeBookmarks(
 
     for (const r of logs.folderRenames.remote) {
       const mine = localRenameByKey.get(folderRenameKey(r));
-      if (strategy !== "prefer-remote" && mine && mine.at >= r.at) continue; // ours is newer
+      // A record we already hold VERBATIM is one we absorbed from a peer and applied on an
+      // earlier sync. Replaying it is not "the peer winning" — it is the same operation run
+      // a second time, and a rename is not idempotent the way an add or a delete is.
+      //
+      // That matters because renaming a folder and then renaming it back leaves two records
+      // that undo each other: Work->Job and Job->Work both live, keyed by their OLD name, so
+      // neither supersedes the other. Replaying the pair renamed the folder twice on every
+      // sync and landed back where it started — `renamed 0+2` with nothing else changed —
+      // and each rewrite woke sync-on-change, so the next sync did it again, forever. Under
+      // lww the "ours is newer" test below happened to stop it once the records were
+      // absorbed; prefer-remote skipped that test and looped until the user noticed.
+      const replay = mine && mine.at === r.at && mine.to === r.to;
+      if (mine && mine.at >= r.at && (strategy !== "prefer-remote" || replay)) continue; // ours is newer, or already applied
       try {
         const parentId = await resolveFolderPath(r.path, localRoots);
         if (!parentId) continue; // path doesn't exist here — fail safe, same as Step C

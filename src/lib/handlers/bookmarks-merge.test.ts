@@ -1130,6 +1130,48 @@ describe("renames reach the other devices", () => {
     expect(out.titles?.map((t) => t.title)).toEqual(["New"]);
     expect(out.folderRenames?.map((r) => `${r.from}->${r.to}`)).toEqual(["Work->Job"]);
   });
+
+  // Renaming a folder and renaming it back leaves two records that undo each other, keyed
+  // by their OLD name so neither supersedes the other. Replaying the pair rewrites the
+  // folder twice and lands where it started: `renamed 0+2` with nothing else changed. That
+  // is a wasted write under any strategy, and it woke sync-on-change, so the next sync did
+  // it again — a sync loop a user reported from the field, on Prefer Remote.
+  for (const strategy of ["lww", "prefer-remote"] as const) {
+    it(`a folder renamed and renamed back settles instead of looping (${strategy})`, async () => {
+      const f = await chrome.bookmarks.create({ parentId: "1", title: "Work" });
+      await chrome.bookmarks.create({ parentId: f.id, title: "A", url: "https://a.com" });
+
+      const packet = {
+        ...payload([folder("Work", [link("A", "https://a.com")])]),
+        folderRenames: [
+          { path: ["bar"], from: "Work", to: "Job", at: NOW - 20_000 },
+          { path: ["bar"], from: "Job", to: "Work", at: NOW - 10_000 },
+        ],
+      };
+
+      let writes = 0;
+      const real = chrome.bookmarks.update.bind(chrome.bookmarks);
+      const spy = vi
+        .spyOn(chrome.bookmarks, "update")
+        .mockImplementation((id: string, ch: { title?: string }) => {
+          writes++;
+          return real(id, ch);
+        });
+
+      const perPass: number[] = [];
+      for (let pass = 0; pass < 4; pass++) {
+        const before = writes;
+        await importBookmarks(packet, "merge", strategy);
+        perPass.push(writes - before);
+      }
+      spy.mockRestore();
+
+      // The second sync and every one after it must be a no-op: the records are ones we
+      // absorbed and applied already, whoever wins a genuine conflict.
+      expect(perPass.slice(1)).toEqual([0, 0, 0]);
+      expect(await folderTitles()).toEqual(["Work"]);
+    });
+  }
 });
 
 describe("renames and repositions of folders that share a name (#51)", () => {
