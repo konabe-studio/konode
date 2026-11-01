@@ -187,6 +187,25 @@ describe("restoring groups", () => {
     expect(now[2].groupId).toBe(-1);
     expect(tabGroups().__groups()[0]).toMatchObject({ title: "Work", color: "cyan", windowId: 2 });
   });
+
+  it("groups the tabs it opens when one of the session's tabs is already open here", async () => {
+    // A restore opens only what is not open here yet (#51), so the tabs it groups are the
+    // ones it opened, counted in that shorter list. Reading the group off the wrong tab
+    // would put c in Reading, which is b's group and nothing this restore opened.
+    await setSingleTabOpenLimit(false);
+    await open("https://b.example/"); // already here, ungrouped, and left exactly as it is
+    await importSession(session(
+      [{ url: "https://a.example/", group: 0 }, { url: "https://b.example/", group: 1 }, { url: "https://c.example/", group: 0 }],
+      [{ title: "Work", color: "blue" }, { title: "Reading", color: "green" }],
+    ));
+
+    const now = await openNow();
+    expect(now.map((t) => t.url)).toEqual(["https://b.example/", "https://a.example/", "https://c.example/"]);
+    expect(now[0].groupId).toBe(-1);
+    expect(now[1].groupId).toBe(now[2].groupId);
+    expect(tabGroups().__groups()).toHaveLength(1);
+    expect(tabGroups().__groups()[0]).toMatchObject({ title: "Work", color: "blue" });
+  });
 });
 
 describe("cleanGroup", () => {
