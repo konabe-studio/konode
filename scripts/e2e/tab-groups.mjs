@@ -537,23 +537,18 @@ async function main() {
       const afterSecond = (await b.tabs()).filter((t) => t.url?.startsWith(pages.origin));
       check("the second restore opened only the new tab, not all six again",
         afterSecond.length === ours.length + 1, `${afterSecond.length} tabs`);
-      // KNOWN GAP, found by this pass. `restoreGroups` groups only the tabs THIS restore
-      // opened — deliberately, so a tab you have since moved is left where you put it. But
-      // the new tab then forms its OWN group rather than joining the one already on screen,
-      // and since the name and colour are applied to it too, you end up with two groups
-      // called Work sitting side by side. Nothing about the "don't move what is open"
-      // rule requires that: `tabs.group({tabIds, groupId})` adds a tab to an existing
-      // group without touching the others. Asserted as it behaves TODAY so the suite is
-      // honest; flip it to `joined` once that is decided.
+      // This pass found the duplicate: the new tab used to form its OWN group, carrying
+      // the same name and colour, so the receiver ended up with two groups called Work
+      // side by side. It joins the one already on screen now.
       const buckets = [...liveBuckets(afterSecond, pages.origin).values()];
       const withOld = buckets.find((us) => us.includes(url(WORK[0])));
       const withNew = buckets.find((us) => us.includes(extra));
-      const joined = withNew && withOld && same(withNew, withOld);
-      check("the new tab is grouped, but in a SECOND group of the same name (open question)",
-        Boolean(withNew) && !joined, JSON.stringify({ withOld, withNew }));
+      check("the new tab joined the group already on screen",
+        Boolean(withNew) && Boolean(withOld) && same(withNew, withOld),
+        JSON.stringify({ withOld, withNew }));
       const named = (await b.groups() ?? []).filter((g) => g.title === "Work");
-      check("which is why Work appears twice on the receiver (open question)",
-        named.length === 2, JSON.stringify(await b.groups()));
+      check("so Work is one group on the receiver, not two",
+        named.length === 1, JSON.stringify(await b.groups()));
       await dav.close();
     }
 

@@ -206,6 +206,44 @@ describe("restoring groups", () => {
     expect(tabGroups().__groups()).toHaveLength(1);
     expect(tabGroups().__groups()[0]).toMatchObject({ title: "Work", color: "blue" });
   });
+
+  it("joins the group already on screen instead of making a second one beside it", async () => {
+    // Restoring a session that has GROWN opens only the new tab, and that tab used to form
+    // its own group — carrying the same name and colour, so the receiver ended up with two
+    // groups called Work side by side. Found by the e2e pass against two real browsers.
+    // Leaving the open tabs alone never required it: `tabs.group` takes a `groupId`.
+    await setSingleTabOpenLimit(false);
+    const a = await open("https://a.example/");
+    const gid = await tabs.group({ tabIds: [a] });
+    await tabGroups().update(gid, { title: "Work", color: "blue" });
+
+    await importSession(session(
+      [{ url: "https://a.example/", group: 0 }, { url: "https://b.example/", group: 0 }],
+      [{ title: "Work", color: "blue" }],
+    ));
+
+    const now = await openNow();
+    expect(now.map((t) => t.url)).toEqual(["https://a.example/", "https://b.example/"]);
+    expect(now[1].groupId).toBe(gid);               // joined it, rather than making another
+    expect(tabGroups().__groups()).toHaveLength(1); // one Work, not two
+  });
+
+  it("keeps the name the user gave a group it joins", async () => {
+    // The group on screen is theirs, and they may have renamed it since. Only a group this
+    // restore MAKES is named from the packet.
+    await setSingleTabOpenLimit(false);
+    const a = await open("https://a.example/");
+    const gid = await tabs.group({ tabIds: [a] });
+    await tabGroups().update(gid, { title: "Mine", color: "pink" });
+
+    await importSession(session(
+      [{ url: "https://a.example/", group: 0 }, { url: "https://b.example/", group: 0 }],
+      [{ title: "Work", color: "blue" }],
+    ));
+
+    expect(tabGroups().__groups()).toHaveLength(1);
+    expect(tabGroups().__groups()[0]).toMatchObject({ title: "Mine", color: "pink" });
+  });
 });
 
 describe("cleanGroup", () => {

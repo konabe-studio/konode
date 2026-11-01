@@ -23,7 +23,7 @@ from the tag — `E2E_DIST_140=/path/to/v1.4.0/dist` — and skips itself withou
 checks, about eight minutes.
 
 So the list below is only what automation cannot reach: the prompts, the pixels, and your
-own storage. **Case 9 found something** — see it below.
+own storage. **Case 9 found a bug, and it is fixed** — see it below.
 
 ## Set-up
 
@@ -91,17 +91,21 @@ an older build ignores `groups` rather than choking on it, as claimed.
 → Expect: nothing of it is published (only live groups are reachable to an extension), the
 sync is quiet about it, and the groups still open travel as usual.
 
-**9. Restore the same session twice.** **Now machine-checked — and it found something.**
-Only the new tab opens, as expected, and the tabs already open stay where you put them. But
-the new tab does **not** join the group already on screen: it forms its own, and the name
-and colour are applied to that one too, so the receiver ends up with **two groups called
-Work side by side**.
+**9. Restore the same session twice.** **Now machine-checked — and it found a bug.**
+
+Only the new tab opened, as intended, and the tabs already open were left where you put
+them. But the new tab did not join the group already on screen: it formed its own, and the
+name and colour were applied to that one too, so the receiver ended up with **two groups
+called Work side by side**. Confirmed against two real browsers before anything was
+changed.
 
 `restoreGroups` groups only the tabs that restore opened, deliberately, so a tab you have
-since moved is left alone. Nothing about that rule requires a second group, though —
-`tabs.group({tabIds, groupId})` adds a tab to an existing group without touching the
-others. The pass asserts today's behaviour so the suite stays honest; it is an open
-question, not a settled one.
+since moved is left alone — but nothing about that rule required a second group.
+`tabs.group` takes a `groupId`, which adds to an existing group without touching its other
+members. It now joins the group that already holds a tab from the same session group in
+that window, matched by the tab rather than by the group's name, and a joined group keeps
+the title and colour it has, since it is yours and you may have renamed it. Two unit tests
+hold it, so CI guards it even though the e2e pass does not run there.
 
 **10. A session with no groups at all.** **Now machine-checked.** An ungrouped session
 carries no `groups` key at all, and a second sync with nothing changed leaves the checksum
