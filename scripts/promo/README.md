@@ -14,6 +14,19 @@ node scripts/promo/capture.mjs --lang=en         # frames into promo-out/en/
 node scripts/promo/assemble.mjs --lang=en        # frames into a video
 ```
 
+## Where this stands
+
+Nothing has been cut yet. ffmpeg was not installed on the machine this was built on, so
+the pipeline has been run as far as the frames and no further, in English and Hungarian,
+at 6 fps while it was being written.
+
+A full-rate pass is roughly 800 MB of frames per language, so it wants a machine with
+room to hold them. The output directory was cleared to get that space back; nothing in
+it is worth keeping, all of it regenerates.
+
+Of the eight languages Konode ships in, two have copy: `text/en.json` and `text/hu.json`.
+The other six are a translation job of one file each.
+
 ## What you need
 
 - **Chrome for Testing**, once: `npx playwright install chromium`. Not the Chrome on
