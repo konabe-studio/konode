@@ -23,6 +23,7 @@ const DRAFT: Omit<OnboardingDraft, "savedAt"> = {
   webdavPass: "",
   ncHost: "",
   dataTypes: { bookmarks: true, history: true, sessions: false, extensions: false },
+  bookmarkExclusions: [{ path: ["bar", "Ext"], id: "20" }],
 };
 
 const stored = async (): Promise<unknown> =>
@@ -87,6 +88,7 @@ describe("the setup wizard's draft", () => {
     expect(await loadDraft(NOW)).toMatchObject({
       step: "data", provider: null, githubToken: "", githubBranch: "main", webdavPass: "",
       dataTypes: { bookmarks: true, history: false, sessions: false, extensions: false },
+      bookmarkExclusions: [],
     });
   });
 

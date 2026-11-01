@@ -6,6 +6,7 @@
 // format changes, so switching a card is not a breaking change.
 
 import type { BackendType } from "@/lib/types";
+import { t } from "@/lib/utils/i18n";
 
 export type ProviderId =
   | "gdrive" | "koofr" | "pcloud" | "nextcloud" | "fastmail" | "jianguoyun" | "webdav" | "github";
@@ -14,6 +15,8 @@ export interface ProviderDef {
   id: ProviderId;
   backend: BackendType;
   label: string;
+  /** Message key for a name with a word in it to translate. Read names through `providerLabel()`. */
+  labelKey?: string;
   /** Message key, not text — resolve with `t()` at the render site. */
   descKey: string;
   fixedUrl?: string;                                        // koofr, fastmail, jianguoyun
@@ -88,7 +91,7 @@ export const PROVIDERS: ProviderDef[] = [
     descKey: "provider_github_desc",
   },
   {
-    id: "webdav", backend: "webdav", label: "WebDAV (other)", custom: true,
+    id: "webdav", backend: "webdav", label: "WebDAV (other)", labelKey: "provider_webdav_other", custom: true,
     descKey: "provider_webdav_desc",
   },
 ];
@@ -110,6 +113,13 @@ export function providerCards(localeTag: string): ProviderDef[] {
     ...PROVIDERS.filter((p) => p.id === "jianguoyun"),
     ...PROVIDERS.filter((p) => p.id !== "jianguoyun"),
   ];
+}
+
+/** A card's name as the page shows it: the brand name, which is never translated, or for the
+ *  catch-all WebDAV card its catalogue entry, since "(other)" is a word like any other. It
+ *  stayed English in every language until QA AR (2026-10-26). */
+export function providerLabel(p: ProviderDef): string {
+  return p.labelKey ? t(p.labelKey) : p.label;
 }
 
 export function providerById(id: ProviderId): ProviderDef {
@@ -163,10 +173,32 @@ export function webdavUrlForCard(id: ProviderId, keptUrl: string): string {
   return keptUrl; // custom WebDAV — the user's own URL, restored as typed
 }
 
-/** Which provider card matches a saved config (for seeding the selected card). */
+/**
+ * Does `url` read exactly as the Nextcloud / ownCloud card would build it for `username`?
+ *
+ * That card does not keep a URL, it rebuilds one from the host and the username every time
+ * either changes. A server URL whose `files/<name>/` is not the login name (a Nextcloud app
+ * password created while signed in with an email address only works with that email as the
+ * username, #51), or one that points into a subfolder, can only be kept by the WebDAV card.
+ */
+export function isNextcloudCardUrl(url: string, username: string | undefined): boolean {
+  const base = nextcloudBaseFromUrl(url);
+  return !!base && sameUrl(nextcloudUrl(base, username ?? ""), url);
+}
+
+/**
+ * Which provider card matches a saved config (for seeding the selected card).
+ *
+ * A files-DAV address counts as Nextcloud only when the Nextcloud card would build that very
+ * address from the saved username. It used to count whenever the address merely contained
+ * `/remote.php/dav/`, so a setup made on the WebDAV card showed up as the Nextcloud card, and
+ * changing the username or the server there silently rewrote the address into one that no
+ * longer worked.
+ */
 export function providerFromConfig(
   backend: BackendType | null | undefined,
-  webdavUrl: string | undefined
+  webdavUrl: string | undefined,
+  webdavUsername?: string,
 ): ProviderId | null {
   if (backend === "gdrive") return "gdrive";
   if (backend === "github") return "github";
@@ -177,7 +209,7 @@ export function providerFromConfig(
       if (p.fixedUrl && sameUrl(p.fixedUrl, url)) return p.id;
       if (p.regions?.some((r) => sameUrl(r.url, url))) return p.id;
     }
-    if (/\/remote\.php\/dav\//i.test(url)) return "nextcloud";
+    if (isNextcloudCardUrl(url, webdavUsername)) return "nextcloud";
     return "webdav";
   }
   return null;

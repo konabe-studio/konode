@@ -32,6 +32,7 @@ import {
   Pencil, Key, Copy, Check, ArrowRight,
   Trash2, RotateCcw, Camera, Mail, Star,
 } from "lucide-react";
+import { BookmarkExclusionTree } from "@/lib/ui/bookmark-exclusion-tree";
 // Shown in the About section. The manifest is the single source of truth for the
 // version — bump `package.json` and the build stamps it into the manifest.
 const APP_VERSION = browser.runtime.getManifest().version;
@@ -94,7 +95,7 @@ import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl, storeUrlFor, inferStore, STORE_NAME, type LocalExtLike } from "@/lib/utils/extensions-match";
 import { BACKEND_LABEL, PERMISSION_LOST_PREFIX, STATE_UPDATE } from "@/lib/constants";
 import {
-  providerCards, providerById, providerFromConfig, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf,
+  providerCards, providerById, providerFromConfig, providerLabel, nextcloudUrl, nextcloudBaseFromUrl, pcloudRegionOf,
   webdavUrlForCard,
   type ProviderId,
 } from "@/lib/storage-providers";
@@ -299,6 +300,9 @@ export default function OptionsApp() {
   // next to the row they belong to — see toggleDataType and the Data Types tab.
   const [availability, setAvailability] = useState<Partial<Record<DataType, Availability>>>({});
   const [typeError, setTypeError] = useState<{ type: DataType; message: string } | null>(null);
+  // Whether the bookmark picker is open (#54). Null until the user touches the switch: it
+  // then follows the stored list, so a device with exclusions opens with them on show.
+  const [excludeOpen, setExcludeOpen] = useState<boolean | null>(null);
   // Tab group names and colours (#11): whether this browser can be asked for `tabGroups` at
   // all, and whether it is held. Membership needs neither, so this row only adds the names.
   const [groupNames, setGroupNames] = useState<{ askable: boolean; granted: boolean }>({ askable: false, granted: false });
@@ -458,8 +462,8 @@ export default function OptionsApp() {
       setSettings(res.payload);
       setSavedFingerprint(settingsFingerprint(res.payload));
       setInitialPass(res.payload.encryption_passphrase ?? "");
-      const url = res.payload.backends.find((b) => b.type === "webdav")?.webdav?.url;
-      setSavedProvider(providerFromConfig(res.payload.active_backend, url));
+      const dav = res.payload.backends.find((b) => b.type === "webdav")?.webdav;
+      setSavedProvider(providerFromConfig(res.payload.active_backend, dav?.url, dav?.username));
     }
   }, []);
 
@@ -542,8 +546,8 @@ export default function OptionsApp() {
   // the user's own selection.
   useEffect(() => {
     if (selectedProvider !== null || !settings) return;
-    const url = settings.backends.find((b) => b.type === "webdav")?.webdav?.url;
-    setSelectedProvider(providerFromConfig(settings.active_backend, url));
+    const dav = settings.backends.find((b) => b.type === "webdav")?.webdav;
+    setSelectedProvider(providerFromConfig(settings.active_backend, dav?.url, dav?.username));
   }, [settings, selectedProvider]);
 
   // Devices come from the backend too, so they wait for the tab as well. Reused by the
@@ -972,10 +976,8 @@ export default function OptionsApp() {
       return;
     }
     // The staged provider is now the live one — move the "active" badge onto it.
-    setSavedProvider(providerFromConfig(
-      settings.active_backend,
-      settings.backends.find((b) => b.type === "webdav")?.webdav?.url,
-    ));
+    const dav = settings.backends.find((b) => b.type === "webdav")?.webdav;
+    setSavedProvider(providerFromConfig(settings.active_backend, dav?.url, dav?.username));
     setSavedFingerprint(settingsFingerprint(settings));
     setSaving(false); setSaveOk(true);
     setTimeout(() => setSaveOk(false), 2500);
@@ -1420,6 +1422,9 @@ export default function OptionsApp() {
                   // persisted provider earns the "active" badge.
                   const isActive = selectedProvider === p.id;
                   const isSaved = savedProvider === p.id;
+                  // No Google sign-in here at all (Firefox for Android has no identity API):
+                  // said on the card itself, as an unsupported data type is, not only once picked.
+                  const driveOff = p.id === "gdrive" && !DRIVE_AVAILABLE;
 
                   return (
                     <div
@@ -1428,7 +1433,8 @@ export default function OptionsApp() {
                       role="button"
                       tabIndex={0}
                       aria-pressed={isActive}
-                      aria-label={`Use ${p.label}`}
+                      aria-label={t("opt_use_provider", providerLabel(p))}
+                      style={driveOff ? { opacity: 0.55 } : undefined}
                       onClick={() => pickProvider(p.id)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
@@ -1441,10 +1447,10 @@ export default function OptionsApp() {
                         <div className="backend-icon-wrap"><ProviderLogo id={p.id} size={16} /></div>
                         <div className="backend-info">
                           <div className="backend-name">
-                            {p.label}
-                            {isSaved && <span className="badge-active">active</span>}
+                            {providerLabel(p)}
+                            {isSaved && <span className="badge-active">{t("opt_provider_active")}</span>}
                           </div>
-                          <div className="backend-desc">{t(p.descKey)}</div>
+                          <div className="backend-desc">{driveOff ? t("opt_drive_unavailable") : t(p.descKey)}</div>
                         </div>
                         <div className={`radio-circle ${isActive ? "checked" : ""}`} />
                       </div>
@@ -1460,13 +1466,12 @@ export default function OptionsApp() {
                                 <div className="account-email">{gdriveUser.email}</div>
                               </div>
                               <button className="btn-disconnect" onClick={disconnectGDrive}>
-                                <LogOut size={12} /> Disconnect
+                                <LogOut size={12} /> {t("opt_drive_disconnect")}
                               </button>
                             </div>
                           ) : !DRIVE_AVAILABLE ? (
                             <div className="error-row">
-                              <XCircle size={12} /> Google sign-in isn't available in
-                              this browser. Use GitHub or WebDAV instead.
+                              <XCircle size={12} /> {t("opt_drive_unavailable")}
                             </div>
                           ) : (
                             <div>
@@ -1873,6 +1878,42 @@ export default function OptionsApp() {
                 })}
               </div>
 
+              {/* Bookmarks this device keeps to itself (#54), for an extension that keeps a huge
+                  folder of its own. Off unless asked for: the tree only opens behind the
+                  switch, and switching it off again puts everything back into the sync. */}
+              {availability.bookmarks?.state !== "unsupported" && (() => {
+                const excluded = settings.excluded_bookmarks ?? [];
+                const shown = excludeOpen ?? excluded.length > 0;
+                return (
+                  <div className="settings-section">
+                    <div className="settings-card-head">{t("datatype_bookmarks")}</div>
+                    <div className="settings-row">
+                      <div className="settings-row-left">
+                        <div>
+                          <div className="row-label">{t("bm_exclude_label")}</div>
+                          <div className="row-desc">{t("bm_exclude_desc")}</div>
+                        </div>
+                      </div>
+                      <label className="toggle-wrap">
+                        <input type="checkbox" className="toggle-input" checked={shown}
+                          aria-label={t("bm_exclude_label")}
+                          onChange={(e) => {
+                            setExcludeOpen(e.target.checked);
+                            if (!e.target.checked) update({ excluded_bookmarks: [] });
+                          }} />
+                        <span className="toggle-track"><span className="toggle-thumb" /></span>
+                      </label>
+                    </div>
+                    {shown && (
+                      <div style={{ padding: "0 var(--sp-xl) var(--sp-xl)" }}>
+                        <BookmarkExclusionTree value={excluded} onChange={(next) => update({ excluded_bookmarks: next })} />
+                        <InfoHint>{t("bm_exclude_hint")}</InfoHint>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* Open tabs carry their groups wherever the browser has them; this row adds the
                   names and colours. Shown only where tabGroups can be asked for at all, so a
                   browser without it never sees a switch that can only fail. */}
@@ -1894,6 +1935,7 @@ export default function OptionsApp() {
                   <label className="toggle-wrap">
                     <input type="checkbox" className="toggle-input"
                       checked={groupNames.granted}
+                      aria-label={t("opt_tab_groups_label")}
                       onChange={() => void toggleGroupNames()} />
                     <span className="toggle-track"><span className="toggle-thumb" /></span>
                   </label>
@@ -2661,7 +2703,10 @@ const STYLES = `
   .settings-card-head .head-sub { display: block; font-size: var(--fs-xs); font-weight: 400; color: var(--text-secondary); margin-top: var(--sp-3xs); line-height: 1.45; }
 
   .settings-section { background: transparent; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; margin-bottom: var(--sp-lg); }
-  .settings-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-lg); padding: var(--sp-xl); border-bottom: 1px solid var(--border); min-height: 52px; background: transparent; transition: background .1s; }
+  /* A row wraps when its control cannot fit beside 14rem of text: a switch stays beside its
+     label on a phone, a wide button such as Copy log goes under the description instead of
+     squeezing it into a column (QA AN, Hungarian at 375 px). */
+  .settings-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-lg); padding: var(--sp-xl); border-bottom: 1px solid var(--border); min-height: 52px; background: transparent; transition: background .1s; }
   .settings-row:last-child { border-bottom: none; }
   .settings-row:hover:not(.row-disabled) { background: var(--bg-hover); }
   .settings-row.radio-row { cursor: pointer; }
@@ -2670,7 +2715,7 @@ const STYLES = `
      LABEL dims — the sentence explaining why is the entire content of the row and has to
      stay properly readable, which is exactly what a blanket opacity would ruin. */
   .settings-row.is-unavailable .row-label { color: var(--text-secondary); }
-  .settings-row-left { display: flex; align-items: flex-start; gap: var(--sp-md); flex: 1; min-width: 0; }
+  .settings-row-left { display: flex; align-items: flex-start; gap: var(--sp-md); flex: 1 1 14rem; min-width: 0; }
   .row-icon { color: var(--text-secondary); margin-top: 1px; flex-shrink: 0; }
   .row-label { font-size: var(--fs-sm); color: var(--text-primary); }
   .row-desc { font-size: var(--fs-xs); color: var(--text-secondary); margin-top: var(--sp-3xs); line-height: 1.45; }

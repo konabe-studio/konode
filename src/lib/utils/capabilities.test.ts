@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   apiPresent, eventPresent, dataTypeApiPresent, dataTypeAvailability, allDataTypeAvailability,
-  assertDataTypeApi, ensurePermission, ensurePermissionWatched, hasPermission, isAndroid, resetCapabilityCache,
+  assertDataTypeApi, ensurePermission, ensurePermissionWatched, hasPermission, isAndroid, permissionState,
+  resetCapabilityCache,
 } from "@/lib/utils/capabilities";
 import { registerBookmarkListeners, exportBookmarks } from "@/lib/handlers/bookmarks-handler";
 import { notifyConflict } from "@/lib/sync/conflict-resolver";
@@ -52,6 +53,29 @@ function permissions(opts: { held?: boolean; request?: () => Promise<boolean> } 
     },
   });
   return requests;
+}
+
+/**
+ * Firefox for Android as the emulator showed it (Firefox 158): no bookmarks or history API,
+ * and a permission schema without those names, so `contains()` rejects them the way the
+ * device did instead of answering. `tabs` and `management` are known and held only when
+ * granted on the add-on's Permissions screen.
+ */
+function firefoxForAndroid(opts: { held?: string[] } = {}) {
+  const known = new Set(["tabs", "management", "notifications", "storage", "alarms", "unlimitedStorage"]);
+  const held = new Set(opts.held ?? []);
+  replace("bookmarks", undefined);
+  replace("history", undefined);
+  replace("permissions", {
+    contains: (req: { permissions?: string[] }) => {
+      const unknown = (req.permissions ?? []).find((p) => !known.has(p));
+      if (unknown) {
+        return Promise.reject(new Error(`Type error for parameter permissions (Error processing permissions.0: Value "${unknown}" must either: …) for permissions.contains.`));
+      }
+      return Promise.resolve((req.permissions ?? []).every((p) => held.has(p)));
+    },
+    request: () => Promise.resolve(false),
+  });
 }
 
 describe("reading the API surface", () => {
@@ -147,6 +171,55 @@ describe("whether a data type can sync here", () => {
     expect(all.extensions.state).toBe("unsupported");
     expect(all.history.state).toBe("ready");
     expect(all.sessions.state).toBe("ready");
+  });
+
+  it("is unsupported when the browser does not know the permission at all", async () => {
+    // Firefox for Android, from the device (Firefox 158): no history API, and no `history`
+    // in its permission schema either, so contains() throws instead of answering. Read as
+    // "not granted", History was offered as a switch, Finish asked for it, and the
+    // browser's own permissions screen had nothing to grant: setup could not finish.
+    firefoxForAndroid();
+    expect(await dataTypeAvailability("history")).toEqual({ state: "unsupported" });
+  });
+
+  it("still asks for a permission whose contains() throws while the API is there", async () => {
+    // The API check is what keeps this narrow: a browser that HAS history and fails the
+    // question for some other reason gets the old answer, a permission to ask for.
+    replace("permissions", { contains: () => Promise.reject(new Error("nope")), request: () => Promise.resolve(false) });
+    expect(await dataTypeAvailability("history")).toEqual({ state: "needs-permission", permission: "history" });
+  });
+
+  it("answers for Firefox for Android the way its settings screen does", async () => {
+    // Its Permissions screen lists tabs and management as switches and nothing for
+    // history, so those two stay one grant away and the other two are never coming.
+    firefoxForAndroid();
+    const all = await allDataTypeAvailability();
+    expect(all.bookmarks).toEqual({ state: "unsupported" });
+    expect(all.history).toEqual({ state: "unsupported" });
+    expect(all.sessions).toEqual({ state: "needs-permission", permission: "tabs" });
+    expect(all.extensions).toEqual({ state: "needs-permission", permission: "management" });
+  });
+
+  it("is ready on Firefox for Android once tabs and management are granted by hand", async () => {
+    firefoxForAndroid({ held: ["tabs", "management"] });
+    const all = await allDataTypeAvailability();
+    expect(all.sessions.state).toBe("ready");
+    expect(all.extensions.state).toBe("ready");
+    expect(all.history.state).toBe("unsupported");
+  });
+});
+
+describe("reading one permission", () => {
+  it("tells a held permission, a missing one and an unknown one apart", async () => {
+    firefoxForAndroid({ held: ["tabs"] });
+    expect(await permissionState("tabs")).toBe("held");
+    expect(await permissionState("management")).toBe("not-held");
+    expect(await permissionState("history")).toBe("unknown");
+  });
+
+  it("leaves hasPermission's plain no alone", async () => {
+    firefoxForAndroid();
+    expect(await hasPermission({ permissions: ["history"] })).toBe(false);
   });
 });
 

@@ -9,8 +9,8 @@
  * setup' button".
  *
  * What is kept, and what is not:
- * - Where the wizard was, the device name, the storage card and its fields, and the data
- *   types. The GitHub token and the WebDAV password are kept too: GitHub shows a
+ * - Where the wizard was, the device name, the storage card and its fields, the data
+ *   types, and the bookmarks picked to stay out of sync (#54). The GitHub token and the WebDAV password are kept too: GitHub shows a
  *   fine-grained token once, and both end up in the same storage the moment setup
  *   completes. What the completed case does not have is a token sitting there for a setup
  *   the user walked away from, so the draft lives a day at most (DRAFT_TTL_MS), goes the
@@ -22,10 +22,11 @@
  *   reads it from there (getStoredGDriveUser) rather than from a copy.
  */
 
-import type { DataType } from "@/lib/types";
+import type { BookmarkExclusion, DataType } from "@/lib/types";
 import { KEYS } from "@/lib/utils/storage";
 import { browser } from "@/lib/utils/ext";
 import { PROVIDERS, type ProviderId } from "@/lib/storage-providers";
+import { sanitizeExclusions } from "@/lib/utils/bookmark-exclusions";
 
 /** The steps a draft can return to. Past `encrypt` the settings are saved and there is
  *  nothing left to keep. */
@@ -45,6 +46,7 @@ export interface OnboardingDraft {
   webdavPass: string;
   ncHost: string;
   dataTypes: Record<DataType, boolean>;
+  bookmarkExclusions: BookmarkExclusion[];
 }
 
 /** A day: long enough for a discarded tab or a trip through Google's consent screen, short
@@ -108,5 +110,7 @@ function validDraft(raw: Partial<OnboardingDraft>, now: number): OnboardingDraft
     dataTypes: Object.fromEntries(
       DATA_TYPES.map((t) => [t, typeof types[t] === "boolean" ? (types[t] as boolean) : t === "bookmarks"])
     ) as Record<DataType, boolean>,
+    // A draft from before #54 has none, which is the same as nothing picked.
+    bookmarkExclusions: sanitizeExclusions(raw.bookmarkExclusions),
   };
 }

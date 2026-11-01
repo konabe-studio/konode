@@ -15,6 +15,8 @@
   <a href="https://addons.mozilla.org/firefox/addon/konode/"><img src="https://img.shields.io/amo/v/konode?label=Firefox%20Add-ons" alt="Firefox Add-ons"></a>
   <a href="https://github.com/konabe-studio/konode/actions/workflows/ci.yml"><img src="https://github.com/konabe-studio/konode/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MPL--2.0-brightgreen" alt="License: MPL-2.0"></a>
+  <a href="https://github.com/konabe-studio/konode/stargazers"><img src="https://img.shields.io/github/stars/konabe-studio/konode?label=stars" alt="GitHub stars"></a>
+  <img src="https://img.shields.io/badge/built%20with-TypeScript-3178C6?logo=typescript&amp;logoColor=white" alt="Built with TypeScript">
 </p>
 
 <p align="center">

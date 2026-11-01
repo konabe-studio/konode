@@ -6,6 +6,7 @@ import { isSafeContentUrl, isSensitiveUrl } from "@/lib/utils/url";
 import { browser } from "@/lib/utils/ext";
 import { assertDataTypeApi, isIOS, tabGroupSupport } from "@/lib/utils/capabilities";
 import { getSingleTabOpenLimit, setSingleTabOpenLimit } from "@/lib/utils/storage";
+import { openTabUrls, rememberOpened, tabsToRestore } from "@/lib/session-restore";
 
 // ─── Export Current Tabs ──────────────────────────────────────────────────
 
@@ -131,15 +132,26 @@ export async function importSession(session: SyncSession): Promise<void> {
     logger.warn("importSession", "Skipping an unsafe tab URL");
     return false;
   });
-  const openable = safe.slice(0, MAX_RESTORE_TABS);
-  if (safe.length > openable.length) {
+  // Only what is not open here yet, so a second restore of a session that has grown opens
+  // the new tabs instead of every tab again (see lib/session-restore).
+  const missing = tabsToRestore(safe, await openTabUrls(await browser.tabs.query({})));
+  if (safe.length && !missing.length) {
+    logger.event("importSession", `All ${safe.length} tabs from "${session.label}" are already open`);
+    return;
+  }
+  const openable = missing.slice(0, MAX_RESTORE_TABS);
+  if (missing.length > openable.length) {
     logger.warn(
       "importSession",
-      `That session lists ${safe.length} tabs, which is more than Konode will open at once. Opening the first ${MAX_RESTORE_TABS}.`
+      `That session lists ${missing.length} tabs that are not open here, which is more than Konode will open at once. Opening the first ${MAX_RESTORE_TABS}.`
     );
   }
 
-  logger.event("importSession", `Opening ${openable.length} tabs from "${session.label}"`);
+  const already = safe.length - missing.length;
+  logger.event(
+    "importSession",
+    `Opening ${openable.length} tabs from "${session.label}"${already ? ` (${already} already open)` : ""}`
+  );
   if (openable.length === 0) return;
 
   /**
@@ -166,14 +178,19 @@ export async function importSession(session: SyncSession): Promise<void> {
    * we still have no idea. Being wrong costs one restore and then corrects itself.
    */
   const urls = openable.map((t) => t.url as string);
-  // Where each opened tab landed, by its position in `openable`, for the grouping at the
-  // end. Grouping opens nothing, so it never spends the one-open-per-click budget.
+  // Where each opened tab landed, by its position in `openable`. Read twice: to note what
+  // opened, so a popup counting open tabs while these still load sees them (Firefox has no
+  // pendingUrl, see lib/session-restore), and for the grouping at the end. Grouping opens
+  // nothing, so it never spends the one-open-per-click budget.
   const opened: OpenedTab[] = [];
+  const noteOpened = (): Promise<void> =>
+    rememberOpened(opened.map((o) => ({ id: o.tabId, url: openable[o.at].url })));
   const openAllInOneWindow = async (list: string[], from: number): Promise<void> => {
     try {
       const win = await browser.windows.create({ url: list, focused: true });
-      // Chrome and Firefox both answer with the new window's tabs in URL order. An engine
-      // that leaves them out gets asked; one that refuses that too restores ungrouped.
+      // Chrome and Firefox both answer with the new window's tabs in the order of `list`,
+      // each still loading its page. An engine that leaves them out gets asked; one that
+      // refuses that too restores ungrouped.
       let tabs = win?.tabs;
       if (!tabs?.length && typeof win?.id === "number") {
         try { tabs = await browser.tabs.query({ windowId: win.id }); } catch { tabs = undefined; }
@@ -195,6 +212,7 @@ export async function importSession(session: SyncSession): Promise<void> {
     logger.event("importSession", `Opening ${urls.length} tab(s) in one window (this browser allows a single open per click)`);
     await openAllInOneWindow(urls, 0);
     if (remembered === null) await setSingleTabOpenLimit(true);
+    await noteOpened();
     await restoreGroups(session.groups, openable, opened);
     return;
   }
@@ -222,9 +240,11 @@ export async function importSession(session: SyncSession): Promise<void> {
         "importSession",
         `This browser blocked the second tab, so ${rest.length} tab(s) are opening in their own window instead. If they don't appear, restore again: the next attempt opens them all at once.`
       );
-      // The second tab was swallowed, so whatever its create() answered is not a tab.
+      // The second tab was swallowed, so whatever its create() answered is not a tab, and
+      // neither the note nor the grouping should believe in it.
       for (let k = opened.length - 1; k >= 0; k--) if (opened[k].at >= 1) opened.splice(k, 1);
       await openAllInOneWindow(rest, 1);
+      await noteOpened();
       // The first tab stayed in this window and the rest went to a new one, so a group
       // that spans both is restored once per window, never pulled across into one.
       await restoreGroups(session.groups, openable, opened);
@@ -232,6 +252,7 @@ export async function importSession(session: SyncSession): Promise<void> {
     }
   }
 
+  await noteOpened();
   // Every tab landed where it was asked to, so per-tab restore is safe on this engine and
   // the next restore can skip the measurement.
   if (remembered === null) await setSingleTabOpenLimit(false);
@@ -249,7 +270,8 @@ type OpenedTab = { at: number; tabId: number; windowId?: number };
  * colour (decided 2026-10-02). Everything read from the packet is checked first: the group
  * index has to point at a group, the group goes through `cleanGroup`, and a pinned tab is
  * never grouped, because both engines unpin a tab they group. Tabs are grouped per window,
- * so a restore split across two windows is never pulled back into one.
+ * so a restore split across two windows is never pulled back into one, and only the tabs
+ * this restore opened are grouped: one that was already open here stays where it was put.
  *
  * A failure is logged once and leaves the tabs open, ungrouped. Grouping is the extra; the
  * tabs are the restore.

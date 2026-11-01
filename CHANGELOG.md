@@ -20,8 +20,17 @@ All notable changes to Konode. Format loosely follows
   a small card at the bottom. Never during setup and never next to an error, a conflict or a
   held-back deletion. Rate it or say no thanks, and either way it is gone for good; rating
   from the Settings row counts too. Nothing about it leaves your device.
-
-- **Open tabs keep their tab groups** (#11). A session now carries which of its tabs share a
+- **Keep bookmarks out of sync (#54).** An extension that keeps a big bookmark folder of its
+  own had Konode syncing every entry in it, and the browser froze until it was done. Under
+  Bookmarks, in setup and in Settings → Data Types, **Exclude bookmarks from sync** opens
+  your bookmark tree with a box in front of every folder and bookmark. Whatever you tick
+  stays on this device untouched: it is never uploaded, nothing your other devices do
+  changes it, and changes inside it no longer start a sync. A ticked folder stays excluded
+  when you rename it, and so does whatever the extension adds to it later. Excluding deletes
+  nothing, so copies your other devices already have stay there. Moving a bookmark into an
+  excluded folder takes it off your other devices, as deleting it would, and moving it back
+  out brings it back to them, even one you saved a moment ago.
+- **Open tabs keep their tab groups (#11).** A session now carries which of its tabs share a
   group, and Restore puts them back together. Allow group names and colours when Konode
   asks for open tabs, or later in Settings → Data Types, and those come back too; without
   that, the groups come back unnamed and your browser picks the colours. Chrome, Edge,
@@ -32,6 +41,10 @@ All notable changes to Konode. Format loosely follows
 
 ### Changed
 
+- **Settings fits a phone better.** A row whose button cannot fit beside its text now puts
+  the button underneath, instead of squeezing the text into a narrow column: in Hungarian,
+  Copy log's explanation ran to fourteen lines at phone width. Switches stay beside their
+  labels.
 - **Nutstore comes first when Konode is in Simplified Chinese.** The storage picker in setup
   and in Settings led with Google Drive for everyone, and from mainland China Drive answers
   only through a VPN that every sync would need open. In Simplified Chinese the first card
@@ -40,6 +53,59 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **Setup can finish on Firefox for Android.** Firefox for Android has no history, but
+  Konode offered History as a switch there, in setup and in Settings. Switched on, it made
+  setup ask for a permission that Firefox for Android does not have, so **Finish & Sync**
+  sent you to Firefox's extension settings again and again, where there was nothing to
+  switch on. History now reads as not available there, as Bookmarks already did, and open
+  tabs and the extension list set up as they should.
+- **Prefer Remote keeps your bookmarks in order when a folder moves in front of them.** On a
+  device set to Prefer Remote, dragging a folder in front of loose bookmarks on another
+  device sent those bookmarks to the end of the bar here, behind the folder. The folder now
+  takes its new place first, and the bookmarks around it stay where they were. The Activity
+  line no longer counts them as moved either.
+- **The Google Drive card says up front when this browser cannot sign in to Google.** On
+  Firefox for Android, which has no way to, the card looked like any other until you picked
+  it, and in Settings the explanation was in English only. In setup and in Settings the card
+  is now dimmed and gives the reason in your language.
+- **Setup tidies up after itself.** An error from the last step stayed on screen after you
+  went Back from it. The final screen named WebDAV for Koofr, Nutstore and the other cards
+  built on it, instead of the card you picked, and a line in its checklist that ran onto a
+  second line was centred while the others were not. On Firefox for Android the Bookmarks
+  row's icon was squeezed to a dot beside its explanation.
+- **The storage cards speak your language all the way through.** In Settings the badge on
+  your storage card read "active" and the Google Drive card's button "Disconnect" in every
+  language, and the catch-all card was "WebDAV (other)" in setup too. They now follow the
+  language Konode is in, and so does the name a screen reader gives each card in Settings.
+- **Folders that share a name stay separate (#51).** Konode tells folders apart by their
+  name, so several folders of one name side by side, unnamed ones most often, were merged
+  into the first of them on your other devices, with all their bookmarks in it. The same
+  happened when you brought bookmarks back from a restore point. Such folders now stay
+  separate and in their order: each one is matched by the bookmarks it holds, and a new
+  bookmark goes into the folder that holds the bookmarks around it. A folder that was
+  already merged stays that way until you split it up again on that device; the bookmarks
+  you move out of it go to the right folder on your other devices too.
+- **Renaming or reordering one of several folders that share a name reaches the right folder
+  (#51).** A folder rename travels as "the folder called X here is now called Y", and your
+  other devices gave the new name to the first folder called X, which with several of them
+  was not always the one you renamed. Moving such a folder among its neighbours went wrong
+  the same way, and renaming an unnamed folder never reached your other devices at all. Now
+  a folder that shares its name with a neighbour sends one of its bookmarks along, and your
+  other devices rename or move the folder that holds it. Both devices need this version; with
+  an older one on either side, it works as it did before.
+- **A Nextcloud server set up on the WebDAV card stays on the WebDAV card (#51).** Settings
+  marked the Nextcloud / ownCloud card as active for any address with `/remote.php/dav/` in
+  it. That card rebuilds the address from the username, so changing the username or the
+  server there could quietly break a setup that only the WebDAV card can hold: a Nextcloud
+  app password created while signed in with an email address needs the email as the
+  username, while the address keeps the plain account name. Now the Nextcloud card counts as
+  active only when the address is exactly the one it would build itself.
+- **Restoring a session no longer opens tabs you already have open.** Every restore opened
+  the whole session again, so restoring another device's 10 tabs, letting it open an 11th
+  and restoring once more left you with 21. A restore now opens only the tabs that aren't
+  open in this browser yet, and the popup says how many of a session's tabs are already open
+  here. When all of them are, the button reads **All open** instead of opening them again,
+  in Firefox too while the tabs a restore just opened are still loading.
 - **A deletion that arrives in pieces no longer slips past the bulk-delete limit.** The
   limit on how much of your bookmarks another device may delete judged each sync on its own,
   so a large deletion that reached this device a piece at a time went through piece by
