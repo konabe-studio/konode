@@ -20,12 +20,17 @@ let bmSeq = 100;
 let alarmStore = new Map();
 let bmNodes = new Map();
 
-function resetBookmarks() {
+function resetBookmarks(roots) {
   bmSeq = 100;
   bmNodes = new Map();
   bmNodes.set("0", { id: "0", parentId: undefined, title: "", index: 0 });
-  [["1", "Bookmarks bar"], ["2", "Other bookmarks"], ["3", "Mobile bookmarks"]].forEach(
-    ([id, title], i) => bmNodes.set(id, { id, parentId: "0", title, index: i })
+  const defaults = [
+    { id: "1", title: "Bookmarks bar", folderType: "bookmarks-bar" },
+    { id: "2", title: "Other bookmarks", folderType: "other" },
+    { id: "3", title: "Mobile bookmarks", folderType: "mobile" },
+  ];
+  (roots ?? defaults).forEach(({ id, title, folderType, syncing }, i) =>
+    bmNodes.set(id, { id, parentId: "0", title, index: i, folderType, syncing })
   );
 }
 resetBookmarks();
@@ -146,6 +151,11 @@ function bmRepack(parentId) {
 function bmBuild(id) {
   const n = bmNodes.get(id);
   const node = { id: n.id, parentId: n.parentId, title: n.title, dateAdded: n.dateAdded, index: n.index };
+  // Chromium 134+ types its permanent folders (`folderType`) and flags the account copy
+  // of one (`syncing`). The fake used to drop both, which is precisely why the suite
+  // could not see Edge's renumbered roots (#66) — root resolution reads these first.
+  if (n.folderType !== undefined) node.folderType = n.folderType;
+  if (n.syncing !== undefined) node.syncing = n.syncing;
   if (typeof n.url === "string") node.url = n.url;
   else node.children = bmChildren(id).map((c) => bmBuild(c.id));
   return node;
@@ -226,6 +236,10 @@ function makeBookmarks() {
     onChanged: { addListener: () => {} },
     onMoved: { addListener: () => {} },
     onRemoved: { addListener: () => {} },
+    // Re-seed the profile with another browser's roots (same idea as history's
+    // `__engine`): Edge after its id renumbering, a managed root, an account + local
+    // pair. Clears every bookmark, so call it before seeding. Reset per test as usual.
+    __setRoots: (roots) => resetBookmarks(roots),
   };
 }
 

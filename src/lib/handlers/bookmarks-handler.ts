@@ -16,7 +16,8 @@ import {
   getCreated, updateCreated, getPeerRemovals, updatePeerRemovals, getBookmarkExclusions,
 } from "@/lib/utils/storage";
 import {
-  defaultOtherRootId, matchLocalRoot, matchLocalRootEx, rootKind, rootKindFromTitle,
+  asRootKind, defaultOtherRootId, findLocalRootByKind, matchLocalRoot, matchLocalRootEx,
+  rootKindOf,
 } from "@/lib/utils/bookmark-roots";
 import { canonicalUrlKey } from "@/lib/utils/url";
 import {
@@ -26,7 +27,13 @@ import {
 import { browser } from "@/lib/utils/ext";
 import { assertDataTypeApi, eventPresent } from "@/lib/utils/capabilities";
 
-type BookmarkNode = chrome.bookmarks.BookmarkTreeNode;
+// Chromium 134+ types its permanent folders on the node (`folderType`) and tells an
+// account root from a local-only one (`syncing`); @types/chrome doesn't carry either yet.
+// Both are optional, so a plain BookmarkTreeNode still satisfies this.
+type BookmarkNode = chrome.bookmarks.BookmarkTreeNode & {
+  folderType?: string;
+  syncing?: boolean;
+};
 
 // ─── Read ─────────────────────────────────────────────────────────────────
 
@@ -56,7 +63,7 @@ async function localExclusions(rules?: BookmarkExclusion[]): Promise<LocalExclus
   ]);
   return {
     rules: stored,
-    part: partitionExcluded(raw.map(mapNode), stored, { byId: true }),
+    part: partitionExcluded(raw.map((node) => mapNode(node, 0)), stored, { byId: true }),
     roots: raw[0]?.children ?? [],
   };
 }
@@ -86,7 +93,15 @@ function excludedFolderPaths(local: LocalExclusions): string[][] {
   return peerRules(local.rules, local.part).filter((r) => !r.url).map((r) => r.path);
 }
 
-function mapNode(node: BookmarkNode): SyncBookmark {
+// `depth` exists only to spot the ROOTS — the virtual root's own children — so each one
+// can carry its kind to the peer. It is NOT an array index: this used to be called as
+// `tree.map(mapNode)`, which would have handed the index to a second parameter.
+function mapNode(node: BookmarkNode, depth: number): SyncBookmark {
+  // A root travels with its resolved kind, so the receiver never has to re-derive it from
+  // an id that only meant something on this profile. Edge 142 renumbered every bookmark id
+  // (crbug 456225717), so the Favorites bar stopped being "1" and a peer had nothing left
+  // to match on — the whole tree landed in "Other favorites" (#66).
+  const kind = depth === 1 ? rootKindOf(node) : undefined;
   return {
     id: node.id,
     parentId: node.parentId ?? null,
@@ -96,10 +111,11 @@ function mapNode(node: BookmarkNode): SyncBookmark {
     // payload/checksum every time — the root node carries no dateAdded, and a moving
     // value there would defeat upload de-dup and cross-device checksum matching.
     dateAdded: node.dateAdded ?? 0,
+    ...(kind ? { rootKind: kind } : {}),
     // NOTE: node.dateGroupModified is deliberately NOT synced — it's a per-folder
     // local mod-time that differs across devices for the same logical tree, so
     // including it only churned the payload/checksum. Nothing in the merge reads it.
-    children: node.children?.map(mapNode),
+    children: node.children?.map((child) => mapNode(child, depth + 1)),
   };
 }
 
@@ -574,16 +590,35 @@ function siblingKey(node: { url?: string; title: string }): string {
 /** Build a folder's browser-agnostic path — `[rootKind, …ancestorTitles, title]`
  *  — by walking up the parent chain to a known root. Returns null if the chain
  *  never reaches a mappable root (so the caller fails safe). */
+/**
+ * The profile's real roots, by id.
+ *
+ * Which nodes are roots is a question about the TREE, not about a node's id or title: on a
+ * renumbered profile (Edge 142) a root's id matches no table, while a folder the user named
+ * "Favorites bar" matches the title table perfectly — and typing that one as a root
+ * truncates every path through it. The tree's own top level settles it, on every engine.
+ */
+async function localRootsById(): Promise<Map<string, BookmarkNode>> {
+  const roots = (await browser.bookmarks.getTree())[0]?.children ?? [];
+  return new Map(roots.map((r) => [r.id, r as BookmarkNode] as const));
+}
+
 async function folderPath(id: string): Promise<string[] | null> {
+  const roots = await localRootsById();
   const path: string[] = [];
   let currentId: string | undefined = id;
   // Bound the walk so a malformed parent chain can't loop forever.
   for (let hops = 0; hops < 64 && currentId; hops++) {
+    const root = roots.get(currentId);
+    if (root) {
+      // Reached a root. Its kind comes from the engine's folderType where there is one,
+      // so it survives renumbering; an unmappable root fails safe, as before.
+      const kind = rootKindOf(root);
+      return kind ? [kind, ...path] : null;
+    }
     let node: BookmarkNode | undefined;
     try { [node] = await browser.bookmarks.get(currentId); } catch { return null; }
     if (!node) return null;
-    const kind = rootKind(node.id);
-    if (kind) { path.unshift(kind); return path; } // reached a root → done
     path.unshift(node.title);
     currentId = node.parentId;
   }
@@ -760,7 +795,7 @@ function publishableFolderDeletes(records: FolderDeleteRecord[], tree: SyncBookm
     }
   };
   for (const root of tree[0]?.children ?? []) {
-    const kind = rootKind(root.id);
+    const kind = rootKindOf(root);
     if (kind) walk(root.children ?? [], [kind]);
   }
   return records
@@ -860,7 +895,10 @@ export function bookmarkContent(payload: unknown): string {
   const roots = tree[0]?.children ?? tree;
   const lines = new Set<string>();
   roots.forEach((root, i) => {
-    const kind = rootKindFromTitle(root.title) ?? rootKind(root.id);
+    // Through rootKindOf, or two devices never agree on this hash: an Edge whose roots
+    // were renumbered answered to no kind and keyed its lines "root:favorites bar" while
+    // the same tree on Chrome keyed them "bar".
+    const kind = rootKindOf(root);
     const top = kind === "menu" ? "other" : kind ?? `root:${root.title?.trim().toLowerCase() || i}`;
     const walk = (nodes: SyncBookmark[] | undefined, path: string[]): void => {
       for (const n of nodes ?? []) {
@@ -1114,6 +1152,14 @@ async function mergeBookmarks(
     return out;
   };
 
+  // The profile's roots, read once. Step A needs to know which ids are roots — never a
+  // shell to prune — and the root matching further down needs the roots themselves.
+  // "Is this a root?" is a question about the TREE: on a renumbered profile (Edge 142,
+  // crbug 456225717) a root's id matches no table, and a folder the user named "Favorites
+  // bar" matches the title table, so neither id nor title can answer it.
+  const localRoots = (await browser.bookmarks.getTree())[0]?.children ?? [];
+  const localRootIds = new Set(localRoots.map((r) => r.id));
+
   // Index local URL bookmarks (ids + when each canonical URL last appeared here). That is
   // the newest dateAdded, or later if an import kept an older date than the moment the
   // bookmark actually arrived (#27): a restore from a browser backup is the user's newest
@@ -1286,7 +1332,7 @@ async function mergeBookmarks(
         removed++;
         removedKeys.add(keyOfId.get(id) as string);
         const parent = parentOf.get(id);
-        if (parent && !rootKind(parent)) emptiedByDeletion.add(parent);
+        if (parent && !localRootIds.has(parent)) emptiedByDeletion.add(parent);
       } catch (err) {
         logger.error("Bookmark delete (tombstone)", err);
       }
@@ -1367,7 +1413,6 @@ async function mergeBookmarks(
     return (remoteMoveAt.get(key) ?? 0) > (newest(localMoveAt, localKeys(key)) ?? 0);
   };
 
-  const localRoots = (await browser.bookmarks.getTree())[0]?.children ?? [];
   const otherId = defaultOtherRootId(localRoots);
   if (!otherId) {
     logger.warn("mergeBookmarks", "No writable root folder found");
@@ -1477,7 +1522,7 @@ async function mergeBookmarks(
               moved++;
               // Track the folder we moved this bookmark OUT of, so an emptied shell
               // (left by a cross-parent folder move on the peer) is cleaned up below.
-              if (from && from !== targetId && !rootKind(from)) emptiedParents.add(from);
+              if (from && from !== targetId && !localRootIds.has(from)) emptiedParents.add(from);
             }
           } catch (err) {
             logger.error(`Bookmark move: ${node.title}`, err);
@@ -1695,7 +1740,7 @@ async function mergeBookmarks(
   // once that child is pruned, and the queue only grows on a removal, so it always ends.
   while (queue.length) {
     const { id, reason } = queue.shift()!;
-    if (rootKind(id)) continue; // never remove a root
+    if (localRootIds.has(id)) continue; // never remove a root
     try {
       const [node] = await browser.bookmarks.get(id);
       if (!node || node.url) continue; // gone already, or not a folder
@@ -1773,8 +1818,10 @@ async function resolveFolderPath(path: string[], localRoots: BookmarkNode[]): Pr
   // and a folder sitting directly in the bookmarks bar has exactly ["bar"] as its parent.
   // Rejecting that silently dropped the most common rename there is.
   if (path.length < 1) return null;
-  const [kind, ...titles] = path;
-  const root = localRoots.find((r) => rootKind(r.id) === kind);
+  const [segment, ...titles] = path;
+  const kind = asRootKind(segment);
+  if (!kind) return null;
+  const root = findLocalRootByKind(localRoots, kind);
   if (!root) return null;
   let currentId = root.id;
   for (const title of titles) {
@@ -2126,16 +2173,17 @@ export function resetExclusionCache(): void {
 
 /** A local folder's path the way the exclusion rules spell it (rootKey first), or null. */
 async function exclusionPath(id: string): Promise<string[] | null> {
+  // Same question as folderPath, same answer: the tree's own top level. This used to test
+  // the id table first, which a renumbered profile's roots fail.
+  const roots = await localRootsById();
   const titles: string[] = [];
   let currentId: string | undefined = id;
   for (let hops = 0; hops < 64 && currentId; hops++) {
+    const root = roots.get(currentId);
+    if (root) return [rootKey(root), ...titles];
     let node: BookmarkNode | undefined;
     try { [node] = await browser.bookmarks.get(currentId); } catch { return null; }
     if (!node || !node.parentId) return null;
-    // A root: a known root id, or whatever sits right under Chrome's or Firefox's virtual root.
-    if (rootKind(node.id) || node.parentId === "0" || node.parentId === "root________") {
-      return [rootKey(node), ...titles];
-    }
     titles.unshift(node.title);
     currentId = node.parentId;
   }
