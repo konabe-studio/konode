@@ -34,6 +34,23 @@ async function support() {
   return browser.tabGroups && granted ? "full" : "membership";
 }
 
+/**
+ * The two engine facts the Firefox 138 pass rests on, asked the way the extension asks.
+ * 138 is the one release with `tabs.group` and no `tabGroups`, and an unknown permission
+ * is what `tabGroupsAskable()` has to survive: one of them fails the WHOLE request, which
+ * would have stopped the wizard dead.
+ */
+async function engineFacts() {
+  const facts = { tabGroupsApi: Boolean(browser.tabGroups) };
+  try {
+    await browser.permissions.contains({ permissions: ["tabGroups"] });
+    facts.containsThrew = false;
+  } catch {
+    facts.containsThrew = true;
+  }
+  return facts;
+}
+
 async function tabsNow() {
   return (await browser.tabs.query({})).map((t) => ({
     url: t.url, title: t.title, pinned: t.pinned, groupId: t.groupId, windowId: t.windowId,
@@ -98,6 +115,7 @@ const report = { role: config.role, userAgent: navigator.userAgent };
 
 try {
   report.support = await support();
+  Object.assign(report, await engineFacts());
   log(`tab group support: ${report.support}`);
 
   if (config.role !== "hello") {

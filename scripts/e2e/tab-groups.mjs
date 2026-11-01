@@ -23,12 +23,16 @@
 // `tabs.group` and `tabGroups` on Gecko are exercised rather than assumed. Those two passes
 // SKIP rather than fail where no Firefox is installed.
 //
-// WHAT IT STILL DOES NOT COVER. The permission PROMPT: every build below holds `tabs` and
-// `tabGroups` from the start, because both engines draw that dialog in browser chrome,
-// where no automation can click it; `tabGroupsAskable` and `permissionsToEnable` have unit
-// tests. And Firefox 138 itself, the one version with `tabs.group` and no `tabGroups`:
-// passes 2 and 3 reproduce its branch in Chromium, because `tabGroupSupport()` lands on
-// `membership` for both, but nothing here runs on that version.
+// Pass 6 runs on a real Firefox 138, the one version with `tabs.group` and no `tabGroups`.
+// Passes 2 and 3 reproduce that BRANCH in Chromium by withholding the permission, and a
+// modern Firefox asked without the grant lands there too — but only on 138 is the
+// permission unknown, and asking whether it is held throws instead of answering false.
+// That is a different failure, and the one that could have stopped the setup wizard.
+//
+// WHAT IT STILL DOES NOT COVER. The permission PROMPT: every build below holds the
+// permissions it needs from the start, because both engines draw that dialog in browser
+// chrome, where no automation can click it; `tabGroupsAskable` and `permissionsToEnable`
+// have unit tests.
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -95,12 +99,33 @@ function liveBuckets(tabs, origin) {
 /** A partition as a comparable thing: the sorted members of each group, sorted. */
 const partition = (buckets) => sorted([...buckets.values()].map((us) => show(us)));
 
+/**
+ * Firefox 138: the one release with `tabs.group` and no `tabGroups`. Passes 2 and 3 take
+ * the `membership` branch in Chromium by withholding the permission, and a modern Firefox
+ * asked without the grant lands there too — but only on 138 is the permission UNKNOWN, and
+ * that is a different thing entirely: `permissions.contains({permissions: ["tabGroups"]})`
+ * throws there rather than answering false. One unknown permission fails the whole request,
+ * which is what would have stopped the setup wizard dead, and what `tabGroupsAskable()`
+ * exists to survive. No other engine reproduces it.
+ */
+async function legacyGecko() {
+  const named = process.env.E2E_FIREFOX_138;
+  const path = named ?? join(process.env.HOME ?? "", ".local/opt/firefox-138/firefox/firefox");
+  try {
+    await stat(path);
+    return path;
+  } catch {
+    return null;
+  }
+}
+
 async function main() {
   await stat(join(dist, "manifest.json")).catch(() => {
     throw new Error("dist/ is not built — run `npm run build` first");
   });
 
   const firefox = await firefoxBinary();
+  const legacy = await legacyGecko();
   if (firefox) {
     await stat(join(distFirefox, "manifest.json")).catch(() => {
       throw new Error("dist-firefox/ is not built — run `npm run build:firefox` first");
@@ -358,6 +383,67 @@ async function main() {
       await dav.close();
     }
 
+    // ── 6. Firefox 138: the engine that does not know what tabGroups IS ───
+    scene = "firefox-138";
+    if (!legacy) {
+      console.log(`\n▸ ${scene}: SKIPPED — no Firefox 138 (unpack one, or set E2E_FIREFOX_138)`);
+      skipped.push(scene);
+    } else {
+      console.log(`\n▸ ${scene}: Chromium publishes names and colours, Firefox 138 takes what it can`);
+      const dav = await startWebdav();
+      const a = await launchPeer({
+        extDir: full, profileDir: join(work, `${scene}-a`), davOrigin: dav.origin,
+        id: `e2e-${scene}-a`, label: "A", headless,
+      });
+      peers.push(a);
+
+      await a.openPages(ours);
+      await a.pin(url(LOOSE));
+      await a.group(WORK.map(url), { title: "Work", color: "blue" });
+      await a.group(READING.map(url), { title: "Reading", color: "red" });
+      await a.sync();
+      const packet = published(dav, a.id);
+
+      const ext = await buildFirefoxDriver({
+        dist: distFirefox,
+        into: join(work, `${scene}-ff-ext`),
+        // Nothing to promote but `tabs`: 138 has no `tabGroups`, and leaving it in
+        // optional_permissions is exactly the shape a shipped build has there.
+        grant: ["tabs"],
+        config: {
+          role: "receive",
+          reportUrl: reporter.url,
+          settings: settingsFor(dav.origin, `e2e-${scene}-ff`, "Firefox 138"),
+        },
+      });
+      const ff = await runFirefoxDriver({ extDir: ext, binary: legacy, reporter });
+      check("the Firefox 138 driver ran without an error", !ff.error, ff.error);
+      console.log(`     ${ff.userAgent}`);
+      // The engine facts this pass exists for. A modern Firefox asked without the grant
+      // answers `false` here; 138 throws, because it has never heard of the permission.
+      check("138 does not know the tabGroups permission, and throws when asked",
+        ff.containsThrew === true, `threw: ${ff.containsThrew}`);
+      check("it has no tabGroups API either", ff.tabGroupsApi === false, `tabGroups api: ${ff.tabGroupsApi}`);
+      check("so the extension settles on membership instead of failing",
+        ff.support === "membership", ff.support);
+      // Setup finishing is the regression this case exists for: settings applied and a
+      // sync completed on an engine that throws at the capability question.
+      check("settings applied and a sync completed there",
+        ff.received?.tabs === ours.length, JSON.stringify(ff.received));
+      check("it opened all five tabs",
+        same((ff.tabs ?? []).filter((t) => ours.includes(t.url)).map((t) => t.url), ours),
+        JSON.stringify((ff.tabs ?? []).map((t) => t.url)));
+      check("it grouped them the way Chromium had them",
+        same(partition(liveBuckets(ff.tabs ?? [], pages.origin)), partition(packetBuckets(packet))),
+        JSON.stringify(partition(liveBuckets(ff.tabs ?? [], pages.origin))));
+      check("the names and colours are simply not available there",
+        ff.groups === null, JSON.stringify(ff.groups));
+      const loose138 = (ff.tabs ?? []).find((t) => t.url === url(LOOSE));
+      check("the pinned tab came back pinned and ungrouped",
+        loose138?.pinned === true && !(loose138?.groupId >= 0), JSON.stringify(loose138));
+      await dav.close();
+    }
+
   } finally {
     for (const p of peers) await p.close();
     await pages.close();
@@ -376,7 +462,7 @@ async function main() {
     console.log("every check passed — tab groups survive a real sync: Chromium to Chromium,");
     console.log("Chromium to Firefox and back, and both ways across the tabGroups permission.");
     if (skipped.length) console.log(`skipped: ${skipped.join(", ")}`);
-    console.log("not covered: the permission prompt, and Firefox 138 itself (see the header).");
+    console.log("not covered: the permission prompt itself (see the header).");
   }
 }
 

@@ -30,6 +30,13 @@ answers `membership` without `tabGroups` and `full` with it, and Firefox 138 is 
 that has `tabs.group` and no `tabGroups` at all — so a Chromium profile that was never
 granted the permission takes the same branch that version does.
 
+A sixth pass runs on a real Firefox 138, which is not the same thing as reproducing its
+branch. There the permission is UNKNOWN, so `permissions.contains({permissions:
+["tabGroups"]})` throws rather than answering false, and one unknown permission fails the
+whole request — the failure that could have stopped the setup wizard. Unpack 138 into
+`~/.local/opt/firefox-138/` (so the binary is at `firefox/firefox` inside it) or point
+`E2E_FIREFOX_138` at one; the pass skips itself when there is none.
+
 ## How each engine is driven
 
 **Chromium** comes with Playwright (`playwright-core`, already a dependency): a persistent
