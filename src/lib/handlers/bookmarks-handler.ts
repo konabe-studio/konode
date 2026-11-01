@@ -535,6 +535,21 @@ async function recordTitleChange(id: string, newTitle: string | undefined): Prom
   let node: BookmarkNode | undefined;
   try { [node] = await browser.bookmarks.get(id); } catch { return; }
   if (!node) return;
+  // A SUPERSEDED event. `importing` is a window in time, and the browser delivers
+  // onChanged whenever it gets round to it — often after the import that caused it has
+  // already returned. The merge applies a folder rename and its reverse in one pass, so
+  // the first of those writes arrives naming a title the folder no longer has, and it was
+  // recorded as though the user had just renamed the folder, stamped `Date.now()`.
+  // Published, that re-stamped record outranked every peer's copy of the same rename, so
+  // their "ours is newer" test could never settle it: each device re-stamped what the
+  // other had just applied, and a folder renamed and renamed back flipped between its two
+  // names forever — the sync loop reported from the field, on default settings.
+  //
+  // Going by the node's CURRENT title instead of the event's needs no flag and no window:
+  // a rename nothing has undone still reads as itself, whenever the event lands, while one
+  // that has already been overtaken records nothing. The live tree is the authority here,
+  // the same way `recordUrlChange` reads the cache rather than trusting the event alone.
+  if (node.title !== newTitle) return;
   const now = Date.now();
 
   if (node.url) {
@@ -1433,7 +1448,19 @@ async function mergeBookmarks(
 
     for (const r of logs.folderRenames.remote) {
       const mine = localRenameByKey.get(folderRenameKey(r));
-      if (strategy !== "prefer-remote" && mine && mine.at >= r.at) continue; // ours is newer
+      // A record we already hold VERBATIM is one we absorbed from a peer and applied on an
+      // earlier sync. Replaying it is not "the peer winning" — it is the same operation run
+      // a second time, and a rename is not idempotent the way an add or a delete is.
+      //
+      // That matters because renaming a folder and then renaming it back leaves two records
+      // that undo each other: Work->Job and Job->Work both live, keyed by their OLD name, so
+      // neither supersedes the other. Replaying the pair renamed the folder twice on every
+      // sync and landed back where it started — `renamed 0+2` with nothing else changed —
+      // and each rewrite woke sync-on-change, so the next sync did it again, forever. Under
+      // lww the "ours is newer" test below happened to stop it once the records were
+      // absorbed; prefer-remote skipped that test and looped until the user noticed.
+      const replay = mine && mine.at === r.at && mine.to === r.to;
+      if (mine && mine.at >= r.at && (strategy !== "prefer-remote" || replay)) continue; // ours is newer, or already applied
       try {
         const parentId = await resolveFolderPath(r.path, localRoots);
         if (!parentId) continue; // path doesn't exist here — fail safe, same as Step C
