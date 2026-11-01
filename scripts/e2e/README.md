@@ -37,6 +37,16 @@ whole request — the failure that could have stopped the setup wizard. Unpack 1
 `~/.local/opt/firefox-138/` (so the binary is at `firefox/firefox` inside it) or point
 `E2E_FIREFOX_138` at one; the pass skips itself when there is none.
 
+Four more passes cover what the manual list called out as beyond automation: an ungrouped
+session's checksum staying put, a session restored twice, E2EE on with the same passphrase
+on both devices, and a build from the **v1.4.0** tag reading a packet that carries groups.
+That last one needs a dist built from the tag:
+
+    git worktree add /tmp/v140 v1.4.0 && cd /tmp/v140 && npm ci && npm run build
+    E2E_DIST_140=/tmp/v140/dist npm run e2e:tab-groups
+
+It skips itself when `E2E_DIST_140` is unset or does not hold a build.
+
 ## How each engine is driven
 
 **Chromium** comes with Playwright (`playwright-core`, already a dependency): a persistent

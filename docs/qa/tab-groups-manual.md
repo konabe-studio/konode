@@ -2,7 +2,7 @@
 
 ## What is already machine-checked — don't spend hands on it
 
-`npm run e2e:tab-groups` runs six passes with real browsers and a real sync (see
+`npm run e2e:tab-groups` runs ten passes with real browsers and a real sync (see
 `scripts/e2e/README.md`). Between a Chromium profile and **Firefox 159**, in both
 directions, it already asserts: the tabs come back together, the group's **name and colour**
 survive, a **pinned** tab is never grouped, a session with no groups carries no `groups` key
@@ -14,10 +14,16 @@ not merely lack `tabGroups`, it has never heard of the permission, so asking whe
 held *throws* instead of answering false, and one unknown permission fails the whole
 request. That is the failure that could have stopped setup dead, and no Chromium profile
 reproduces it. Unpack 138 into `~/.local/opt/firefox-138/` or set `E2E_FIREFOX_138`; the
-pass skips itself when there is none. Fifty-one checks, about five minutes.
+pass skips itself when there is none.
+
+Cases 6, 7, 9 and 10 are automated too: encryption on with the same passphrase on both
+devices, a built **1.4.0** reading a packet that carries groups, a session restored twice,
+and an ungrouped session whose checksum does not move. The 1.4.0 pass needs a dist built
+from the tag — `E2E_DIST_140=/path/to/v1.4.0/dist` — and skips itself without one. Seventy
+checks, about eight minutes.
 
 So the list below is only what automation cannot reach: the prompts, the pixels, and your
-own storage.
+own storage. **Case 9 found something** — see it below.
 
 ## Set-up
 
@@ -68,30 +74,39 @@ is absent or reads as unavailable. Get 138 from
 the **tab strip**; and a group that was **collapsed** on the sender arrives **expanded** —
 `collapsed` is deliberately not synced, so this is correct, not a bug.
 
-**6. Real storage with encryption on.** Turn E2EE on on both devices with the same
-passphrase, publish a named group, restore it.
-→ Expect it to work exactly as without. The automated pass runs with encryption **off**, so
-this is the only check that groups ride inside the encrypted payload.
+**6. Real storage with encryption on.** **Half machine-checked now**: a pass turns E2EE on
+with the same passphrase on both devices and asserts the packet goes up encrypted, that the
+group's name is nowhere in the ciphertext, and that the grouping, names and colours all
+survive the round trip through it.
 
-**7. An older Konode reads a new packet.** In a third profile, load 1.4.0 (`git stash` your
-work, `git checkout v1.4.0 && npm run build`, or just use the store build) and sync it
-against a device on this branch that publishes a named group.
-→ Expect: the tabs restore **ungrouped**, and the Activity log says nothing alarming. The
-claim being tested is that an older build ignores `groups` rather than choking on it.
+What is left by hand is the word *real*: your own WebDAV / Drive / Nutstore account, your
+latency, your folder. The pass still syncs through a throwaway server on localhost.
+
+**7. An older Konode reads a new packet.** **Now machine-checked.** A peer is launched from
+a dist built at the v1.4.0 tag and fed a packet that carries two named groups. It accepts
+it, opens all the tabs, leaves every one ungrouped, and writes nothing at error level. So
+an older build ignores `groups` rather than choking on it, as claimed.
 
 **8. Chrome's saved groups.** Right-click a group → *Save group*, then close it.
 → Expect: nothing of it is published (only live groups are reachable to an extension), the
 sync is quiet about it, and the groups still open travel as usual.
 
-**9. Restore the same session twice.** Restore a peer's session; then, on the sender, add a
-tab to one group and publish again; restore again on the receiver.
-→ Expect: only the **new** tab opens, it joins the **right** group, and the tabs already
-open stay where you had put them — including any you had moved out of a group by hand.
+**9. Restore the same session twice.** **Now machine-checked — and it found something.**
+Only the new tab opens, as expected, and the tabs already open stay where you put them. But
+the new tab does **not** join the group already on screen: it forms its own, and the name
+and colour are applied to that one too, so the receiver ends up with **two groups called
+Work side by side**.
 
-**10. A session with no groups at all.** Ungroup everything on both devices and sync a few
-times.
-→ Expect the Activity log **not** to report a change on every sync. An ungrouped session's
-checksum must not have moved when groups shipped.
+`restoreGroups` groups only the tabs that restore opened, deliberately, so a tab you have
+since moved is left alone. Nothing about that rule requires a second group, though —
+`tabs.group({tabIds, groupId})` adds a tab to an existing group without touching the
+others. The pass asserts today's behaviour so the suite stays honest; it is an open
+question, not a settled one.
+
+**10. A session with no groups at all.** **Now machine-checked.** An ungrouped session
+carries no `groups` key at all, and a second sync with nothing changed leaves the checksum
+exactly where it was — so a device that never groups a tab publishes nothing new and the
+Activity log has nothing to report.
 
 **11. A big session.** 20+ tabs, two of them groups, restore on the peer.
 → Expect the popup to ask before it opens them, and the groups to come out right once you

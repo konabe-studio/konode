@@ -73,7 +73,7 @@ const pause = (ms) => new Promise((ok) => setTimeout(ok, ms));
 
 export async function launchPeer({
   extDir, profileDir, davOrigin, id, label,
-  enabledTypes = ["sessions"], headless = true,
+  enabledTypes = ["sessions"], headless = true, settings,
 }) {
   await rm(profileDir, { recursive: true, force: true });
   await mkdir(profileDir, { recursive: true });
@@ -124,7 +124,7 @@ export async function launchPeer({
     return answer;
   };
 
-  await ok("SAVE_SETTINGS", settingsFor(davOrigin, id, label, enabledTypes));
+  await ok("SAVE_SETTINGS", settings ?? settingsFor(davOrigin, id, label, enabledTypes));
 
   /** Tab ids for a list of URLs, in the order given. Throws rather than group half of them. */
   const idsFor = async (urls) =>
@@ -204,6 +204,13 @@ export async function launchPeer({
         (await chrome.storage.local.get("konode_remote_sessions")).konode_remote_sessions ?? []
       );
       return Array.isArray(raw) ? raw : Object.values(raw ?? {});
+    },
+
+    /** The Activity log as the user would read it in Settings. */
+    async audit() {
+      return worker.evaluate(async () =>
+        (await chrome.storage.local.get("konode_audit")).konode_audit ?? []
+      );
     },
 
     sync: () => ok("SYNC_NOW"),

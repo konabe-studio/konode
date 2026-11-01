@@ -33,7 +33,7 @@
 // permissions it needs from the start, because both engines draw that dialog in browser
 // chrome, where no automation can click it; `tabGroupsAskable` and `permissionsToEnable`
 // have unit tests.
-import { mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { startWebdav } from "./lib/webdav-server.mjs";
@@ -68,6 +68,12 @@ const same = (a, b) => show(a) === show(b);
 const pause = (ms) => new Promise((ok) => setTimeout(ok, ms));
 
 /** The session a device actually published, read back off the server. */
+/** The envelope itself — checksum, encryption flag, timestamp — not its payload. */
+function rawPacket(dav, deviceId) {
+  const key = [...dav.files.keys()].find((p) => p.endsWith(`konode_sessions_${deviceId}.json`));
+  return key ? JSON.parse(dav.files.get(key).toString("utf8")) : null;
+}
+
 function published(dav, deviceId) {
   const key = [...dav.files.keys()].find((p) => p.endsWith(`konode_sessions_${deviceId}.json`));
   if (!key) return null;
@@ -108,6 +114,17 @@ const partition = (buckets) => sorted([...buckets.values()].map((us) => show(us)
  * which is what would have stopped the setup wizard dead, and what `tabGroupsAskable()`
  * exists to survive. No other engine reproduces it.
  */
+/** A dist/ somebody built elsewhere — an older release, for the back-compat pass. */
+async function builtDist(dir) {
+  if (!dir) return null;
+  try {
+    await stat(join(dir, "manifest.json"));
+    return dir;
+  } catch {
+    return null;
+  }
+}
+
 async function legacyGecko() {
   const named = process.env.E2E_FIREFOX_138;
   const path = named ?? join(process.env.HOME ?? "", ".local/opt/firefox-138/firefox/firefox");
@@ -126,6 +143,7 @@ async function main() {
 
   const firefox = await firefoxBinary();
   const legacy = await legacyGecko();
+  const dist140 = await builtDist(process.env.E2E_DIST_140);
   if (firefox) {
     await stat(join(distFirefox, "manifest.json")).catch(() => {
       throw new Error("dist-firefox/ is not built — run `npm run build:firefox` first");
@@ -441,6 +459,198 @@ async function main() {
       const loose138 = (ff.tabs ?? []).find((t) => t.url === url(LOOSE));
       check("the pinned tab came back pinned and ungrouped",
         loose138?.pinned === true && !(loose138?.groupId >= 0), JSON.stringify(loose138));
+      await dav.close();
+    }
+
+    // ── 7. An ungrouped session does not churn ───────────────────────────
+    //    Groups were added to a packet every device already publishes, so the cost of
+    //    the feature to somebody who never groups a tab must be exactly nothing.
+    scene = "no-groups-no-churn";
+    {
+      console.log(`\n▸ ${scene}: nothing is grouped, so nothing should move`);
+      const dav = await startWebdav();
+      const a = await launchPeer({
+        extDir: full, profileDir: join(work, `${scene}-a`), davOrigin: dav.origin,
+        id: `e2e-${scene}-a`, label: "A", headless,
+      });
+      peers.push(a);
+
+      await a.openPages(ours);
+      await a.sync();
+      const first = rawPacket(dav, a.id);
+      const keys = Object.keys(JSON.parse(first?.payload ?? "{}"));
+      check("an ungrouped session carries no groups key at all", !keys.includes("groups"), JSON.stringify(keys));
+
+      await a.sync();
+      const second = rawPacket(dav, a.id);
+      check("a second sync with nothing changed leaves the checksum where it was",
+        Boolean(first) && second?.checksum === first?.checksum,
+        `${first?.checksum?.slice(0, 12)} → ${second?.checksum?.slice(0, 12)}`);
+
+      // Keeps the two above from being vacuous: this checksum is live, so "it did not
+      // move" means the session did not change, not that nothing ever moves it. Grouping
+      // is only the cheapest way to change the session here — the browser also reorders
+      // the tabs to sit together, so this says the checksum reacts, not that `groups` is
+      // what it reacted to. Check one is what holds the groups key out of the packet.
+      await a.group(WORK.map(url), { title: "Work", color: "blue" });
+      await a.sync();
+      const third = rawPacket(dav, a.id);
+      check("while changing the session does move it",
+        third?.checksum !== first?.checksum, `still ${third?.checksum?.slice(0, 12)}`);
+      await dav.close();
+    }
+
+    // ── 8. Restoring the same session twice ──────────────────────────────
+    scene = "restore-twice";
+    {
+      console.log(`\n▸ ${scene}: the second restore opens only what is new`);
+      const dav = await startWebdav();
+      const a = await launchPeer({
+        extDir: full, profileDir: join(work, `${scene}-a`), davOrigin: dav.origin,
+        id: `e2e-${scene}-a`, label: "A", headless,
+      });
+      const b = await launchPeer({
+        extDir: full, profileDir: join(work, `${scene}-b`), davOrigin: dav.origin,
+        id: `e2e-${scene}-b`, label: "B", headless,
+      });
+      peers.push(a, b);
+
+      await a.openPages(ours);
+      await a.group(WORK.map(url), { title: "Work", color: "blue" });
+      await a.group(READING.map(url), { title: "Reading", color: "red" });
+      await a.sync();
+      await b.sync();
+      const firstEntry = (await b.remoteSessions()).find((e) => e?.session?.tabs?.length);
+      check("B received A's session", Boolean(firstEntry), "no session arrived");
+      await b.restore(firstEntry.session.id);
+      const afterFirst = (await b.tabs()).filter((t) => t.url?.startsWith(pages.origin));
+      check("the first restore opened all five", afterFirst.length === ours.length, `${afterFirst.length} tabs`);
+
+      // A adds a sixth tab to the Work group and publishes again.
+      const extra = url("work-3");
+      await a.openPages([extra]);
+      await a.group([...WORK.map(url), extra], { title: "Work", color: "blue" });
+      await a.sync();
+      await b.sync();
+      const secondEntry = (await b.remoteSessions()).find((e) => e?.session?.tabs?.length);
+      await b.restore(secondEntry.session.id);
+      const afterSecond = (await b.tabs()).filter((t) => t.url?.startsWith(pages.origin));
+      check("the second restore opened only the new tab, not all six again",
+        afterSecond.length === ours.length + 1, `${afterSecond.length} tabs`);
+      // KNOWN GAP, found by this pass. `restoreGroups` groups only the tabs THIS restore
+      // opened — deliberately, so a tab you have since moved is left where you put it. But
+      // the new tab then forms its OWN group rather than joining the one already on screen,
+      // and since the name and colour are applied to it too, you end up with two groups
+      // called Work sitting side by side. Nothing about the "don't move what is open"
+      // rule requires that: `tabs.group({tabIds, groupId})` adds a tab to an existing
+      // group without touching the others. Asserted as it behaves TODAY so the suite is
+      // honest; flip it to `joined` once that is decided.
+      const buckets = [...liveBuckets(afterSecond, pages.origin).values()];
+      const withOld = buckets.find((us) => us.includes(url(WORK[0])));
+      const withNew = buckets.find((us) => us.includes(extra));
+      const joined = withNew && withOld && same(withNew, withOld);
+      check("the new tab is grouped, but in a SECOND group of the same name (open question)",
+        Boolean(withNew) && !joined, JSON.stringify({ withOld, withNew }));
+      const named = (await b.groups() ?? []).filter((g) => g.title === "Work");
+      check("which is why Work appears twice on the receiver (open question)",
+        named.length === 2, JSON.stringify(await b.groups()));
+      await dav.close();
+    }
+
+    // ── 9. Groups ride inside the ENCRYPTED payload ──────────────────────
+    scene = "encrypted";
+    {
+      console.log(`\n▸ ${scene}: E2EE on, the same passphrase on both`);
+      const dav = await startWebdav();
+      const secret = "e2e-passphrase-never-leaves-the-device";
+      const aId = `e2e-${scene}-a`;
+      const bId = `e2e-${scene}-b`;
+      const sealed = (id, label) => ({
+        ...settingsFor(dav.origin, id, label),
+        encryption_enabled: true,
+        encryption_passphrase: secret,
+      });
+      const a = await launchPeer({
+        extDir: full, profileDir: join(work, `${scene}-a`), davOrigin: dav.origin,
+        id: aId, label: "A", headless, settings: sealed(aId, "A"),
+      });
+      const b = await launchPeer({
+        extDir: full, profileDir: join(work, `${scene}-b`), davOrigin: dav.origin,
+        id: bId, label: "B", headless, settings: sealed(bId, "B"),
+      });
+      peers.push(a, b);
+
+      await a.openPages(ours);
+      await a.group(WORK.map(url), { title: "Work", color: "blue" });
+      await a.group(READING.map(url), { title: "Reading", color: "red" });
+      await a.sync();
+
+      const raw = rawPacket(dav, aId);
+      check("the packet went up encrypted", raw?.encrypted === true, JSON.stringify(raw?.encrypted));
+      check("and the group's name is nowhere in the ciphertext",
+        typeof raw?.payload === "string" && !raw.payload.includes("Work"), "the payload contains 'Work'");
+
+      await b.sync();
+      const entry = (await b.remoteSessions()).find((e) => e?.session?.tabs?.length);
+      check("B read it with the same passphrase", Boolean(entry), "no session arrived");
+      await b.restore(entry.session.id);
+      const bTabs = await b.tabs();
+      check("the grouping survived the round trip through the ciphertext",
+        same(partition(liveBuckets(bTabs, pages.origin)), partition(liveBuckets(await a.tabs(), pages.origin))),
+        JSON.stringify(partition(liveBuckets(bTabs, pages.origin))));
+      check("and so did the names and colours",
+        same((await b.groups() ?? []).map((g) => `${g.title}/${g.color}`), ["Work/blue", "Reading/red"]),
+        JSON.stringify(await b.groups()));
+      await dav.close();
+    }
+
+    // ── 10. A 1.4.0 build reads a packet that carries groups ─────────────
+    //     The claim is that an older build IGNORES `groups` rather than choking on it.
+    scene = "old-build";
+    if (!dist140) {
+      console.log(`\n▸ ${scene}: SKIPPED — set E2E_DIST_140 to a built 1.4.0 dist/`);
+      skipped.push(scene);
+    } else {
+      console.log(`\n▸ ${scene}: a 1.4.0 device restores a session published today`);
+      const dav = await startWebdav();
+      const a = await launchPeer({
+        extDir: full, profileDir: join(work, `${scene}-a`), davOrigin: dav.origin,
+        id: `e2e-${scene}-a`, label: "A", headless,
+      });
+      // 1.4.0 has no `tabGroups` in its manifest at all — there was nothing to ask for yet.
+      const old = await buildWith(dist140, join(work, "ext-140"), ["tabs"]);
+      const b = await launchPeer({
+        extDir: old, profileDir: join(work, `${scene}-b`), davOrigin: dav.origin,
+        id: `e2e-${scene}-b`, label: "B (1.4.0)", headless,
+      });
+      peers.push(a, b);
+
+      // `support()` asks the browser, and Chromium has `tabs.group` whatever build is
+      // loaded — so the fact that makes this peer old is in its manifest, not its engine.
+      const manifest140 = JSON.parse(await readFile(join(dist140, "manifest.json"), "utf8"));
+      check("the old build never knew about tab groups",
+        manifest140.version.startsWith("1.4.") && !JSON.stringify(manifest140).includes("tabGroups"),
+        `${manifest140.version}, optional: ${JSON.stringify(manifest140.optional_permissions)}`);
+
+      await a.openPages(ours);
+      await a.pin(url(LOOSE));
+      await a.group(WORK.map(url), { title: "Work", color: "blue" });
+      await a.group(READING.map(url), { title: "Reading", color: "red" });
+      await a.sync();
+      check("the packet it published does carry groups",
+        (published(dav, a.id)?.groups ?? []).length === 2, JSON.stringify(published(dav, a.id)?.groups));
+
+      await b.sync();
+      const entry = (await b.remoteSessions()).find((e) => e?.session?.tabs?.length);
+      check("1.4.0 accepted the packet", Boolean(entry), "no session arrived");
+      await b.restore(entry.session.id);
+      const bTabs = (await b.tabs()).filter((t) => t.url?.startsWith(pages.origin));
+      check("it opened all five tabs", bTabs.length === ours.length, `${bTabs.length} tabs`);
+      check("and left every one of them ungrouped",
+        bTabs.every((t) => !(t.groupId >= 0)), JSON.stringify(bTabs.map((t) => t.groupId)));
+      const loud = (await b.audit()).filter((e) => e?.level === "error");
+      check("with nothing alarming in its Activity log",
+        loud.length === 0, JSON.stringify(loud.slice(0, 2)));
       await dav.close();
     }
 
