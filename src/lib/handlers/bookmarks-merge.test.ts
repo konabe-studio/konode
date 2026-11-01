@@ -1172,6 +1172,42 @@ describe("renames reach the other devices", () => {
       expect(await folderTitles()).toEqual(["Work"]);
     });
   }
+
+  it("the merge's own rename is not re-recorded when its event lands late", async () => {
+    // `importing` is a window in time, and the browser delivers onChanged whenever it
+    // likes — often after the import returned. The merge's own write then read as a user
+    // rename and went out re-stamped with `Date.now()`, outranking every peer's copy of
+    // the same rename. Each device re-stamped what the other had just applied, so the
+    // "ours is newer" test could never settle, and a folder renamed and renamed back
+    // flipped forever. This is the sync loop reported from the field, on default settings.
+    const f = await chrome.bookmarks.create({ parentId: "1", title: "Nextend" });
+    await chrome.bookmarks.create({ parentId: f.id, title: "A", url: "https://a.com" });
+    await exportBookmarkPayload(); // the cache the recorder reads the OLD name from
+
+    const onChanged = captureOnChanged();
+    const there = NOW - 20_000;
+    const back = NOW - 10_000;
+
+    await importBookmarks(
+      {
+        ...payload([folder("Nextend", [link("A", "https://a.com")])]),
+        folderRenames: [
+          { path: ["bar"], from: "Nextend", to: "Nextendweb", at: there },
+          { path: ["bar"], from: "Nextendweb", to: "Nextend", at: back },
+        ],
+      },
+      "merge", "lww"
+    );
+
+    // The browser catches up: both of the merge's own renames arrive now.
+    onChanged(f.id, { title: "Nextendweb" });
+    onChanged(f.id, { title: "Nextend" });
+    await new Promise((r) => setTimeout(r, 0));
+
+    const out = await exportBookmarkPayload();
+    const published = Object.fromEntries((out.folderRenames ?? []).map((r) => [`${r.from}->${r.to}`, r.at]));
+    expect(published).toEqual({ "Nextend->Nextendweb": there, "Nextendweb->Nextend": back });
+  });
 });
 
 describe("renames and repositions of folders that share a name (#51)", () => {

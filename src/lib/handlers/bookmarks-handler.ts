@@ -535,6 +535,21 @@ async function recordTitleChange(id: string, newTitle: string | undefined): Prom
   let node: BookmarkNode | undefined;
   try { [node] = await browser.bookmarks.get(id); } catch { return; }
   if (!node) return;
+  // A SUPERSEDED event. `importing` is a window in time, and the browser delivers
+  // onChanged whenever it gets round to it — often after the import that caused it has
+  // already returned. The merge applies a folder rename and its reverse in one pass, so
+  // the first of those writes arrives naming a title the folder no longer has, and it was
+  // recorded as though the user had just renamed the folder, stamped `Date.now()`.
+  // Published, that re-stamped record outranked every peer's copy of the same rename, so
+  // their "ours is newer" test could never settle it: each device re-stamped what the
+  // other had just applied, and a folder renamed and renamed back flipped between its two
+  // names forever — the sync loop reported from the field, on default settings.
+  //
+  // Going by the node's CURRENT title instead of the event's needs no flag and no window:
+  // a rename nothing has undone still reads as itself, whenever the event lands, while one
+  // that has already been overtaken records nothing. The live tree is the authority here,
+  // the same way `recordUrlChange` reads the cache rather than trusting the event alone.
+  if (node.title !== newTitle) return;
   const now = Date.now();
 
   if (node.url) {
