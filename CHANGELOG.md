@@ -5,6 +5,8 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-01
+
 ### Added
 
 - **Copy the Activity log for a bug report.** Settings → Activity has a **Copy log** button
@@ -30,6 +32,17 @@ All notable changes to Konode. Format loosely follows
   nothing, so copies your other devices already have stay there. Moving a bookmark into an
   excluded folder takes it off your other devices, as deleting it would, and moving it back
   out brings it back to them, even one you saved a moment ago.
+- **Open tabs keep their tab groups (#11).** A session now carries which of its tabs share a
+  group, and Restore puts them back together. Allow group names and colours when Konode
+  asks for open tabs, or later in Settings → Data Types, and those come back too; without
+  that, the groups come back unnamed and your browser picks the colours. Chrome, Edge,
+  Brave and the other Chromium browsers have groups, and so does Firefox from version 138
+  (names and colours from 139). Where a browser has none, a session restores as before.
+  Pinned tabs stay pinned and are never grouped, and a group's collapsed state is not
+  synced: a restore shows you everything it brought back. Restoring a session you have
+  restored before opens only the tabs you do not already have, and a new one joins the
+  group already on your screen rather than starting a second one beside it; a tab you have
+  since dragged out of a group is left where you put it.
 
 ### Changed
 
@@ -44,6 +57,52 @@ All notable changes to Konode. Format loosely follows
   Chinese included, keeps the order it had.
 
 ### Fixed
+
+- **Renaming a bookmark folder and then renaming it back could leave Konode syncing in a
+  loop.** The folder's name flipped between the two every few seconds, on every device at
+  once, and the Activity log filled with the same line — one report had sixty-nine of them
+  in nine minutes. A rename travels to your other devices as an instruction filed under the
+  name the folder had before it, so renaming `Nextend` to `Nextendweb` and back left two of
+  them, neither cancelling the other. Replaying the pair renamed the folder twice and landed
+  exactly where it started, and because each rewrite counted as a change, the next sync began
+  at once.
+
+  What kept it going was that the rename a sync itself applies was recorded as one you had
+  just made, freshly timestamped. Published, that outranked every other device's copy of the
+  same rename, so none of them could ever settle whose was newer: each re-stamped what the
+  other had just applied. A rename is now read from the folder as it stands rather than from
+  the notification that it changed, so a change Konode makes is no longer mistaken for one of
+  yours. Renaming the folder to a third name was the way out before, and still works; a
+  folder already in that state otherwise settles by itself once every device syncing it has
+  updated, since one left on an older version goes on re-stamping for the rest.
+
+  With **Prefer Remote** chosen under Conflict resolution, an instruction that had already
+  been carried out could be carried out again on every sync for the same reason. It is not
+  any more.
+
+- **On Edge, everything arriving from your other devices landed in "Other favorites".**
+  Konode worked out which root an arriving bookmark belonged in — the bar, other, mobile —
+  from the number the browser gives that folder, which on Chromium has been 1, 2 and 3 for
+  as long as there has been a bookmarks API. Edge 142 renumbered every bookmark on the
+  profile, once and permanently, so the Favorites bar stopped being 1. With nothing left to
+  recognise, Konode fell back to the one root it knows is always writable, and your bar,
+  your folders and your mobile bookmarks all came down into "Other favorites" together.
+  Syncing between other browsers was unaffected, which is why it looked like Edge was
+  simply unsupported.
+  Konode now asks the browser what each folder *is* rather than inferring it from a number,
+  which is renumbering-proof and the same answer on Chrome, Edge, Brave and Opera. Each
+  device also publishes that answer alongside its roots, so your other devices never have
+  to guess from ids that only ever meant anything on the machine that wrote them, and an
+  Edge whose titles are in your own language maps correctly too. Bookmarks already sitting
+  in "Other favorites" are not moved back for you — Konode has no record of where they came
+  from — but nothing new will be put there.
+  Two things found alongside it are fixed as well. A "Managed bookmarks" root, the one your
+  employer's policy fills, is never written to any more: it rejects every write, so anything
+  routed there was quietly lost, and a peer's managed bookmarks now arrive in the ordinary
+  "Other bookmarks" instead. And on a Chrome signed in to a Google account, which keeps a
+  second set of roots for the account alongside the local ones, arriving bookmarks now
+  consistently go to the account's bar instead of whichever of the two the browser happened
+  to list first — the same tearing-in-half that Orion used to cause.
 
 - **Setup can finish on Firefox for Android.** Firefox for Android has no history, but
   Konode offered History as a switch there, in setup and in Settings. Switched on, it made

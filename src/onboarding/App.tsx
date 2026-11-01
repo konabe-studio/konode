@@ -12,7 +12,7 @@ import type { BackendType, BookmarkExclusion, DataType, SyncSettings } from "@/l
 import { BookmarkExclusionTree } from "@/lib/ui/bookmark-exclusion-tree";
 import {
   allDataTypeAvailability, ensurePermissionWatched, unsupportedReason,
-  PERMISSION_FOR_TYPE, type Availability,
+  permissionsToEnable, tabGroupsAskable, type Availability,
 } from "@/lib/utils/capabilities";
 import {
   Bookmark,
@@ -116,10 +116,15 @@ export default function OnboardingApp() {
   const [availability, setAvailability] = useState<Partial<Record<DataType, Availability>>>({});
   const unavailable = (key: DataType): boolean => availability[key]?.state === "unsupported";
 
+  // Whether Open tabs may ask for `tabGroups` in the same request (#11). Read now, because
+  // the Finish click has to reach permissions.request() before it awaits anything.
+  const [askTabGroups, setAskTabGroups] = useState(false);
+
   useEffect(() => {
     void (async () => {
       setAvailability(await allDataTypeAvailability());
     })();
+    void tabGroupsAskable().then(setAskTabGroups);
   }, []);
 
   // Whether the draft has been read back yet (#38). Nothing is written until it has, or the
@@ -374,8 +379,9 @@ export default function OnboardingApp() {
     // being told their WEBDAV permission was refused.
     const optPerms: string[] = [];
     for (const type of ["history", "sessions", "extensions"] as const) {
-      const perm = PERMISSION_FOR_TYPE[type];
-      if (dataTypes[type] && perm && availability[type]?.state !== "unsupported") optPerms.push(perm);
+      if (dataTypes[type] && availability[type]?.state !== "unsupported") {
+        optPerms.push(...permissionsToEnable(type, askTabGroups));
+      }
     }
 
     const origins: string[] = [];

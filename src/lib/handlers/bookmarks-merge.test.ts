@@ -1130,6 +1130,84 @@ describe("renames reach the other devices", () => {
     expect(out.titles?.map((t) => t.title)).toEqual(["New"]);
     expect(out.folderRenames?.map((r) => `${r.from}->${r.to}`)).toEqual(["Work->Job"]);
   });
+
+  // Renaming a folder and renaming it back leaves two records that undo each other, keyed
+  // by their OLD name so neither supersedes the other. Replaying the pair rewrites the
+  // folder twice and lands where it started: `renamed 0+2` with nothing else changed. That
+  // is a wasted write under any strategy, and it woke sync-on-change, so the next sync did
+  // it again — a sync loop a user reported from the field, on Prefer Remote.
+  for (const strategy of ["lww", "prefer-remote"] as const) {
+    it(`a folder renamed and renamed back settles instead of looping (${strategy})`, async () => {
+      const f = await chrome.bookmarks.create({ parentId: "1", title: "Work" });
+      await chrome.bookmarks.create({ parentId: f.id, title: "A", url: "https://a.com" });
+
+      const packet = {
+        ...payload([folder("Work", [link("A", "https://a.com")])]),
+        folderRenames: [
+          { path: ["bar"], from: "Work", to: "Job", at: NOW - 20_000 },
+          { path: ["bar"], from: "Job", to: "Work", at: NOW - 10_000 },
+        ],
+      };
+
+      let writes = 0;
+      const real = chrome.bookmarks.update.bind(chrome.bookmarks);
+      const spy = vi
+        .spyOn(chrome.bookmarks, "update")
+        .mockImplementation((id: string, ch: { title?: string }) => {
+          writes++;
+          return real(id, ch);
+        });
+
+      const perPass: number[] = [];
+      for (let pass = 0; pass < 4; pass++) {
+        const before = writes;
+        await importBookmarks(packet, "merge", strategy);
+        perPass.push(writes - before);
+      }
+      spy.mockRestore();
+
+      // The second sync and every one after it must be a no-op: the records are ones we
+      // absorbed and applied already, whoever wins a genuine conflict.
+      expect(perPass.slice(1)).toEqual([0, 0, 0]);
+      expect(await folderTitles()).toEqual(["Work"]);
+    });
+  }
+
+  it("the merge's own rename is not re-recorded when its event lands late", async () => {
+    // `importing` is a window in time, and the browser delivers onChanged whenever it
+    // likes — often after the import returned. The merge's own write then read as a user
+    // rename and went out re-stamped with `Date.now()`, outranking every peer's copy of
+    // the same rename. Each device re-stamped what the other had just applied, so the
+    // "ours is newer" test could never settle, and a folder renamed and renamed back
+    // flipped forever. This is the sync loop reported from the field, on default settings.
+    const f = await chrome.bookmarks.create({ parentId: "1", title: "Nextend" });
+    await chrome.bookmarks.create({ parentId: f.id, title: "A", url: "https://a.com" });
+    await exportBookmarkPayload(); // the cache the recorder reads the OLD name from
+
+    const onChanged = captureOnChanged();
+    const there = NOW - 20_000;
+    const back = NOW - 10_000;
+
+    await importBookmarks(
+      {
+        ...payload([folder("Nextend", [link("A", "https://a.com")])]),
+        folderRenames: [
+          { path: ["bar"], from: "Nextend", to: "Nextendweb", at: there },
+          { path: ["bar"], from: "Nextendweb", to: "Nextend", at: back },
+        ],
+      },
+      "merge", "lww"
+    );
+
+    // The browser catches up: both of the merge's own renames arrive now.
+    onChanged(f.id, { title: "Nextendweb" });
+    onChanged(f.id, { title: "Nextend" });
+    await new Promise((r) => setTimeout(r, 0));
+
+    const out = await exportBookmarkPayload();
+    const published = Object.fromEntries((out.folderRenames ?? []).map((r) => [`${r.from}->${r.to}`, r.at]));
+    expect(published).toEqual({ "Nextend->Nextendweb": there, "Nextendweb->Nextend": back });
+  });
 });
 
 describe("renames and repositions of folders that share a name (#51)", () => {
@@ -1289,5 +1367,106 @@ describe("renames and repositions of folders that share a name (#51)", () => {
     }, "merge", "lww");
 
     expect(await bar()).toEqual(["[] C", "[] A"]);
+  });
+});
+
+// ── Issue #66: "Don't support Microsoft Edge" ──────────────────────────────────────────
+//
+// crbug 456225717 reassigned every bookmark id, and it shipped in Edge 142 as a one-time
+// permanent renumbering: the Favorites bar stopped being "1". Root matching was built on
+// those numbers, and Edge's English root titles never matched Chrome's either, so a peer's
+// bar matched nothing and its whole tree was dropped into "Other favorites" — which is
+// exactly what the report describes. The roots are typed by the engine (`folderType`,
+// Chromium 134+), so run the real merge against a renumbered Edge profile.
+//
+// chrome.bookmarks' real typings have no such hook; it is the fake's root re-seed. See
+// test/setup.ts.
+const bmFake = chrome.bookmarks as unknown as {
+  __setRoots: (roots: { id: string; title: string; folderType?: string }[]) => void;
+};
+
+describe("importBookmarks — an Edge profile after the id renumbering (issue #66)", () => {
+  const EDGE_ROOTS = [
+    { id: "17", title: "Favorites bar", folderType: "bookmarks-bar" },
+    { id: "18", title: "Other favorites", folderType: "other" },
+    { id: "19", title: "Mobile favorites", folderType: "mobile" },
+  ];
+  const titlesIn = async (rootId: string): Promise<string[]> =>
+    (await chrome.bookmarks.getChildren(rootId)).map((c) => c.title).sort();
+
+  it("merges a Chrome peer's bar into the Favorites bar, not Other favorites", async () => {
+    bmFake.__setRoots(EDGE_ROOTS);
+    await importBookmarks(
+      payload([link("A", "https://a.com"), folder("Work", [link("B", "https://b.com")])]),
+      "merge",
+      "lww",
+    );
+    expect(await titlesIn("17")).toEqual(["A", "Work"]);
+    expect(await titlesIn("18")).toEqual([]); // the bug put every one of them here
+  });
+
+  it("replaces onto the renumbered roots too", async () => {
+    bmFake.__setRoots(EDGE_ROOTS);
+    await seed("Stale", "https://stale.com", "17");
+    await importBookmarks(payload([link("A", "https://a.com")]), "replace", "lww");
+    expect(await titlesIn("17")).toEqual(["A"]);
+    expect(await titlesIn("18")).toEqual([]);
+  });
+
+  it("publishes each root with its kind, so a peer needn't guess from our ids", async () => {
+    bmFake.__setRoots(EDGE_ROOTS);
+    await seed("A", "https://a.com", "17");
+    const { tree } = await exportBookmarkPayload();
+    expect(tree[0].children?.map((r) => r.rootKind)).toEqual(["bar", "other", "mobile"]);
+    // Only the roots carry it — the kind is meaningless on an ordinary bookmark, and the
+    // payload is uploaded on every sync.
+    expect(tree[0].children?.[0].children?.[0].rootKind).toBeUndefined();
+  });
+
+  it("does not mistake a folder NAMED like a root for the root itself", async () => {
+    // The title table that rescues a renumbered Edge has to stay out of the tree: a folder
+    // the user called "Favorites bar" is not a root, and reading it as one truncates every
+    // path through it — this rename would then be recorded against the bar instead, and
+    // replayed on whatever the peer happens to have sitting there.
+    bmFake.__setRoots(EDGE_ROOTS); // wipes the profile, so re-seed first
+    let onChanged: ((id: string, info: { title: string; url?: string }) => void) | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (chrome.bookmarks.onChanged as any).addListener = (fn: never) => { onChanged = fn; };
+    registerBookmarkListeners(() => {});
+
+    const lookalike = await chrome.bookmarks.create({ parentId: "17", title: "Favorites bar" });
+    const sub = await chrome.bookmarks.create({ parentId: lookalike.id, title: "Old" });
+    await chrome.bookmarks.create({ parentId: sub.id, title: "L", url: "https://l.com" });
+    await exportBookmarkPayload(); // caches the names a rename is measured against
+
+    await chrome.bookmarks.update(sub.id, { title: "New" });
+    onChanged!(sub.id, { title: "New" });
+    await new Promise((r) => setTimeout(r, 0));
+
+    const out = await exportBookmarkPayload();
+    expect(out.folderRenames?.map((r) => ({ path: r.path, from: r.from, to: r.to }))).toEqual([
+      { path: ["bar", "Favorites bar"], from: "Old", to: "New" },
+    ]);
+  });
+
+  it("accepts a renumbered peer's published kind in place of its ids", async () => {
+    // The other direction: WE are Chrome-shaped, the peer is a renumbered Edge that now
+    // sends the kind alongside each root. Its bar id ("17") means nothing here.
+    const edgePayload: BookmarkPayload = {
+      tree: [{
+        id: "0", parentId: null, title: "", dateAdded: 0,
+        children: [
+          {
+            id: "17", parentId: "0", title: "Kedvencek sávja", dateAdded: 0, rootKind: "bar",
+            children: [link("A", "https://a.com")],
+          },
+          { id: "18", parentId: "0", title: "Egyéb kedvencek", dateAdded: 0, rootKind: "other", children: [] },
+        ],
+      }],
+      tombstones: [],
+    };
+    await importBookmarks(edgePayload, "merge", "lww");
+    expect(await titlesIn("1")).toEqual(["A"]);
+    expect(await titlesIn("2")).toEqual([]);
   });
 });
