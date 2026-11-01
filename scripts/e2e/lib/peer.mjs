@@ -39,8 +39,9 @@ export async function buildWith(dist, into, grant) {
   return into;
 }
 
-/** The settings a device would hold after setup, pointed at the local server. */
-function settings(davOrigin, device_id, device_label, enabled_types) {
+/** The settings a device would hold after setup, pointed at the local server. Both halves
+ * of the pass configure themselves with this, so neither can drift into its own shape. */
+export function settingsFor(davOrigin, device_id, device_label, enabled_types = ["sessions"]) {
   return {
     device_id,
     device_label,
@@ -123,7 +124,7 @@ export async function launchPeer({
     return answer;
   };
 
-  await ok("SAVE_SETTINGS", settings(davOrigin, id, label, enabledTypes));
+  await ok("SAVE_SETTINGS", settingsFor(davOrigin, id, label, enabledTypes));
 
   /** Tab ids for a list of URLs, in the order given. Throws rather than group half of them. */
   const idsFor = async (urls) =>

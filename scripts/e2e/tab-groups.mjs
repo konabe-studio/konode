@@ -14,22 +14,33 @@
 // what the second and third pass below are: a device that cannot name a group publishing
 // to one that can, and the other way round.
 //
-// WHAT IT DOES NOT COVER. Gecko itself. Playwright cannot load an extension into Firefox
-// — there is no API for it — so no part of this runs on Firefox, and `tabs.group`'s own
-// behaviour there is unverified by this pass. web-ext can run Firefox with the extension
-// loaded and would be the way to add it; it is not wired up here, and this machine has no
-// Firefox installed. The permission PROMPT is not covered either: the builds below hold
-// the permission from the start, because the dialog is drawn in browser chrome where
-// Playwright cannot click it. `tabGroupsAskable` and `permissionsToEnable` have unit tests.
+// AND GECKO, FOR REAL. Playwright cannot load an extension into Firefox — there is no API
+// for it — so the Firefox half is driven from the other side: web-ext installs the build as
+// a temporary add-on over Firefox's remote debugging protocol, and a driver page inside the
+// extension does what the Chromium harness does from outside, then posts what the browser
+// ended up holding back to this script (lib/firefox.mjs, lib/driver/). Firefox publishes to
+// a Chromium profile in one pass and restores what Chromium published in the other, so
+// `tabs.group` and `tabGroups` on Gecko are exercised rather than assumed. Those two passes
+// SKIP rather than fail where no Firefox is installed.
+//
+// WHAT IT STILL DOES NOT COVER. The permission PROMPT: every build below holds `tabs` and
+// `tabGroups` from the start, because both engines draw that dialog in browser chrome,
+// where no automation can click it; `tabGroupsAskable` and `permissionsToEnable` have unit
+// tests. And Firefox 138 itself, the one version with `tabs.group` and no `tabGroups`:
+// passes 2 and 3 reproduce its branch in Chromium, because `tabGroupSupport()` lands on
+// `membership` for both, but nothing here runs on that version.
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { startWebdav } from "./lib/webdav-server.mjs";
 import { startPages } from "./lib/pages.mjs";
-import { buildWith, launchPeer } from "./lib/peer.mjs";
+import { startReporter } from "./lib/reporter.mjs";
+import { buildWith, launchPeer, settingsFor } from "./lib/peer.mjs";
+import { buildFirefoxDriver, firefoxBinary, runFirefoxDriver } from "./lib/firefox.mjs";
 
 const repo = resolve(import.meta.dirname, "../..");
 const dist = join(repo, "dist");
+const distFirefox = join(repo, "dist-firefox");
 const headless = !process.env.E2E_HEADFUL;
 
 /** The nine colours both engines share — src/lib/types.ts TAB_GROUP_COLORS. */
@@ -40,6 +51,7 @@ const READING = ["reading-1", "reading-2"];
 const LOOSE = "loose-1";
 
 const failures = [];
+const skipped = [];
 let scene = "";
 function check(name, ok, detail = "") {
   if (!ok) failures.push(`${scene} → ${name}${detail ? `: ${detail}` : ""}`);
@@ -63,7 +75,7 @@ function published(dav, deviceId) {
 /** Which tabs the PACKET puts together: one entry per group index, URLs inside. */
 function packetBuckets(session) {
   const out = new Map();
-  for (const t of session.tabs ?? []) {
+  for (const t of session?.tabs ?? []) {
     if (typeof t.group !== "number") continue;
     out.set(t.group, [...(out.get(t.group) ?? []), t.url]);
   }
@@ -88,8 +100,16 @@ async function main() {
     throw new Error("dist/ is not built — run `npm run build` first");
   });
 
+  const firefox = await firefoxBinary();
+  if (firefox) {
+    await stat(join(distFirefox, "manifest.json")).catch(() => {
+      throw new Error("dist-firefox/ is not built — run `npm run build:firefox` first");
+    });
+  }
+
   const work = await mkdtemp(join(tmpdir(), "konode-e2e-"));
   const pages = await startPages();
+  const reporter = await startReporter();
   const url = (n) => pages.url(n);
   const ours = [...WORK, ...READING, LOOSE].map(url);
 
@@ -223,21 +243,140 @@ async function main() {
         JSON.stringify(bGroups));
       await dav.close();
     }
+    // ── 4. Gecko publishes, Chromium restores ─────────────────────────────
+    scene = "firefox-to-chromium";
+    if (!firefox) {
+      console.log(`\n▸ ${scene}: SKIPPED — no Firefox found (install one, or set E2E_FIREFOX)`);
+      skipped.push(scene);
+    } else {
+      console.log(`\n▸ ${scene}: a real Firefox publishes, a Chromium profile restores`);
+      const dav = await startWebdav();
+      const b = await launchPeer({
+        extDir: full, profileDir: join(work, `${scene}-b`), davOrigin: dav.origin,
+        id: `e2e-${scene}-b`, label: "B", headless,
+      });
+      peers.push(b);
+
+      const ffId = `e2e-${scene}-ff`;
+      const ext = await buildFirefoxDriver({
+        dist: distFirefox,
+        into: join(work, `${scene}-ff-ext`),
+        grant: ["tabs", "tabGroups"],
+        config: {
+          role: "publish",
+          named: true,
+          reportUrl: reporter.url,
+          settings: settingsFor(dav.origin, ffId, "Firefox"),
+          pages: { work: WORK.map(url), reading: READING.map(url), loose: url(LOOSE) },
+        },
+      });
+      const ff = await runFirefoxDriver({ extDir: ext, binary: firefox, reporter });
+      check("the Firefox driver ran without an error", !ff.error, ff.error);
+      check("Firefox reports full tab group support", ff.support === "full", ff.support);
+      console.log(`     ${ff.userAgent}`);
+
+      // Gecko's own grouping, before anything is synced: `tabs.group` there is the half
+      // this pass could not reach until now.
+      const ffGrouped = liveBuckets(ff.tabs ?? [], pages.origin);
+      check("Firefox put its own tabs in two groups", ffGrouped.size === 2, JSON.stringify(partition(ffGrouped)));
+      check("Firefox named them Work and Reading",
+        same((ff.groups ?? []).map((g) => `${g.title}/${g.color}`), ["Work/blue", "Reading/red"]),
+        JSON.stringify(ff.groups));
+
+      const packet = published(dav, ffId);
+      check("the packet Firefox published carries both groups",
+        same((packet?.groups ?? []).map((g) => `${g.title}/${g.color}`), ["Work/blue", "Reading/red"]),
+        JSON.stringify(packet?.groups));
+      const looseOut = (packet?.tabs ?? []).find((t) => t.url === url(LOOSE));
+      check("the tab Firefox pinned is published without a group",
+        looseOut?.pinned === true && looseOut?.group === undefined, JSON.stringify(looseOut));
+
+      await b.sync();
+      const [entry] = await b.remoteSessions();
+      check("the Chromium device received Firefox's session", Boolean(entry?.session?.tabs?.length));
+      await b.restore(entry?.session?.id);
+      await pause(400);
+
+      const tabs = await b.tabs();
+      check("Chromium opened all five of Firefox's tabs",
+        same(tabs.filter((t) => ours.includes(t.url)).map((t) => t.url), ours));
+      check("Chromium grouped them the way Firefox had them",
+        same(partition(liveBuckets(tabs, pages.origin)), partition(packetBuckets(packet))),
+        JSON.stringify(partition(liveBuckets(tabs, pages.origin))));
+      check("Chromium carried Firefox's names and colours",
+        same(((await b.groups()) ?? []).map((g) => `${g.title}/${g.color}`), ["Work/blue", "Reading/red"]),
+        JSON.stringify(await b.groups()));
+      await dav.close();
+    }
+
+    // ── 5. Chromium publishes, Gecko restores ─────────────────────────────
+    scene = "chromium-to-firefox";
+    if (!firefox) {
+      console.log(`\n▸ ${scene}: SKIPPED — no Firefox found (install one, or set E2E_FIREFOX)`);
+      skipped.push(scene);
+    } else {
+      console.log(`\n▸ ${scene}: a Chromium profile publishes, a real Firefox restores`);
+      const dav = await startWebdav();
+      const a = await launchPeer({
+        extDir: full, profileDir: join(work, `${scene}-a`), davOrigin: dav.origin,
+        id: `e2e-${scene}-a`, label: "A", headless,
+      });
+      peers.push(a);
+
+      await a.openPages(ours);
+      await a.pin(url(LOOSE));
+      await a.group(WORK.map(url), { title: "Work", color: "blue" });
+      await a.group(READING.map(url), { title: "Reading", color: "red" });
+      await a.sync();
+      const packet = published(dav, a.id);
+
+      const ext = await buildFirefoxDriver({
+        dist: distFirefox,
+        into: join(work, `${scene}-ff-ext`),
+        grant: ["tabs", "tabGroups"],
+        config: {
+          role: "receive",
+          reportUrl: reporter.url,
+          settings: settingsFor(dav.origin, `e2e-${scene}-ff`, "Firefox"),
+        },
+      });
+      const ff = await runFirefoxDriver({ extDir: ext, binary: firefox, reporter });
+      check("the Firefox driver ran without an error", !ff.error, ff.error);
+      check("Firefox received the Chromium session", ff.received?.tabs === ours.length, JSON.stringify(ff.received));
+      check("Firefox opened all five tabs",
+        same((ff.tabs ?? []).filter((t) => ours.includes(t.url)).map((t) => t.url), ours),
+        JSON.stringify((ff.tabs ?? []).map((t) => t.url)));
+      check("Firefox grouped them the way Chromium had them",
+        same(partition(liveBuckets(ff.tabs ?? [], pages.origin)), partition(packetBuckets(packet))),
+        JSON.stringify(partition(liveBuckets(ff.tabs ?? [], pages.origin))));
+      check("Firefox carried Chromium's names and colours",
+        same((ff.groups ?? []).map((g) => `${g.title}/${g.color}`), ["Work/blue", "Reading/red"]),
+        JSON.stringify(ff.groups));
+      const looseIn = (ff.tabs ?? []).find((t) => t.url === url(LOOSE));
+      check("the pinned tab came back pinned and ungrouped on Firefox",
+        looseIn?.pinned === true && !(looseIn?.groupId >= 0), JSON.stringify(looseIn));
+      await dav.close();
+    }
+
   } finally {
     for (const p of peers) await p.close();
     await pages.close();
+    await reporter.close();
     if (process.env.E2E_KEEP) console.log(`\nprofiles kept in ${work}`);
     else await rm(work, { recursive: true, force: true });
   }
 
   console.log("");
   if (failures.length) {
+    if (skipped.length) console.log(`skipped: ${skipped.join(", ")}`);
     console.log(`${failures.length} check(s) failed:`);
     for (const f of failures) console.log(`  ✗ ${f}`);
     process.exitCode = 1;
   } else {
-    console.log("every check passed — tab groups survive a real sync, both ways across the permission.");
-    console.log("not covered: Gecko itself, and the permission prompt (see the header).");
+    console.log("every check passed — tab groups survive a real sync: Chromium to Chromium,");
+    console.log("Chromium to Firefox and back, and both ways across the tabGroups permission.");
+    if (skipped.length) console.log(`skipped: ${skipped.join(", ")}`);
+    console.log("not covered: the permission prompt, and Firefox 138 itself (see the header).");
   }
 }
 
