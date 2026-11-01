@@ -2,7 +2,7 @@ import { TAB_GROUP_COLORS, type SyncSession, type SyncTabGroup, type TabGroupCol
 
 type TabInfo = { url: string; title?: string; pinned: boolean; favIconUrl?: string; group?: number };
 import { logger } from "@/lib/utils/logger";
-import { isSafeContentUrl, isSensitiveUrl } from "@/lib/utils/url";
+import { canonicalUrlKey, isSafeContentUrl, isSensitiveUrl } from "@/lib/utils/url";
 import { browser } from "@/lib/utils/ext";
 import { assertDataTypeApi, isIOS, tabGroupSupport } from "@/lib/utils/capabilities";
 import { getSingleTabOpenLimit, setSingleTabOpenLimit } from "@/lib/utils/storage";
@@ -213,7 +213,7 @@ export async function importSession(session: SyncSession): Promise<void> {
     await openAllInOneWindow(urls, 0);
     if (remembered === null) await setSingleTabOpenLimit(true);
     await noteOpened();
-    await restoreGroups(session.groups, openable, opened);
+    await restoreGroups(session.groups, openable, opened, safe);
     return;
   }
 
@@ -247,7 +247,7 @@ export async function importSession(session: SyncSession): Promise<void> {
       await noteOpened();
       // The first tab stayed in this window and the rest went to a new one, so a group
       // that spans both is restored once per window, never pulled across into one.
-      await restoreGroups(session.groups, openable, opened);
+      await restoreGroups(session.groups, openable, opened, safe);
       return;
     }
   }
@@ -256,7 +256,49 @@ export async function importSession(session: SyncSession): Promise<void> {
   // Every tab landed where it was asked to, so per-tab restore is safe on this engine and
   // the next restore can skip the measurement.
   if (remembered === null) await setSingleTabOpenLimit(false);
-  await restoreGroups(session.groups, openable, opened);
+  await restoreGroups(session.groups, openable, opened, safe);
+}
+
+/**
+ * `window:groupIndex` → the id of a group ALREADY on screen that holds a tab from that same
+ * session group, so the restore can add to it instead of making a second one beside it.
+ *
+ * Matched by the tab itself, not by the group's name: a name can have been changed here, two
+ * groups can share one, and the tab is what actually says "this is that group". Only a group
+ * in the SAME window counts — joining one in another window would drag the tab across, which
+ * is the one thing the per-window rule exists to prevent. URLs are compared the way
+ * `tabsToRestore` compares them, and read through `openTabUrls` so a tab still loading from
+ * an earlier restore is recognised rather than counted as `about:blank`.
+ */
+async function groupsAlreadyHere(
+  all: SyncSession["tabs"],
+  groupCount: number,
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const wanted = new Map<string, number>();
+  for (const t of all) {
+    const g = t.group;
+    if (typeof g !== "number" || !Number.isInteger(g) || g < 0 || g >= groupCount) continue;
+    if (t.url) wanted.set(canonicalUrlKey(t.url), g);
+  }
+  if (wanted.size === 0) return out;
+
+  try {
+    const live = await browser.tabs.query({});
+    const urls = await openTabUrls(live);
+    live.forEach((t, i) => {
+      const url = urls[i];
+      const g = url ? wanted.get(canonicalUrlKey(url)) : undefined;
+      if (g === undefined) return;
+      const groupId = (t as { groupId?: number }).groupId;
+      if (typeof groupId !== "number" || groupId < 0) return;
+      const key = `${t.windowId ?? ""}:${g}`;
+      if (!out.has(key)) out.set(key, groupId);
+    });
+  } catch {
+    return new Map(); // can't look: make new groups, exactly as before
+  }
+  return out;
 }
 
 /** One tab a restore opened: its position in the session's openable list, and where it is. */
@@ -273,6 +315,15 @@ type OpenedTab = { at: number; tabId: number; windowId?: number };
  * so a restore split across two windows is never pulled back into one, and only the tabs
  * this restore opened are grouped: one that was already open here stays where it was put.
  *
+ * Where a tab from the same session group is already open in that window, its group is
+ * JOINED rather than a second one made beside it. Restoring a session that has since grown
+ * opens only the new tab, and that tab used to form its own group — carrying the same name
+ * and colour, so the receiver ended up with two groups called Work side by side. Leaving
+ * the open tabs where they are never required that: `tabs.group` takes a `groupId` and adds
+ * to an existing group without touching its other members. A joined group keeps its own
+ * title and colour, because it is the one already on the user's screen and they may have
+ * renamed it.
+ *
  * A failure is logged once and leaves the tabs open, ungrouped. Grouping is the extra; the
  * tabs are the restore.
  */
@@ -280,6 +331,7 @@ async function restoreGroups(
   rawGroups: unknown,
   tabs: SyncSession["tabs"],
   opened: OpenedTab[],
+  all: SyncSession["tabs"] = tabs,
 ): Promise<void> {
   if (!Array.isArray(rawGroups) || rawGroups.length === 0 || opened.length === 0) return;
   const support = await tabGroupSupport();
@@ -302,15 +354,23 @@ async function restoreGroups(
     tabs: { group(o: { tabIds: number[]; createProperties?: { windowId: number } }): Promise<number> };
     tabGroups?: { update(id: number, p: { title?: string; color?: string }): Promise<unknown> };
   };
+  const joinable = await groupsAlreadyHere(all, groups.length);
+
   let made = 0;
   let failed = false;
   for (const b of buckets.values()) {
+    const join = joinable.get(`${b.windowId ?? ""}:${b.group}`);
     try {
       const id = await api.tabs.group({
         tabIds: b.tabIds,
-        ...(typeof b.windowId === "number" ? { createProperties: { windowId: b.windowId } } : {}),
+        ...(typeof join === "number"
+          ? { groupId: join }
+          : typeof b.windowId === "number" ? { createProperties: { windowId: b.windowId } } : {}),
       });
       made++;
+      // A group already on screen keeps the name and colour it has: it is the user's, and
+      // the tabs in it are theirs to have renamed.
+      if (typeof join === "number") continue;
       const { title, color } = groups[b.group];
       if (support === "full" && (title || color)) {
         await api.tabGroups?.update(id, { ...(title ? { title } : {}), ...(color ? { color } : {}) });

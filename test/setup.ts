@@ -132,9 +132,13 @@ const tabsApi = {
     const ids = Array.isArray(opts.tabIds) ? opts.tabIds : opts.tabIds != null ? [opts.tabIds] : [];
     const tabs = ids.map((id) => openTabs.find((t) => t.id === id));
     if (!ids.length || tabs.some((t) => !t)) return Promise.reject(new Error("No tab with that id"));
-    const windowId = opts.createProperties?.windowId ?? tabs[0].windowId;
-    const id = nextGroupId++;
-    groupStore.set(id, { id, title: "", color: "grey", collapsed: false, windowId });
+    // `groupId` adds to a group that already exists, which is how a restore joins the one
+    // already on screen instead of making a second one beside it. Both engines take it.
+    const existing = opts.groupId != null ? groupStore.get(opts.groupId) : undefined;
+    if (opts.groupId != null && !existing) return Promise.reject(new Error(`No group with id: ${opts.groupId}`));
+    const windowId = existing?.windowId ?? opts.createProperties?.windowId ?? tabs[0].windowId;
+    const id = existing?.id ?? nextGroupId++;
+    if (!existing) groupStore.set(id, { id, title: "", color: "grey", collapsed: false, windowId });
     for (const t of tabs) { t.groupId = id; t.pinned = false; t.windowId = windowId; }
     return Promise.resolve(id);
   },

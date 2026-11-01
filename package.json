@@ -24,6 +24,7 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "e2e:tab-groups": "node scripts/e2e/tab-groups.mjs",
     "lint": "eslint src",
     "check": "npm run type-check && npm run lint && npm run test"
   },
