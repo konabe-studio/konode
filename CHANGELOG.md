@@ -5,6 +5,8 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-11-02
+
 ### Fixed
 
 - **A folder renamed while a sync was running never reached your other devices.** Konode
