@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
-  importBookmarks, exportBookmarkPayload, registerBookmarkListeners, resetExclusionCache, restoreBookmarks,
+  importBookmarks, exportBookmarkPayload, recordExclusionRelease, registerBookmarkListeners,
+  resetExclusionCache, restoreBookmarks,
 } from "@/lib/handlers/bookmarks-handler";
 import { KEYS, getAppeared, getFolderDeletes, getTitles, getTombstones } from "@/lib/utils/storage";
 import type { BookmarkExclusion, BookmarkPayload, SyncBookmark } from "@/lib/types";
@@ -369,5 +370,93 @@ describe("events inside an excluded folder (#54)", () => {
 
     expect(fired).toBe(true); // the merge really did write while we were watching
     expect(await getTitles()).toEqual([]); // the excluded bookmark's URL never left
+  });
+});
+
+describe("unticking the box puts what changed back into the sync (#54)", () => {
+  // An excluded folder records nothing inside it, which is the point of it. But the
+  // exclusion is a RULE, and taking a folder back out of it was a plain settings write, so
+  // a bookmark renamed while excluded never reached the other devices: the new title rode
+  // along in the tree, and a title with no operation behind it is deliberately ignored on
+  // arrival. The rename was lost for good, and renaming it again was the only way through.
+
+  type Listeners = { changed?: (id: string, info: { title?: string }) => void };
+
+  function onChanged(): Listeners {
+    const l: Listeners = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (chrome.bookmarks.onChanged as any).addListener = (fn: never) => { l.changed = fn; };
+    registerBookmarkListeners(() => {});
+    return l;
+  }
+
+  /** A synced folder with one bookmark in it, then excluded and renamed inside. */
+  async function renamedWhileExcluded(): Promise<{ rule: BookmarkExclusion[] }> {
+    const work = await folderWith("Work", ["https://a.com/"]);
+    await exportBookmarkPayload(); // this device has synced before
+    const rule = [{ path: ["bar", "Work"] }];
+    await exclude(rule);
+    resetExclusionCache();
+
+    const l = onChanged();
+    const [bm] = await chrome.bookmarks.getChildren(work);
+    await chrome.bookmarks.update(bm.id, { title: "New name" });
+    l.changed!(bm.id, { title: "New name" });
+    await settle();
+
+    // Nothing was recorded while it was excluded — that half is by design.
+    expect(await getTitles()).toEqual([]);
+    return { rule };
+  }
+
+  it("publishes the rename once the folder is back in the sync", async () => {
+    const { rule } = await renamedWhileExcluded();
+
+    await exclude([]); // the user unticks the box
+    resetExclusionCache();
+    await recordExclusionRelease(rule, []);
+
+    const out = await exportBookmarkPayload();
+    expect(out.titles?.map((t) => `${t.url}=${t.title}`)).toEqual(["https://a.com/=New name"]);
+    // The folder is not covered and cannot be: its rename travels keyed on the OLD name,
+    // which is read from the last synced snapshot, and an excluded folder is not in it.
+    expect(out.folderRenames ?? []).toEqual([]);
+  });
+
+  it("says the re-joined bookmarks are here, so an older deletion cannot undo them", async () => {
+    const { rule } = await renamedWhileExcluded();
+
+    await exclude([]);
+    resetExclusionCache();
+    await recordExclusionRelease(rule, []);
+
+    expect((await getAppeared()).map((r) => r.url)).toEqual(["https://a.com/"]);
+  });
+
+  it("records nothing when the save only ADDS an exclusion", async () => {
+    await folderWith("Work", ["https://a.com/"]);
+    await exportBookmarkPayload();
+    const rule = [{ path: ["bar", "Work"] }];
+    await exclude(rule);
+    resetExclusionCache();
+
+    await recordExclusionRelease([], rule);
+
+    expect(await getTitles()).toEqual([]);
+    expect(await getAppeared()).toEqual([]);
+  });
+
+  it("does not even read the tree when a save leaves the rules as they were", async () => {
+    // Every Save from Settings carries the whole settings object, exclusions included, so
+    // this runs on saves that have nothing to do with them. Working out what came back
+    // walks the tree twice, and #54 exists because that tree can be enormous.
+    const { rule } = await renamedWhileExcluded();
+
+    const spy = vi.spyOn(chrome.bookmarks, "getTree");
+    await recordExclusionRelease(rule, rule); // Save pressed for some other setting
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+
+    expect(await getTitles()).toEqual([]);
   });
 });

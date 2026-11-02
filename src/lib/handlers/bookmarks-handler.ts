@@ -2273,6 +2273,52 @@ async function recordJoinedSync(id: string): Promise<void> {
   if (urls.length) await updateAppeared((current) => gcAppeared([...current, ...urls.map((url) => ({ url, at: now }))]));
 }
 
+/**
+ * Put back into the sync what unticking a box in Settings has just released (#54).
+ *
+ * An excluded folder records nothing that happens inside it — no rename, no move, no
+ * deletion — and that is the whole point of it. But the exclusion is a RULE, and taking a
+ * folder back out of it is a plain settings write, so everything done in there while it was
+ * out stayed unrecorded and the peers never heard about any of it. The new title still rode
+ * along in the tree, but a title with no operation behind it is deliberately ignored by the
+ * receiver — two devices holding the same URL under different names would otherwise trade
+ * them forever — so a bookmark renamed while excluded kept its old name everywhere else.
+ *
+ * Re-joining therefore republishes the subtree as it stands HERE, stamped now. That has a
+ * cost worth stating: a peer that renamed the same URL more recently loses to this stamp.
+ * It is the defensible way round, because unticking the box is an explicit act and what
+ * this device holds is exactly what the user has just asked to share again — and it happens
+ * only on that act, never on a sync.
+ *
+ * Folders are left out, and cannot be included: a folder rename travels as an operation
+ * keyed on the OLD name, which is read from the last synced snapshot, and an excluded
+ * folder is not in that snapshot. A folder renamed while excluded re-joins under its new
+ * name alone.
+ */
+export async function recordExclusionRelease(
+  before: BookmarkExclusion[], after: BookmarkExclusion[],
+): Promise<void> {
+  if (!before.length) return; // nothing was excluded, so nothing can come back
+  if (JSON.stringify(before) === JSON.stringify(after)) return; // a save that left the rules alone
+  const was = (await localExclusions(before)).part.excludedIds;
+  if (!was.size) return;
+  const still = after.length ? (await localExclusions(after)).part.excludedIds : new Set<string>();
+  const back = new Set([...was].filter((id) => !still.has(id)));
+  if (!back.size) return;
+  // The tree as it syncs NOW: the new rules are already saved, so what came back is in it.
+  const rejoined = flattenNodes(await exportBookmarks()).filter((n) => n.url && back.has(n.id));
+  if (!rejoined.length) return;
+  const now = Date.now();
+  await updateTitles((current) =>
+    mergeTitleLists(current, rejoined.map((n) => ({ url: n.url as string, title: n.title, at: now })))
+  );
+  // And that they are here, so a peer's older deletion does not undo the lot on arrival (#27).
+  await updateAppeared((current) =>
+    gcAppeared([...current, ...rejoined.map((n) => ({ url: n.url as string, at: now }))])
+  );
+  logger.event("Bookmarks", `Put ${rejoined.length} bookmark(s) back into the sync`);
+}
+
 export function registerBookmarkListeners(onChange: BookmarkChangeCallback): void {
   // The background script calls this at the TOP LEVEL, because MV3 requires listeners to
   // be attached on every worker load. So on a browser with no bookmarks API this line

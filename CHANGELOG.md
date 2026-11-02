@@ -21,6 +21,20 @@ All notable changes to Konode. Format loosely follows
   ignored while yours is recorded, whichever moment you make it. Renaming a bookmark was
   dropped the same way, and is not any more.
 
+- **A bookmark renamed inside an excluded folder stayed renamed only here.** Konode records
+  nothing that happens inside a folder you keep out of the sync, which is the point of it —
+  but taking the folder back out of the exclusion never caught up on what you had changed
+  meanwhile. The new name sat there on this device, nothing told your other devices it had
+  one, and renaming it a second time was the only way through. Unticking the box now
+  publishes the bookmarks that come back as they stand here. A device that renamed the same
+  bookmark more recently loses to that, which is the way round it should be: unticking the
+  box is you asking for this device's copy to be the shared one again.
+
+  Two things still do not come back with it. A folder renamed while excluded re-joins under
+  its new name without anything saying it was a rename — that needs the name it had before,
+  and an excluded folder is not in the last synced copy Konode reads it from. Nor does a
+  bookmark moved to a different folder while excluded take its new place with it.
+
 ## [1.5.0] - 2026-11-01
 
 ### Added
