@@ -47,9 +47,10 @@ jobs:
       #
       # A release page is a public download, so what goes on it must not carry Konode's own
       # Google OAuth client secret: these are the "bring your own OAuth client" variant, and
-      # Drive sign-in in them needs the user's own. The zips uploaded to the Chrome Web Store
-      # and to AMO are built locally WITH the secret, by hand, and land in
-      # web-ext-artifacts/chrome/ and .../firefox/ instead.
+      # Drive sign-in in them needs the user's own. The zips uploaded to the Chrome Web Store,
+      # Microsoft Edge Add-ons and AMO are built locally WITH the secret, by hand, and land in
+      # web-ext-artifacts/chrome/ (the Web Store and Edge take the same file) and
+      # .../firefox/ instead.
       #
       # `package:source` does not merely rely on CI having no .env. It builds through
       # `--mode source`, which blanks the secret via .env.source, and then reads the built
@@ -98,9 +99,10 @@ jobs:
 # `--generate-notes` only produces a "Full Changelog" compare link, which is not enough on
 # its own: a visitor cannot tell the two zips apart, and cannot know that Drive needs their
 # own OAuth client in these builds. Replace the body by hand after the run: which download
-# for which browser, the Drive caveat, an upgrade note. Take the SHAPE from the v1.2.0
-# release, not the words. Both stores are live now, so a body copied verbatim would repeat
-# its "waiting on review" and "until the listing is live" lines, which are dead wrong today.
+# for which browser, the Drive caveat, an upgrade note. Take the SHAPE from the v1.4.0
+# release, not the words, and say under "Which download" that Edge Add-ons carries the same
+# package as the Chrome Web Store. All three stores have listings now, so a body copied
+# verbatim would repeat review states that are wrong by the next release.
 #
 # Not done, worth doing: GitHub already publishes a SHA-256 digest per release asset, so the
 # download itself is covered. What `npm run checksum` adds is the reproducible part, a
