@@ -97,8 +97,18 @@ on any Chromium browser and on Firefox.
   findings", because the second one never arrives.
 
 ## Now live
-Konode is live on both stores, **both serving 1.4.0**: Firefox Add-ons since 2026-09-29, the
-Chrome Web Store since 2026-09-30, after a day in review.
+Konode is live on both stores. **Firefox Add-ons serves 1.5.1** since 2026-11-02, listed for
+Firefox for Android too from that version. **The Chrome Web Store serves 1.4.0** since
+2026-09-30, with 1.5.1 in review since 2026-11-02.
+
+**1.5.1 shipped on 2026-11-02**, tagged `v1.5.1` at `64fcc87`, and it is the first store
+release since 1.4.0: 1.5.0 (tagged 2026-11-01 at `2c9b649`) went to neither store, so 1.5.1
+carries both. That means bookmarks kept out of sync (#54), tab groups in a session (#11),
+folders that share a name kept apart (#51), the rename loop and the renames lost during a
+sync, Edge 142's renumbered roots (#66), a deletion arriving in pieces held by the guard
+(#41), setup on Firefox for Android, and the rest of the CHANGELOG's two sections. Both
+store uploads were built from an LF `git archive` of the tag, unpacked into an empty folder,
+which is the route PUBLISHING-FIREFOX.md settled on after 1.4.0.
 
 **1.4.0 shipped on 2026-09-29**, tagged `v1.4.0` at `0acc210`, and both store uploads were
 built from that commit. It carries everything merged since 1.3.2, the four fixes of
@@ -127,12 +137,14 @@ tag* above). Three of the fixes did come from a report, #16, filed by someone wh
 stuck on the same blocked deletion for weeks; the comment on that thread when 1.3.1 went
 out says which half of his problem the release solves and which half it does not.
 
-- [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/): **serving 1.4.0**
-  since 2026-09-29, listed since 2026-08-04. Before it 1.3.2 from 2026-09-10; 1.3.1 went out
+- [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/): **serving 1.5.1**
+  since 2026-11-02, for Firefox for Android too, listed since 2026-08-04. Before it 1.4.0
+  from 2026-09-29, and 1.3.2 from 2026-09-10; 1.3.1 went out
   the same morning and was superseded within two hours. AMO auto-approves and signs an
   update on upload, so each goes out within minutes; the source submission a bundled add-on
   requires is reviewed afterwards rather than before.
-- Chrome Web Store: **serving 1.4.0 since 2026-09-30**, a day after it was submitted. 1.3.2
+- Chrome Web Store: **serving 1.4.0 since 2026-09-30**, a day after it was submitted, and
+  1.5.1 in review since 2026-11-02. 1.3.2
   was served from 2026-09-13, after a second review. 1.3.1 was
   submitted on 2026-09-10 and withdrawn the same day in favour of 1.3.2, so it never reached
   the store at all: Chromium went from 1.3.0 straight to 1.3.2, carrying both releases'
@@ -523,8 +535,8 @@ a translation nobody can read.
 
 **Firefox Add-ons.** Live at <https://addons.mozilla.org/firefox/addon/konode/> since
 **2026-08-04**, first listed with 1.2.0, then 1.2.1, then 1.3.0 from 2026-08-17, 1.3.2 from
-2026-09-10 (1.3.1 the same morning, superseded within two hours), and **serving 1.4.0 since
-2026-09-29**.
+2026-09-10 (1.3.1 the same morning, superseded within two hours), 1.4.0 from 2026-09-29,
+and **serving 1.5.1 since 2026-11-02**, the first version marked for Firefox for Android.
 An update to an add-on that is already listed is auto-approved and signed on upload, and
 the source review happens afterwards, which is why 1.3.0 reached users while its version
 notes were still being filled in. The source archive must be the commit the upload was
@@ -533,7 +545,10 @@ BUILT from, not necessarily the tag: 1.3.0 was built from `efd6eb0`, two commits
 directories and the old Chinese name against an upload with five and the new one. AMO
 diffs that rebuild and requires no differences. For 1.3.2 the two coincide: it was built
 from `7e2ae38`, which is `v1.3.2` itself, so an archive of the tag was the right one, and
-so it was for 1.4.0 (`0acc210`, `v1.4.0`).
+so it was for 1.4.0 (`0acc210`, `v1.4.0`). From 1.5.1 the upload is built FROM the archive
+(an LF `git archive` of the tag, unpacked into an empty folder), so the two agree by
+construction; a second build from the same archive matched the 1.5.1 upload in all 32
+files.
 Packaged with `npm run package:firefox` and checked with `npm run lint:firefox`. AMO
 requires a source submission, since the build is bundled and minified, and the reviewer
 rebuilds and diffs it.
