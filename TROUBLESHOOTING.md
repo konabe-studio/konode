@@ -159,7 +159,13 @@ API and no history API, so an extension has nothing to read or write
 ([bookmarks](https://github.com/mozilla-mobile/fenix/issues/21830)). Konode marks both as
 unavailable in Settings → Data Types and skips them, rather than reporting an error every
 sync for something you can't fix. Open tabs still sync, and your desktop devices carry on
-syncing everything among themselves. Bookmarks you have on Android are not touched.
+syncing everything among themselves. Bookmarks you have on Android are not touched. The
+extension list syncs too.
+
+**Google Drive can't sign in there.** Firefox for Android has no identity API, which is what
+an extension uses to open Google's sign-in, so the Drive card says up front that it isn't
+available in this browser. Use GitHub or a WebDAV provider on the phone, the same one your
+other devices use.
 
 **"This browser can't show permission prompts."** Firefox for Android doesn't implement
 runtime permission requests
@@ -169,6 +175,21 @@ grant it by hand: open Firefox's **Settings → Extensions → Konode → Permis
 the permissions there, then return to Konode and try again. Konode checks what you've
 already granted before asking, so once it's allowed there, setup and Test connection go
 through.
+
+## Zen
+
+**Only the workspace in front syncs its open tabs.** Zen gives extensions the tabs of the
+workspace you are looking at and nothing else: to an extension, the tabs of your other
+workspaces don't exist, not even as hidden tabs. So the session a Zen device shares is the
+workspace that was active when it last synced, and what your other devices see changes when
+you switch workspaces. A restored session opens in whichever workspace is active, and which
+workspace a tab came from isn't carried, because no extension API can name a workspace.
+Konode can't work around this; it would take Zen offering workspaces to extensions.
+Bookmarks, history and the extension list are not affected. (Measured on Zen 1.24b,
+November 2026.)
+
+A separate Zen **profile** is a different matter: each profile is its own Konode device,
+with its own file in your storage, as in any browser.
 
 ## Starting over
 
