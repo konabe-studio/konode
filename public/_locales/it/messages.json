@@ -573,7 +573,7 @@
     }
   },
   "opt_snap_saved": {
-    "message": "Istantanea salvata."
+    "message": "Punto di ripristino salvato."
   },
   "opt_snap_restored_one": {
     "message": "Ripristinato $COUNT$ segnalibro. Sincronizzazione con gli altri tuoi dispositivi…",
@@ -1201,13 +1201,13 @@
     "message": "Copie con data e ora dei tuoi segnalibri sul backend, condivise da tutti i tuoi dispositivi. Il ripristino aggiunge di nuovo i segnalibri che mancano su questo dispositivo (non elimina mai nulla). Vengono conservate le 10 più recenti; quelle più vecchie vengono rimosse automaticamente, e qui puoi eliminare quelle che vuoi."
   },
   "opt_snap_now_label": {
-    "message": "Salva ora un'istantanea"
+    "message": "Salva ora un punto di ripristino"
   },
   "opt_snap_now_desc": {
     "message": "Un punto di ripristino dell'attuale albero dei segnalibri."
   },
   "opt_snap_create": {
-    "message": "Crea istantanea"
+    "message": "Crea punto di ripristino"
   },
   "opt_snap_loading": {
     "message": "Caricamento dei punti di ripristino…"

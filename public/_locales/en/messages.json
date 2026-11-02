@@ -653,7 +653,7 @@
     }
   },
   "opt_snap_saved": {
-    "message": "Snapshot saved."
+    "message": "Restore point saved."
   },
   "opt_snap_restored_one": {
     "message": "Restored $COUNT$ bookmark. Syncing to your other devices…",
@@ -1321,13 +1321,13 @@
     "message": "Timestamped copies of your bookmarks on the backend, shared by all your devices. Restoring adds back any bookmarks missing on this device (it never deletes). The newest 10 are kept; older ones are removed automatically, and you can delete any of them here."
   },
   "opt_snap_now_label": {
-    "message": "Save a snapshot now"
+    "message": "Save a restore point now"
   },
   "opt_snap_now_desc": {
     "message": "A restore point of your current bookmark tree."
   },
   "opt_snap_create": {
-    "message": "Create snapshot"
+    "message": "Create restore point"
   },
   "opt_snap_loading": {
     "message": "Loading restore points…"

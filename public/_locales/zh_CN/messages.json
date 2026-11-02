@@ -60,7 +60,7 @@
     "message": "无法连接 Konode。点击重试。"
   },
   "popup_recovery_notice": {
-    "message": "一次异常删除（$COUNT$ 条书签）被阻止，已保存恢复点。请在设置 → 活动中应用或保留。",
+    "message": "一次异常删除（$COUNT$ 条书签）被阻止，已保存还原点。请在设置 → 活动中应用或保留。",
     "placeholders": {
       "count": {
         "content": "$1",
@@ -564,7 +564,7 @@
     }
   },
   "opt_snap_saved": {
-    "message": "已保存快照。"
+    "message": "已保存还原点。"
   },
   "opt_snap_restored_one": {
     "message": "已恢复 $COUNT$ 条书签。正在同步到您的其他设备…",
@@ -975,7 +975,7 @@
     "message": "活动"
   },
   "opt_activity_head_sub": {
-    "message": "Konode 在此设备上所执行的操作，以及它所依赖的内容。所有数据均在本地计算：数字、恢复点以及最近 200 条日志条目都只存放在本地，此页面上的任何信息都不会被上传。"
+    "message": "Konode 在此设备上所执行的操作，以及它所依赖的内容。所有数据均在本地计算：数字、还原点以及最近 200 条日志条目都只存放在本地，此页面上的任何信息都不会被上传。"
   },
   "opt_sync_activity_section": {
     "message": "同步活动"
@@ -1156,7 +1156,7 @@
     "message": "由另一台设备请求。"
   },
   "opt_blocked_saved": {
-    "message": "没有删除任何内容，并已事先保存恢复点。"
+    "message": "没有删除任何内容，并已事先保存还原点。"
   },
   "opt_blocked_recent_one": {
     "message": "其他设备在过去 24 小时内已在此删除了 $COUNT$ 条书签，加上这次删除将超过你设置的批量删除上限。",
@@ -1183,7 +1183,7 @@
     "message": "应用并删除"
   },
   "opt_blocked_keep": {
-    "message": "如果想保留它们，请在发出请求的设备上还原到清理之前的恢复点。这会清除该设备上的删除记录，它就不会再发送到这里。"
+    "message": "如果想保留它们，请在发出请求的设备上还原到清理之前的还原点。这会清除该设备上的删除记录，它就不会再发送到这里。"
   },
   "opt_snapshots_section": {
     "message": "还原点"
@@ -1192,19 +1192,19 @@
     "message": "在后端保存了带时间戳的书签副本，所有设备共享。恢复时会把该设备缺失的书签补回（永不删除）。仅保留最新的 10 条，较旧的会自动移除，你也可以在此删除任意一条。"
   },
   "opt_snap_now_label": {
-    "message": "立即保存快照"
+    "message": "立即保存还原点"
   },
   "opt_snap_now_desc": {
-    "message": "当前书签树的恢复点。"
+    "message": "当前书签树的还原点。"
   },
   "opt_snap_create": {
-    "message": "创建快照"
+    "message": "创建还原点"
   },
   "opt_snap_loading": {
-    "message": "正在加载恢复点…"
+    "message": "正在加载还原点…"
   },
   "opt_snap_error": {
-    "message": "无法读取您的恢复点：$ERROR$",
+    "message": "无法读取您的还原点：$ERROR$",
     "placeholders": {
       "error": {
         "content": "$1",
@@ -1213,10 +1213,10 @@
     }
   },
   "opt_snap_error_desc": {
-    "message": "这并不意味着您没有恢复点。它们保存在您的存储空间中，刚才无法列出。"
+    "message": "这并不意味着您没有还原点。它们保存在您的存储空间中，刚才无法列出。"
   },
   "opt_snap_empty": {
-    "message": "尚未创建任何恢复点。请在上方创建，或在出现异常删除被阻止时自动保存一个。"
+    "message": "尚未创建任何还原点。请在上方创建，或在出现异常删除被阻止时自动保存一个。"
   },
   "opt_snap_count_one": {
     "message": "$COUNT$ 书签",
@@ -1237,7 +1237,7 @@
     }
   },
   "opt_snap_unknown": {
-    "message": "书签恢复点"
+    "message": "书签还原点"
   },
   "opt_snap_confirm_restore": {
     "message": "确认恢复"

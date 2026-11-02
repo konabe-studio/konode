@@ -5,6 +5,14 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Settings calls a restore point a restore point everywhere.** Under the Restore points
+  heading, three of its own lines said "Snapshot saved", "Save a snapshot now" and "Create
+  snapshot", and Spanish, Italian, Russian and both Chinese followed the English. Simplified
+  Chinese also had two words for the same thing, 还原点 in the heading and 恢复点 in the rest.
+  It is one word now, in every language Konode ships.
+
 ## [1.5.1] - 2026-11-02
 
 ### Fixed

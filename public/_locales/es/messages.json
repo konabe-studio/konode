@@ -564,7 +564,7 @@
     }
   },
   "opt_snap_saved": {
-    "message": "Se guardó la instantánea."
+    "message": "Se guardó el punto de restauración."
   },
   "opt_snap_restored_one": {
     "message": "Se ha restaurado $COUNT$ marcador. Sincronizando con tus otros dispositivos…",
@@ -1022,13 +1022,13 @@
     "message": "Puntos de restauración"
   },
   "opt_snap_now_label": {
-    "message": "Guarda una instantánea ahora"
+    "message": "Guarda un punto de restauración ahora"
   },
   "opt_snap_now_desc": {
     "message": "Un punto de restauración de tu árbol de marcadores actual."
   },
   "opt_snap_create": {
-    "message": "Crear instantánea"
+    "message": "Crear punto de restauración"
   },
   "opt_snap_loading": {
     "message": "Cargando puntos de restauración…"

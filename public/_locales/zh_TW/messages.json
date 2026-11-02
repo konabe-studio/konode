@@ -573,7 +573,7 @@
     }
   },
   "opt_snap_saved": {
-    "message": "已儲存快照。"
+    "message": "已儲存還原點。"
   },
   "opt_snap_restored_one": {
     "message": "已還原 $COUNT$ 個書籤。正在同步到你的其他裝置…",
@@ -1201,13 +1201,13 @@
     "message": "存在後端、帶時間戳記的書籤副本，你所有裝置共用。還原會把這台裝置上缺少的書籤補回來（永遠不會刪除）。只保留最新的 10 個，比較舊的會自動移除，你也可以在這裡刪掉其中任何一個。"
   },
   "opt_snap_now_label": {
-    "message": "立即儲存快照"
+    "message": "立即儲存還原點"
   },
   "opt_snap_now_desc": {
     "message": "目前書籤樹的還原點。"
   },
   "opt_snap_create": {
-    "message": "建立快照"
+    "message": "建立還原點"
   },
   "opt_snap_loading": {
     "message": "正在載入還原點…"
