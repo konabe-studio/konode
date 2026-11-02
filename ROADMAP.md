@@ -97,9 +97,9 @@ on any Chromium browser and on Firefox.
   findings", because the second one never arrives.
 
 ## Now live
-Konode is live on both stores. **Firefox Add-ons serves 1.5.1** since 2026-11-02, listed for
-Firefox for Android too from that version. **The Chrome Web Store serves 1.4.0** since
-2026-09-30, with 1.5.1 in review since 2026-11-02. **Microsoft Edge Add-ons** is the third
+Konode is live on both stores, **both serving 1.5.1** since 2026-11-02: Firefox Add-ons
+within minutes of the upload, listed for Firefox for Android too from that version, and the
+Chrome Web Store the same day, after a few hours in review. **Microsoft Edge Add-ons** is the third
 store (#43): its first submission, 1.5.1 from the same package as the Web Store, went in on
 2026-11-02 and is in review.
 
@@ -145,8 +145,8 @@ out says which half of his problem the release solves and which half it does not
   the same morning and was superseded within two hours. AMO auto-approves and signs an
   update on upload, so each goes out within minutes; the source submission a bundled add-on
   requires is reviewed afterwards rather than before.
-- Chrome Web Store: **serving 1.4.0 since 2026-09-30**, a day after it was submitted, and
-  1.5.1 in review since 2026-11-02. 1.3.2
+- Chrome Web Store: **serving 1.5.1 since 2026-11-02**, out the same day it was submitted.
+  Before it 1.4.0 from 2026-09-30, a day after it was submitted. 1.3.2
   was served from 2026-09-13, after a second review. 1.3.1 was
   submitted on 2026-09-10 and withdrawn the same day in favour of 1.3.2, so it never reached
   the store at all: Chromium went from 1.3.0 straight to 1.3.2, carrying both releases'
