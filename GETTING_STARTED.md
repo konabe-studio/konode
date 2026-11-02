@@ -36,7 +36,8 @@ change anything.
 On install Konode opens a short setup wizard:
 
 1. **Choose where your data goes**: a card each for Google Drive, Nextcloud / ownCloud,
-   pCloud, Koofr, Fastmail, GitHub, and WebDAV (other), details below.
+   pCloud, Koofr, Fastmail, Nutstore (坚果云), GitHub, and WebDAV (other), details below.
+   With Konode in Simplified Chinese, Nutstore comes first.
 2. **Sign in / enter your credentials** for that backend.
 3. **Choose what to sync**: bookmarks are on by default; history, open tabs, and the
    extension list are opt-in.
@@ -76,27 +77,36 @@ if you enable encryption, the **same passphrase**) to sync together.
 
 ### WebDAV
 
-1. Pick your provider: **Nextcloud / ownCloud**, **pCloud**, **Koofr**, **Fastmail**, or
-   **WebDAV (other)** for anything else (Synology, kDrive, and so on).
+1. Pick your provider: **Nextcloud / ownCloud**, **pCloud**, **Koofr**, **Fastmail**,
+   **Nutstore (坚果云)**, or **WebDAV (other)** for anything else (Synology, kDrive, and so
+   on).
 2. The presets know the address, so you type less. Nextcloud and ownCloud ask for your
    server's host and Konode builds the rest of the path from it and your username; pCloud
-   asks whether your account lives in the EU or the US (and needs a paid plan); Koofr and
-   Fastmail need no address at all. **WebDAV (other)** takes the full URL, which must be
-   `https://`.
+   asks whether your account lives in the EU or the US (and needs a paid plan); Koofr,
+   Fastmail and Nutstore need no address at all. **WebDAV (other)** takes the full URL,
+   which must be `https://`.
 3. Enter your **username** and **password**. Use an app password where your provider
    offers one: Nextcloud under Settings → Security, a Koofr app password with your Koofr
-   email, or a Fastmail app password with Files (WebDAV) access and your full Fastmail
-   address.
+   email, a Fastmail app password with Files (WebDAV) access and your full Fastmail
+   address, or a Nutstore third-party app password (第三方应用密码, in Nutstore's account
+   security settings) with your Nutstore email. A free Nutstore account allows 600
+   requests every 30 minutes, so with three or more devices raise **Sync interval** to 120
+   seconds under Settings → Device; the card says so too.
 4. Plain `http://` is rejected for security (except `http://localhost`). Konode creates a
    `konode/` folder for its files.
 
 ## Choosing what to sync
 
 - **Bookmarks**: on by default. Two-way sync with folders preserved; deletions
-  propagate (no old bookmarks quietly coming back).
+  propagate (no old bookmarks quietly coming back). **Exclude bookmarks from sync**, under
+  Bookmarks in setup and in Settings → Data Types, lets you tick folders and bookmarks this
+  device keeps to itself. Excluding deletes nothing: copies your other devices already have
+  stay there, and so do their files in your storage.
 - **Open tabs / sessions**, **History**, **Installed-extension list**: opt-in. When
   you turn one on, the browser asks for the matching permission at that moment. If you
-  never enable it, Konode never holds that permission.
+  never enable it, Konode never holds that permission. Open tabs carry their tab groups;
+  the groups' names and colours need one more permission, asked along with Open tabs and
+  switchable on its own in Settings.
 
 ## End-to-end encryption
 

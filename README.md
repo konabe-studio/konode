@@ -51,8 +51,8 @@ provider can't read it.
 
 | Data | What it does |
 |------|--------------|
-| **Bookmarks** | Two-way sync that preserves your folder structure. Renames, moves and folder reorders travel too, and so do deletions, so no old bookmarks quietly come back. |
-| **Open tabs / sessions** | Save the current tab set and restore another device's session whenever you want. |
+| **Bookmarks** | Two-way sync that preserves your folder structure. Renames, moves and folder reorders travel too, and so do deletions, so no old bookmarks quietly come back. Keep any folder or bookmark out of the sync on a device, for example one another extension fills. |
+| **Open tabs / sessions** | Save the current tab set and restore another device's session whenever you want, tab groups included (with their names and colours, if you allow it). Restoring opens only the tabs you don't already have. |
 | **History** | Keep a synced, de-duplicated history list. *(On Firefox the original visit time is preserved; on Chrome the API can't set visit times, so restored entries show the sync moment.)* |
 | **Installed extensions** | Sync the list and see at a glance which extensions are missing on the device you're on. |
 
@@ -65,8 +65,7 @@ prefer this device, always prefer the other, or resolve it yourself from the pop
 |---------|------|-------|
 | **Google Drive** | One-time sign-in | Scoped to `drive.file`, so Konode only ever touches the files it creates. |
 | **GitHub** | Fine-grained token | Point it at a single private repository. |
-| **WebDAV** | Username + password | Presets fill in the address for Nextcloud / ownCloud, pCloud, Koofr, and Fastmail. **WebDAV (other)** takes Synology, kDrive, or any standard WebDAV server. |
-| **Mega** | n/a | Planned. |
+| **WebDAV** | Username + password | Presets fill in the address for Nextcloud / ownCloud, pCloud, Koofr, Fastmail, and Nutstore (坚果云), which works from mainland China where Google Drive can't be reached. **WebDAV (other)** takes Synology, kDrive, or any standard WebDAV server. |
 
 ## How Konode compares
 
@@ -124,9 +123,13 @@ you had in mind. Picking one system for bookmarks is the simple answer.
 - **Chromium**: Chrome, Edge, Brave, Helium, ungoogled-chromium, and other Chromium
   browsers. Fully supported, and on the Chrome Web Store. A Microsoft Edge Add-ons
   listing, with the same package, is in review.
-- **Firefox**: Firefox and Firefox-based browsers (e.g. Waterfox), from a dedicated
-  build that ships on Firefox Add-ons. Same sync folder and same files as your
-  Chromium browsers, so a Firefox install joins a group that is already running.
+- **Firefox**: Firefox and Firefox-based browsers (e.g. Waterfox, Zen), from a
+  dedicated build that ships on Firefox Add-ons. Same sync folder and same files as your
+  Chromium browsers, so a Firefox install joins a group that is already running. In Zen,
+  only the workspace in front shares its open tabs ([why](TROUBLESHOOTING.md#zen)).
+- **Firefox for Android**: open tabs and the extension list, on GitHub or WebDAV storage.
+  Firefox for Android gives extensions no bookmarks, history or Google sign-in
+  ([details](TROUBLESHOOTING.md#firefox-for-android)).
 
 > On non-Chrome Chromium browsers, Google Drive sign-in uses the OAuth PKCE flow
 > (`launchWebAuthFlow`), so Drive sync works even where `chrome.identity.getAuthToken`
@@ -139,8 +142,9 @@ Konode speaks **English, Hungarian, German, Spanish, Italian, Russian and Chines
 translated: the popup, the setup wizard, and Settings. Dates and numbers follow your
 browser's locale everywhere.
 
-**Japanese** and **Estonian** have been started. A language reaches a release once it is
-complete, because a screen that is half translated reads worse than an English one.
+**Japanese**, **Estonian** and **Arabic** have been started. A language reaches a release
+once it is complete, because a screen that is half translated reads worse than an English
+one. Arabic also needs the pages laid out right to left, which comes with it.
 
 Translations are edited on
 [Hosted Weblate](https://hosted.weblate.org/projects/konode/). You don't need git, a
@@ -200,9 +204,9 @@ npm ci && npm run build && npm run checksum
 Two honest caveats. The release notes don't carry the fingerprint yet, so today this shows
 you that the build reproduces, not that a particular download came from this tag. (GitHub
 does publish its own SHA-256 digest next to each release asset, which covers the download
-itself.) And the store builds can't match your hash: the Chrome Web Store and Firefox
-Add-ons zips are built with Konode's own Google OAuth client compiled in, while the release
-zips and your own builds are not. It also assumes a comparable toolchain; the pinned
+itself.) And the store builds can't match your hash: the zips for the Chrome Web Store,
+Microsoft Edge Add-ons (the same file) and Firefox Add-ons are built with Konode's own
+Google OAuth client compiled in, while the release zips and your own builds are not. It also assumes a comparable toolchain; the pinned
 lockfile keeps dependencies identical.
 
 ## How it works
@@ -250,15 +254,19 @@ use a dedicated manager like [Bitwarden](https://bitwarden.com),
 ## Roadmap
 
 - **Shipped**: bookmarks / sessions / history / extension-list sync · Google Drive +
-  GitHub + WebDAV · WebDAV provider presets · multi-device merge · per-item conflict
-  resolution · opt-in E2EE · Drive OAuth refresh (PKCE) · cross-browser extension
-  matching · **Chrome Web Store listing** · **Firefox Add-ons listing** · **translated
-  interface** (English, Hungarian, German, Spanish, Italian, Russian, Chinese (Simplified
-  and Traditional)).
-- **Next**: more backends, cheapest sign-in first (Dropbox token and S3-compatible, then
-  Dropbox OAuth and OneDrive) · faster history sync · more languages (Japanese, Estonian).
-- **Later**: MEGA · incremental diff for very large bookmark trees · diffs between
-  restore points.
+  GitHub + WebDAV · WebDAV provider presets, Nutstore (坚果云) included · multi-device
+  merge · per-item conflict resolution · opt-in E2EE · Drive OAuth refresh (PKCE) ·
+  cross-browser extension matching · bookmarks kept out of sync · tab groups in sessions ·
+  **Chrome Web Store listing** · **Firefox Add-ons listing**, Firefox for Android included ·
+  **translated interface** (English, Hungarian, German, Spanish, Italian, Russian, Chinese
+  (Simplified and Traditional)).
+- **In review**: the **Microsoft Edge Add-ons listing**, with the Chrome Web Store's package.
+- **Next**: the reading list ([#11](https://github.com/konabe-studio/konode/issues/11)) ·
+  a conflict card that shows what differs ([#35](https://github.com/konabe-studio/konode/issues/35)) ·
+  more backends, cheapest sign-in first (Dropbox token and S3-compatible, then Dropbox OAuth
+  and OneDrive) · faster history sync · more languages (Japanese, Estonian, Arabic).
+- **Later**: right-to-left languages · incremental diff for very large bookmark trees ·
+  diffs between restore points.
 
 ## Support & feedback
 

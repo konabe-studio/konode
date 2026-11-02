@@ -185,11 +185,11 @@ are built by hand with Konode's own OAuth client compiled in and live in
 keeps the two from being confused.
 
 ## Next
-- **[#11](https://github.com/konabe-studio/konode/issues/11) first: tab groups, then the rest
-  of the list.** Moved ahead of backend expansion on 2026-10-01, after a Helium user with
-  dozens of grouped tabs asked whether the browser blocks it. It does not: live groups are
-  readable and creatable, only *saved* groups are out of reach. **Built on 2026-10-20 for
-  the next release:** each tab in the session packet can point into a list of groups, and
+- **[#11](https://github.com/konabe-studio/konode/issues/11): tab groups have shipped, the
+  reading list is next.** Moved ahead of backend expansion on 2026-10-01, after a Helium user
+  with dozens of grouped tabs asked whether the browser blocks it. It does not: live groups
+  are readable and creatable, only *saved* groups are out of reach. **Built on 2026-10-20,
+  shipped in 1.5.1 on 2026-11-02:** each tab in the session packet can point into a list of groups, and
   Restore puts the tabs back into them. Which tabs share a group needs no permission on
   either engine; names and colours need `tabGroups`, which is an OPTIONAL permission
   because Chrome warns for it ("View and manage your tab groups"), asked together with Open
@@ -202,8 +202,9 @@ keeps the two from being confused.
   SYNC rather than once per peer (1.3.1), which was the larger half of the cost with more
   than one other device; what remains is that a sync which imports any history at all
   still reads the whole local history once to answer "is the peer's visit newer".
-- **More languages.** Japanese and Estonian are open
-  volunteer work on Weblate with no target date. A language joins `shipped-languages.json`
+- **More languages.** Japanese, Estonian and Arabic are open
+  volunteer work on Weblate with no target date. Arabic is the first right-to-left one, so
+  it brings the layout work under *Later* with it. A language joins `shipped-languages.json`
   once it is complete, which is the last step of shipping it: that one list is what both the
   packaging scripts and `i18n.test.ts` read, so what we ship and what we hold to a
   completeness check cannot drift apart. Completeness is the whole bar: the translators
@@ -267,7 +268,7 @@ keeps the two from being confused.
     `uploadIfChanged` and the E2EE dedup both need over the exact bytes. Until then the
     setting asks whether two files are byte-identical while the screen says it is asking
     whether two devices disagree.
-    **Fixed for the next release** with `bookmarkContent`: folder path by root kind,
+    **Fixed in 1.5.1** (2026-11-02, closed) with `bookmarkContent`: folder path by root kind,
     canonical URL and title, with order and duplicates left out too, since the merge
     converges neither. The transport checksum is untouched. History still compares the
     checksum under Manual, and whether Manual should gate history at all is the open
@@ -361,10 +362,13 @@ Sequenced by where our value prop is strongest, not by raw browser size:
      WebDAV/GitHub-class, ~0.5-1.5 d each, and they port to Firefox trivially.
    - *OAuth (PKCE) backends* (Dropbox OAuth, OneDrive/Graph): ~2-4 d each (provider
      app registration + redirect + refresh + QA, per browser).
-   - *MEGA*: heavier (~3-5 d; own crypto SDK to bundle). See
-     *MEGA integration (design notes)* below for the how.
+   - *MEGA*: heavier (~3-5 d; own crypto SDK to bundle). **Parked on 2026-11-02**: off the
+     README's roadmap and not planned. The notes in *MEGA integration (design notes)* below
+     stay for whoever picks it up.
 
 ## MEGA integration (design notes)
+**Parked since 2026-11-02, not planned.** Kept as research for whoever picks it up.
+
 Added 2026-07-13. MEGA (mega.io) as a fourth `IBackend`, alongside Drive / GitHub /
 WebDAV. Slots into the same per-device-per-type file model
 (`konode_<type>_<device_id>.json` in a `Konode` folder). Rated ~3-5 d because,
