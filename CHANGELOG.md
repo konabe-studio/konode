@@ -5,6 +5,40 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-11-02
+
+### Fixed
+
+- **A folder renamed while a sync was running never reached your other devices.** Konode
+  syncs about once a minute and a sync takes a few seconds, so a rename made in that window
+  was dropped. The folder kept its new name here, but nothing told your other devices it had
+  one: they went on matching it by the old name, so what you had in it arrived into a second
+  folder under the new name, beside the one they already had — and the pair then came back to
+  this device on the next sync. Renaming the folder again at a quieter moment was the only
+  way through, and a folder already doubled up this way still has to be tidied up by hand.
+
+  The window was there to keep Konode from mistaking its own work for yours, which is what
+  the sync loop fixed in 1.5.0 came down to. It now tells the two apart by what the change
+  was rather than by when it arrived, so a rename Konode applies during a sync is still
+  ignored while yours is recorded, whichever moment you make it. Renaming a bookmark was
+  dropped the same way, and is not any more.
+
+- **A bookmark renamed inside an excluded folder stayed renamed only here.** Konode records
+  nothing that happens inside a folder you keep out of the sync, which is the point of it —
+  but taking the folder back out of the exclusion never caught up on what you had changed
+  meanwhile. The new name sat there on this device, nothing told your other devices it had
+  one, and renaming it a second time was the only way through. Unticking the box now
+  publishes what comes back as it stands here — the bookmarks in the folder, and the
+  folder's own name. A device that renamed the same bookmark more recently loses to that,
+  which is the way round it should be: unticking the box is you asking for this device's
+  copy to be the shared one again.
+
+  Renaming the folder itself works because the exclusion remembers what it was called when
+  you ticked it, which is still the name your other devices are using. Two things do not
+  come back, and nothing remembers them: a folder renamed *inside* the excluded one keeps
+  its old name elsewhere, and a bookmark moved to a different folder while excluded does
+  not take its new place with it.
+
 ## [1.5.0] - 2026-11-01
 
 ### Added

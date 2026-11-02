@@ -1208,6 +1208,119 @@ describe("renames reach the other devices", () => {
     const published = Object.fromEntries((out.folderRenames ?? []).map((r) => [`${r.from}->${r.to}`, r.at]));
     expect(published).toEqual({ "Nextend->Nextendweb": there, "Nextendweb->Nextend": back });
   });
+
+  // ─── A rename made while a sync is running ─────────────────────────────────
+  //
+  // The mirror image of the loop above, and the same mistake underneath it: `importing`
+  // guarded the recorder by being a window in TIME, so it caught the user along with the
+  // merge. A sync runs every minute and takes seconds, and a folder renamed inside that
+  // window recorded nothing at all. The new title still rode along in the tree, but the
+  // operation did not, so a peer — which matches folders by title — found none of that
+  // name and made one beside the user's. The merge now declares its own writes instead
+  // (self-writes.ts): by content, not by timing.
+
+  /** Let an event's recorder run to completion. */
+  const settle = async (): Promise<void> => {
+    for (let i = 0; i < 3; i++) await new Promise((r) => setTimeout(r, 0));
+  };
+
+  it("records the user's folder rename even though it lands mid-merge", async () => {
+    const work = await chrome.bookmarks.create({ parentId: "1", title: "Work" });
+    await chrome.bookmarks.create({ parentId: work.id, title: "A", url: "https://a.com" });
+    const notes = await chrome.bookmarks.create({ parentId: "1", title: "Notes" });
+    await chrome.bookmarks.create({ parentId: notes.id, title: "B", url: "https://b.com" });
+    await exportBookmarkPayload(); // the cache the recorder reads the OLD names from
+
+    const onChanged = captureOnChanged();
+    const there = NOW - 20_000;
+
+    // The user renames a folder of their own at the one moment the merge is mid-write.
+    // Driven from inside the merge's own `update` so the window is not a matter of luck:
+    // `importing` is true for all of it, which is exactly what used to throw this away.
+    const real = chrome.bookmarks.update.bind(chrome.bookmarks);
+    let fired = false;
+    const spy = vi
+      .spyOn(chrome.bookmarks, "update")
+      .mockImplementation(async (id: string, ch: { title?: string }) => {
+        if (!fired) {
+          fired = true;
+          await real(notes.id, { title: "Ideas" });
+          onChanged(notes.id, { title: "Ideas" });
+          await settle();
+        }
+        return real(id, ch);
+      });
+
+    await importBookmarks(
+      {
+        ...payload([
+          folder("Work", [link("A", "https://a.com")]),
+          folder("Notes", [link("B", "https://b.com")]),
+        ]),
+        folderRenames: [{ path: ["bar"], from: "Work", to: "Job", at: there }],
+      },
+      "merge", "lww"
+    );
+    spy.mockRestore();
+    await settle();
+
+    expect(fired).toBe(true); // the merge really did write while we were watching
+    expect(await folderTitles()).toEqual(["Job", "Ideas"]);
+    const out = await exportBookmarkPayload();
+    expect(out.folderRenames?.map((r) => `${r.from}->${r.to}`).sort())
+      .toEqual(["Notes->Ideas", "Work->Job"]);
+  });
+
+  it("does not re-record the merge's OWN folder rename when its event lands late", async () => {
+    // The renamed-and-back pair above settles for a second reason as well: the folder ends
+    // up under the name the cache already holds, so the recorder finds nothing to report.
+    // A SINGLE rename has no such cover — the folder really is called something new now —
+    // and that is the case the ledger is there for.
+    const f = await chrome.bookmarks.create({ parentId: "1", title: "Work" });
+    await chrome.bookmarks.create({ parentId: f.id, title: "A", url: "https://a.com" });
+    await exportBookmarkPayload();
+
+    const onChanged = captureOnChanged();
+    const there = NOW - 20_000;
+
+    await importBookmarks(
+      {
+        ...payload([folder("Work", [link("A", "https://a.com")])]),
+        folderRenames: [{ path: ["bar"], from: "Work", to: "Job", at: there }],
+      },
+      "merge", "lww"
+    );
+    expect(await folderTitles()).toEqual(["Job"]);
+
+    onChanged(f.id, { title: "Job" }); // the browser catches up, after the merge returned
+    await settle();
+
+    const out = await exportBookmarkPayload();
+    const late = Object.fromEntries((out.folderRenames ?? []).map((r) => [`${r.from}->${r.to}`, r.at]));
+    expect(late).toEqual({ "Work->Job": there }); // the peer's stamp, not a fresh one
+  });
+
+  it("does not re-record the merge's OWN bookmark rename when its event lands late", async () => {
+    // Same echo, the other log: a bookmark is keyed by its URL, so the re-stamped record
+    // outranked the peer's copy of the very rename it had just applied.
+    const a = await chrome.bookmarks.create({ parentId: "1", title: "Old", url: "https://a.com" });
+    await exportBookmarkPayload();
+
+    const onChanged = captureOnChanged();
+    const there = NOW - 20_000;
+
+    await importBookmarks(
+      { ...payload([link("Theirs", "https://a.com")]), titles: titled("https://a.com", "Theirs", there) },
+      "merge", "lww"
+    );
+    expect(await titleOf("https://a.com")).toBe("Theirs");
+
+    onChanged(a.id, { title: "Theirs" });
+    await settle();
+
+    const out = await exportBookmarkPayload();
+    expect(Object.fromEntries((out.titles ?? []).map((t) => [t.title, t.at]))).toEqual({ Theirs: there });
+  });
 });
 
 describe("renames and repositions of folders that share a name (#51)", () => {

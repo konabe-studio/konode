@@ -1,6 +1,6 @@
 {
   "name": "konode",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "license": "MPL-2.0",
   "private": true,
   "type": "module",
@@ -26,7 +26,8 @@
     "test:watch": "vitest",
     "e2e:tab-groups": "node scripts/e2e/tab-groups.mjs",
     "lint": "eslint src",
-    "check": "npm run type-check && npm run lint && npm run test"
+    "check": "npm run type-check && npm run lint && npm run test",
+    "e2e:bookmark-exclusions": "node scripts/e2e/bookmark-exclusions.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.400.0",

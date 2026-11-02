@@ -4,7 +4,7 @@
 import type { ExtensionMessage, ExtensionResponse, SyncState } from "@/lib/types";
 import { getSettings, getState, setState, saveSettings, clearStaleSyncLock, setBulkDeleteApproval, KEYS } from "@/lib/utils/storage";
 import { SyncEngine, explainSyncFailure } from "@/lib/sync/sync-engine";
-import { registerBookmarkListeners } from "@/lib/handlers/bookmarks-handler";
+import { registerBookmarkListeners, recordExclusionRelease } from "@/lib/handlers/bookmarks-handler";
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { logger, setLoggerDebug } from "@/lib/utils/logger";
 import { BADGE_COLORS, BADGE_TEXT, STATE_UPDATE } from "@/lib/constants";
@@ -216,7 +216,22 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
     }
 
     case "SAVE_SETTINGS": {
+      // Unticking a box puts a folder back into the sync, and nothing inside it was
+      // recorded while it was out (#54). Telling what came back needs the rules as they
+      // stand BEFORE the write, so they are read here rather than after it.
+      const wasExcluding = "excluded_bookmarks" in message.payload
+        ? (await getSettings()).excluded_bookmarks ?? []
+        : null;
       const updated = await saveSettings(message.payload);
+      if (wasExcluding) {
+        // Never at the cost of the save itself: the settings are already written, and a
+        // browser with no bookmarks API throws in here rather than returning nothing.
+        try {
+          await recordExclusionRelease(wasExcluding, updated.excluded_bookmarks ?? []);
+        } catch (err) {
+          logger.error("recordExclusionRelease", err);
+        }
+      }
       setLoggerDebug(updated.debug_mode);
 
       // Reinit engine with new settings (awaited: an encryption/passphrase change

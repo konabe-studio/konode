@@ -8,6 +8,7 @@ one gets.
 ```bash
 npm run build && npm run build:firefox   # the passes load dist/ and dist-firefox/
 npm run e2e:tab-groups
+npm run e2e:bookmark-exclusions   # Chromium only, so dist/ alone is enough
 ```
 
 - `E2E_HEADFUL=1` runs the browsers on screen, which is how you watch one fail.
@@ -71,3 +72,19 @@ can click it. `dist/` and `dist-firefox/` are never modified.
 makes, in memory, and takes any credentials. The promo pipeline (PR #68) carries the same
 file at `scripts/promo/lib/webdav-server.mjs`; whichever of the two lands second should fold
 them into one shared helper rather than keep both.
+
+## bookmark-exclusions.mjs (#54)
+
+Two Chromium devices and a folder kept out of the sync. The unit tests prove the recorders
+against a fake `chrome.bookmarks`; what they cannot prove is a SEQUENCE across two devices
+and a real backend — tick a folder out, change it while it is out, untick it, and see what
+the other device ends up holding. That answer used to be "nothing".
+
+It also pins down the limits on purpose, so that changing them is deliberate rather than a
+surprise: the folder's own rename comes back (the rule still carries the name it had), a
+rename of a folder INSIDE it does not, and a bookmark moved while excluded does not take
+its new place with it.
+
+Both devices are Chromium: what is under test is the bookmark merge and the exclusion
+rules, and neither has an engine-specific branch. Firefox's own bookmark differences live
+in the unit tests for `withRemovedContents`.
