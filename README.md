@@ -283,9 +283,18 @@ is free and open source.
 
 See [LICENSE](LICENSE).
 
-## Built with
+## How it's built
 
-Built with AI assistance (Claude Code), human-reviewed and maintained by Kōnabe Studio.
+Konode is designed, tested and maintained by Kōnabe Studio. Much of the code is written with
+an AI coding assistant (Claude Code), much as a project might work with a contractor: the
+design decisions, the review before release and the testing stay with us. In practice:
+
+- each release goes through a QA pass on real browsers and devices (Chromium browsers,
+  Firefox, Firefox for Android), plus headless runs that play out multi-device scenarios;
+- close to 900 automated tests run on every change;
+- builds are reproducible, see [Verifying a build](#verifying-a-build);
+- bug reports get an answer, and when the bug is ours, a fix with an explanation of what
+  went wrong.
 
 ---
 
