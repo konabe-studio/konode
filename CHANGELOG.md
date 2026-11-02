@@ -13,6 +13,15 @@ All notable changes to Konode. Format loosely follows
   Chinese also had two words for the same thing, 还原点 in the heading and 恢复点 in the rest.
   It is one word now, in every language Konode ships.
 
+### Fixed
+
+- **Simplified Chinese reads properly in five more places.** "Never" in Settings was a
+  word that means nothing (用不, now 从未), the device ID label had a typo (设备iD), the
+  idle status said "finished" (完成) where it means "ready" (就绪), the warning about
+  encryption without a passphrase was a broken sentence about a "plaintext password", and
+  the passphrase fields in Settings said "password" (密码) where setup says "passphrase"
+  (密码短语).
+
 ## [1.5.1] - 2026-11-02
 
 ### Fixed

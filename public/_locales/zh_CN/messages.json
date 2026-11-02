@@ -18,7 +18,7 @@
     "message": "扩展"
   },
   "status_idle": {
-    "message": "完成"
+    "message": "就绪"
   },
   "status_syncing": {
     "message": "同步中…"
@@ -687,7 +687,7 @@
     "message": "分支"
   },
   "opt_stat_never": {
-    "message": "用不"
+    "message": "从未"
   },
   "opt_setup_sub": {
     "message": "Konode 将您的浏览器同步至您自己的存储空间。不存在 Konode 服务器。只需简单两步即可完成。（如果设置向导未在您的浏览器中打开，您可以在此处完成所有设置。）"
@@ -792,7 +792,7 @@
     "message": "我的笔记本电脑"
   },
   "opt_device_id_label": {
-    "message": "设备iD"
+    "message": "设备 ID"
   },
   "opt_device_id_desc": {
     "message": "自动生成。请勿更改。"
@@ -1339,19 +1339,19 @@
     "message": "关闭"
   },
   "opt_passphrase_label": {
-    "message": "密码"
+    "message": "密码短语"
   },
   "opt_passphrase_desc": {
     "message": "生成加密密钥。仅存储在此设备上，永不上传。"
   },
   "opt_passphrase_placeholder": {
-    "message": "选择一个强密码"
+    "message": "选择一个强密码短语"
   },
   "opt_passphrase_confirm_placeholder": {
-    "message": "确认密码"
+    "message": "确认密码短语"
   },
   "opt_passphrase_match": {
-    "message": "密码匹配."
+    "message": "密码短语一致。"
   },
   "opt_genkey_saved_warning": {
     "message": "请立即保存。如果您忘记了它，这是恢复数据的唯一方法。请在您的其他设备上输入相同的密钥。"
@@ -1467,7 +1467,7 @@
     "message": "无法读取设备列表。"
   },
   "opt_e2ee_no_passphrase": {
-    "message": "加密已经开启，但没有设定明文密码，同步将持续上传明文文文件，直到你添加一个明文密码。"
+    "message": "加密已开启，但尚未设置密码短语，因此在您设置之前，同步会继续上传未加密的内容。"
   },
   "opt_e2ee_off_warning": {
     "message": "加密已关闭，因此您的同步数据（书签、历史记录、会话、扩展程序）以 $UNENCRYPTED$ 形式存储在后端。开启加密可在数据离开此设备前加密所有内容。",
