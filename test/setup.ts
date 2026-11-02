@@ -3,6 +3,12 @@
 // Vitest's Node environment. storage.local is a real in-memory store, cleared
 // between tests. This file lives outside src/ so tsc/eslint don't check it.
 import { vi, beforeEach } from "vitest";
+// The one src import here, and a leaf module with no imports of its own: the merge's record
+// of its own title writes is in-memory, and the bookmark fake below hands out the same ids
+// to every test, so an unclaimed entry from one test would silence a rename in another.
+// Global rather than per-file for that reason — any test that drives the listeners is
+// exposed, not just the merge ones.
+import { resetSelfWrites } from "../src/lib/utils/self-writes";
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -420,6 +426,7 @@ beforeEach(() => {
   resetBookmarks();
   resetHistory();
   resetTabs();
+  resetSelfWrites();
   alarmStore = new Map();
 });
 

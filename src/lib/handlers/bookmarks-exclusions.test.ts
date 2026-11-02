@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   importBookmarks, exportBookmarkPayload, registerBookmarkListeners, resetExclusionCache, restoreBookmarks,
 } from "@/lib/handlers/bookmarks-handler";
-import { KEYS, getAppeared, getFolderDeletes, getTombstones } from "@/lib/utils/storage";
+import { KEYS, getAppeared, getFolderDeletes, getTitles, getTombstones } from "@/lib/utils/storage";
 import type { BookmarkExclusion, BookmarkPayload, SyncBookmark } from "@/lib/types";
 
 // #54. An extension that keeps a huge bookmark folder of its own had Konode publishing and
@@ -167,6 +167,7 @@ describe("a restore point leaves an excluded folder alone (#54)", () => {
 describe("events inside an excluded folder (#54)", () => {
   type Listeners = {
     created?: (id: string, node: Node) => void;
+    changed?: (id: string, info: { title?: string; url?: string }) => void;
     moved?: (id: string, info: chrome.bookmarks.BookmarkMoveInfo) => void;
     removed?: (id: string, info: chrome.bookmarks.BookmarkRemoveInfo) => void;
   };
@@ -175,6 +176,7 @@ describe("events inside an excluded folder (#54)", () => {
     const l: Listeners = {};
     /* eslint-disable @typescript-eslint/no-explicit-any */
     (chrome.bookmarks.onCreated as any).addListener = (fn: never) => { l.created = fn; };
+    (chrome.bookmarks.onChanged as any).addListener = (fn: never) => { l.changed = fn; };
     (chrome.bookmarks.onMoved as any).addListener = (fn: never) => { l.moved = fn; };
     (chrome.bookmarks.onRemoved as any).addListener = (fn: never) => { l.removed = fn; };
     /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -325,5 +327,47 @@ describe("events inside an excluded folder (#54)", () => {
     expect(changes).toBe(0);
     expect(await getTombstones()).toEqual([]);
     expect(await getFolderDeletes()).toEqual([]);
+  });
+
+  it("renaming inside an excluded folder records nothing, mid-merge included", async () => {
+    // onChanged used to skip the exclusion question entirely while a merge was running: the
+    // merge never writes into an excluded folder, so the only renames in that window were
+    // its own. Now that one landing mid-merge may be the USER's and is recorded on purpose
+    // (self-writes.ts), the question has to be asked for this event after all — otherwise
+    // an extension renaming inside its own folder would publish the URLs it renamed.
+    const l = capture(() => {});
+    const ext = await folderWith("Ext", ["https://ext1.com/"]);
+    await folderWith("Work", ["https://a.com/"]);
+    await exclude([{ path: ["bar", "Ext"] }]);
+    await exportBookmarkPayload(); // a device that has synced before
+    const [hidden] = await chrome.bookmarks.getChildren(ext);
+
+    // From inside the merge's own write, so `importing` is true for all of it.
+    const real = chrome.bookmarks.update.bind(chrome.bookmarks);
+    let fired = false;
+    const spy = vi
+      .spyOn(chrome.bookmarks, "update")
+      .mockImplementation(async (id: string, ch: { title?: string }) => {
+        if (!fired) {
+          fired = true;
+          await real(hidden.id, { title: "Ext rewrote this" });
+          l.changed!(hidden.id, { title: "Ext rewrote this" });
+          await settle();
+          await settle();
+        }
+        return real(id, ch);
+      });
+
+    await importBookmarks(
+      payload([folder("Work", [link("https://a.com/")])], {
+        folderRenames: [{ path: ["bar"], from: "Work", to: "Job", at: FUTURE }],
+      }),
+      "merge", "lww"
+    );
+    spy.mockRestore();
+    await settle();
+
+    expect(fired).toBe(true); // the merge really did write while we were watching
+    expect(await getTitles()).toEqual([]); // the excluded bookmark's URL never left
   });
 });
