@@ -1,8 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
-  importBookmarks, exportBookmarkPayload, registerBookmarkListeners, resetExclusionCache, restoreBookmarks,
+  importBookmarks, exportBookmarkPayload, recordExclusionRelease, registerBookmarkListeners,
+  resetExclusionCache, restoreBookmarks,
 } from "@/lib/handlers/bookmarks-handler";
-import { KEYS, getAppeared, getFolderDeletes, getTombstones } from "@/lib/utils/storage";
+import {
+  KEYS, getAppeared, getFolderDeletes, getFolderRenames, getTitles, getTombstones,
+} from "@/lib/utils/storage";
 import type { BookmarkExclusion, BookmarkPayload, SyncBookmark } from "@/lib/types";
 
 // #54. An extension that keeps a huge bookmark folder of its own had Konode publishing and
@@ -167,6 +170,7 @@ describe("a restore point leaves an excluded folder alone (#54)", () => {
 describe("events inside an excluded folder (#54)", () => {
   type Listeners = {
     created?: (id: string, node: Node) => void;
+    changed?: (id: string, info: { title?: string; url?: string }) => void;
     moved?: (id: string, info: chrome.bookmarks.BookmarkMoveInfo) => void;
     removed?: (id: string, info: chrome.bookmarks.BookmarkRemoveInfo) => void;
   };
@@ -175,6 +179,7 @@ describe("events inside an excluded folder (#54)", () => {
     const l: Listeners = {};
     /* eslint-disable @typescript-eslint/no-explicit-any */
     (chrome.bookmarks.onCreated as any).addListener = (fn: never) => { l.created = fn; };
+    (chrome.bookmarks.onChanged as any).addListener = (fn: never) => { l.changed = fn; };
     (chrome.bookmarks.onMoved as any).addListener = (fn: never) => { l.moved = fn; };
     (chrome.bookmarks.onRemoved as any).addListener = (fn: never) => { l.removed = fn; };
     /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -325,5 +330,194 @@ describe("events inside an excluded folder (#54)", () => {
     expect(changes).toBe(0);
     expect(await getTombstones()).toEqual([]);
     expect(await getFolderDeletes()).toEqual([]);
+  });
+
+  it("renaming inside an excluded folder records nothing, mid-merge included", async () => {
+    // onChanged used to skip the exclusion question entirely while a merge was running: the
+    // merge never writes into an excluded folder, so the only renames in that window were
+    // its own. Now that one landing mid-merge may be the USER's and is recorded on purpose
+    // (self-writes.ts), the question has to be asked for this event after all — otherwise
+    // an extension renaming inside its own folder would publish the URLs it renamed.
+    const l = capture(() => {});
+    const ext = await folderWith("Ext", ["https://ext1.com/"]);
+    await folderWith("Work", ["https://a.com/"]);
+    await exclude([{ path: ["bar", "Ext"] }]);
+    await exportBookmarkPayload(); // a device that has synced before
+    const [hidden] = await chrome.bookmarks.getChildren(ext);
+
+    // From inside the merge's own write, so `importing` is true for all of it.
+    const real = chrome.bookmarks.update.bind(chrome.bookmarks);
+    let fired = false;
+    const spy = vi
+      .spyOn(chrome.bookmarks, "update")
+      .mockImplementation(async (id: string, ch: { title?: string }) => {
+        if (!fired) {
+          fired = true;
+          await real(hidden.id, { title: "Ext rewrote this" });
+          l.changed!(hidden.id, { title: "Ext rewrote this" });
+          await settle();
+          await settle();
+        }
+        return real(id, ch);
+      });
+
+    await importBookmarks(
+      payload([folder("Work", [link("https://a.com/")])], {
+        folderRenames: [{ path: ["bar"], from: "Work", to: "Job", at: FUTURE }],
+      }),
+      "merge", "lww"
+    );
+    spy.mockRestore();
+    await settle();
+
+    expect(fired).toBe(true); // the merge really did write while we were watching
+    expect(await getTitles()).toEqual([]); // the excluded bookmark's URL never left
+  });
+});
+
+describe("unticking the box puts what changed back into the sync (#54)", () => {
+  // An excluded folder records nothing inside it, which is the point of it. But the
+  // exclusion is a RULE, and taking a folder back out of it was a plain settings write, so
+  // a bookmark renamed while excluded never reached the other devices: the new title rode
+  // along in the tree, and a title with no operation behind it is deliberately ignored on
+  // arrival. The rename was lost for good, and renaming it again was the only way through.
+
+  type Listeners = { changed?: (id: string, info: { title?: string }) => void };
+
+  function onChanged(): Listeners {
+    const l: Listeners = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (chrome.bookmarks.onChanged as any).addListener = (fn: never) => { l.changed = fn; };
+    registerBookmarkListeners(() => {});
+    return l;
+  }
+
+  /** A synced folder with one bookmark in it, then excluded and renamed inside. */
+  async function renamedWhileExcluded(): Promise<{ rule: BookmarkExclusion[] }> {
+    const work = await folderWith("Work", ["https://a.com/"]);
+    await exportBookmarkPayload(); // this device has synced before
+    const rule = [{ path: ["bar", "Work"] }];
+    await exclude(rule);
+    resetExclusionCache();
+
+    const l = onChanged();
+    const [bm] = await chrome.bookmarks.getChildren(work);
+    await chrome.bookmarks.update(bm.id, { title: "New name" });
+    l.changed!(bm.id, { title: "New name" });
+    await settle();
+
+    // Nothing was recorded while it was excluded — that half is by design.
+    expect(await getTitles()).toEqual([]);
+    return { rule };
+  }
+
+  it("publishes the rename once the folder is back in the sync", async () => {
+    const { rule } = await renamedWhileExcluded();
+
+    await exclude([]); // the user unticks the box
+    resetExclusionCache();
+    await recordExclusionRelease(rule, []);
+
+    const out = await exportBookmarkPayload();
+    expect(out.titles?.map((t) => `${t.url}=${t.title}`)).toEqual(["https://a.com/=New name"]);
+    // The folder is not covered and cannot be: its rename travels keyed on the OLD name,
+    // which is read from the last synced snapshot, and an excluded folder is not in it.
+    expect(out.folderRenames ?? []).toEqual([]);
+  });
+
+  it("says the re-joined bookmarks are here, so an older deletion cannot undo them", async () => {
+    const { rule } = await renamedWhileExcluded();
+
+    await exclude([]);
+    resetExclusionCache();
+    await recordExclusionRelease(rule, []);
+
+    expect((await getAppeared()).map((r) => r.url)).toEqual(["https://a.com/"]);
+  });
+
+  it("records nothing when the save only ADDS an exclusion", async () => {
+    await folderWith("Work", ["https://a.com/"]);
+    await exportBookmarkPayload();
+    const rule = [{ path: ["bar", "Work"] }];
+    await exclude(rule);
+    resetExclusionCache();
+
+    await recordExclusionRelease([], rule);
+
+    expect(await getTitles()).toEqual([]);
+    expect(await getAppeared()).toEqual([]);
+  });
+
+  it("does not even read the tree when a save leaves the rules as they were", async () => {
+    // Every Save from Settings carries the whole settings object, exclusions included, so
+    // this runs on saves that have nothing to do with them. Working out what came back
+    // walks the tree twice, and #54 exists because that tree can be enormous.
+    const { rule } = await renamedWhileExcluded();
+
+    const spy = vi.spyOn(chrome.bookmarks, "getTree");
+    await recordExclusionRelease(rule, rule); // Save pressed for some other setting
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+
+    expect(await getTitles()).toEqual([]);
+  });
+
+  // A folder rename travels keyed on the name the PEERS still hold, and for an excluded
+  // folder the live tree cannot supply it: the last synced snapshot every other recorder
+  // reads it from has no excluded folder in it. The rule that was holding the folder out
+  // does — its path is the one the folder had when the box was ticked.
+
+  /** A synced folder, excluded, then renamed while it is out of the sync. */
+  async function folderRenamedWhileExcluded(twin = false): Promise<{
+    id: string; rule: BookmarkExclusion[];
+  }> {
+    const work = await folderWith("Work", ["https://a.com/"]);
+    if (twin) await folderWith("Work", ["https://b.com/"]); // a same-named sibling, not excluded
+    await exportBookmarkPayload();
+    const rule = [{ path: ["bar", "Work"], id: work }];
+    await exclude(rule);
+    resetExclusionCache();
+
+    await chrome.bookmarks.update(work, { title: "Job" });
+    expect(await getFolderRenames()).toEqual([]); // nothing recorded while it was out
+
+    await exclude([]);
+    resetExclusionCache();
+    return { id: work, rule };
+  }
+
+  it("publishes a folder renamed while excluded, under the name the peers still hold", async () => {
+    const { rule } = await folderRenamedWhileExcluded();
+
+    await recordExclusionRelease(rule, []);
+
+    const out = await exportBookmarkPayload();
+    expect(out.folderRenames?.map((r) => `${r.path.join("/")}:${r.from}->${r.to}`))
+      .toEqual(["bar:Work->Job"]);
+  });
+
+  it("marks that rename with a bookmark when a same-named folder sits beside it (#51)", async () => {
+    const { rule } = await folderRenamedWhileExcluded(true);
+
+    await recordExclusionRelease(rule, []);
+
+    const out = await exportBookmarkPayload();
+    // Without the mark the receiver would take the first folder called Work and rename the
+    // wrong one; with it, it either finds the right one or leaves the rename alone.
+    expect(out.folderRenames?.[0]?.holds).toBeTruthy();
+  });
+
+  it("records no folder rename when the folder kept its name", async () => {
+    const work = await folderWith("Work", ["https://a.com/"]);
+    await exportBookmarkPayload();
+    const rule = [{ path: ["bar", "Work"], id: work }];
+    await exclude(rule);
+    resetExclusionCache();
+    await exclude([]);
+    resetExclusionCache();
+
+    await recordExclusionRelease(rule, []);
+
+    expect(await getFolderRenames()).toEqual([]);
   });
 });

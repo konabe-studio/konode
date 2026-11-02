@@ -26,6 +26,7 @@ import {
 } from "@/lib/utils/bookmark-exclusions";
 import { browser } from "@/lib/utils/ext";
 import { assertDataTypeApi, eventPresent } from "@/lib/utils/capabilities";
+import { noteSelfTitleWrite, takeSelfTitleWrite } from "@/lib/utils/self-writes";
 
 // Chromium 134+ types its permanent folders on the node (`folderType`) and tells an
 // account root from a local-only one (`syncing`); @types/chrome doesn't carry either yet.
@@ -531,24 +532,27 @@ async function recordUrlChange(id: string, newUrl: string | undefined): Promise<
  * recordUrlChange already reads the cache this way for the same reason.
  */
 async function recordTitleChange(id: string, newTitle: string | undefined): Promise<void> {
-  if (importing || newTitle === undefined) return;
+  if (newTitle === undefined) return;
+  // The merge's own write coming back. `importing` stood here, and it suppressed this echo
+  // by being a window in TIME — which closed over the user as well: a folder renamed while
+  // a sync was running recorded nothing at all, and a sync runs every minute and takes
+  // seconds. The new title still rode along in the tree, but the operation did not, so the
+  // peers found no folder of that name and made one beside the user's. The merge now says
+  // what it wrote and only the matching event is skipped; see self-writes.ts.
+  if (takeSelfTitleWrite(id, newTitle)) return;
   let node: BookmarkNode | undefined;
   try { [node] = await browser.bookmarks.get(id); } catch { return; }
   if (!node) return;
-  // A SUPERSEDED event. `importing` is a window in time, and the browser delivers
-  // onChanged whenever it gets round to it — often after the import that caused it has
-  // already returned. The merge applies a folder rename and its reverse in one pass, so
-  // the first of those writes arrives naming a title the folder no longer has, and it was
-  // recorded as though the user had just renamed the folder, stamped `Date.now()`.
-  // Published, that re-stamped record outranked every peer's copy of the same rename, so
-  // their "ours is newer" test could never settle it: each device re-stamped what the
-  // other had just applied, and a folder renamed and renamed back flipped between its two
-  // names forever — the sync loop reported from the field, on default settings.
-  //
-  // Going by the node's CURRENT title instead of the event's needs no flag and no window:
-  // a rename nothing has undone still reads as itself, whenever the event lands, while one
-  // that has already been overtaken records nothing. The live tree is the authority here,
-  // the same way `recordUrlChange` reads the cache rather than trusting the event alone.
+  // A SUPERSEDED event: the title it names is not the one the node has any more, so
+  // something has already overtaken it, whoever made either change. The merge applies a
+  // folder rename and its reverse in one pass, so the first of those writes arrives naming
+  // a title the folder no longer has, and it was recorded as though the user had just
+  // renamed the folder, stamped `Date.now()`. Published, that re-stamped record outranked
+  // every peer's copy of the same rename, so their "ours is newer" test could never settle
+  // it: each device re-stamped what the other had just applied, and a folder renamed and
+  // renamed back flipped between its two names forever — the sync loop reported from the
+  // field, on default settings. The live tree is the authority here, the same way
+  // `recordUrlChange` reads the cache rather than trusting the event alone.
   if (node.title !== newTitle) return;
   const now = Date.now();
 
@@ -1477,6 +1481,9 @@ async function mergeBookmarks(
           ? await markedFolder(folders, candidates, localKeys(canonicalUrlKey(r.holds)))
           : candidates[0];
         if (!target || target.title === r.to) continue;
+        // Ours, not the user's: the onChanged this fires must not be recorded as a fresh
+        // rename and published re-stamped. See self-writes.ts.
+        noteSelfTitleWrite(target.id, r.to);
         await browser.bookmarks.update(target.id, { title: r.to });
         renamedFolders++;
       } catch (err) {
@@ -1561,6 +1568,7 @@ async function mergeBookmarks(
           // matched a local URL it was considered satisfied and returned right here, so a
           // rename travelled in every packet and was discarded on arrival by every device.
           try {
+            noteSelfTitleWrite(loc.id, newTitle); // ours, not the user's — see self-writes.ts
             await browser.bookmarks.update(loc.id, { title: newTitle });
             renamed++;
           } catch (err) {
@@ -2265,6 +2273,105 @@ async function recordJoinedSync(id: string): Promise<void> {
   if (urls.length) await updateAppeared((current) => gcAppeared([...current, ...urls.map((url) => ({ url, at: now }))]));
 }
 
+/**
+ * Put back into the sync what unticking a box in Settings has just released (#54).
+ *
+ * An excluded folder records nothing that happens inside it — no rename, no move, no
+ * deletion — and that is the whole point of it. But the exclusion is a RULE, and taking a
+ * folder back out of it is a plain settings write, so everything done in there while it was
+ * out stayed unrecorded and the peers never heard about any of it. The new title still rode
+ * along in the tree, but a title with no operation behind it is deliberately ignored by the
+ * receiver — two devices holding the same URL under different names would otherwise trade
+ * them forever — so a bookmark renamed while excluded kept its old name everywhere else.
+ *
+ * Re-joining therefore republishes the subtree as it stands HERE, stamped now. That has a
+ * cost worth stating: a peer that renamed the same URL more recently loses to this stamp.
+ * It is the defensible way round, because unticking the box is an explicit act and what
+ * this device holds is exactly what the user has just asked to share again — and it happens
+ * only on that act, never on a sync.
+ *
+ * Folders are left out, and cannot be included: a folder rename travels as an operation
+ * keyed on the OLD name, which is read from the last synced snapshot, and an excluded
+ * folder is not in that snapshot. A folder renamed while excluded re-joins under its new
+ * name alone.
+ */
+export async function recordExclusionRelease(
+  before: BookmarkExclusion[], after: BookmarkExclusion[],
+): Promise<void> {
+  if (!before.length) return; // nothing was excluded, so nothing can come back
+  if (JSON.stringify(before) === JSON.stringify(after)) return; // a save that left the rules alone
+  const was = (await localExclusions(before)).part.excludedIds;
+  if (!was.size) return;
+  const still = after.length ? (await localExclusions(after)).part.excludedIds : new Set<string>();
+  const back = new Set([...was].filter((id) => !still.has(id)));
+  if (!back.size) return;
+  // The tree as it syncs NOW: the new rules are already saved, so what came back is in it.
+  const live = flattenNodes(await exportBookmarks());
+  const rejoined = live.filter((n) => n.url && back.has(n.id));
+  const now = Date.now();
+  if (rejoined.length) {
+    await updateTitles((current) =>
+      mergeTitleLists(current, rejoined.map((n) => ({ url: n.url as string, title: n.title, at: now })))
+    );
+    // And that they are here, so a peer's older deletion does not undo the lot on arrival (#27).
+    await updateAppeared((current) =>
+      gcAppeared([...current, ...rejoined.map((n) => ({ url: n.url as string, at: now }))])
+    );
+  }
+
+  // A FOLDER's rename, reconstructed from the rule that was holding it out.
+  //
+  // A folder rename travels as an operation keyed on the name the peers still hold, and for
+  // an excluded folder the live tree cannot supply that name: the last synced snapshot, which
+  // every other recorder reads it from, has no excluded folder in it. The rule does. Its path
+  // is the one the folder had when the box was ticked, so its last segment is exactly the name
+  // the peers are still using — the only place that name survives.
+  const byId = new Map(live.map((n) => [n.id, n]));
+  const stillThere = (r: BookmarkExclusion): boolean => after.some((k) =>
+    (k.id !== undefined && k.id === r.id)
+    || (k.url === r.url && k.path.length === r.path.length && k.path.every((seg, i) => seg === r.path[i]))
+  );
+  const renames: FolderRenameRecord[] = [];
+  for (const r of before) {
+    // `id` is what the rule is matched by once the folder has been renamed, and the tree
+    // writes one into every rule it makes. Without it there is nothing to go on here.
+    if (r.url || !r.id || stillThere(r) || !back.has(r.id)) continue;
+    const was = r.path[r.path.length - 1];
+    const node = byId.get(r.id);
+    if (was === undefined || !node || node.url || node.title === was) continue;
+    const parentPath = r.path.slice(0, -1);
+    if (!parentPath.length || !node.parentId) continue;
+    const holds = await releasedTwinMark(r.id, was, node.parentId);
+    renames.push({ path: parentPath, from: was, to: node.title, at: now, ...(holds ? { holds } : {}) });
+  }
+  if (renames.length) {
+    await updateFolderRenames((current) => mergeFolderRenameLists(current, renames));
+  }
+
+  if (rejoined.length || renames.length) {
+    logger.event("Bookmarks", `Put ${rejoined.length} bookmark(s) and ${renames.length} folder rename(s) back into the sync`);
+  }
+}
+
+/**
+ * twinMark for a folder the cache cannot speak for.
+ *
+ * A released folder was never in the last synced snapshot, so the bookmark that tells the
+ * receiver WHICH same-named folder is meant (#51) has to come from the folder as it stands
+ * here. One the peers happen not to have simply fails to match on arrival, and the receiver
+ * then leaves the rename alone rather than renaming the wrong twin — which is what it would
+ * do with no mark at all, since it would take the first folder of that name.
+ */
+async function releasedTwinMark(id: string, was: string, parentId: string): Promise<string | undefined> {
+  try {
+    const siblings = await browser.bookmarks.getChildren(parentId);
+    if (!siblings.some((s) => !s.url && s.id !== id && s.title === was)) return undefined;
+    return [...urlKeysIn((await browser.bookmarks.getSubTree(id)).map((n) => mapNode(n, 0)))].sort()[0];
+  } catch {
+    return undefined;
+  }
+}
+
 export function registerBookmarkListeners(onChange: BookmarkChangeCallback): void {
   // The background script calls this at the TOP LEVEL, because MV3 requires listeners to
   // be attached on every worker load. So on a browser with no bookmarks API this line
@@ -2306,7 +2413,13 @@ export function registerBookmarkListeners(onChange: BookmarkChangeCallback): voi
   });
   browser.bookmarks.onChanged.addListener((id, changeInfo) => {
     swallow((async () => {
-      const ex = await exclusions();
+      // The one event that cannot take the shortcut above. A rename landing during a merge
+      // may be the USER's — recording those is the whole point of the self-write ledger —
+      // so whether it is about something this device keeps to itself has to be asked here
+      // too, or an excluded bookmark renamed mid-sync would publish its URL (#54). It costs
+      // one storage read where no rules are configured, and a rename is nothing like the
+      // onCreated burst the shortcut exists for.
+      const ex = await excludedNow().catch(() => null);
       if (ex) {
         if (ex.ids.has(id)) return;
         // Renamed or re-pointed onto an excluded path or URL: it leaves the sync as a move

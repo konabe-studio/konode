@@ -213,6 +213,11 @@ export async function launchPeer({
       );
     },
 
+    /** A settings change, exactly as Settings sends it — the whole point of going through
+     *  the message rather than chrome.storage: SAVE_SETTINGS is where the extension reacts
+     *  to one (re-reading the backend, and noticing an exclusion that was just lifted). */
+    saveSettings: (partial) => ok("SAVE_SETTINGS", partial),
+
     sync: () => ok("SYNC_NOW"),
     restore: (sessionId) => ok("RESTORE_SESSION", { id: sessionId }),
     close: () => context.close().catch(() => {}),
