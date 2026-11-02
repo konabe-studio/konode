@@ -121,8 +121,9 @@ you had in mind. Picking one system for bookmarks is the simple answer.
 
 ## Browser support
 
-- **Chromium**: Chrome, Brave, Helium, ungoogled-chromium, and other Chromium
-  browsers. Fully supported, and on the Chrome Web Store.
+- **Chromium**: Chrome, Edge, Brave, Helium, ungoogled-chromium, and other Chromium
+  browsers. Fully supported, and on the Chrome Web Store. A Microsoft Edge Add-ons
+  listing, with the same package, is in review.
 - **Firefox**: Firefox and Firefox-based browsers (e.g. Waterfox), from a dedicated
   build that ships on Firefox Add-ons. Same sync folder and same files as your
   Chromium browsers, so a Firefox install joins a group that is already running.
@@ -156,8 +157,14 @@ untranslated string falls back to English, which is safe.
 
 - **Chrome / Brave / Helium / other Chromium browsers**: install from the
   **[Chrome Web Store](https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa)**.
+- **Microsoft Edge**: install from the Chrome Web Store link above for now (Edge asks once
+  to allow extensions from other stores). A Microsoft Edge Add-ons listing is in review;
+  it carries the same package as the Chrome Web Store, so the version is the same either
+  way.
 - **Firefox / Waterfox**: install from
-  **[Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/)**.
+  **[Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/)**. On Firefox for
+  Android, Konode syncs open tabs and the extension list (Firefox for Android gives
+  extensions no bookmarks or history), on GitHub or WebDAV storage.
 
 New to Konode? The **[Getting Started guide](GETTING_STARTED.md)** walks through setup
 and connecting each backend.

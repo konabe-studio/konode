@@ -99,7 +99,9 @@ on any Chromium browser and on Firefox.
 ## Now live
 Konode is live on both stores. **Firefox Add-ons serves 1.5.1** since 2026-11-02, listed for
 Firefox for Android too from that version. **The Chrome Web Store serves 1.4.0** since
-2026-09-30, with 1.5.1 in review since 2026-11-02.
+2026-09-30, with 1.5.1 in review since 2026-11-02. **Microsoft Edge Add-ons** is the third
+store (#43): its first submission, 1.5.1 from the same package as the Web Store, went in on
+2026-11-02 and is in review.
 
 **1.5.1 shipped on 2026-11-02**, tagged `v1.5.1` at `64fcc87`, and it is the first store
 release since 1.4.0: 1.5.0 (tagged 2026-11-01 at `2c9b649`) went to neither store, so 1.5.1
@@ -163,6 +165,14 @@ out says which half of his problem the release solves and which half it does not
     GitLab long after the text inside the extension stopped, and someone installed Konode on
     the strength of it and filed the issue. Screenshots are the part of a listing no test can
     read, so a backend claim changing means checking them by eye.
+- Microsoft Edge Add-ons ([#43](https://github.com/konabe-studio/konode/issues/43)): **first
+  submission 2026-11-02**, 1.5.1, in review (Microsoft quotes up to seven business days).
+  It takes the Web Store's zip unchanged, so every release goes to both from one file, and
+  an Edge user can still install from the Web Store as before. The listing gets its own
+  extension id (`acmngpjfommajbkfbfmdfemlheiamfoe`), which needed two more Drive redirect
+  URIs, registered before the submission. Why a third store when Edge already installs from
+  the Web Store: Edge for Android installs only from Edge Add-ons, and the Web Store is out
+  of reach from mainland China without a VPN, where most of Konode's real users are.
 
 The two ran three days and two versions apart before the Web Store caught up, and that is
 the shape of every release here rather than anything going wrong: AMO signs on upload and
