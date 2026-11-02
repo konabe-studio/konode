@@ -2306,17 +2306,70 @@ export async function recordExclusionRelease(
   const back = new Set([...was].filter((id) => !still.has(id)));
   if (!back.size) return;
   // The tree as it syncs NOW: the new rules are already saved, so what came back is in it.
-  const rejoined = flattenNodes(await exportBookmarks()).filter((n) => n.url && back.has(n.id));
-  if (!rejoined.length) return;
+  const live = flattenNodes(await exportBookmarks());
+  const rejoined = live.filter((n) => n.url && back.has(n.id));
   const now = Date.now();
-  await updateTitles((current) =>
-    mergeTitleLists(current, rejoined.map((n) => ({ url: n.url as string, title: n.title, at: now })))
+  if (rejoined.length) {
+    await updateTitles((current) =>
+      mergeTitleLists(current, rejoined.map((n) => ({ url: n.url as string, title: n.title, at: now })))
+    );
+    // And that they are here, so a peer's older deletion does not undo the lot on arrival (#27).
+    await updateAppeared((current) =>
+      gcAppeared([...current, ...rejoined.map((n) => ({ url: n.url as string, at: now }))])
+    );
+  }
+
+  // A FOLDER's rename, reconstructed from the rule that was holding it out.
+  //
+  // A folder rename travels as an operation keyed on the name the peers still hold, and for
+  // an excluded folder the live tree cannot supply that name: the last synced snapshot, which
+  // every other recorder reads it from, has no excluded folder in it. The rule does. Its path
+  // is the one the folder had when the box was ticked, so its last segment is exactly the name
+  // the peers are still using — the only place that name survives.
+  const byId = new Map(live.map((n) => [n.id, n]));
+  const stillThere = (r: BookmarkExclusion): boolean => after.some((k) =>
+    (k.id !== undefined && k.id === r.id)
+    || (k.url === r.url && k.path.length === r.path.length && k.path.every((seg, i) => seg === r.path[i]))
   );
-  // And that they are here, so a peer's older deletion does not undo the lot on arrival (#27).
-  await updateAppeared((current) =>
-    gcAppeared([...current, ...rejoined.map((n) => ({ url: n.url as string, at: now }))])
-  );
-  logger.event("Bookmarks", `Put ${rejoined.length} bookmark(s) back into the sync`);
+  const renames: FolderRenameRecord[] = [];
+  for (const r of before) {
+    // `id` is what the rule is matched by once the folder has been renamed, and the tree
+    // writes one into every rule it makes. Without it there is nothing to go on here.
+    if (r.url || !r.id || stillThere(r) || !back.has(r.id)) continue;
+    const was = r.path[r.path.length - 1];
+    const node = byId.get(r.id);
+    if (was === undefined || !node || node.url || node.title === was) continue;
+    const parentPath = r.path.slice(0, -1);
+    if (!parentPath.length || !node.parentId) continue;
+    const holds = await releasedTwinMark(r.id, was, node.parentId);
+    renames.push({ path: parentPath, from: was, to: node.title, at: now, ...(holds ? { holds } : {}) });
+  }
+  if (renames.length) {
+    await updateFolderRenames((current) => mergeFolderRenameLists(current, renames));
+  }
+
+  if (rejoined.length || renames.length) {
+    logger.event("Bookmarks", `Put ${rejoined.length} bookmark(s) and ${renames.length} folder rename(s) back into the sync`);
+  }
+}
+
+/**
+ * twinMark for a folder the cache cannot speak for.
+ *
+ * A released folder was never in the last synced snapshot, so the bookmark that tells the
+ * receiver WHICH same-named folder is meant (#51) has to come from the folder as it stands
+ * here. One the peers happen not to have simply fails to match on arrival, and the receiver
+ * then leaves the rename alone rather than renaming the wrong twin — which is what it would
+ * do with no mark at all, since it would take the first folder of that name.
+ */
+async function releasedTwinMark(id: string, was: string, parentId: string): Promise<string | undefined> {
+  try {
+    const siblings = await browser.bookmarks.getChildren(parentId);
+    if (!siblings.some((s) => !s.url && s.id !== id && s.title === was)) return undefined;
+    return [...urlKeysIn((await browser.bookmarks.getSubTree(id)).map((n) => mapNode(n, 0)))].sort()[0];
+  } catch {
+    return undefined;
+  }
 }
 
 export function registerBookmarkListeners(onChange: BookmarkChangeCallback): void {

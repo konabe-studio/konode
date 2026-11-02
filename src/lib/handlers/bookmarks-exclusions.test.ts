@@ -3,7 +3,9 @@ import {
   importBookmarks, exportBookmarkPayload, recordExclusionRelease, registerBookmarkListeners,
   resetExclusionCache, restoreBookmarks,
 } from "@/lib/handlers/bookmarks-handler";
-import { KEYS, getAppeared, getFolderDeletes, getTitles, getTombstones } from "@/lib/utils/storage";
+import {
+  KEYS, getAppeared, getFolderDeletes, getFolderRenames, getTitles, getTombstones,
+} from "@/lib/utils/storage";
 import type { BookmarkExclusion, BookmarkPayload, SyncBookmark } from "@/lib/types";
 
 // #54. An extension that keeps a huge bookmark folder of its own had Konode publishing and
@@ -458,5 +460,64 @@ describe("unticking the box puts what changed back into the sync (#54)", () => {
     spy.mockRestore();
 
     expect(await getTitles()).toEqual([]);
+  });
+
+  // A folder rename travels keyed on the name the PEERS still hold, and for an excluded
+  // folder the live tree cannot supply it: the last synced snapshot every other recorder
+  // reads it from has no excluded folder in it. The rule that was holding the folder out
+  // does — its path is the one the folder had when the box was ticked.
+
+  /** A synced folder, excluded, then renamed while it is out of the sync. */
+  async function folderRenamedWhileExcluded(twin = false): Promise<{
+    id: string; rule: BookmarkExclusion[];
+  }> {
+    const work = await folderWith("Work", ["https://a.com/"]);
+    if (twin) await folderWith("Work", ["https://b.com/"]); // a same-named sibling, not excluded
+    await exportBookmarkPayload();
+    const rule = [{ path: ["bar", "Work"], id: work }];
+    await exclude(rule);
+    resetExclusionCache();
+
+    await chrome.bookmarks.update(work, { title: "Job" });
+    expect(await getFolderRenames()).toEqual([]); // nothing recorded while it was out
+
+    await exclude([]);
+    resetExclusionCache();
+    return { id: work, rule };
+  }
+
+  it("publishes a folder renamed while excluded, under the name the peers still hold", async () => {
+    const { rule } = await folderRenamedWhileExcluded();
+
+    await recordExclusionRelease(rule, []);
+
+    const out = await exportBookmarkPayload();
+    expect(out.folderRenames?.map((r) => `${r.path.join("/")}:${r.from}->${r.to}`))
+      .toEqual(["bar:Work->Job"]);
+  });
+
+  it("marks that rename with a bookmark when a same-named folder sits beside it (#51)", async () => {
+    const { rule } = await folderRenamedWhileExcluded(true);
+
+    await recordExclusionRelease(rule, []);
+
+    const out = await exportBookmarkPayload();
+    // Without the mark the receiver would take the first folder called Work and rename the
+    // wrong one; with it, it either finds the right one or leaves the rename alone.
+    expect(out.folderRenames?.[0]?.holds).toBeTruthy();
+  });
+
+  it("records no folder rename when the folder kept its name", async () => {
+    const work = await folderWith("Work", ["https://a.com/"]);
+    await exportBookmarkPayload();
+    const rule = [{ path: ["bar", "Work"], id: work }];
+    await exclude(rule);
+    resetExclusionCache();
+    await exclude([]);
+    resetExclusionCache();
+
+    await recordExclusionRelease(rule, []);
+
+    expect(await getFolderRenames()).toEqual([]);
   });
 });
