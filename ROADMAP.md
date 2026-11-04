@@ -209,7 +209,7 @@ keeps the two from being confused.
   tabs and switchable on its own in Settings. Firefox has groups from 138 and `tabGroups`
   from 139, grants it without a prompt, and shares Chrome's nine colours. Wherever groups do
   not exist (Firefox for Android, Safari, older Firefox), a session restores ungrouped, as
-  before. Then the rest of #11 gets its look, the reading list first.
+  before. The reading list continues in [#77](https://github.com/konabe-studio/konode/issues/77).
 - **Backend expansion**, cheapest sign-in first. See *Platform priority* item 3 below.
 - **History sync performance**: the full-history dedup scan. It is now built once per
   SYNC rather than once per peer (1.3.1), which was the larger half of the cost with more
@@ -258,7 +258,7 @@ keeps the two from being confused.
     it with no engine change. **Live tab groups** (`chrome.tabGroups`, live groups only,
     since Brave's *saved* groups are not exposed to extensions) shipped in 1.5.0, as an
     optional field on the session packet rather than a data type of its own, which is the
-    shape #6 will take too. The reading list moves to an issue of its own, and #11 closes
+    shape #6 will take too. The reading list moved to [#77](https://github.com/konabe-studio/konode/issues/77), and #11 closes
     with the tab groups.
   - [#10 Device identity is per install, not per machine](https://github.com/konabe-studio/konode/issues/10),
     split from #7. The rule it lands on: never merge identities automatically, ask, and ask

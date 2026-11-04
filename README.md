@@ -273,7 +273,7 @@ use a dedicated manager like [Bitwarden](https://bitwarden.com),
   ([#23](https://github.com/konabe-studio/konode/issues/23)) · a device list that says when
   each device was last active ([#10](https://github.com/konabe-studio/konode/issues/10)) ·
   a conflict card that shows what differs ([#35](https://github.com/konabe-studio/konode/issues/35)) ·
-  the reading list ([#11](https://github.com/konabe-studio/konode/issues/11)) · more backends, cheapest sign-in first (Dropbox token and S3-compatible, then Dropbox OAuth
+  the reading list ([#77](https://github.com/konabe-studio/konode/issues/77)) · more backends, cheapest sign-in first (Dropbox token and S3-compatible, then Dropbox OAuth
   and OneDrive) · faster history sync · more languages (Japanese, Estonian, Arabic).
 - **Later**: right-to-left languages · incremental diff for very large bookmark trees ·
   diffs between restore points.
