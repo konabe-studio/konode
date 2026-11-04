@@ -5,6 +5,24 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+
+- **The device list says how long ago each device last uploaded, and which browser it is.**
+  Settings showed the exact date and time of a device's last upload, which is precise and
+  hard to read at a glance. It now says "last upload 39 days ago" in your language, and the
+  exact time is still there when you hover over it. A device that has uploaded nothing for
+  more than 30 days gets a quiet INACTIVE mark and a line saying what that can mean: a
+  browser uploads only when something it syncs has changed, so a long silence is either a
+  quiet browser or one that is gone. Nothing happens to it on its own. Forgetting a device
+  is still something only you do.
+
+  Each row also names the browser and its engine, for example "Brave (Chromium)" or
+  "Firefox (Gecko)", which tells the Chrome build and the Firefox build on one computer
+  apart. That is all a device records about itself: no version, no operating system, no
+  hardware details. A device shows it once it has synced on this version, and every device
+  uploads its files once more after updating to carry it. Two identical computers still
+  look identical here, and the upload time is what tells those apart (#10).
+
 ### Changed
 
 - **A blocked deletion shows which bookmarks it would remove (#23).** When another device

@@ -1220,13 +1220,45 @@
     "message": "THIS DEVICE",
     "description": "Badge marking your own device in the list. Upper case matches the other badges; use whatever reads as a badge in your language."
   },
-  "opt_last_upload": {
+  "opt_last_upload_ago": {
     "message": "· last upload $WHEN$",
-    "description": "Follows the list of data types on a device row. $WHEN$ is a date already formatted in the browser's own locale. Keep the leading middle dot, it separates this from the types.",
+    "description": "Follows the list of data types on a device row. $WHEN$ is how long ago, already worded by the browser in your language, such as \"39 days ago\", \"3 hours ago\" or \"2 years ago\", so build the phrase around a time of that shape. Keep the leading middle dot, it separates this from the types.",
     "placeholders": {
       "when": {
         "content": "$1",
-        "example": "8/9/2026, 10:20:45 AM"
+        "example": "39 days ago"
+      }
+    }
+  },
+  "opt_device_browser": {
+    "message": "$BROWSER$ ($ENGINE$)",
+    "description": "The browser a device runs and the engine it is built on, shown after the device's name, for example \"Brave (Chromium)\" or \"Firefox (Gecko)\". Both are product names and are never translated. Change only the punctuation, if your language writes brackets differently.",
+    "placeholders": {
+      "browser": {
+        "content": "$1",
+        "example": "Brave"
+      },
+      "engine": {
+        "content": "$2",
+        "example": "Chromium"
+      }
+    }
+  },
+  "opt_device_dormant": {
+    "message": "INACTIVE",
+    "description": "Badge on a device in the list that has uploaded nothing for a long time (the line under it says how long). Calm, not alarming: nothing is wrong and nothing happens to the device. Upper case matches the other badges; use whatever reads as a badge in your language."
+  },
+  "opt_device_dormant_note_one": {
+    "message": "Nothing uploaded in over a day. That can mean nothing changed there, or that this browser is gone. If it is gone, you can forget it.",
+    "description": "Under a device marked INACTIVE. A device uploads only when something it syncs has changed, so a long silence is not proof the device is gone, and this says both. \"Forget\" is the button on the same row. $COUNT$ is available but this form does not need it."
+  },
+  "opt_device_dormant_note_other": {
+    "message": "Nothing uploaded in over $COUNT$ days. That can mean nothing changed there, or that this browser is gone. If it is gone, you can forget it.",
+    "description": "Plural of opt_device_dormant_note_one. $COUNT$ is a number of days, 30 today.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
       }
     }
   },

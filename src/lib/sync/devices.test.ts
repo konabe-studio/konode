@@ -188,6 +188,62 @@ describe("listDevices", () => {
   });
 });
 
+describe("what each device runs (#10)", () => {
+  // The browser rides in the packet envelope next to the name, outside the ciphertext, so a
+  // peer can show it without the passphrase. Older builds never wrote it.
+  const withBrowser = (device_id: string, browser: unknown) => JSON.stringify({
+    ...JSON.parse(packet(device_id, "extensions", "Mac", "2026-11-01T10:00:00.000Z")),
+    device_browser: browser,
+  });
+
+  it("lists the browser and engine a peer recorded", async () => {
+    h.files.set("konode_extensions_chrome.json", withBrowser("chrome", { engine: "chromium", name: "Chrome" }));
+    h.files.set("konode_extensions_fox.json", withBrowser("fox", { engine: "gecko", name: "Firefox" }));
+
+    const devices = await new SyncEngine(settings(), () => {}).listDevices();
+
+    expect(devices.find((d) => d.device_id === "chrome")?.browser).toEqual({ engine: "chromium", name: "Chrome" });
+    expect(devices.find((d) => d.device_id === "fox")?.browser).toEqual({ engine: "gecko", name: "Firefox" });
+  });
+
+  it("shows nothing for a peer on an older build, and nothing for a field it cannot trust", async () => {
+    h.files.set("konode_extensions_old.json", packet("old", "extensions", "Old", "2026-08-01T10:00:00.000Z"));
+    h.files.set("konode_extensions_odd.json", withBrowser("odd", { engine: "presto", name: "Opera 12" }));
+
+    const devices = await new SyncEngine(settings(), () => {}).listDevices();
+
+    expect(devices.map((d) => d.browser)).toEqual([null, null]);
+  });
+
+  it("writes this device's browser into every packet it uploads, and nothing finer", async () => {
+    vi.stubGlobal("navigator", {
+      userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      userAgentData: { brands: [{ brand: "Brave", version: "130" }, { brand: "Chromium", version: "130" }] },
+    });
+    try {
+      const engine = new SyncEngine(settings(), () => {}) as unknown as {
+        buildPacket(type: string, payload: unknown): Promise<Record<string, unknown>>;
+      };
+      const p = await engine.buildPacket("extensions", []);
+      expect(p.device_browser).toEqual({ engine: "chromium", name: "Brave" });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("leaves the field off entirely when it cannot tell, rather than writing a guess", async () => {
+    vi.stubGlobal("navigator", { userAgent: "Node.js/24" });
+    try {
+      const engine = new SyncEngine(settings(), () => {}) as unknown as {
+        buildPacket(type: string, payload: unknown): Promise<Record<string, unknown>>;
+      };
+      expect("device_browser" in await engine.buildPacket("extensions", [])).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 describe("forgetDevice", () => {
   it("deletes every file that device had, and leaves the others alone", async () => {
     h.files.set("konode_bookmarks_peer1.json", packet("peer1", "bookmarks", "Gone", "2026-08-01T10:00:00.000Z"));

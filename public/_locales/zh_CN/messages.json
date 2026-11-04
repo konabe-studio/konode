@@ -1068,12 +1068,40 @@
   "opt_this_device": {
     "message": "此设备"
   },
-  "opt_last_upload": {
+  "opt_last_upload_ago": {
     "message": "· 最后上传 $WHEN$",
     "placeholders": {
       "when": {
         "content": "$1",
-        "example": "8/9/2026, 10:20:45 AM"
+        "example": "39 days ago"
+      }
+    }
+  },
+  "opt_device_browser": {
+    "message": "$BROWSER$（$ENGINE$）",
+    "placeholders": {
+      "browser": {
+        "content": "$1",
+        "example": "Brave"
+      },
+      "engine": {
+        "content": "$2",
+        "example": "Chromium"
+      }
+    }
+  },
+  "opt_device_dormant": {
+    "message": "不活跃"
+  },
+  "opt_device_dormant_note_one": {
+    "message": "已超过一天没有上传任何内容。这可能是那边什么都没有变化，也可能是这个浏览器已经不在了。如果已经不在，可以将它忘记。"
+  },
+  "opt_device_dormant_note_other": {
+    "message": "已超过 $COUNT$ 天没有上传任何内容。这可能是那边什么都没有变化，也可能是这个浏览器已经不在了。如果已经不在，可以将它忘记。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
       }
     }
   },

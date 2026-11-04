@@ -905,12 +905,40 @@
   "opt_this_device": {
     "message": "ESTE DISPOSITIVO"
   },
-  "opt_last_upload": {
+  "opt_last_upload_ago": {
     "message": "· última subida $WHEN$",
     "placeholders": {
       "when": {
         "content": "$1",
-        "example": "8/9/2026, 10:20:45 AM"
+        "example": "39 days ago"
+      }
+    }
+  },
+  "opt_device_browser": {
+    "message": "$BROWSER$ ($ENGINE$)",
+    "placeholders": {
+      "browser": {
+        "content": "$1",
+        "example": "Brave"
+      },
+      "engine": {
+        "content": "$2",
+        "example": "Chromium"
+      }
+    }
+  },
+  "opt_device_dormant": {
+    "message": "INACTIVO"
+  },
+  "opt_device_dormant_note_one": {
+    "message": "No ha subido nada en más de un día. Puede que allí no haya cambiado nada o que este navegador ya no exista. Si ya no existe, puedes olvidarlo."
+  },
+  "opt_device_dormant_note_other": {
+    "message": "No ha subido nada en más de $COUNT$ días. Puede que allí no haya cambiado nada o que este navegador ya no exista. Si ya no existe, puedes olvidarlo.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
       }
     }
   },
