@@ -421,15 +421,27 @@ export interface SyncState {
   // machine asked, and both are needed before anyone can decide to approve it (#18).
   // `recent` is what other devices' deletions already removed here within the guard's
   // window: when it is not 0, that is why a deletion smaller than the cap was held back.
+  // `sample` is the first few of the `blocked` bookmarks themselves (#23), already capped
+  // in count and length by the merge; `blocked` minus its length is the "and N more".
   recovery_notice?: {
     at: string;
     blocked: number;
     cap?: number;
     local_total?: number;
     recent?: number;
+    sample?: BlockedBookmark[];
     device_id?: string;
     device_label?: string | null;
   } | null;
+}
+
+/**
+ * One bookmark a blocked deletion would remove, as the Activity card lists it (#23). Its
+ * fields are cut to a fixed length before they are stored: see `blockedSample`.
+ */
+export interface BlockedBookmark {
+  title: string;
+  url: string;
 }
 
 /**

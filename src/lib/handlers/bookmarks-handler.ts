@@ -1,7 +1,7 @@
 import type {
   SyncBookmark, Tombstone, MoveRecord, FolderMoveRecord, TitleRecord, FolderRenameRecord,
   FolderDeleteRecord, AppearedRecord, KeptShellRecord, CreatedRecord, BookmarkPayload, ConflictStrategy,
-  BookmarkExclusion,
+  BookmarkExclusion, BlockedBookmark,
 } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import {
@@ -952,6 +952,40 @@ export interface BulkDeleteBlock {
   /** What other devices' deletions already removed here within the window, which counts
    *  toward the cap together with `blocked` (#41). */
   recent: number;
+  /**
+   * The first few of the `blocked` bookmarks themselves (#23), so the notice can say which
+   * ones and the user can tell "I meant that" from "I never touched those".
+   *
+   * Exactly the bookmarks Apply would remove: the ones this merge held back, never the
+   * `recent` ones, which are already gone. Capped at BLOCKED_SAMPLE_SIZE entries and each
+   * field at a fixed length, because it is stored in `konode_state`, which is rewritten
+   * and broadcast on every status change, and a bookmark can be a megabyte-long data: URL.
+   */
+  sample: BlockedBookmark[];
+}
+
+/** How many of a blocked deletion's bookmarks are kept to show. */
+export const BLOCKED_SAMPLE_SIZE = 5;
+const BLOCKED_TITLE_MAX = 120;
+const BLOCKED_URL_MAX = 240;
+
+/** `s` cut to `max` characters, with an ellipsis where it was cut. */
+function clip(s: string, max: number): string {
+  return s.length > max ? `${s.slice(0, max - 1)}…` : s;
+}
+
+/**
+ * The first BLOCKED_SAMPLE_SIZE bookmarks of a held-back deletion, in the order it was
+ * asked for, each bookmark once however many copies of it this device holds.
+ */
+export function blockedSample(nodes: Iterable<{ title?: string; url?: string }>): BlockedBookmark[] {
+  const out: BlockedBookmark[] = [];
+  for (const n of nodes) {
+    if (out.length >= BLOCKED_SAMPLE_SIZE) break;
+    if (!n.url) continue;
+    out.push({ title: clip((n.title ?? "").trim(), BLOCKED_TITLE_MAX), url: clip(n.url, BLOCKED_URL_MAX) });
+  }
+  return out;
 }
 
 /**
@@ -1343,7 +1377,20 @@ async function mergeBookmarks(
       ? `${asked + recentGone.size} of ${before} with the ${recentGone.size} that peers removed in the last day; cap ${cap}, ${pct}%`
       : `cap ${cap}, ${pct}% of ${localByUrl.size}`;
     logger.info("mergeBookmarks", `Skipped deleting ${asked} bookmarks (${why}): exceeds the mass-delete guard`);
-    onBulkBlocked?.({ blocked: asked, cap, localTotal: localByUrl.size, pct, recent: recentGone.size });
+    if (onBulkBlocked) {
+      // Which bookmarks, not only how many (#23). Taken from `toRemove`, the list the removal
+      // loop below would have worked through, so what the card shows is what Apply removes.
+      // One entry per URL, like `asked`: the first copy stands for the rest.
+      const nodeById = new Map(localFlat.map((n) => [n.id, n]));
+      const firstOfKey = new Map<string, string>();
+      for (const id of toRemove) {
+        const key = keyOfId.get(id) as string;
+        if (!firstOfKey.has(key)) firstOfKey.set(key, id);
+        if (firstOfKey.size >= BLOCKED_SAMPLE_SIZE) break;
+      }
+      const sample = blockedSample([...firstOfKey.values()].map((id) => nodeById.get(id) ?? {}));
+      onBulkBlocked({ blocked: asked, cap, localTotal: localByUrl.size, pct, recent: recentGone.size, sample });
+    }
   } else {
     for (const id of toRemove) {
       try {

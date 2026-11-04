@@ -446,7 +446,11 @@ describe("importBookmarks — mass-delete guard (configurable percent)", () => {
     await importBookmarks(payload([], tombstonesFor(70)), "merge", "lww", 60, 0, (i) => { info = i; });
 
     expect((await localUrls()).length).toBe(40);
-    expect(info).toEqual({ blocked: 10, cap: 60, localTotal: 40, pct: 60, recent: 60 });
+    // The sample is from the ten held back, never from the sixty already gone (#23).
+    expect(info).toEqual({
+      blocked: 10, cap: 60, localTotal: 40, pct: 60, recent: 60,
+      sample: [60, 61, 62, 63, 64].map((i) => ({ title: `S${i}`, url: `https://s${i}.com` })),
+    });
   });
 
   it("forgets what peers removed more than a day ago", async () => {
@@ -517,6 +521,63 @@ describe("importBookmarks — mass-delete guard (configurable percent)", () => {
     await importBookmarks(payload([], [{ url: "neo://newtab/", deletedAt: 9e15 }]), "merge", "lww");
 
     expect((await localUrls()).length).toBe(30);
+  });
+
+  // #23: the notice says which bookmarks, not only how many.
+  it("names the first five bookmarks it held back, with their titles and addresses", async () => {
+    await seedMany(100);
+    let info: BulkDeleteBlock | undefined;
+    await importBookmarks(payload([], tombstonesFor(70)), "merge", "lww", 60, 0, (i) => { info = i; });
+
+    expect(info?.blocked).toBe(70);
+    expect(info?.sample).toEqual(
+      [0, 1, 2, 3, 4].map((i) => ({ title: `S${i}`, url: `https://s${i}.com` }))
+    );
+  });
+
+  it("lists a bookmark held in many copies once", async () => {
+    await seedMany(30);
+    for (let i = 0; i < 50; i++) await seed("New Tab", "neo://newtab/");
+    const tombstones = [{ url: "neo://newtab/", deletedAt: 9e15 }, ...tombstonesFor(30)];
+
+    let info: BulkDeleteBlock | undefined;
+    await importBookmarks(payload([], tombstones), "merge", "lww", 60, 0, (i) => { info = i; });
+
+    expect(info?.blocked).toBe(31);
+    expect(info?.sample.map((b) => b.url)).toEqual([
+      "neo://newtab/", "https://s0.com", "https://s1.com", "https://s2.com", "https://s3.com",
+    ]);
+  });
+
+  it("keeps what it stores small however long a title or address is", async () => {
+    await seedMany(40);
+    // A data: URL bookmark can be megabytes, and the notice lives in konode_state, which
+    // is rewritten and broadcast on every status change.
+    const huge = `data:text/html,${"x".repeat(100_000)}`;
+    await seed("t".repeat(5_000), huge);
+    const tombstones = [{ url: huge, deletedAt: 9e15 }, ...tombstonesFor(40)];
+
+    let info: BulkDeleteBlock | undefined;
+    await importBookmarks(payload([], tombstones), "merge", "lww", 60, 0, (i) => { info = i; });
+
+    expect(info?.sample).toHaveLength(5);
+    expect(JSON.stringify(info?.sample).length).toBeLessThan(2_000);
+    expect(info?.sample[0].url.startsWith("data:text/html,xxx")).toBe(true);
+    expect(info?.sample[0].url.endsWith("…")).toBe(true);
+    expect(info?.sample[0].title.endsWith("…")).toBe(true);
+  });
+
+  it("removes exactly the listed bookmarks once the user approves", async () => {
+    await seedMany(100);
+    let info: BulkDeleteBlock | undefined;
+    await importBookmarks(payload([], tombstonesFor(98)), "merge", "lww", 95, 0, (i) => { info = i; });
+    const listed = info?.sample.map((b) => b.url) ?? [];
+    expect(listed).toHaveLength(5);
+
+    await importBookmarks(payload([], tombstonesFor(98)), "merge", "lww", 95, info?.blocked ?? 0);
+    const left = await localUrls();
+    expect(left).toHaveLength(2);
+    for (const url of listed) expect(left).not.toContain(url);
   });
 
   it("refuses to spend an approval on a deletion bigger than the one approved", async () => {

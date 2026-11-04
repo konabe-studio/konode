@@ -7,6 +7,14 @@ All notable changes to Konode. Format loosely follows
 
 ### Changed
 
+- **A blocked deletion shows which bookmarks it would remove (#23).** When another device
+  asks to delete more of your bookmarks than the bulk-delete limit allows, the card in
+  Settings → Activity used to say how many, and who asked, and nothing about which ones.
+  It now lists the first five by title and address, with "and 43 more" under them. They are
+  the bookmarks Apply would remove, so you can tell at a glance whether this is a cleanup
+  you meant or something you never touched. Ones that other devices already removed earlier
+  in the day are not in the list, since they are gone from this device already.
+
 - **Settings calls a restore point a restore point everywhere.** Under the Restore points
   heading, three of its own lines said "Snapshot saved", "Save a snapshot now" and "Create
   snapshot", and Spanish, Italian, Russian and both Chinese followed the English. Simplified

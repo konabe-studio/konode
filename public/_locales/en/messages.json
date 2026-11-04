@@ -1086,6 +1086,26 @@
       }
     }
   },
+  "bm_list_more_one": {
+    "message": "and $COUNT$ more",
+    "description": "Under a short list of bookmarks, for the ones not listed. Shown under the bookmarks a blocked deletion would remove, in Settings → Activity. Starts lowercase because it continues the list.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_list_more_other": {
+    "message": "and $COUNT$ more",
+    "description": "Plural of bm_list_more_one.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "43"
+      }
+    }
+  },
   "bm_exclude_summary_one": {
     "message": "$COUNT$ item kept out of sync",
     "description": "Under the bookmark tree: how many folders and bookmarks are ticked, in the case of exactly one.",

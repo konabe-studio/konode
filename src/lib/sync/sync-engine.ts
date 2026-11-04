@@ -801,6 +801,7 @@ export class SyncEngine {
       cap: blocked.cap,
       local_total: blocked.localTotal,
       recent: blocked.recent,
+      sample: blocked.sample,
       device_id: blocked.device_id,
       device_label: blocked.device_label ?? null,
     };

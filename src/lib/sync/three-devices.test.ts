@@ -749,6 +749,13 @@ describe("AG. a deletion made in several sittings is one deletion (#41)", () => 
     const [, card] = await cycle(A, B);
     expect(card).toMatchObject({ blocked: 10, recent: 30 });
 
+    // The card lists five of the ten Apply removes (#23), never one of the thirty already
+    // gone, which would send the user looking for a bookmark this device no longer has.
+    const listed = (card?.sample ?? []).map((b) => b.url);
+    expect(listed).toHaveLength(5);
+    for (const url of listed) expect(sites(30, 40)).toContain(url);
+    expect(card?.sample?.[0].title).toMatch(/^B3\d$/);
+
     await at(B, async () => { await setBulkDeleteApproval(10); });
     expect(await cycle(B)).toEqual([null]);
     await at(B, async () => { expect(await urlsHere()).toEqual(sites(40, 50)); });
