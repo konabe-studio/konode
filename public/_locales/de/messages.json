@@ -1059,12 +1059,40 @@
   "opt_this_device": {
     "message": "DIESES GERÄT"
   },
-  "opt_last_upload": {
+  "opt_last_upload_ago": {
     "message": "· letzter Upload $WHEN$",
     "placeholders": {
       "when": {
         "content": "$1",
-        "example": "8/9/2026, 10:20:45 AM"
+        "example": "39 days ago"
+      }
+    }
+  },
+  "opt_device_browser": {
+    "message": "$BROWSER$ ($ENGINE$)",
+    "placeholders": {
+      "browser": {
+        "content": "$1",
+        "example": "Brave"
+      },
+      "engine": {
+        "content": "$2",
+        "example": "Chromium"
+      }
+    }
+  },
+  "opt_device_dormant": {
+    "message": "INAKTIV"
+  },
+  "opt_device_dormant_note_one": {
+    "message": "Seit über einem Tag nichts hochgeladen. Das kann heißen, dass sich dort nichts geändert hat, oder dass es diesen Browser nicht mehr gibt. Wenn es ihn nicht mehr gibt, kannst du ihn vergessen."
+  },
+  "opt_device_dormant_note_other": {
+    "message": "Seit über $COUNT$ Tagen nichts hochgeladen. Das kann heißen, dass sich dort nichts geändert hat, oder dass es diesen Browser nicht mehr gibt. Wenn es ihn nicht mehr gibt, kannst du ihn vergessen.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
       }
     }
   },

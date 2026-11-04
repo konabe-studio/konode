@@ -22,6 +22,16 @@ export interface SyncPacket {
    * payload before, which meant a device with Sessions turned off was nameless to its peers.
    */
   device_label?: string;
+  /**
+   * What the writing device runs: the browser's name and its engine, so a device list can
+   * tell the Chrome build and the Firefox build on one machine apart (#10).
+   *
+   * Optional, and absent from every packet written before it existed: a reader shows
+   * nothing then. Deliberately nothing more than these two: no version, no OS, no hardware
+   * or install id, since anything finer than "Brave on Chromium" starts to fingerprint.
+   * Display only, like `device_label`; nothing keys off it.
+   */
+  device_browser?: DeviceBrowser;
   timestamp: string; // ISO-8601
   data_type: DataType;
   checksum: string; // SHA-256 hex of the plaintext payload
@@ -552,6 +562,16 @@ export type ExtensionMessage =
  * downloading it. `device_label` and `timestamp` sit outside the encrypted payload, so both
  * are readable even with E2EE on and without the passphrase.
  */
+/** The rendering engine a browser is built on. Three cover every browser Konode runs in. */
+export type BrowserEngine = "chromium" | "gecko" | "webkit";
+
+/** What a device runs, as its own packets say. See `SyncPacket.device_browser`. */
+export interface DeviceBrowser {
+  engine: BrowserEngine;
+  /** "Brave", "Firefox", "Zen". Absent where the browser does not name itself to an extension, the usual case on WebKit. */
+  name?: string;
+}
+
 export interface DeviceInfo {
   device_id: string;
   /** null when every packet we could read came from a build that didn't carry a name. */
@@ -562,6 +582,8 @@ export interface DeviceInfo {
    * name. null if neither was available.
    */
   lastSeen: string | null;
+  /** null when the packet read for the name came from a build that did not record it. */
+  browser: DeviceBrowser | null;
   types: DataType[];
   isSelf: boolean;
 }

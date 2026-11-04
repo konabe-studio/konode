@@ -1,5 +1,5 @@
 import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncExtension, ConflictItem, BackendConfig,
-  DeviceInfo,
+  DeviceInfo, DeviceBrowser,
 } from "@/lib/types";
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { normalizeRepoSlug } from "@/lib/backends/github-backend";
@@ -11,6 +11,7 @@ import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
 import { exportHistory, importHistory, buildLocalHistoryIndex } from "@/lib/handlers/history-handler";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
 import { dataTypeAvailability, unsupportedReason, hasPermission } from "@/lib/utils/capabilities";
+import { detectBrowser, readDeviceBrowser } from "@/lib/utils/browser-identity";
 import { HttpError, rateLimitMessage } from "@/lib/utils/retry";
 import {
   getState,
@@ -254,10 +255,13 @@ export function statusAfterSync(problems: number, pendingConflicts: number): Syn
  * Folding this into the tag means one re-upload per device per bump, which is exactly the
  * cost of the change. Same mechanism the encryption form and the destination already use.
  */
-const PACKET_ENVELOPE = "env2";
+// env3: `device_browser` (#10).
+const PACKET_ENVELOPE = "env3";
 
 export class SyncEngine {
   public isSyncing = false;
+  // Asked once per engine: the answer cannot change while the browser runs.
+  private browserIdentity: Promise<DeviceBrowser | null> | undefined;
   private resolver: ConflictResolver;
   // Peers we couldn't safely consume this sync because they disagree on encryption
   // (plaintext peer while we encrypt, encrypted peer we can't decrypt, or a wrong
@@ -866,6 +870,7 @@ export class SyncEngine {
         const pick = CHEAPEST.find((t) => set.has(t));
         let label: string | null = null;
         let lastSeen: string | null = null;
+        let browserInfo: DeviceBrowser | null = null;
         if (pick) {
           const name = `konode_${pick}_${device_id}.json`;
           try {
@@ -879,6 +884,7 @@ export class SyncEngine {
               const p = JSON.parse(raw) as Partial<SyncPacket>;
               label = p.device_label ?? null;
               lastSeen = p.timestamp ?? null;
+              browserInfo = readDeviceBrowser(p.device_browser);
               if (!label) {
                 logger.info("listDevices", `${name} carries no device name yet; it will once that device syncs on a build that sends one`);
               }
@@ -891,6 +897,7 @@ export class SyncEngine {
         if (uploadedAt !== undefined) lastSeen = new Date(uploadedAt).toISOString();
         out.push({
           device_id, label, lastSeen,
+          browser: browserInfo,
           types: [...set].sort(),
           isSelf: device_id === this.settings.device_id,
         });
@@ -1451,12 +1458,15 @@ export class SyncEngine {
   private async buildPacket(dataType: DataType, payload: unknown): Promise<SyncPacket> {
     const payloadStr = JSON.stringify(payload);
     const useE2ee = this.e2eeActive;
+    const browserInfo = await (this.browserIdentity ??= detectBrowser());
     return {
       version: "1.0",
       device_id: this.settings.device_id,
       // Carried on every packet, not just the session one, so a device is nameable to its
       // peers even with Sessions turned off. Purely for display; nothing keys off it.
       device_label: this.settings.device_label,
+      // Browser name and engine only, and left off entirely when unknown (see detectBrowser).
+      ...(browserInfo ? { device_browser: browserInfo } : {}),
       timestamp: new Date().toISOString(),
       data_type: dataType,
       // SHA-256 over the plaintext, so identical content across devices still

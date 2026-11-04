@@ -106,9 +106,22 @@ export function tParts(key: string): [string, string] {
  * catalogue that actually answered.
  */
 export function applyDocumentLanguage(): void {
+  // The markup's `lang="en"` is the right thing to leave alone when there is no tag.
+  const tag = catalogueLocale();
+  if (tag) document.documentElement.lang = tag;
+}
+
+/**
+ * The BCP 47 tag of the catalogue that is answering, for `Intl` formatters whose words sit
+ * inside a translated sentence ("· last upload 3 days ago"). Same reasoning as
+ * `applyDocumentLanguage()`: on a browser set to a language Konode does not ship, the
+ * sentence is English, so the phrase in it must be English too.
+ *
+ * undefined, meaning "the browser's default", when the catalogue has no plausible tag:
+ * `t()` answers an unknown key with the key itself, which is a deliberate choice for a
+ * visible label and a bad one for a locale, where `Intl` would throw on it.
+ */
+export function catalogueLocale(): string | undefined {
   const tag = t("locale_bcp47");
-  // `t()` answers an unknown key with the key itself, which is a deliberate choice for a
-  // visible label and a bad one for an attribute. Only a plausible tag gets written; the
-  // markup's `lang="en"` is the right thing to leave alone otherwise.
-  if (/^[a-z]{2,3}(-[A-Za-z]{2,8})*$/.test(tag)) document.documentElement.lang = tag;
+  return /^[a-z]{2,3}(-[A-Za-z]{2,8})*$/.test(tag) ? tag : undefined;
 }

@@ -1,6 +1,6 @@
 # Konode Privacy Policy
 
-_Last updated: October 20, 2026_
+_Last updated: November 4, 2026_
 
 ## The short version
 
@@ -108,8 +108,9 @@ Even with encryption on, a small amount of **metadata** in each sync file is not
 encrypted: the storage provider can see that Konode sync files exist, roughly how
 many devices you sync (each has a random identifier), the **name each device goes by**
 (by default your browser and operating system, for example "Brave on Windows 10/11",
-which you can change in Settings), which data type each file holds, and when it was
-last written, but **not its contents**. Each file also
+which you can change in Settings), the **browser and engine** each device runs (for
+example "Brave" and "Chromium", with no version), which data type each file holds, and
+when it was last written, but **not its contents**. Each file also
 carries a checksum of the (unencrypted) content so your devices can tell identical
 data apart from changed data; it cannot be reversed into your data, but someone who
 already had an exact copy of your entire data set could use it to confirm the match.

@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback, useRef, Fragment } from "react";
-import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, SyncExtension, SnapshotMeta, DeviceInfo } from "@/lib/types";
+import type { SyncSettings, SyncState, BackendType, DataType, BackendConfig, SyncExtension, SnapshotMeta, DeviceInfo, DeviceBrowser } from "@/lib/types";
 import { sendMessage, request } from "@/lib/utils/messaging";
-import { t, tParts, plural, isolate } from "@/lib/utils/i18n";
+import { t, tParts, plural, isolate, catalogueLocale } from "@/lib/utils/i18n";
+import { DORMANT_DEVICE_DAYS, isDormant, relativeTime } from "@/lib/device-activity";
+import { ENGINE_LABEL } from "@/lib/utils/browser-identity";
 import { interactiveSignIn, isDriveAuthAvailable, clearGDriveSession } from "@/lib/backends/gdrive-oauth";
 import {
   allDataTypeAvailability, dataTypeAvailability, dataTypeApiPresent, ensurePermission,
@@ -262,6 +264,11 @@ const auditTime = (iso: string): string =>
     month: "short", day: "numeric",
     hour: "2-digit", minute: "2-digit", second: "2-digit",
   });
+
+// "Brave (Chromium)" on a device row, or the engine alone where the browser gave no name.
+// The name came from another program, so it is isolated from the sentence around it.
+const browserText = (b: DeviceBrowser): string =>
+  b.name ? t("opt_device_browser", [isolate(b.name), ENGINE_LABEL[b.engine]]) : ENGINE_LABEL[b.engine];
 
 // Backend label stamped on a newly created BackendConfig. The user-facing card
 // copy and icons live in the shared storage-providers module.
@@ -2209,12 +2216,26 @@ export default function OptionsApp() {
                           <div>
                             <div className="row-label">
                               {d.label != null ? <bdi>{d.label}</bdi> : t("opt_device_unnamed", d.device_id.slice(0, 8))}
+                              {/* What the device runs, from its own packets (#10). It tells the
+                                  Chrome build and the Firefox build on one machine apart; two
+                                  identical machines it cannot, which the time below does. */}
+                              {d.browser && <span className="device-browser">{browserText(d.browser)}</span>}
                               {d.isSelf && <span className="badge-active" style={{ marginLeft: 8 }}>{t("opt_this_device")}</span>}
+                              {isDormant(d.lastSeen, d.isSelf, Date.now()) && <span className="badge-quiet">{t("opt_device_dormant")}</span>}
                             </div>
                             <div className="row-desc">
                               {d.types.join(", ")}
-                              {d.lastSeen && ` ${t("opt_last_upload", new Date(d.lastSeen).toLocaleString())}`}
+                              {/* "39 days ago" is what tells a ghost from a live device at a
+                                  glance; the exact time stays one hover away. */}
+                              {d.lastSeen && <> <span title={new Date(d.lastSeen).toLocaleString()}>
+                                {t("opt_last_upload_ago", relativeTime(d.lastSeen, Date.now(), catalogueLocale()))}
+                              </span></>}
                             </div>
+                            {/* A mark, never an action: the files are in the user's own storage,
+                                so Forget stays theirs to press (#10, open question 3). */}
+                            {isDormant(d.lastSeen, d.isSelf, Date.now()) && (
+                              <div className="row-desc">{plural("opt_device_dormant_note", DORMANT_DEVICE_DAYS)}</div>
+                            )}
                           </div>
                         </div>
                         {/* No trash can. The icon did more of the work than the word did: a bin
@@ -2735,6 +2756,10 @@ const STYLES = `
   .backend-name { display: flex; align-items: center; gap: var(--sp-xs); font-size: var(--fs-sm); color: var(--text-primary); margin-bottom: var(--sp-3xs); }
   .backend-desc { font-size: var(--fs-xs); color: var(--text-secondary); line-height: 1.4; }
   .badge-active { font-size: var(--fs-2xs); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; background: var(--accent-solid); color: var(--on-accent); padding: var(--sp-3xs) var(--sp-xs); border-radius: var(--r-xs); }
+  /* The inactive device mark. Calm on purpose: an outline in the secondary text colour, not
+     the danger red, because nothing is wrong and nothing will happen to that device. */
+  .badge-quiet { font-size: var(--fs-2xs); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); border: 1px solid var(--border-input); padding: 0 var(--sp-xs); border-radius: var(--r-xs); margin-left: var(--sp-sm); white-space: nowrap; }
+  .device-browser { font-size: var(--fs-xs); color: var(--text-secondary); margin-left: var(--sp-sm); }
   .radio-circle { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border-input); flex-shrink: 0; margin-top: var(--sp-2xs); background: var(--bg-card); transition: border-color .15s; }
   .radio-circle.checked { border-color: var(--accent); background: radial-gradient(circle at center, var(--accent) 38%, transparent 42%); }
 
