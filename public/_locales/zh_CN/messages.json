@@ -77,6 +77,9 @@
   "popup_use_remote": {
     "message": "使用远程"
   },
+  "popup_conflict_resolve": {
+    "message": "处理"
+  },
   "popup_active_streams": {
     "message": "活跃数据流"
   },
@@ -967,6 +970,95 @@
         "example": "43"
       }
     }
+  },
+  "opt_conflicts_section": {
+    "message": "冲突"
+  },
+  "opt_conflicts_section_sub": {
+    "message": "本设备与另一台设备的版本不同。冲突解决设为“手动”，所以 Konode 在等你选择。"
+  },
+  "opt_conflicts_explain": {
+    "message": "“$KEEP$”会让本设备保持原样。“$REMOTE$”会把另一台设备的更改合并到这里。",
+    "placeholders": {
+      "keep": {
+        "content": "$1",
+        "example": "Keep local"
+      },
+      "remote": {
+        "content": "$2",
+        "example": "Use remote"
+      }
+    }
+  },
+  "opt_conflict_bookmarks": {
+    "message": "书签：本设备与 $DEVICE$",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_conflict_history": {
+    "message": "历史记录：本设备与 $DEVICE$",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_diff_loading": {
+    "message": "正在比较两个版本…"
+  },
+  "opt_diff_failed": {
+    "message": "无法比较这两个版本。"
+  },
+  "opt_diff_only_remote": {
+    "message": "仅在 $DEVICE$ 上（$COUNT$）",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      },
+      "count": {
+        "content": "$2",
+        "example": "12"
+      }
+    }
+  },
+  "opt_diff_only_local": {
+    "message": "仅在本设备上（$COUNT$）",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_changed_one": {
+    "message": "有 $COUNT$ 个书签两边都有，但标题不同或位于不同的文件夹。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_changed_other": {
+    "message": "有 $COUNT$ 个书签两边都有，但标题不同或位于不同的文件夹。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_none_bookmarks": {
+    "message": "现在两台设备的书签相同。"
+  },
+  "opt_diff_none_history": {
+    "message": "两台设备访问过相同的页面，只是访问时间或次数不同。"
   },
   "bm_exclude_summary_one": {
     "message": "$COUNT$ 项不参与同步",

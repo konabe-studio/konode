@@ -74,6 +74,9 @@
   "popup_use_remote": {
     "message": "Usa remoto"
   },
+  "popup_conflict_resolve": {
+    "message": "Risolvi"
+  },
   "popup_active_streams": {
     "message": "Flussi attivi"
   },
@@ -976,6 +979,95 @@
         "example": "43"
       }
     }
+  },
+  "opt_conflicts_section": {
+    "message": "Conflitti"
+  },
+  "opt_conflicts_section_sub": {
+    "message": "Questo dispositivo e un altro hanno versioni diverse. La risoluzione dei conflitti è impostata su Manuale, quindi Konode aspetta la tua scelta."
+  },
+  "opt_conflicts_explain": {
+    "message": "$KEEP$ lascia questo dispositivo com'è. $REMOTE$ unisce qui le modifiche dell'altro dispositivo.",
+    "placeholders": {
+      "keep": {
+        "content": "$1",
+        "example": "Keep local"
+      },
+      "remote": {
+        "content": "$2",
+        "example": "Use remote"
+      }
+    }
+  },
+  "opt_conflict_bookmarks": {
+    "message": "Segnalibri: questo dispositivo e $DEVICE$",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_conflict_history": {
+    "message": "Cronologia: questo dispositivo e $DEVICE$",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_diff_loading": {
+    "message": "Confronto delle due versioni…"
+  },
+  "opt_diff_failed": {
+    "message": "Impossibile confrontare le due versioni."
+  },
+  "opt_diff_only_remote": {
+    "message": "Solo su $DEVICE$ ($COUNT$)",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      },
+      "count": {
+        "content": "$2",
+        "example": "12"
+      }
+    }
+  },
+  "opt_diff_only_local": {
+    "message": "Solo su questo dispositivo ($COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_changed_one": {
+    "message": "$COUNT$ segnalibro è su entrambi, con un altro titolo o in un'altra cartella.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_changed_other": {
+    "message": "$COUNT$ segnalibri sono su entrambi, con un altro titolo o in un'altra cartella.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_none_bookmarks": {
+    "message": "Ora i due dispositivi hanno gli stessi segnalibri."
+  },
+  "opt_diff_none_history": {
+    "message": "I due dispositivi hanno visitato le stesse pagine. Cambiano solo l'ora o il numero delle visite."
   },
   "bm_exclude_summary_one": {
     "message": "$COUNT$ elemento resta fuori dalla sincronizzazione",

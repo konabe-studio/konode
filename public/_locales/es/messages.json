@@ -77,6 +77,9 @@
   "popup_use_remote": {
     "message": "Usar el remoto"
   },
+  "popup_conflict_resolve": {
+    "message": "Resolver"
+  },
   "popup_active_streams": {
     "message": "Transmisiones activas"
   },
@@ -1467,6 +1470,95 @@
         "example": "43"
       }
     }
+  },
+  "opt_conflicts_section": {
+    "message": "Conflictos"
+  },
+  "opt_conflicts_section_sub": {
+    "message": "Este dispositivo y otro tienen versiones distintas. La resolución de conflictos está en Manual, así que Konode espera a que elijas."
+  },
+  "opt_conflicts_explain": {
+    "message": "$KEEP$ deja este dispositivo como está. $REMOTE$ incorpora aquí los cambios del otro dispositivo.",
+    "placeholders": {
+      "keep": {
+        "content": "$1",
+        "example": "Keep local"
+      },
+      "remote": {
+        "content": "$2",
+        "example": "Use remote"
+      }
+    }
+  },
+  "opt_conflict_bookmarks": {
+    "message": "Marcadores: este dispositivo y $DEVICE$",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_conflict_history": {
+    "message": "Historial: este dispositivo y $DEVICE$",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_diff_loading": {
+    "message": "Comparando las dos versiones…"
+  },
+  "opt_diff_failed": {
+    "message": "No se pudieron comparar las dos versiones."
+  },
+  "opt_diff_only_remote": {
+    "message": "Solo en $DEVICE$ ($COUNT$)",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      },
+      "count": {
+        "content": "$2",
+        "example": "12"
+      }
+    }
+  },
+  "opt_diff_only_local": {
+    "message": "Solo en este dispositivo ($COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_changed_one": {
+    "message": "$COUNT$ marcador está en ambos, con otro título o en otra carpeta.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_changed_other": {
+    "message": "$COUNT$ marcadores están en ambos, con otro título o en otra carpeta.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_none_bookmarks": {
+    "message": "Ahora los dos dispositivos tienen los mismos marcadores."
+  },
+  "opt_diff_none_history": {
+    "message": "Los dos dispositivos visitaron las mismas páginas. Solo cambian la hora o el número de visitas."
   },
   "bm_exclude_summary_one": {
     "message": "$COUNT$ elemento queda fuera de la sincronización",

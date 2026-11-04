@@ -266,6 +266,11 @@ export default function PopupApp() {
   const openActivityLog = () =>
     void browser.tabs.create({ url: browser.runtime.getURL("options.html#activity") });
 
+  // What differs on a conflict does not fit in 360px, so the card's Resolve button opens
+  // the full list in Settings → Activity, where the same two answers are given (#35).
+  const openConflicts = () =>
+    void browser.tabs.create({ url: browser.runtime.getURL("options.html#activity") });
+
   const openDataTypes = () =>
     void browser.tabs.create({ url: browser.runtime.getURL("options.html#data") });
 
@@ -491,9 +496,16 @@ export default function PopupApp() {
                 <div key={group[0].device_id} className="rounded-box border border-sk-hairline bg-sk-raised px-3 py-2">
                   <div className="flex items-center gap-2">
                     <GitMerge size={12} className="shrink-0 text-sk-warn" />
-                    <span className="truncate text-[12px] text-sk-warn">
+                    <span className="min-w-0 flex-1 truncate text-[12px] text-sk-warn">
                       {group[0].device_label ? <bdi>{group[0].device_label}</bdi> : t("popup_unknown_device")}
                     </span>
+                    {/* The way to see what the two buttons below are about (#35). */}
+                    <button
+                      onClick={openConflicts}
+                      className="flex shrink-0 items-center gap-0.5 text-[12px] text-sk-muted transition-colors hover:text-sk-text"
+                    >
+                      {t("popup_conflict_resolve")} <ChevronRight size={12} />
+                    </button>
                   </div>
                   {group.map((c) => {
                     const TypeIcon = DATA_TYPE_META[c.data_type].icon;

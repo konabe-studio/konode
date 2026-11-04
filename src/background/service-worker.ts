@@ -267,6 +267,11 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
       return { type: "OK" };
     }
 
+    case "GET_CONFLICT_DIFF": {
+      if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
+      return { type: "CONFLICT_DIFF", payload: await syncEngine.conflictDiff(message.payload.id) };
+    }
+
     case "RESTORE_SESSION": {
       if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
       await syncEngine.restoreSession(message.payload?.id);

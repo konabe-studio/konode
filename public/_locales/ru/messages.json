@@ -89,6 +89,9 @@
   "popup_use_remote": {
     "message": "Взять удалённую"
   },
+  "popup_conflict_resolve": {
+    "message": "Решить"
+  },
   "popup_active_streams": {
     "message": "Активные потоки"
   },
@@ -976,6 +979,95 @@
         "example": "43"
       }
     }
+  },
+  "opt_conflicts_section": {
+    "message": "Конфликты"
+  },
+  "opt_conflicts_section_sub": {
+    "message": "У этого устройства и другого разные версии. Разрешение конфликтов установлено на «Вручную», поэтому Konode ждёт вашего выбора."
+  },
+  "opt_conflicts_explain": {
+    "message": "«$KEEP$» оставляет это устройство как есть. «$REMOTE$» переносит сюда изменения другого устройства.",
+    "placeholders": {
+      "keep": {
+        "content": "$1",
+        "example": "Keep local"
+      },
+      "remote": {
+        "content": "$2",
+        "example": "Use remote"
+      }
+    }
+  },
+  "opt_conflict_bookmarks": {
+    "message": "Закладки: это устройство и $DEVICE$",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_conflict_history": {
+    "message": "История: это устройство и $DEVICE$",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_diff_loading": {
+    "message": "Сравнение двух версий…"
+  },
+  "opt_diff_failed": {
+    "message": "Не удалось сравнить две версии."
+  },
+  "opt_diff_only_remote": {
+    "message": "Только на устройстве $DEVICE$ ($COUNT$)",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      },
+      "count": {
+        "content": "$2",
+        "example": "12"
+      }
+    }
+  },
+  "opt_diff_only_local": {
+    "message": "Только на этом устройстве ($COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_changed_one": {
+    "message": "$COUNT$ закладка есть на обоих устройствах, но с другим названием или в другой папке.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_changed_other": {
+    "message": "Закладок, которые есть на обоих устройствах, но с другим названием или в другой папке: $COUNT$.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_none_bookmarks": {
+    "message": "Теперь на обоих устройствах одинаковые закладки."
+  },
+  "opt_diff_none_history": {
+    "message": "Оба устройства посещали одни и те же страницы. Отличаются только время или число посещений."
   },
   "bm_exclude_summary_one": {
     "message": "$COUNT$ элемент не синхронизируется",
