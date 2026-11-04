@@ -849,25 +849,25 @@
     "message": "Az utolsó írás győz"
   },
   "opt_conflict_lww_desc": {
-    "message": "Mindig a legutóbbi változás győz."
+    "message": "A legújabb változás győz. Egy másik eszközön törölt könyvjelző itt is törlődik, hacsak a törlés után újra hozzá nem adtad."
   },
   "opt_conflict_local": {
     "message": "A helyi elsőbbsége"
   },
   "opt_conflict_local_desc": {
-    "message": "A helyi változások felülírják a távoliakat."
+    "message": "Ennek az eszköznek a könyvjelzői győznek. A többi eszköz új könyvjelzői továbbra is megérkeznek, de a törléseik, áthelyezéseik és átnevezéseik itt soha nem érvényesülnek."
   },
   "opt_conflict_remote": {
     "message": "A távoli elsőbbsége"
   },
   "opt_conflict_remote_desc": {
-    "message": "A távoli változások felülírják a helyieket."
+    "message": "A többi eszköz áthelyezései és átnevezései felülírják a tieidet. A törléseik ugyanúgy érvényesülnek, mint „Az utolsó írás győz” beállításnál."
   },
   "opt_conflict_manual": {
     "message": "Kézi"
   },
   "opt_conflict_manual_desc": {
-    "message": "Kérdezzen rá minden ütközésre a felugró ablakban."
+    "message": "A felugró ablak rákérdez, ha ez az eszköz és egy másik eltér. Amíg nem választod annak az eszköznek a változatát, egyik könyvjelző-változása sem érvényesül itt, a törléseket is beleértve."
   },
   "opt_safety_section": {
     "message": "Biztonság"
@@ -956,6 +956,24 @@
       "count": {
         "content": "$1",
         "example": "200"
+      }
+    }
+  },
+  "bm_list_more_one": {
+    "message": "és még $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_list_more_other": {
+    "message": "és még $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "43"
       }
     }
   },

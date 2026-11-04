@@ -849,25 +849,25 @@
     "message": "Vince l'ultima modifica"
   },
   "opt_conflict_lww_desc": {
-    "message": "Vince sempre la modifica più recente."
+    "message": "Vince la modifica più recente. Un segnalibro eliminato su un altro dispositivo viene eliminato anche qui, a meno che tu non l'abbia aggiunto di nuovo dopo l'eliminazione."
   },
   "opt_conflict_local": {
     "message": "Preferisci locale"
   },
   "opt_conflict_local_desc": {
-    "message": "Le modifiche locali prevalgono su quelle remote."
+    "message": "Vincono i segnalibri di questo dispositivo. I nuovi segnalibri degli altri dispositivi arrivano comunque, ma le loro eliminazioni, gli spostamenti e le rinominazioni non vengono mai applicati qui."
   },
   "opt_conflict_remote": {
     "message": "Preferisci remoto"
   },
   "opt_conflict_remote_desc": {
-    "message": "Le modifiche remote prevalgono su quelle locali."
+    "message": "Gli spostamenti e le rinominazioni degli altri dispositivi prevalgono sui tuoi. Le loro eliminazioni vengono applicate come con “Vince l'ultima modifica”."
   },
   "opt_conflict_manual": {
     "message": "Manuale"
   },
   "opt_conflict_manual_desc": {
-    "message": "Chiedimi di risolvere ogni conflitto nel popup."
+    "message": "Chiedimi nel popup quando questo dispositivo e un altro sono diversi. Finché non scegli la versione di quel dispositivo, nessuna delle sue modifiche ai segnalibri viene applicata qui, eliminazioni comprese."
   },
   "opt_safety_section": {
     "message": "Sicurezza"
@@ -956,6 +956,24 @@
       "count": {
         "content": "$1",
         "example": "200"
+      }
+    }
+  },
+  "bm_list_more_one": {
+    "message": "e ancora $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_list_more_other": {
+    "message": "e altri $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "43"
       }
     }
   },

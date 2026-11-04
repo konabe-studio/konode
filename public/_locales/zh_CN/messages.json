@@ -840,25 +840,25 @@
     "message": "以最后一次写入为准"
   },
   "opt_conflict_lww_desc": {
-    "message": "以最新的更改为准。"
+    "message": "以最新的更改为准。在其他设备上删除的书签也会在这里删除，除非您在删除之后又重新添加了它。"
   },
   "opt_conflict_local": {
     "message": "本地优先"
   },
   "opt_conflict_local_desc": {
-    "message": "本地更改会覆盖远程。"
+    "message": "以本设备的书签为准。其他设备新增的书签仍会同步过来，但它们的删除、移动和重命名永远不会在这里应用。"
   },
   "opt_conflict_remote": {
     "message": "远程优先"
   },
   "opt_conflict_remote_desc": {
-    "message": "远程更改覆盖本地。"
+    "message": "其他设备的移动和重命名优先于您的更改。它们的删除与“以最后一次写入为准”的处理方式相同。"
   },
   "opt_conflict_manual": {
     "message": "手动"
   },
   "opt_conflict_manual_desc": {
-    "message": "在弹窗中提示我解决每个冲突。"
+    "message": "当本设备与其他设备不一致时，在弹窗中询问我。在您选择那台设备的版本之前，它对书签的任何更改（包括删除）都不会在这里应用。"
   },
   "opt_safety_section": {
     "message": "安全"
@@ -947,6 +947,24 @@
       "count": {
         "content": "$1",
         "example": "200"
+      }
+    }
+  },
+  "bm_list_more_one": {
+    "message": "还有 $COUNT$ 个",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_list_more_other": {
+    "message": "还有 $COUNT$ 个",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "43"
       }
     }
   },

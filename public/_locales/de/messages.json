@@ -849,25 +849,25 @@
     "message": "Letzte Änderung gewinnt"
   },
   "opt_conflict_lww_desc": {
-    "message": "Die neueste Änderung gewinnt immer."
+    "message": "Die neueste Änderung gewinnt. Ein auf einem anderen Gerät gelöschtes Lesezeichen wird auch hier gelöscht, außer du hast es nach dem Löschen erneut hinzugefügt."
   },
   "opt_conflict_local": {
     "message": "Lokal bevorzugen"
   },
   "opt_conflict_local_desc": {
-    "message": "Lokale Änderungen überschreiben entfernte."
+    "message": "Die Lesezeichen dieses Geräts gewinnen. Neue Lesezeichen von anderen Geräten kommen weiterhin an, aber deren Löschungen, Verschiebungen und Umbenennungen werden hier nie übernommen."
   },
   "opt_conflict_remote": {
     "message": "Entfernt bevorzugen"
   },
   "opt_conflict_remote_desc": {
-    "message": "Entfernte Änderungen überschreiben lokale."
+    "message": "Verschiebungen und Umbenennungen anderer Geräte gewinnen gegen deine. Ihre Löschungen werden genauso übernommen wie bei „Letzte Änderung gewinnt“."
   },
   "opt_conflict_manual": {
     "message": "Manuell"
   },
   "opt_conflict_manual_desc": {
-    "message": "Frag mich bei jedem Konflikt im Popup."
+    "message": "Frag mich im Popup, wenn sich dieses Gerät und ein anderes unterscheiden. Bis du die Version des anderen Geräts wählst, wird keine seiner Lesezeichenänderungen hier übernommen, auch keine Löschung."
   },
   "opt_safety_section": {
     "message": "Sicherheit"
@@ -956,6 +956,24 @@
       "count": {
         "content": "$1",
         "example": "200"
+      }
+    }
+  },
+  "bm_list_more_one": {
+    "message": "und $COUNT$ weiteres",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_list_more_other": {
+    "message": "und $COUNT$ weitere",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "43"
       }
     }
   },
