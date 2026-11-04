@@ -963,25 +963,29 @@
     "message": "Last Write Wins"
   },
   "opt_conflict_lww_desc": {
-    "message": "Most recent change always wins."
+    "message": "The newest change wins. A bookmark deleted on another device is deleted here too, unless you added it again after it was deleted there.",
+    "description": "Under 'Last Write Wins' in Settings → Device → Conflict resolution. Each of the four options says what it does with bookmarks another device deletes, because that is where they differ most."
   },
   "opt_conflict_local": {
     "message": "Prefer Local"
   },
   "opt_conflict_local_desc": {
-    "message": "Local changes override remote."
+    "message": "This device's bookmarks win. New bookmarks from other devices still arrive, but their deletions, moves and renames are never applied here.",
+    "description": "Under 'Prefer Local'. The important promise is that deletions made on other devices never remove anything on this device."
   },
   "opt_conflict_remote": {
     "message": "Prefer Remote"
   },
   "opt_conflict_remote_desc": {
-    "message": "Remote changes override local."
+    "message": "Other devices' moves and renames win over yours. Their deletions are applied the same way as Last Write Wins.",
+    "description": "Under 'Prefer Remote'. 'Last Write Wins' is the name of the first option (opt_conflict_lww), so use the same translation for it here."
   },
   "opt_conflict_manual": {
     "message": "Manual"
   },
   "opt_conflict_manual_desc": {
-    "message": "Ask me to resolve each conflict in the popup."
+    "message": "Ask me in the popup when this device and another one differ. Until you choose that device's version, none of its bookmark changes are applied here, deletions included.",
+    "description": "Under 'Manual'. The popup shows a card per device with 'Keep local' and 'Use remote'; 'choose that device's version' means 'Use remote'."
   },
   "opt_safety_section": {
     "message": "Safety"

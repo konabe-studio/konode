@@ -15,6 +15,13 @@ All notable changes to Konode. Format loosely follows
   you meant or something you never touched. Ones that other devices already removed earlier
   in the day are not in the list, since they are gone from this device already.
 
+- **The conflict resolution options say what they do with deletions.** Settings → Device
+  described them only as which side wins, and deletions are where they differ most. Prefer
+  Local never deletes a bookmark here because another device deleted it. Manual applies no
+  bookmark change from another device, deletions included, until you choose that device's
+  version in the popup. Last Write Wins and Prefer Remote handle deletions the same way: a
+  bookmark deleted elsewhere goes here too, unless you added it again after that.
+
 - **Settings calls a restore point a restore point everywhere.** Under the Restore points
   heading, three of its own lines said "Snapshot saved", "Save a snapshot now" and "Create
   snapshot", and Spanish, Italian, Russian and both Chinese followed the English. Simplified

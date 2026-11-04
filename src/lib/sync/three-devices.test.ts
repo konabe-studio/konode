@@ -1017,6 +1017,22 @@ describe("AO. Manual asks only when the bookmarks disagree (#34)", () => {
     await at(B, async () => { expect(await urlsHere()).toHaveLength(5); });
   });
 
+  // What Settings promises for Manual (#23): none of the other device's bookmark changes,
+  // deletions included, until the user chooses its version.
+  it("applies another device's deletion only when you choose its version", async () => {
+    const [A, B] = await seedGroup(5);
+    await manual(B);
+    await at(A, async () => { await del(site(2)); });
+
+    await cycle(A, B, B);
+    await at(B, async () => { expect(await urlsHere()).toEqual(sites(0, 5)); });
+
+    const [card] = await cards(B);
+    expect(card).toMatchObject({ data_type: "bookmarks", device_id: A.id });
+    await at(B, async () => { await B.engine.resolveConflict(card.id, "remote"); });
+    await at(B, async () => { expect(await urlsHere()).not.toContain(site(2)); });
+  });
+
   it("keeps an answered question answered while the peer's bookmarks stay the same", async () => {
     // The memo was the peer's checksum, which moves with every date and log entry it
     // writes: here A only reorders, which Manual cannot act on and the merge does not
