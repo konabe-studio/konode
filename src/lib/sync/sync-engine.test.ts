@@ -77,7 +77,11 @@ function priv(engine: SyncEngine): EnginePrivate {
 
 /** What the merge hands the engine when the guard blocks, or null when it didn't. */
 type BlockedArg =
-  | { blocked: number; cap: number; localTotal: number; pct: number; device_id?: string; device_label?: string | null }
+  | {
+      blocked: number; cap: number; localTotal: number; pct: number;
+      sample?: { title: string; url: string }[];
+      device_id?: string; device_label?: string | null;
+    }
   | null;
 
 /** A blocked deletion of `n`, with the arithmetic a 60% guard on a 100-bookmark tree
@@ -739,6 +743,18 @@ describe("SyncEngine — blocked mass-delete takes ONE restore point per inciden
     for (const n of [first, second, third]) expect(n?.blocked).toBe(50);
   });
 
+
+  it("puts the bookmarks the merge named on the card (#23)", async () => {
+    const { engine } = countingEngine();
+    const sample = [{ title: "Docs", url: "https://docs.example/" }];
+
+    const notice = await priv(engine).recordBlockedDeletion(
+      { blocked: 50, cap: 60, localTotal: 100, pct: 60, device_id: "peer", device_label: "peer-1", sample },
+      true,
+    );
+
+    expect(notice).toMatchObject({ blocked: 50, sample });
+  });
 
   it("earns a new restore point after a clean bookmark sync ends the incident", async () => {
     const { engine, taken } = countingEngine();

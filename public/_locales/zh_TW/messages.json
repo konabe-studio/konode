@@ -849,25 +849,25 @@
     "message": "以最後寫入為準"
   },
   "opt_conflict_lww_desc": {
-    "message": "永遠以最新的變更為準。"
+    "message": "以最新的變更為準。在其他裝置上刪除的書籤也會在這裡刪除，除非你在刪除之後又重新加入了它。"
   },
   "opt_conflict_local": {
     "message": "本機優先"
   },
   "opt_conflict_local_desc": {
-    "message": "本機的變更會蓋過遠端。"
+    "message": "以本機的書籤為準。其他裝置新增的書籤仍會同步過來，但它們的刪除、移動和重新命名永遠不會套用到這裡。"
   },
   "opt_conflict_remote": {
     "message": "遠端優先"
   },
   "opt_conflict_remote_desc": {
-    "message": "遠端的變更會蓋過本機。"
+    "message": "其他裝置的移動和重新命名優先於你的變更。它們的刪除與「以最後寫入為準」的處理方式相同。"
   },
   "opt_conflict_manual": {
     "message": "手動"
   },
   "opt_conflict_manual_desc": {
-    "message": "請在對話方塊中手動解決每一個衝突。"
+    "message": "當本機與其他裝置不一致時，在對話方塊中詢問我。在你選擇那台裝置的版本之前，它對書籤的任何變更（包括刪除）都不會套用到這裡。"
   },
   "opt_safety_section": {
     "message": "安全防護"
@@ -956,6 +956,24 @@
       "count": {
         "content": "$1",
         "example": "200"
+      }
+    }
+  },
+  "bm_list_more_one": {
+    "message": "還有 $COUNT$ 個",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_list_more_other": {
+    "message": "還有 $COUNT$ 個",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "43"
       }
     }
   },

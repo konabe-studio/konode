@@ -840,25 +840,25 @@
     "message": "Prevalece la última modificación"
   },
   "opt_conflict_lww_desc": {
-    "message": "El cambio más reciente siempre prevalece."
+    "message": "Prevalece el cambio más reciente. Un marcador eliminado en otro dispositivo también se elimina aquí, salvo que lo hayas vuelto a añadir después de que se eliminara allí."
   },
   "opt_conflict_local": {
     "message": "Preferir lo local"
   },
   "opt_conflict_local_desc": {
-    "message": "Los cambios locales tienen prioridad sobre los remotos."
+    "message": "Prevalecen los marcadores de este dispositivo. Los marcadores nuevos de otros dispositivos siguen llegando, pero sus eliminaciones, movimientos y cambios de nombre nunca se aplican aquí."
   },
   "opt_conflict_remote": {
     "message": "Preferir lo remoto"
   },
   "opt_conflict_remote_desc": {
-    "message": "Los cambios remotos tienen prioridad sobre los locales."
+    "message": "Los movimientos y cambios de nombre de otros dispositivos prevalecen sobre los tuyos. Sus eliminaciones se aplican igual que con «Prevalece la última modificación»."
   },
   "opt_conflict_manual": {
     "message": "Manual"
   },
   "opt_conflict_manual_desc": {
-    "message": "Pedirme que resuelva cada conflicto en la ventana emergente."
+    "message": "Preguntarme en la ventana emergente cuando este dispositivo y otro no coincidan. Hasta que elijas la versión de ese dispositivo, no se aplica aquí ninguno de sus cambios en los marcadores, tampoco las eliminaciones."
   },
   "opt_safety_section": {
     "message": "Seguridad"
@@ -1419,6 +1419,24 @@
       "count": {
         "content": "$1",
         "example": "200"
+      }
+    }
+  },
+  "bm_list_more_one": {
+    "message": "y $COUNT$ más",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "bm_list_more_other": {
+    "message": "y $COUNT$ más",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "43"
       }
     }
   },

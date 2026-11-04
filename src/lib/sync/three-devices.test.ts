@@ -749,6 +749,13 @@ describe("AG. a deletion made in several sittings is one deletion (#41)", () => 
     const [, card] = await cycle(A, B);
     expect(card).toMatchObject({ blocked: 10, recent: 30 });
 
+    // The card lists five of the ten Apply removes (#23), never one of the thirty already
+    // gone, which would send the user looking for a bookmark this device no longer has.
+    const listed = (card?.sample ?? []).map((b) => b.url);
+    expect(listed).toHaveLength(5);
+    for (const url of listed) expect(sites(30, 40)).toContain(url);
+    expect(card?.sample?.[0].title).toMatch(/^B3\d$/);
+
     await at(B, async () => { await setBulkDeleteApproval(10); });
     expect(await cycle(B)).toEqual([null]);
     await at(B, async () => { expect(await urlsHere()).toEqual(sites(40, 50)); });
@@ -1008,6 +1015,22 @@ describe("AO. Manual asks only when the bookmarks disagree (#34)", () => {
     expect(card).toMatchObject({ data_type: "bookmarks", device_id: A.id });
     expect(card.content_key).toMatch(/^[0-9a-f]{64}$/);
     await at(B, async () => { expect(await urlsHere()).toHaveLength(5); });
+  });
+
+  // What Settings promises for Manual (#23): none of the other device's bookmark changes,
+  // deletions included, until the user chooses its version.
+  it("applies another device's deletion only when you choose its version", async () => {
+    const [A, B] = await seedGroup(5);
+    await manual(B);
+    await at(A, async () => { await del(site(2)); });
+
+    await cycle(A, B, B);
+    await at(B, async () => { expect(await urlsHere()).toEqual(sites(0, 5)); });
+
+    const [card] = await cards(B);
+    expect(card).toMatchObject({ data_type: "bookmarks", device_id: A.id });
+    await at(B, async () => { await B.engine.resolveConflict(card.id, "remote"); });
+    await at(B, async () => { expect(await urlsHere()).not.toContain(site(2)); });
   });
 
   it("keeps an answered question answered while the peer's bookmarks stay the same", async () => {

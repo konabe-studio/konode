@@ -33,6 +33,7 @@ import {
   Trash2, RotateCcw, Camera, Mail, Star,
 } from "lucide-react";
 import { BookmarkExclusionTree } from "@/lib/ui/bookmark-exclusion-tree";
+import { BookmarkList } from "@/lib/ui/bookmark-list";
 // Shown in the About section. The manifest is the single source of truth for the
 // version — bump `package.json` and the build stamps it into the manifest.
 const APP_VERSION = browser.runtime.getManifest().version;
@@ -2263,7 +2264,9 @@ export default function OptionsApp() {
                     </div>
                     <div className="settings-row">
                       <div className="settings-row-left">
-                        <div>
+                        {/* minWidth 0 lets a long address in the list below end in an
+                            ellipsis instead of pushing the Apply button off the card. */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           {/* "48 of your 49" is the number that decides this, and a bare
                               48 is not: a notice from an older build has no total, so it
                               falls back to the count it does have rather than to "of 0". */}
@@ -2287,6 +2290,14 @@ export default function OptionsApp() {
                               {plural("opt_blocked_recent", syncState.recovery_notice.recent ?? 0)}
                             </div>
                           )}
+                          {/* Which bookmarks, not only how many (#23): "did I mean this?" is
+                              answered by recognizing them, or by not recognizing them, which
+                              points at a different bug. These are the ones Apply removes. A
+                              notice from an older build has no sample and shows no list. */}
+                          <BookmarkList
+                            items={syncState.recovery_notice.sample ?? []}
+                            total={syncState.recovery_notice.blocked}
+                          />
                         </div>
                       </div>
                       {confirmApply ? (
