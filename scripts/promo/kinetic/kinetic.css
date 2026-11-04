@@ -1,0 +1,382 @@
+/* Fonts and colours come from the extension itself, so the video cannot drift from the
+   product. Both files are served by the capture server out of public/. */
+@font-face {
+  font-family: "Inter";
+  font-weight: 400;
+  font-display: block;
+  src: url("/fonts/inter-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-weight: 500;
+  font-display: block;
+  src: url("/fonts/inter-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 400;
+  font-display: block;
+  src: url("/fonts/jetbrains-mono-400.woff2") format("woff2");
+}
+
+:root {
+  --bg: #0a0a0f;
+  --fg: #f4f4f5;
+  --muted: #a1a1aa;
+  --subtle: #52525b;
+  --accent: #6ee7b7;
+  --brand: #12b76a;
+  --hair: #ffffff1a;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  overflow: hidden;
+}
+
+#stage {
+  position: relative;
+  width: 1280px;
+  height: 720px;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: "Inter", sans-serif;
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+
+#scene {
+  position: absolute;
+  inset: 0;
+}
+
+/* A single soft pool of brand light behind everything. Opacity is driven per frame. */
+.glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1100px;
+  height: 1100px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, #12b76a26 0%, #12b76a00 62%);
+  opacity: 0;
+}
+
+.col {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 96px;
+  text-align: center;
+}
+
+.big {
+  font-size: 64px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+  opacity: 0;
+}
+
+.headline {
+  font-size: 52px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  opacity: 0;
+}
+
+.kicker {
+  margin-top: 26px;
+  font-size: 26px;
+  color: var(--muted);
+  opacity: 0;
+}
+
+.caption {
+  margin-top: 46px;
+  font-size: 24px;
+  color: var(--muted);
+  opacity: 0;
+}
+
+.mono {
+  font-family: "JetBrains Mono", monospace;
+}
+
+/* The two-devices-and-something-in-the-middle diagram, shared by shots 2 and 3 so the
+   cut between them reads as one continuous move. */
+.rail {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1100px;
+  height: 200px;
+}
+
+.dev {
+  width: 190px;
+  height: 118px;
+  border: 1px solid var(--hair);
+  border-radius: 14px;
+  background: #ffffff08;
+  flex: none;
+  opacity: 0;
+}
+
+.dev::before {
+  content: "";
+  display: block;
+  height: 22px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.wire {
+  flex: 1;
+  height: 2px;
+  background: var(--subtle);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.wire.right {
+  transform-origin: right center;
+}
+
+.hub {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 250px;
+  height: 150px;
+  padding: 0 18px;
+  border: 1px solid var(--hair);
+  border-radius: 18px;
+  background: #ffffff0a;
+  font-size: 21px;
+  color: var(--muted);
+  text-align: center;
+  opacity: 0;
+}
+
+.hub.own {
+  position: absolute;
+  left: 50%;
+  margin-left: -125px;
+  border-color: #6ee7b759;
+  background: #6ee7b714;
+  color: var(--accent);
+}
+
+.pip {
+  position: absolute;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 18px #6ee7b7cc;
+  opacity: 0;
+}
+
+.claims {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 26px;
+}
+
+.claim {
+  display: flex;
+  align-items: baseline;
+  gap: 22px;
+  font-size: 46px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  opacity: 0;
+}
+
+.claim .dash {
+  width: 34px;
+  height: 3px;
+  background: var(--accent);
+  transform: translateY(-14px);
+  flex: none;
+}
+
+.footnote {
+  margin-top: 52px;
+  font-size: 20px;
+  color: var(--subtle);
+  opacity: 0;
+}
+
+.wordmark {
+  opacity: 0;
+}
+
+.wordmark svg {
+  width: 320px;
+  height: auto;
+  display: block;
+}
+
+.stores {
+  margin-top: 30px;
+  font-size: 24px;
+  color: var(--muted);
+  opacity: 0;
+}
+
+.url {
+  margin-top: 14px;
+  font-size: 20px;
+  color: var(--subtle);
+  opacity: 0;
+}
+
+.sweep {
+  margin-top: 34px;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #6ee7b700, var(--accent), #6ee7b700);
+}
+
+/* Shots 2 and 3 cut together, so the rail has to sit at the same height in both. The
+   block underneath is a fixed box whatever it holds. */
+.under {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 220px;
+}
+
+/* Shot 4: two devices, each one a still shot from a real profile. */
+.frame {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+}
+
+.devices {
+  display: flex;
+  gap: 60px;
+}
+
+.device {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  opacity: 0;
+}
+
+.panel {
+  position: relative;
+  width: 580px;
+  height: 249px;
+  border: 1px solid var(--hair);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #111118;
+}
+
+.panel img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+}
+
+.panel img.after {
+  opacity: 0;
+}
+
+.plabel {
+  font-size: 19px;
+  color: var(--muted);
+}
+
+.hop {
+  position: relative;
+  width: 620px;
+  height: 2px;
+  background: linear-gradient(90deg, #6ee7b700, #6ee7b759, #6ee7b700);
+  opacity: 0;
+}
+
+/* Shots 5 and 6: one window, held still or panned. */
+.window {
+  position: relative;
+  width: 860px;
+  height: 470px;
+  border: 1px solid var(--hair);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0d0d13;
+  opacity: 0;
+}
+
+.window img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: block;
+}
+
+.popup-shot {
+  display: flex;
+  align-items: center;
+  gap: 72px;
+}
+
+.popup-shot .window {
+  width: 400px;
+  height: 400px;
+  border-radius: 18px;
+}
+
+.streams {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.stream {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  opacity: 0;
+}
+
+.stream .tick {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: none;
+}
