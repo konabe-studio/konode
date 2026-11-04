@@ -69,22 +69,30 @@ prefer this device, always prefer the other, or resolve it yourself from the pop
 
 ## How Konode compares
 
-Every tool below is good at what it does. They just make different choices about where
-your data ends up, which is the one thing this table is about. Checked August 2026.
+**Pick by what you need.** Your browser's own sync is the least work if you use one
+browser everywhere, and Firefox and Brave encrypt it end to end by default. floccus is the
+one to look at if you want your bookmarks in a phone app, or synced to Nextcloud
+Bookmarks, Linkwarden or Karakeep. Konode is for mixing browser families, Chromium and
+Firefox, and syncing open tabs, history and the extension list along with your bookmarks,
+to storage you already have.
 
-| | **Konode** | floccus | xBrowserSync | Built-in sync |
-|---|---|---|---|---|
-| **What syncs** | **Bookmarks, tabs, history, extension list** | Bookmarks, or open tabs | Bookmarks | Bookmarks, tabs, history, passwords, and more |
-| **Where synced data is stored** | **Your Drive, GitHub, or WebDAV** | Nextcloud, WebDAV, Git, Drive, Dropbox, Linkwarden, KaraKeep | Its own service: official, community-run, or self-hosted | Google's or Mozilla's servers |
-| **Account needed** | **No Konode account** | No floccus account | No account, just a sync ID and password | Yes, a Google or Mozilla account |
-| **End-to-end encryption** | **Optional, on every backend** | Optional, on WebDAV and Drive | Always on | Firefox by default, Chrome behind a passphrase |
-| **Open source** | **Yes, MPL-2.0** | Yes, MPL-2.0 | Yes, GPL-3.0 | Clients open. Firefox's server too, Chrome's not |
+| | Konode | floccus | Built-in sync |
+|---|---|---|---|
+| **What syncs** | Bookmarks, open tabs with their groups, history, extension list | Bookmarks, or open tabs (one per profile) | Bookmarks, tabs, history, passwords, settings and more |
+| **Where it is stored** | Google Drive, GitHub, WebDAV | Nextcloud Bookmarks, WebDAV, Git, Google Drive, Dropbox, Linkwarden, Karakeep | The browser maker's servers |
+| **Mixes Chromium and Firefox** | Yes | Yes | No, each syncs only with itself |
+| **On phones** | Firefox for Android: open tabs and the extension list | Android and iOS apps, with your bookmarks inside the app | Everything, in the browser's own app |
+| **End-to-end encryption** | Optional, on every backend | Optional, on WebDAV, Google Drive and Dropbox | Firefox and Brave always. Chrome only with a sync passphrase |
+| **Account** | None beyond your storage | None beyond your storage | A Mozilla or Google account. Brave uses a sync code |
+| **Around since** | 2026 | Years, with a much larger user base | As long as the browser |
+| **Open source** | Yes, MPL-2.0 | Yes, MPL-2.0 | Clients open. Firefox's server too, Chrome's not |
 
 A few details the cells are too small for. floccus syncs open tabs as an alternative to
-bookmarks inside one sync profile, so doing both means setting up a second profile.
-Chrome's built-in sync encrypts passwords by default and the rest once you set a sync
-passphrase, with some categories left out; Firefox Sync is end-to-end encrypted by
-default.
+bookmarks inside one sync profile, so doing both means setting up a second profile. Its
+phone apps keep your bookmarks inside the app rather than in the phone's browser. Chrome's
+sync passphrase covers everything except payment methods and addresses. xBrowserSync,
+which this table used to list, has had no release since 2020. Checked November 2026 from
+each project's own documentation and store pages.
 
 **Running Konode alongside your browser's own sync.** You can, and people do, but it is
 untested rather than known to work, so here is what to expect. The concern isn't that the
@@ -261,9 +269,11 @@ use a dedicated manager like [Bitwarden](https://bitwarden.com),
   **translated interface** (English, Hungarian, German, Spanish, Italian, Russian, Chinese
   (Simplified and Traditional)).
 - **In review**: the **Microsoft Edge Add-ons listing**, with the Chrome Web Store's package.
-- **Next**: the reading list ([#11](https://github.com/konabe-studio/konode/issues/11)) ·
+- **Next**: a held-back deletion that lists the bookmarks it holds
+  ([#23](https://github.com/konabe-studio/konode/issues/23)) · a device list that says when
+  each device was last active ([#10](https://github.com/konabe-studio/konode/issues/10)) ·
   a conflict card that shows what differs ([#35](https://github.com/konabe-studio/konode/issues/35)) ·
-  more backends, cheapest sign-in first (Dropbox token and S3-compatible, then Dropbox OAuth
+  the reading list ([#77](https://github.com/konabe-studio/konode/issues/77)) · more backends, cheapest sign-in first (Dropbox token and S3-compatible, then Dropbox OAuth
   and OneDrive) · faster history sync · more languages (Japanese, Estonian, Arabic).
 - **Later**: right-to-left languages · incremental diff for very large bookmark trees ·
   diffs between restore points.

@@ -185,18 +185,31 @@ are built by hand with Konode's own OAuth client compiled in and live in
 keeps the two from being confused.
 
 ## Next
+- **The next release**, set on 2026-11-04 from the issue round after 1.5.1. No date, the
+  same as everything else here:
+  - [#23](https://github.com/konabe-studio/konode/issues/23): a held-back deletion lists
+    the bookmarks it holds, title and address, capped with "and N more", and the four
+    conflict-resolution options say what each does with another device's deletions.
+  - [#10](https://github.com/konabe-studio/konode/issues/10): the device list says when a
+    device was last active in human terms ("39 days ago") and flags the ones that are
+    plainly dead, then shows the browser on each row. Taking over an identity and
+    renaming a peer wait on the open questions in the issue.
+  - [#35](https://github.com/konabe-studio/konode/issues/35): a Resolve button on the
+    conflict card opens a full tab in Settings that lists what differs, next to the
+    held-back deletion card from #23. #34, which it was waiting for, shipped in 1.5.1.
 - **[#11](https://github.com/konabe-studio/konode/issues/11): tab groups have shipped, the
   reading list is next.** Moved ahead of backend expansion on 2026-10-01, after a Helium user
   with dozens of grouped tabs asked whether the browser blocks it. It does not: live groups
   are readable and creatable, only *saved* groups are out of reach. **Built on 2026-10-20,
-  shipped in 1.5.1 on 2026-11-02:** each tab in the session packet can point into a list of groups, and
+  released in 1.5.0 on 2026-11-01 and in the stores with 1.5.1 on 2026-11-02** (1.5.0 went
+  to neither store): each tab in the session packet can point into a list of groups, and
   Restore puts the tabs back into them. Which tabs share a group needs no permission on
   either engine; names and colours need `tabGroups`, which is an OPTIONAL permission
   because Chrome warns for it ("View and manage your tab groups"), asked together with Open
   tabs and switchable on its own in Settings. Firefox has groups from 138 and `tabGroups`
   from 139, grants it without a prompt, and shares Chrome's nine colours. Wherever groups do
   not exist (Firefox for Android, Safari, older Firefox), a session restores ungrouped, as
-  before. Then the rest of #11 gets its look, the reading list first.
+  before. The reading list continues in [#77](https://github.com/konabe-studio/konode/issues/77).
 - **Backend expansion**, cheapest sign-in first. See *Platform priority* item 3 below.
 - **History sync performance**: the full-history dedup scan. It is now built once per
   SYNC rather than once per peer (1.3.1), which was the larger half of the cost with more
@@ -243,8 +256,10 @@ keeps the two from being confused.
     cheaper of them, because `capabilities.ts` already handles a data type a browser does
     not implement, so it would report itself unavailable on Firefox and the sync would skip
     it with no engine change. **Live tab groups** (`chrome.tabGroups`, live groups only,
-    since Brave's *saved* groups are not exposed to extensions) is structurally the same
-    problem as #6 and belongs in the same design.
+    since Brave's *saved* groups are not exposed to extensions) shipped in 1.5.0, as an
+    optional field on the session packet rather than a data type of its own, which is the
+    shape #6 will take too. The reading list moved to [#77](https://github.com/konabe-studio/konode/issues/77), and #11 closes
+    with the tab groups.
   - [#10 Device identity is per install, not per machine](https://github.com/konabe-studio/konode/issues/10),
     split from #7. The rule it lands on: never merge identities automatically, ask, and ask
     with the only two facts that let a human decide, how recently the device uploaded and
@@ -263,7 +278,7 @@ keeps the two from being confused.
     `manual` compares the transport checksum, and for bookmarks that covers this device's
     own IDs, its `dateAdded` values and its deletion, move and rename logs, so two devices
     never match even when the trees on screen are identical. What it needs is a **content
-    identity** for bookmarks — canonical URL, title, structural position — cheap enough to
+    identity** for bookmarks (canonical URL, title, structural position), cheap enough to
     compute every sync, and it must NOT replace the transport checksum, which
     `uploadIfChanged` and the E2EE dedup both need over the exact bytes. Until then the
     setting asks whether two files are byte-identical while the screen says it is asking
@@ -279,9 +294,9 @@ keeps the two from being confused.
     since the peer's full packet is parked in storage for "Use remote" to decrypt. The design
     half is where it goes: the popup is 360px wide and 1.3.1 had to cap the conflict list at
     200px to stop it pushing the rest off the bottom, so this is a Resolve button and a full
-    tab in Settings — next to the held-back deletion card from #23, which asks the user to
-    approve something they cannot see in the same way. Worth taking after #34, which shrinks
-    the job.
+    tab in Settings, next to the held-back deletion card from #23, which asks the user to
+    approve something they cannot see in the same way. It was waiting for #34, which shrank
+    the job and shipped in 1.5.1, so it is in the next release now.
 
 ## Not supported, but closer than it was: iOS / WebKit
 
@@ -365,6 +380,27 @@ Sequenced by where our value prop is strongest, not by raw browser size:
    - *MEGA*: heavier (~3-5 d; own crypto SDK to bundle). **Parked on 2026-11-02**: off the
      README's roadmap and not planned. The notes in *MEGA integration (design notes)* below
      stay for whoever picks it up.
+
+   **Asked for in the tracker**, as of 2026-11-04. None is scheduled, and the order above
+   still decides which comes first:
+   - [#52](https://github.com/konabe-studio/konode/issues/52) **S3-compatible storage.**
+     The reporter self-hosts RustFS behind https, so a custom endpoint and path-style
+     addressing are part of it from the start rather than assuming AWS. The token tier.
+   - [#32](https://github.com/konabe-studio/konode/issues/32) **Gitea**, and with it
+     Forgejo ([#76](https://github.com/konabe-studio/konode/issues/76), closed as a
+     duplicate), whose API follows Gitea's. Gitea's contents API is shaped like GitHub's,
+     so the missing piece is a configurable API base URL on the GitHub backend rather than
+     a backend of its own. The #32 reporter offered to test against a real instance.
+     GitLab is a bigger job: different API, different auth header, project ids.
+   - [#44](https://github.com/konabe-studio/konode/issues/44) **GitHub Gist**, kept open as
+     a candidate. A secret gist is unlisted rather than private, so it needs E2EE
+     recommended in the wizard. The same issue asked for cookie sync, which Konode will not
+     do: cookies are logged-in sessions, and syncing them needs access to every site.
+   - [#49](https://github.com/konabe-studio/konode/issues/49) **Syncthing**, closed by the
+     reporter: an extension cannot reach a local folder, and a WebDAV server on the phone
+     was not worth it. They moved to GitHub.
+   - **Filen** (blocked on a licence, see *Later*) and **iCloud** (see *iCloud: asked for,
+     and not on our terms*) were asked for on Reddit.
 
 ## MEGA integration (design notes)
 **Parked since 2026-11-02, not planned.** Kept as research for whoever picks it up.
@@ -482,6 +518,16 @@ Apple logo on a card in the setup wizard at the cost of the only claim the proje
 Apple users are served today by any WebDAV provider, and by a private GitHub repository.
 Reopen this if Apple ever ships an API that writes to the user's visible iCloud Drive.
 
+## Safari: not planned
+
+Asked for in [#56](https://github.com/konabe-studio/konode/issues/56) by someone syncing
+bookmarks between Chrome and Safari, and closed as not planned on 2026-11-04. Safari runs
+only extensions packaged inside a Mac app and distributed through the App Store with a paid
+Apple developer account, so it is not one more build the way Firefox was. It is a separate
+app with its own review, signing and upkeep. On the Mac, Orion runs on the same engine and
+takes Chrome and Firefox extensions, see *Not supported, but closer than it was: iOS /
+WebKit* above.
+
 ## Later / nice-to-have
 - Incremental diff for >10k bookmarks; history sync performance (one full-history scan
   per sync is what's left, after 1.2.0 overlapped the per-page writes that were the
@@ -529,8 +575,8 @@ Reopen this if Apple ever ships an API that writes to the user's visible iCloud 
 **Chrome Web Store.** 1.0.0 submitted for review on **2026-07-19**, **published
 2026-07-20** (<https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa>).
 1.2.1 cleared review after it, then 1.3.0 (confirmed 2026-08-26, nine days after it was
-submitted) and 1.3.2 (2026-09-13), and **1.4.0 is live since 2026-09-30**, a day after it was
-submitted. Listing copy is
+submitted) and 1.3.2 (2026-09-13), then 1.4.0 (2026-09-30, a day after it was submitted),
+and **1.5.1 is live since 2026-11-02**, out the same day it was submitted. Listing copy is
 maintained per language in the dashboard: the name and the short description come from the
 extension's own catalogues and translate themselves, but the long description is entered by
 hand, in each of the languages Konode ships.
