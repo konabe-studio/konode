@@ -15,10 +15,11 @@ import { browser } from "@/lib/utils/ext";
  *
  *  - Gecko: `runtime.getBrowserInfo()`, which names the browser itself, so a fork can answer
  *    with its own name. Its version is dropped.
- *  - Chromium: `navigator.userAgentData.brands`, the first brand that is neither the
- *    "Chromium" base nor the deliberately meaningless GREASE entry. Versions dropped. Brave
- *    also has `navigator.brave`, and Edge and Opera keep a token in the user agent, for the
- *    builds that send no brand.
+ *  - Chromium: `navigator.userAgentData.brands`, the first brand that is not the
+ *    "Chromium" base, the deliberately meaningless GREASE entry or "Google Chrome", which
+ *    other builds send too (see `UNTRUSTED_BRANDS`). Versions dropped. Brave also has
+ *    `navigator.brave`, and Edge and Opera keep a token in the user agent, for the builds
+ *    that send no brand of their own.
  *  - WebKit: the engine only. A WebKit browser that runs extensions presents Safari's user
  *    agent, so there is no honest name to read.
  *
@@ -68,21 +69,31 @@ async function geckoName(): Promise<string | undefined> {
 // "Not A(Brand", "Not)A;Brand", "Not_A Brand"... GREASE changes shape on purpose, so match
 // the pattern rather than a list.
 const GREASE = /not.?a.?brand/i;
+/**
+ * Brands that say nothing about which browser this is. "Chromium" is every build's base.
+ * "Google Chrome" is sent as well by builds that present themselves as Chrome so sites treat
+ * them like it: Helium sends exactly Chrome's list (2026-11-05, Linux, Helium on Chromium
+ * 156: "Not:A-Brand", "Chromium", "Google Chrome", and the same in `fullVersionList`), and
+ * nothing an extension can read without a permission tells the two apart. Trusting it named
+ * Helium "Chrome" on every peer. So real Chrome reads "Chromium" too, which is less than it
+ * could say and never false.
+ */
+const UNTRUSTED_BRANDS = new Set(["Chromium", "Google Chrome"]);
 const BRAND_NAMES: Record<string, string> = {
-  "Google Chrome": "Chrome",
   "Microsoft Edge": "Edge",
 };
 
 function chromiumName(ua: string, nav: NavigatorLike | undefined): string | undefined {
   const brand = nav?.userAgentData?.brands
     ?.map((b) => b.brand)
-    .find((b) => b && b !== "Chromium" && !GREASE.test(b));
+    .find((b) => b && !UNTRUSTED_BRANDS.has(b) && !GREASE.test(b));
   if (brand) return BRAND_NAMES[brand] ?? brand;
   if (nav?.brave) return "Brave";
   if (/\bEdg\//.test(ua)) return "Edge";
   if (/\bOPR\//.test(ua)) return "Opera";
-  // A Chromium build that names nothing else (Helium, ungoogled-chromium, Vivaldi) is shown
-  // by its engine alone, which is the truth about it as far as an extension can tell.
+  // A Chromium build that names nothing else (Chrome itself, Helium, ungoogled-chromium,
+  // Vivaldi) is shown by its engine alone, which is the truth about it as far as an
+  // extension can tell.
   return undefined;
 }
 

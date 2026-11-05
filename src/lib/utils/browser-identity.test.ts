@@ -21,9 +21,6 @@ const brands = (...names: string[]) => ({ brands: names.map((brand) => ({ brand,
 
 describe("detectBrowser on Chromium", () => {
   it("names the browser from its brand, never the Chromium base or the GREASE entry", async () => {
-    as({ userAgent: CHROME_UA, userAgentData: brands("Chromium", "Google Chrome", "Not?A_Brand") });
-    expect(await detectBrowser()).toEqual({ engine: "chromium", name: "Chrome" });
-
     as({ userAgent: `${CHROME_UA} Edg/130.0.0.0`, userAgentData: brands("Not)A;Brand", "Microsoft Edge", "Chromium") });
     expect(await detectBrowser()).toEqual({ engine: "chromium", name: "Edge" });
 
@@ -37,6 +34,18 @@ describe("detectBrowser on Chromium", () => {
 
     as({ userAgent: `${CHROME_UA} OPR/114.0.0.0` });
     expect(await detectBrowser()).toEqual({ engine: "chromium", name: "Opera" });
+  });
+
+  it("never says Chrome, since other builds send Chrome's brand list word for word", async () => {
+    // Helium on Linux, 2026-11-05, read from its console: the same three brands as Google
+    // Chrome. Trusting the brand named Helium "Chrome" on every peer.
+    as({ userAgent: CHROME_UA, userAgentData: brands("Not:A-Brand", "Chromium", "Google Chrome") });
+    expect(await detectBrowser()).toEqual({ engine: "chromium" });
+
+    // What it costs: real Chrome reads "Chromium" too. Edge, Brave and Opera keep their
+    // names, which a build pretending to be Chrome would not send.
+    as({ userAgent: `${CHROME_UA} Edg/130.0.0.0`, userAgentData: brands("Microsoft Edge", "Google Chrome", "Chromium") });
+    expect((await detectBrowser())?.name).toBe("Edge");
   });
 
   it("shows a build that names nothing but Chromium by its engine alone", async () => {
