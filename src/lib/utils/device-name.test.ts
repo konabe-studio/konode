@@ -17,14 +17,14 @@ describe("detectDeviceName — the OS half", () => {
     // Microsoft never bumped the UA token: Windows 10 and Windows 11 BOTH send
     // "Windows NT 10.0". Every Windows 10 user was told they were on 11.
     const win10 = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
-    expect(named(win10)).toBe("Windows 10/11 · Chrome");
+    expect(named(win10)).toBe("Windows 10/11 · Chromium");
   });
 
   it("recognises Android instead of calling it Linux", () => {
     // A Chromium Android UA carries the "Linux" token, which the desktop branch matched
     // first — so those phones never once identified as Android.
     const androidChromium = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36";
-    expect(named(androidChromium)).toBe("Android · Chrome");
+    expect(named(androidChromium)).toBe("Android · Chromium");
 
     // Firefox for Android omits "Linux", so this one was already right — keep it covered
     // so the reordering can't break the case that used to work. This is Konode's
@@ -43,11 +43,19 @@ describe("detectDeviceName — the OS half", () => {
 
   it("still names a real Mac, a real Linux desktop and older Windows", () => {
     expect(named("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"))
-      .toBe("Mac · Chrome");
+      .toBe("Mac · Chromium");
     expect(named("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"))
-      .toBe("Linux · Chrome");
+      .toBe("Linux · Chromium");
     expect(named("Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"))
-      .toBe("Windows 7 · Chrome");
+      .toBe("Windows 7 · Chromium");
+  });
+
+  it("calls a Chromium build Chromium, since Chrome's user agent is everyone's", () => {
+    // A fresh Helium on Linux sends exactly this, and was named "Linux · Chrome".
+    expect(named("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"))
+      .toBe("Linux · Chromium");
+    expect(named("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0"))
+      .toBe("Windows 10/11 · Edge");
   });
 
   it("falls back to a neutral label rather than guessing", () => {

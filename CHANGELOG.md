@@ -18,7 +18,10 @@ All notable changes to Konode. Format loosely follows
 
   Each row also names the browser and its engine, for example "Brave (Chromium)" or
   "Firefox (Gecko)", which tells the Chrome build and the Firefox build on one computer
-  apart. That is all a device records about itself: no version, no operating system, no
+  apart. Chrome itself reads "Chromium": Helium and other Chromium-based browsers announce
+  themselves to sites exactly as Chrome does, and an extension cannot tell them apart, so
+  naming any of them Chrome would be a guess shown as fact. Brave, Edge and Opera keep their
+  names. That is all a device records about itself: no version, no operating system, no
   hardware details. A device shows it once it has synced on this version, and every device
   uploads its files once more after updating to carry it. Two identical computers still
   look identical here, and the upload time is what tells those apart (#10).
@@ -47,6 +50,12 @@ All notable changes to Konode. Format loosely follows
   It is one word now, in every language Konode ships.
 
 ### Fixed
+
+- **A new device on a Chromium-based browser is named after the engine, not after Chrome.**
+  Every Chromium-based browser carries Chrome's name in what it tells websites, so a fresh
+  install on Helium, Vivaldi or ungoogled-chromium was called "Linux · Chrome". It is now
+  "Linux · Chromium". Brave and Edge are still recognized by name, and a name you already
+  have, or typed yourself, stays as it is.
 
 - **Simplified Chinese reads properly in five more places.** "Never" in Settings was a
   word that means nothing (用不, now 从未), the device ID label had a typo (设备iD), the

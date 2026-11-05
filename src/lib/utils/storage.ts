@@ -51,7 +51,10 @@ export function detectDeviceName(): string {
   let browser = "";
   if ((navigator as any).brave) browser = " · Brave";
   else if (ua.includes("Edg/")) browser = " · Edge";
-  else if (ua.includes("Chrome")) browser = " · Chrome";
+  // "Chrome/" is in every Chromium build's user agent, Helium's, Vivaldi's and
+  // ungoogled-chromium's included, so it proves the engine and nothing more. Calling that
+  // Chrome named a fresh Helium "Linux · Chrome" (2026-11-05).
+  else if (ua.includes("Chrome")) browser = " · Chromium";
   else if (ua.includes("Firefox")) browser = " · Firefox";
 
   return `${os}${browser}`;
