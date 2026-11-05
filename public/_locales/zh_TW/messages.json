@@ -89,6 +89,9 @@
   "popup_use_remote": {
     "message": "使用遠端"
   },
+  "popup_conflict_resolve": {
+    "message": "處理"
+  },
   "popup_active_streams": {
     "message": "使用中的資料流"
   },
@@ -976,6 +979,95 @@
         "example": "43"
       }
     }
+  },
+  "opt_conflicts_section": {
+    "message": "衝突"
+  },
+  "opt_conflicts_section_sub": {
+    "message": "這台裝置和另一台裝置的版本不同。衝突處理設為「手動」，所以 Konode 正在等你選擇。"
+  },
+  "opt_conflicts_explain": {
+    "message": "「$KEEP$」會讓這台裝置維持原樣。「$REMOTE$」會把另一台裝置的變更合併到這裡。",
+    "placeholders": {
+      "keep": {
+        "content": "$1",
+        "example": "Keep local"
+      },
+      "remote": {
+        "content": "$2",
+        "example": "Use remote"
+      }
+    }
+  },
+  "opt_conflict_bookmarks": {
+    "message": "書籤：這台裝置與 $DEVICE$",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_conflict_history": {
+    "message": "瀏覽記錄：這台裝置與 $DEVICE$",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_diff_loading": {
+    "message": "正在比對兩個版本…"
+  },
+  "opt_diff_failed": {
+    "message": "無法比對這兩個版本。"
+  },
+  "opt_diff_only_remote": {
+    "message": "只在 $DEVICE$ 上（$COUNT$）",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      },
+      "count": {
+        "content": "$2",
+        "example": "12"
+      }
+    }
+  },
+  "opt_diff_only_local": {
+    "message": "只在這台裝置上（$COUNT$）",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_changed_one": {
+    "message": "有 $COUNT$ 個書籤兩邊都有，但標題不同或放在不同的資料夾。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_changed_other": {
+    "message": "有 $COUNT$ 個書籤兩邊都有，但標題不同或放在不同的資料夾。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_none_bookmarks": {
+    "message": "現在兩台裝置的書籤相同。"
+  },
+  "opt_diff_none_history": {
+    "message": "兩台裝置造訪過相同的網頁，只是造訪時間或次數不同。"
   },
   "bm_exclude_summary_one": {
     "message": "$COUNT$ 個項目不參與同步",

@@ -7,6 +7,17 @@ All notable changes to Konode. Format loosely follows
 
 ### Added
 
+- **A conflict shows what differs before you choose (#35).** With conflict resolution set
+  to Manual, the popup asked you to Keep local or Use remote and said nothing about either
+  version, so the choice was a guess. The card now has a Resolve button that opens
+  Settings → Activity, where each conflict lists what is different: the bookmarks or
+  visited pages the other device has and this one does not, and the ones only this device
+  has, by title and address, with "and 43 more" under a long list. Bookmarks that both
+  devices have, but under another title or in another folder, are counted too. Keep local
+  and Use remote are right there and do exactly what they do in the popup, which keeps its
+  own two buttons as well. The lists compare against this device as it is when you look,
+  and looking changes nothing on either device.
+
 - **The device list says how long ago each device last uploaded, and which browser it is.**
   Settings showed the exact date and time of a device's last upload, which is precise and
   hard to read at a glance. It now says "last upload 39 days ago" in your language, and the

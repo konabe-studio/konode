@@ -89,6 +89,9 @@
   "popup_use_remote": {
     "message": "Távoli használata"
   },
+  "popup_conflict_resolve": {
+    "message": "Feloldás"
+  },
   "popup_active_streams": {
     "message": "Aktív adatfolyamok"
   },
@@ -976,6 +979,95 @@
         "example": "43"
       }
     }
+  },
+  "opt_conflicts_section": {
+    "message": "Ütközések"
+  },
+  "opt_conflicts_section_sub": {
+    "message": "Ez az eszköz és egy másik eltérő változatot tárol. Az ütközések feloldása Kézire van állítva, ezért a Konode a döntésedre vár."
+  },
+  "opt_conflicts_explain": {
+    "message": "$KEEP$: ez az eszköz úgy marad, ahogy van. $REMOTE$: a másik eszköz változásait beolvasztja ebbe.",
+    "placeholders": {
+      "keep": {
+        "content": "$1",
+        "example": "Keep local"
+      },
+      "remote": {
+        "content": "$2",
+        "example": "Use remote"
+      }
+    }
+  },
+  "opt_conflict_bookmarks": {
+    "message": "Könyvjelzők: ez az eszköz és $DEVICE$",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_conflict_history": {
+    "message": "Előzmények: ez az eszköz és $DEVICE$",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_diff_loading": {
+    "message": "A két változat összevetése…"
+  },
+  "opt_diff_failed": {
+    "message": "Nem sikerült összevetni a két változatot."
+  },
+  "opt_diff_only_remote": {
+    "message": "Csak itt: $DEVICE$ ($COUNT$)",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      },
+      "count": {
+        "content": "$2",
+        "example": "12"
+      }
+    }
+  },
+  "opt_diff_only_local": {
+    "message": "Csak ezen az eszközön ($COUNT$)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_changed_one": {
+    "message": "$COUNT$ könyvjelző mindkettőn megvan, de más címmel vagy más mappában.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_changed_other": {
+    "message": "$COUNT$ könyvjelző mindkettőn megvan, de más címmel vagy más mappában.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_none_bookmarks": {
+    "message": "Most már mindkét eszközön ugyanazok a könyvjelzők vannak."
+  },
+  "opt_diff_none_history": {
+    "message": "Mindkét eszköz ugyanazokat az oldalakat látogatta meg. Csak a látogatások ideje vagy száma tér el."
   },
   "bm_exclude_summary_one": {
     "message": "$COUNT$ elem kimarad a szinkronból",

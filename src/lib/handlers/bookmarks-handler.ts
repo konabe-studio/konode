@@ -930,6 +930,20 @@ export function bookmarkContent(payload: unknown): string {
   return [...lines].sort().join("\n");
 }
 
+/**
+ * A peer's bookmark tree as "Use remote" would see it: without anything that would land in
+ * what this device keeps to itself (#54).
+ *
+ * For the conflict screen (#35). Listing a bookmark inside an excluded folder as one the
+ * peer has and this device does not would promise something Use remote never brings here.
+ */
+export async function peerTreeAsMerged(payload: unknown): Promise<SyncBookmark[]> {
+  const { tree } = normalizePayload(payload);
+  const rules = await getBookmarkExclusions();
+  if (!rules.length) return tree;
+  return withoutExcluded(tree, await localExclusions(rules));
+}
+
 // ─── Write (import from remote) ──────────────────────────────────────────
 
 /**
@@ -977,11 +991,17 @@ function clip(s: string, max: number): string {
 /**
  * The first BLOCKED_SAMPLE_SIZE bookmarks of a held-back deletion, in the order it was
  * asked for, each bookmark once however many copies of it this device holds.
+ *
+ * `size` is for the conflict screen (#35), which lists what differs between two devices
+ * the same way and clips each entry the same way, but is not stored, so it can show more.
  */
-export function blockedSample(nodes: Iterable<{ title?: string; url?: string }>): BlockedBookmark[] {
+export function blockedSample(
+  nodes: Iterable<{ title?: string; url?: string }>,
+  size = BLOCKED_SAMPLE_SIZE
+): BlockedBookmark[] {
   const out: BlockedBookmark[] = [];
   for (const n of nodes) {
-    if (out.length >= BLOCKED_SAMPLE_SIZE) break;
+    if (out.length >= size) break;
     if (!n.url) continue;
     out.push({ title: clip((n.title ?? "").trim(), BLOCKED_TITLE_MAX), url: clip(n.url, BLOCKED_URL_MAX) });
   }

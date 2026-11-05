@@ -117,6 +117,10 @@
     "message": "Use remote",
     "description": "Conflict resolution: take the other device's version."
   },
+  "popup_conflict_resolve": {
+    "message": "Resolve",
+    "description": "Button on a conflict card in the popup, next to the other device's name. Opens Settings → Activity, which lists what differs between the two devices and offers the same two answers."
+  },
   "popup_active_streams": {
     "message": "Active streams",
     "description": "Heading above the four data-type dots. The stylesheet displays it in capitals, so do not capitalise it here."
@@ -1109,6 +1113,108 @@
         "example": "43"
       }
     }
+  },
+  "opt_conflicts_section": {
+    "message": "Conflicts",
+    "description": "Card in Settings → Activity, shown only while Manual conflict resolution is waiting for an answer. The popup's Resolve button leads here."
+  },
+  "opt_conflicts_section_sub": {
+    "message": "This device and another one hold different versions. Conflict resolution is set to Manual, so Konode waits for you to choose.",
+    "description": "Sub-heading under 'Conflicts'. 'Manual' is the conflict resolution option of that name (opt_conflict_manual)."
+  },
+  "opt_conflicts_explain": {
+    "message": "$KEEP$ leaves this device as it is. $REMOTE$ merges the other device's changes into this one.",
+    "description": "What the two buttons do. $KEEP$ and $REMOTE$ are the buttons' own labels (popup_keep_local, popup_use_remote), filled in by the code.",
+    "placeholders": {
+      "keep": {
+        "content": "$1",
+        "example": "Keep local"
+      },
+      "remote": {
+        "content": "$2",
+        "example": "Use remote"
+      }
+    }
+  },
+  "opt_conflict_bookmarks": {
+    "message": "Bookmarks: this device and $DEVICE$",
+    "description": "Heading of one conflict. $DEVICE$ is the other device's name, which the user chose.",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_conflict_history": {
+    "message": "History: this device and $DEVICE$",
+    "description": "Heading of one conflict. $DEVICE$ is the other device's name, which the user chose.",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
+  },
+  "opt_diff_loading": {
+    "message": "Comparing the two versions…",
+    "description": "Shown while the two versions are being compared. With encryption on this can take a few seconds."
+  },
+  "opt_diff_failed": {
+    "message": "Couldn't compare the two versions.",
+    "description": "Shown if the comparison gave no usable answer."
+  },
+  "opt_diff_only_remote": {
+    "message": "Only on $DEVICE$ ($COUNT$)",
+    "description": "Above a list of bookmarks or visited pages that the other device has and this one does not. $DEVICE$ is that device's name, $COUNT$ how many there are.",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      },
+      "count": {
+        "content": "$2",
+        "example": "12"
+      }
+    }
+  },
+  "opt_diff_only_local": {
+    "message": "Only on this device ($COUNT$)",
+    "description": "Above a list of bookmarks or visited pages that this device has and the other one does not. $COUNT$ is how many there are.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_changed_one": {
+    "message": "$COUNT$ bookmark is on both, under a different title or in a different folder.",
+    "description": "Bookmarks with the same address on both devices, but renamed or in a different folder on one of them.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_changed_other": {
+    "message": "$COUNT$ bookmarks are on both, under a different title or in a different folder.",
+    "description": "Plural of opt_diff_changed_one.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "opt_diff_none_bookmarks": {
+    "message": "Both devices have the same bookmarks now.",
+    "description": "Shown instead of the lists when nothing differs any more between the two devices' bookmarks."
+  },
+  "opt_diff_none_history": {
+    "message": "Both devices visited the same pages. Only the visit times or counts differ.",
+    "description": "Shown instead of the lists when both devices visited the same pages and only the visit details differ."
   },
   "bm_exclude_summary_one": {
     "message": "$COUNT$ item kept out of sync",

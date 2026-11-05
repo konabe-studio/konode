@@ -495,6 +495,26 @@ export interface ConflictItem {
   resolved: boolean;
 }
 
+/**
+ * What differs between this device and the peer on one Manual conflict card (#35), as the
+ * Settings → Activity screen lists it. Worked out when the screen asks, from the parked
+ * peer packet and this device's data as it is right then, and never stored.
+ */
+export interface ConflictDiff {
+  /** What the peer has and this device does not. */
+  only_remote: DiffSide;
+  /** What this device has and the peer does not. */
+  only_local: DiffSide;
+  /** Bookmarks both have, under a different title or in a different folder. 0 for history. */
+  changed: number;
+}
+
+/** One side of a ConflictDiff: how many, and the first few to list. */
+export interface DiffSide {
+  total: number;
+  sample: BlockedBookmark[];
+}
+
 // ─── Backend Interface ─────────────────────────────────────────────────────
 
 export interface IBackend {
@@ -551,6 +571,8 @@ export type ExtensionMessage =
   | { type: "GET_SETTINGS" }
   | { type: "SAVE_SETTINGS"; payload: Partial<SyncSettings> }
   | { type: "RESOLVE_CONFLICT"; payload: { id: string; resolution: "local" | "remote" } }
+  // What differs on one pending conflict (#35). Read-only: opens the parked packet, applies nothing.
+  | { type: "GET_CONFLICT_DIFF"; payload: { id: string } }
   | { type: "CLEAR_AUDIT_LOG" }
   | { type: "RESTORE_SESSION"; payload?: { id?: string } }
   | { type: "TEST_BACKEND"; payload: { backend: BackendType } }
@@ -609,4 +631,5 @@ export type ExtensionResponse =
   | { type: "SNAPSHOTS"; payload: SnapshotMeta[] }
   | { type: "SNAPSHOT_RESTORED"; payload: { restored: number } }
   | { type: "DEVICES"; payload: DeviceInfo[] }
-  | { type: "DEVICE_FORGOTTEN"; payload: { removed: number } };
+  | { type: "DEVICE_FORGOTTEN"; payload: { removed: number } }
+  | { type: "CONFLICT_DIFF"; payload: ConflictDiff };

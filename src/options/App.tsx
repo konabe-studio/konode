@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { BookmarkExclusionTree } from "@/lib/ui/bookmark-exclusion-tree";
 import { BookmarkList } from "@/lib/ui/bookmark-list";
+import { ConflictsSection } from "@/options/conflicts-section";
 // Shown in the About section. The manifest is the single source of truth for the
 // version — bump `package.json` and the build stamps it into the manifest.
 const APP_VERSION = browser.runtime.getManifest().version;
@@ -2156,6 +2157,17 @@ export default function OptionsApp() {
               <div className="section-wrap">
                 <h1 className="page-title">{t("opt_activity_head")}</h1>
                 <p className="page-subtitle">{t("opt_activity_head_sub")}</p>
+
+                {/* ── Conflicts (#35) ──
+                    First on the tab, because the popup's Resolve button lands here and a
+                    question waiting for an answer should not sit below the device list. */}
+                <ConflictsSection
+                  conflicts={syncState?.pending_conflicts ?? []}
+                  onResolved={async () => {
+                    const after = await request({ type: "GET_STATE" });
+                    if (after.ok && after.res.type === "STATE") setSyncState(after.res.payload);
+                  }}
+                />
 
                 <div className="settings-section">
                   <div className="settings-card-head">{t("opt_sync_activity_section")}</div>

@@ -1,12 +1,13 @@
 import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncExtension, ConflictItem, BackendConfig,
-  DeviceInfo, DeviceBrowser,
+  DeviceInfo, DeviceBrowser, ConflictDiff,
 } from "@/lib/types";
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { normalizeRepoSlug } from "@/lib/backends/github-backend";
 import { createSnapshot as writeSnapshot, listSnapshots as readSnapshots, restoreSnapshot as applySnapshot, deleteSnapshot as dropSnapshot, type SnapshotMeta } from "@/lib/sync/snapshots";
 import {
-  bookmarkContent, exportBookmarkPayload, importBookmarks, type BulkDeleteBlock,
+  bookmarkContent, exportBookmarkPayload, importBookmarks, peerTreeAsMerged, type BulkDeleteBlock,
 } from "@/lib/handlers/bookmarks-handler";
+import { diffBookmarks, diffHistory } from "./conflict-diff";
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
 import { exportHistory, importHistory, buildLocalHistoryIndex } from "@/lib/handlers/history-handler";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
@@ -1747,6 +1748,35 @@ export class SyncEngine {
     });
     this.onStateChange(newState);
     logger.event("SyncEngine", `Resolved conflict ${id} → ${resolution}`);
+  }
+
+  /**
+   * What differs on one pending conflict (#35): what the peer has that this device does not,
+   * and the reverse, for the Settings screen that asks the question.
+   *
+   * Read-only. Opens the same parked packet "Use remote" would apply, under the same rules
+   * (decrypt, verify), and compares it with what this device would publish right now, so
+   * the lists describe the choice as it stands when it is made, not as it stood when the
+   * card was queued. A peer this device cannot read fails here with the same reason Use
+   * remote would give.
+   */
+  async conflictDiff(id: string): Promise<ConflictDiff> {
+    const state = await getState();
+    const conflict = state.pending_conflicts.find((c) => c.id === id);
+    if (!conflict) throw new Error("This conflict is no longer pending.");
+    const { data_type: dataType } = conflict;
+    if (dataType !== "bookmarks" && dataType !== "history") {
+      throw new Error(`There is nothing to compare for ${dataType}.`);
+    }
+    const packet = (await getConflictPacket(id)) ?? conflict.remote_packet ?? null;
+    const remote = packet ? await this.openPacket(packet) : conflict.remote_version;
+    if (remote === undefined) {
+      throw new Error("That device's data is no longer available here. Sync again to re-check it.");
+    }
+    const local = await this.buildPayload(dataType);
+    return dataType === "bookmarks"
+      ? diffBookmarks(local, await peerTreeAsMerged(remote))
+      : diffHistory(local, remote);
   }
 
   // ─── Session restore ──────────────────────────────────────────────────

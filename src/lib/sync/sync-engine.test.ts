@@ -1428,6 +1428,56 @@ describe("SyncEngine — the conflict packet is parked outside konode_state", ()
   });
 });
 
+describe("SyncEngine.conflictDiff: what a conflict card is about (#35)", () => {
+  function manualEngine3(): SyncEngine {
+    return new SyncEngine({ ...DEFAULT_SETTINGS, device_id: "me", conflict_strategy: "manual" }, () => {});
+  }
+
+  it("lists both sides from the parked packet and applies nothing", async () => {
+    const engine = manualEngine3();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    backend.files.set("bookmarks_peer1", await peerPacket(engine, "peer1", payload([link("B", "https://b.com")])));
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+    const id = (await getState()).pending_conflicts[0].id;
+
+    const diff = await engine.conflictDiff(id);
+
+    expect(diff.only_remote).toEqual({ total: 1, sample: [{ title: "B", url: "https://b.com" }] });
+    expect(diff.only_local).toEqual({ total: 1, sample: [{ title: "A", url: "https://a.com" }] });
+    // Looking is not choosing: the card stays, the peer is not applied.
+    expect(await localUrls()).toEqual(["https://a.com"]);
+    expect((await getState()).pending_conflicts.map((c) => c.id)).toEqual([id]);
+  });
+
+  it("compares against this device as it is now, not as it was when the card was queued", async () => {
+    const engine = manualEngine3();
+    const backend = new FakeBackend();
+    await chrome.bookmarks.create({ parentId: "1", title: "A", url: "https://a.com" });
+    backend.files.set("bookmarks_peer1", await peerPacket(engine, "peer1", payload([link("B", "https://b.com")])));
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+    await chrome.bookmarks.create({ parentId: "1", title: "B", url: "https://b.com" });
+
+    const diff = await engine.conflictDiff((await getState()).pending_conflicts[0].id);
+
+    expect(diff.only_remote.total).toBe(0);
+    expect(diff.only_local.total).toBe(1);
+  });
+
+  it("says so when the conflict is gone or its data is", async () => {
+    const engine = manualEngine3();
+    await setState({
+      pending_conflicts: [{
+        id: "orphan-1", data_type: "bookmarks", device_id: "peer1",
+        timestamp: new Date().toISOString(), resolved: false,
+      }],
+    });
+
+    await expect(engine.conflictDiff("orphan-1")).rejects.toThrow(/no longer available/i);
+    await expect(engine.conflictDiff("nope")).rejects.toThrow(/no longer pending/i);
+  });
+});
+
 describe("statusAfterSync — a queued conflict must not read as 'Synced'", () => {
   // sync() hard-coded `problems ? "error" : "success"`, overwriting the "conflict" status
   // syncType had just set. The popup header said "Synced" and the toolbar showed nothing
