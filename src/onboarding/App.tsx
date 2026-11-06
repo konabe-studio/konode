@@ -4,7 +4,7 @@ import { browser } from "@/lib/utils/ext";
 import { t, tParts } from "@/lib/utils/i18n";
 import { interactiveSignIn, isDriveAuthAvailable, getStoredGDriveUser } from "@/lib/backends/gdrive-oauth";
 import { loadDraft, saveDraft, clearDraft, type DraftStep } from "@/lib/onboarding-draft";
-import { isSecureBackendUrl } from "@/lib/utils/url";
+import { isRefusedHttpUrl } from "@/lib/utils/url";
 
 // Some engines (notably iOS WebKit, e.g. Orion) don't support interactive Google
 // sign-in; gate the Drive option so users aren't sent into a dead end.
@@ -155,6 +155,7 @@ export default function OnboardingApp() {
   // Derived from the selected provider card.
   const backend: BackendType | null = provider ? providerById(provider).backend : null;
   const effectiveWebdavUrl = provider === "nextcloud" ? nextcloudUrl(ncHost, webdavUser) : webdavUrl;
+  const webdavUrlRefused = isRefusedHttpUrl(effectiveWebdavUrl);
 
   // Per-card WebDAV credentials, remembered while the wizard is open. The fields are
   // shared by every WebDAV card, so switching swaps them rather than wiping them —
@@ -354,6 +355,7 @@ export default function OnboardingApp() {
     if (provider === "gdrive") return !!gdriveUser;
     if (provider === "github") return !!githubUser && !!githubRepo;
     if (provider === "nextcloud") return !!(ncHost && webdavUser && webdavPass);
+    if (webdavUrlRefused) return false;
     return !!(effectiveWebdavUrl && webdavUser && webdavPass);
   };
 
@@ -389,8 +391,10 @@ export default function OnboardingApp() {
     if (backend === "webdav") {
       // Refused before the prompt, as in Settings (#83): the manifest grants http only on
       // localhost, so asking could only fail, and the failure read as a server account
-      // problem. Synchronous, so the gesture survives for the real request below.
-      if (/^\s*http:\/\//i.test(effectiveWebdavUrl) && !isSecureBackendUrl(effectiveWebdavUrl)) {
+      // problem. Synchronous, so the gesture survives for the real request below. The
+      // storage step already holds Continue on such an address; this is for a draft
+      // restored past it.
+      if (webdavUrlRefused) {
         setSetupError(t("webdav_err_http"));
         return;
       }
@@ -737,6 +741,11 @@ export default function OnboardingApp() {
                     <div style={S.authPanel} onClick={(e) => e.stopPropagation()}>
                       <input style={S.input} placeholder="https://host/remote.php/dav/files/user/"
                         value={webdavUrl} onChange={(e) => setWebdavUrl(e.target.value)} />
+                      {/* Said here, where the address is typed, and not two steps on at
+                          Finish, which is where the refusal first surfaced (#83). */}
+                      {webdavUrlRefused && (
+                        <div style={S.errorRow} role="alert"><XCircle size={12} style={{ flexShrink: 0 }} /> {t("webdav_err_http")}</div>
+                      )}
                       {webdavCreds()}
                     </div>
                   )}
@@ -908,7 +917,7 @@ export default function OnboardingApp() {
           </div>
 
           {setupError && (
-            <div style={{ ...S.errorRow, marginTop: 12, marginBottom: 12 }}><XCircle size={12} /> {setupError}</div>
+            <div style={{ ...S.errorRow, marginTop: 12, marginBottom: 12 }}><XCircle size={12} style={{ flexShrink: 0 }} /> {setupError}</div>
           )}
           <div style={S.navRow}>
             <button style={S.btnSecondary} onClick={() => { setSetupError(null); setStep("backend"); }}>{t("common_back")}</button>
@@ -1006,7 +1015,7 @@ export default function OnboardingApp() {
           )}
 
           {setupError && (
-            <div style={{ ...S.errorRow, marginBottom: 12 }}><XCircle size={12} /> {setupError}</div>
+            <div style={{ ...S.errorRow, marginBottom: 12 }}><XCircle size={12} style={{ flexShrink: 0 }} /> {setupError}</div>
           )}
           {permSlow && (
             <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 12, lineHeight: 1.5 }}>

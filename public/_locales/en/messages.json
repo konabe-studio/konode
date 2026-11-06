@@ -694,7 +694,7 @@
   },
   "webdav_err_http": {
     "message": "Konode does not connect to a WebDAV server over http://, because your username and password would be sent unencrypted with every request. Use an https:// address. http:// works only for a server on this computer (localhost).",
-    "description": "Shown on Save, on Test connection and on the setup wizard's Finish when the WebDAV address is http:// on any host other than this computer. Keep http://, https:// and localhost exactly as they are."
+    "description": "Shown on Save and Test connection in Settings, and under the address in the setup wizard, when the WebDAV address is http:// on any host other than this computer. Keep http://, https:// and localhost exactly as they are."
   },
   "opt_err_pass_too_short": {
     "message": "Use at least $MIN$ characters. Synced data can be attacked offline, so a short passphrase is guessable. Longer is better, or generate a key.",

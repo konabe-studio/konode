@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isSafeContentUrl, isSecureBackendUrl, isSensitiveUrl } from "@/lib/utils/url";
+import { isRefusedHttpUrl, isSafeContentUrl, isSecureBackendUrl, isSensitiveUrl } from "@/lib/utils/url";
 
 describe("isSafeContentUrl", () => {
   it("allows http(s) web URLs", () => {
@@ -54,5 +54,21 @@ describe("isSecureBackendUrl", () => {
   it("rejects empty / malformed input", () => {
     expect(isSecureBackendUrl("")).toBe(false);
     expect(isSecureBackendUrl(undefined)).toBe(false);
+  });
+});
+
+describe("isRefusedHttpUrl", () => {
+  it("flags http to a host other than this computer (#83)", () => {
+    expect(isRefusedHttpUrl("http://alist.example.com:5244/dav/")).toBe(true);
+    expect(isRefusedHttpUrl("  HTTP://192.168.1.10/dav")).toBe(true);
+    expect(isRefusedHttpUrl("http://127.0.0.2/dav")).toBe(true);
+  });
+  it("leaves https, loopback http and non-addresses alone", () => {
+    expect(isRefusedHttpUrl("https://alist.example.com/dav/")).toBe(false);
+    expect(isRefusedHttpUrl("http://localhost:8080/dav")).toBe(false);
+    expect(isRefusedHttpUrl("http://127.0.0.1/dav")).toBe(false);
+    expect(isRefusedHttpUrl("not a web address")).toBe(false);
+    expect(isRefusedHttpUrl("")).toBe(false);
+    expect(isRefusedHttpUrl(undefined)).toBe(false);
   });
 });

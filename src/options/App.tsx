@@ -93,7 +93,7 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
 import { KEYS, normalizeRemoteExtensions, setRateAnswered, type AuditEntry } from "@/lib/utils/storage";
 import { auditLogText } from "@/lib/utils/audit-text";
-import { isSafeContentUrl, isSecureBackendUrl } from "@/lib/utils/url";
+import { isRefusedHttpUrl, isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl, storeUrlFor, inferStore, STORE_NAME, type LocalExtLike } from "@/lib/utils/extensions-match";
@@ -911,7 +911,7 @@ export default function OptionsApp() {
   // an address that works, or stays quiet about one Save will refuse (127.0.0.2 did).
   const webdavHttpWarn = () => {
     const u = getBackend("webdav")?.webdav?.url ?? "";
-    if (!/^http:\/\//i.test(u) || isSecureBackendUrl(u)) return null;
+    if (!isRefusedHttpUrl(u)) return null;
     // Two sentences, each split around its own scheme, rather than one string with two
     // inline elements: tParts carries a single placeholder, and the schemes are literals
     // that never translate, so they stay <code> and word order stays the translator's.
@@ -945,7 +945,7 @@ export default function OptionsApp() {
   const requestWebdavHostPermission = async (): Promise<PermissionOutcome | "bad-url" | "insecure"> => {
     const url = getBackend("webdav")?.webdav?.url;
     if (!url) return "bad-url";
-    if (/^http:\/\//i.test(url.trim()) && !isSecureBackendUrl(url.trim())) return "insecure";
+    if (isRefusedHttpUrl(url)) return "insecure";
     try {
       const origin = new URL(url).origin + "/*";
       return await ensurePermission({ origins: [origin] });
@@ -2874,6 +2874,8 @@ const STYLES = `
   /* Wraps freely now that it has a line to itself; it used to be nowrap because it was
      competing with the buttons for the same row. */
   .test-result { display: flex; align-items: center; gap: var(--sp-2xs); font-size: var(--fs-xs); }
+  /* A message long enough to wrap squeezed its icon to a dot (#83's message did). */
+  .error-row > svg, .test-result > svg { flex-shrink: 0; }
   .test-result.ok { color: var(--success); }
   .test-result.fail { color: var(--danger); }
 

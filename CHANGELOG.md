@@ -82,7 +82,8 @@ All notable changes to Konode. Format loosely follows
   Save, Test connection and the setup wizard used to say the permission to reach the
   server was not granted, which looked like a problem with your server account. They now
   say that http:// is not allowed and what to use instead, and the note under the address
-  no longer reads as if http:// would work with a risk.
+  no longer reads as if http:// would work with a risk. The setup wizard says it right under
+  the address as you type it and holds Continue, instead of at Finish, two steps later.
 
 ## [1.5.1] - 2026-11-02
 
