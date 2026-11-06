@@ -13,6 +13,7 @@
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa"><img src="https://img.shields.io/chrome-web-store/v/mmlfiiimnpnjcjhhbldenpcmnibedkfa?label=Chrome%20Web%20Store" alt="Chrome Web Store"></a>
   <a href="https://addons.mozilla.org/firefox/addon/konode/"><img src="https://img.shields.io/amo/v/konode?label=Firefox%20Add-ons" alt="Firefox Add-ons"></a>
+  <a href="https://microsoftedge.microsoft.com/addons/detail/acmngpjfommajbkfbfmdfemlheiamfoe"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fmicrosoftedge.microsoft.com%2Faddons%2Fgetproductdetailsbycrxid%2Facmngpjfommajbkfbfmdfemlheiamfoe&amp;query=%24.version&amp;prefix=v&amp;label=Edge%20Add-ons&amp;color=blue" alt="Microsoft Edge Add-ons"></a>
   <a href="https://github.com/konabe-studio/konode/actions/workflows/ci.yml"><img src="https://github.com/konabe-studio/konode/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MPL--2.0-brightgreen" alt="License: MPL-2.0"></a>
   <a href="https://github.com/konabe-studio/konode/stargazers"><img src="https://img.shields.io/github/stars/konabe-studio/konode?label=stars" alt="GitHub stars"></a>
@@ -129,8 +130,8 @@ you had in mind. Picking one system for bookmarks is the simple answer.
 ## Browser support
 
 - **Chromium**: Chrome, Edge, Brave, Helium, ungoogled-chromium, and other Chromium
-  browsers. Fully supported, and on the Chrome Web Store. A Microsoft Edge Add-ons
-  listing, with the same package, is in review.
+  browsers. Fully supported, on the Chrome Web Store and on Microsoft Edge Add-ons
+  (the same package in both).
 - **Firefox**: Firefox and Firefox-based browsers (e.g. Waterfox, Zen), from a
   dedicated build that ships on Firefox Add-ons. Same sync folder and same files as your
   Chromium browsers, so a Firefox install joins a group that is already running. In Zen,
@@ -169,10 +170,11 @@ untranslated string falls back to English, which is safe.
 
 - **Chrome / Brave / Helium / other Chromium browsers**: install from the
   **[Chrome Web Store](https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa)**.
-- **Microsoft Edge**: install from the Chrome Web Store link above for now (Edge asks once
-  to allow extensions from other stores). A Microsoft Edge Add-ons listing is in review;
-  it carries the same package as the Chrome Web Store, so the version is the same either
-  way.
+- **Microsoft Edge**: install from
+  **[Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/acmngpjfommajbkfbfmdfemlheiamfoe)**.
+  It carries the same package as the Chrome Web Store. If you already installed Konode in
+  Edge from the Chrome Web Store, keep that install: it updates the same way, and a second
+  install would join your sync group as a new device.
 - **Firefox / Waterfox**: install from
   **[Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/)**. On Firefox for
   Android, Konode syncs open tabs and the extension list (Firefox for Android gives
@@ -266,9 +268,9 @@ use a dedicated manager like [Bitwarden](https://bitwarden.com),
   merge · per-item conflict resolution · opt-in E2EE · Drive OAuth refresh (PKCE) ·
   cross-browser extension matching · bookmarks kept out of sync · tab groups in sessions ·
   **Chrome Web Store listing** · **Firefox Add-ons listing**, Firefox for Android included ·
+  **Microsoft Edge Add-ons listing** ·
   **translated interface** (English, Hungarian, German, Spanish, Italian, Russian, Chinese
   (Simplified and Traditional)).
-- **In review**: the **Microsoft Edge Add-ons listing**, with the Chrome Web Store's package.
 - **Next**: a held-back deletion that lists the bookmarks it holds
   ([#23](https://github.com/konabe-studio/konode/issues/23)) · a device list that says when
   each device was last active ([#10](https://github.com/konabe-studio/konode/issues/10)) ·

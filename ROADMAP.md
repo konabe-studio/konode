@@ -97,11 +97,11 @@ on any Chromium browser and on Firefox.
   findings", because the second one never arrives.
 
 ## Now live
-Konode is live on both stores, **both serving 1.5.1** since 2026-11-02: Firefox Add-ons
-within minutes of the upload, listed for Firefox for Android too from that version, and the
-Chrome Web Store the same day, after a few hours in review. **Microsoft Edge Add-ons** is the third
-store (#43): its first submission, 1.5.1 from the same package as the Web Store, went in on
-2026-11-02 and is in review.
+Konode is live on three stores, **all serving 1.5.1**. Firefox Add-ons had it within
+minutes of the upload on 2026-11-02, listed for Firefox for Android too from that version,
+and the Chrome Web Store the same day, after a few hours in review. **Microsoft Edge
+Add-ons** is the third store (#43): its first submission, 1.5.1 from the same package as the
+Web Store, went in on 2026-11-02 and is live as of 2026-11-06.
 
 **1.5.1 shipped on 2026-11-02**, tagged `v1.5.1` at `64fcc87`, and it is the first store
 release since 1.4.0: 1.5.0 (tagged 2026-11-01 at `2c9b649`) went to neither store, so 1.5.1
@@ -166,7 +166,8 @@ out says which half of his problem the release solves and which half it does not
     the strength of it and filed the issue. Screenshots are the part of a listing no test can
     read, so a backend claim changing means checking them by eye.
 - Microsoft Edge Add-ons ([#43](https://github.com/konabe-studio/konode/issues/43)): **first
-  submission 2026-11-02**, 1.5.1, in review (Microsoft quotes up to seven business days).
+  submission 2026-11-02**, 1.5.1, **live as of 2026-11-06**, at
+  <https://microsoftedge.microsoft.com/addons/detail/acmngpjfommajbkfbfmdfemlheiamfoe>.
   It takes the Web Store's zip unchanged, so every release goes to both from one file, and
   an Edge user can still install from the Web Store as before. The listing gets its own
   extension id (`acmngpjfommajbkfbfmdfemlheiamfoe`), which needed two more Drive redirect
