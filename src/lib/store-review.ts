@@ -6,10 +6,8 @@
 // where their rating goes, and where it counts. An id not listed here (the local unpacked
 // build, a Chromium package someone built and loaded themselves) has no store to rate it
 // in, so it gets no row. A self-built Firefox package keeps the gecko id, and AMO is still
-// the right place for it.
-//
-// Edge Add-ons assigns a new id when the listing is created; add it here once it exists
-// (internal/PUBLISHING-EDGE.md, "After certification").
+// the right place for it. An install from Microsoft Edge Add-ons carries the id that store
+// assigned (listed since 2026-11-06), so its rating goes to that listing.
 
 import { STORE_NAME } from "@/lib/utils/extensions-match";
 
@@ -23,6 +21,11 @@ const PAGES: Record<string, ReviewPage> = {
   mmlfiiimnpnjcjhhbldenpcmnibedkfa: {
     store: STORE_NAME.chrome,
     url: "https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa/reviews",
+  },
+  // Edge Add-ons has no reviews page of its own: ratings are given on the listing.
+  acmngpjfommajbkfbfmdfemlheiamfoe: {
+    store: "Microsoft Edge Add-ons",
+    url: "https://microsoftedge.microsoft.com/addons/detail/acmngpjfommajbkfbfmdfemlheiamfoe",
   },
   // AMO's rating widget is on the listing itself, not on its reviews page.
   "konabe@proton.me": {

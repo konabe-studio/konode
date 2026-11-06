@@ -7,6 +7,14 @@ All notable changes to Konode. Format loosely follows
 
 ### Added
 
+- **Konode is on Microsoft Edge Add-ons.** The listing went live on 2026-11-06 with 1.5.1,
+  the same package as the Chrome Web Store, and Google Drive sign-in works from it. If you
+  already installed Konode in Edge from the Chrome Web Store, keep that install: it updates
+  the same way, and a second install would join your sync group as a new device. From this
+  version, an install from the Edge listing gets the "Rate it in the store" row in Settings
+  and the one-time rating card, both pointing at the Edge listing. Until now it had neither,
+  because Konode did not know that store's id yet.
+
 - **A conflict shows what differs before you choose (#35).** With conflict resolution set
   to Manual, the popup asked you to Keep local or Use remote and said nothing about either
   version, so the choice was a guess. The card now has a Resolve button that opens
