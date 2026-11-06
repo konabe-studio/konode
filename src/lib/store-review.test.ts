@@ -10,6 +10,12 @@ describe("reviewPageFor", () => {
     expect(page?.url).toMatch(/^https:\/\/chromewebstore\.google\.com\/detail\/konode\/mmlfiiimnpnjcjhhbldenpcmnibedkfa\/reviews$/);
   });
 
+  it("sends an Edge Add-ons install to the Edge listing, not the Web Store", () => {
+    const page = reviewPageFor("acmngpjfommajbkfbfmdfemlheiamfoe");
+    expect(page?.store).toBe("Microsoft Edge Add-ons");
+    expect(page?.url).toBe("https://microsoftedge.microsoft.com/addons/detail/acmngpjfommajbkfbfmdfemlheiamfoe");
+  });
+
   it("sends a Firefox install to the AMO listing", () => {
     expect(reviewPageFor("konabe@proton.me")?.url).toBe("https://addons.mozilla.org/firefox/addon/konode/");
   });
