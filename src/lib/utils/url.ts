@@ -88,3 +88,12 @@ export function isSecureBackendUrl(url: string | undefined | null): boolean {
     return false;
   }
 }
+
+/**
+ * A plain http:// address that `isSecureBackendUrl` refuses: what the WebDAV screens
+ * explain instead of asking the browser for a permission it can never grant (#83).
+ * Anything else that fails the test (empty, unparseable) has its own message.
+ */
+export function isRefusedHttpUrl(url: string | undefined | null): boolean {
+  return !!url && /^\s*http:\/\//i.test(url) && !isSecureBackendUrl(url);
+}

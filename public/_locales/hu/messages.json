@@ -558,7 +558,7 @@
     "message": "Jelszó / app-token"
   },
   "opt_webdav_http_warn": {
-    "message": "Ez egy $SCHEME$ cím, így a jelszavad titkosítatlanul kerülne elküldésre.",
+    "message": "A Konode nem kapcsolódik $SCHEME$ címhez, mert a jelszavad titkosítatlanul utazna.",
     "placeholders": {
       "scheme": {
         "content": "$1",
@@ -607,6 +607,9 @@
   },
   "opt_err_perms_denied": {
     "message": "A WebDAV-szerver eléréséhez szükséges engedély nem lett megadva."
+  },
+  "webdav_err_http": {
+    "message": "A Konode nem kapcsolódik WebDAV-szerverhez http:// címen, mert a felhasználóneved és a jelszavad minden kéréssel titkosítatlanul utazna. Használj https:// címet. A http:// csak ezen a gépen futó szerverhez (localhost) működik."
   },
   "opt_err_pass_too_short": {
     "message": "Használj legalább $MIN$ karaktert. A szinkronizált adatok offline is támadhatók, ezért a rövid jelmondat kitalálható. A hosszabb jobb, vagy generálj kulcsot.",

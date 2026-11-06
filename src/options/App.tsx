@@ -93,7 +93,7 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
 import { KEYS, normalizeRemoteExtensions, setRateAnswered, type AuditEntry } from "@/lib/utils/storage";
 import { auditLogText } from "@/lib/utils/audit-text";
-import { isSafeContentUrl } from "@/lib/utils/url";
+import { isRefusedHttpUrl, isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl, storeUrlFor, inferStore, STORE_NAME, type LocalExtLike } from "@/lib/utils/extensions-match";
@@ -906,10 +906,12 @@ export default function OptionsApp() {
     }
   };
 
-  // http:// warning shown under any WebDAV card whose URL would send the password in the clear.
+  // Shown under any WebDAV card whose URL Konode refuses because it would send the
+  // password in the clear. The same test as the backend's, so the card never warns about
+  // an address that works, or stays quiet about one Save will refuse (127.0.0.2 did).
   const webdavHttpWarn = () => {
     const u = getBackend("webdav")?.webdav?.url ?? "";
-    if (!/^http:\/\//i.test(u) || /^http:\/\/(localhost|127\.)/i.test(u)) return null;
+    if (!isRefusedHttpUrl(u)) return null;
     // Two sentences, each split around its own scheme, rather than one string with two
     // inline elements: tParts carries a single placeholder, and the schemes are literals
     // that never translate, so they stay <code> and word order stays the translator's.
@@ -935,9 +937,15 @@ export default function OptionsApp() {
   // WebDAV hits an arbitrary user host that isn't in host_permissions, so we
   // request it at runtime (optional_host_permissions). Must run inside a user
   // gesture, so call it first — before any await — in the click handlers below.
-  const requestWebdavHostPermission = async (): Promise<PermissionOutcome | "bad-url"> => {
+  //
+  // A plain http:// address is refused here, before the prompt (#83). The manifest asks
+  // for http only on localhost, so the request could never succeed, and the user was told
+  // the permission was not granted, which reads as a problem with their server account.
+  // The check is synchronous, so the click's gesture still reaches the request.
+  const requestWebdavHostPermission = async (): Promise<PermissionOutcome | "bad-url" | "insecure"> => {
     const url = getBackend("webdav")?.webdav?.url;
     if (!url) return "bad-url";
+    if (isRefusedHttpUrl(url)) return "insecure";
     try {
       const origin = new URL(url).origin + "/*";
       return await ensurePermission({ origins: [origin] });
@@ -951,12 +959,14 @@ export default function OptionsApp() {
    *  "Permission was not granted" was the only answer this had, and on Firefox for
    *  Android it was actively misleading: there is no prompt to decline there, so the
    *  user is told they refused something they were never asked. */
-  const webdavPermissionError = (outcome: PermissionOutcome | "bad-url"): string =>
-    outcome === "cannot-prompt"
-      ? t("opt_err_perms_no_prompt")
-      : outcome === "bad-url"
-        ? t("opt_err_perms_bad_url")
-        : t("opt_err_perms_denied");
+  const webdavPermissionError = (outcome: PermissionOutcome | "bad-url" | "insecure"): string =>
+    outcome === "insecure"
+      ? t("webdav_err_http")
+      : outcome === "cannot-prompt"
+        ? t("opt_err_perms_no_prompt")
+        : outcome === "bad-url"
+          ? t("opt_err_perms_bad_url")
+          : t("opt_err_perms_denied");
 
   const save = async () => {
     if (!settings) return;
@@ -2864,6 +2874,8 @@ const STYLES = `
   /* Wraps freely now that it has a line to itself; it used to be nowrap because it was
      competing with the buttons for the same row. */
   .test-result { display: flex; align-items: center; gap: var(--sp-2xs); font-size: var(--fs-xs); }
+  /* A message long enough to wrap squeezed its icon to a dot (#83's message did). */
+  .error-row > svg, .test-result > svg { flex-shrink: 0; }
   .test-result.ok { color: var(--success); }
   .test-result.fail { color: var(--danger); }
 
