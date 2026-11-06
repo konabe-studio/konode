@@ -4,6 +4,7 @@ import { browser } from "@/lib/utils/ext";
 import { t, tParts } from "@/lib/utils/i18n";
 import { interactiveSignIn, isDriveAuthAvailable, getStoredGDriveUser } from "@/lib/backends/gdrive-oauth";
 import { loadDraft, saveDraft, clearDraft, type DraftStep } from "@/lib/onboarding-draft";
+import { isSecureBackendUrl } from "@/lib/utils/url";
 
 // Some engines (notably iOS WebKit, e.g. Orion) don't support interactive Google
 // sign-in; gate the Drive option so users aren't sent into a dead end.
@@ -386,6 +387,13 @@ export default function OnboardingApp() {
 
     const origins: string[] = [];
     if (backend === "webdav") {
+      // Refused before the prompt, as in Settings (#83): the manifest grants http only on
+      // localhost, so asking could only fail, and the failure read as a server account
+      // problem. Synchronous, so the gesture survives for the real request below.
+      if (/^\s*http:\/\//i.test(effectiveWebdavUrl) && !isSecureBackendUrl(effectiveWebdavUrl)) {
+        setSetupError(t("webdav_err_http"));
+        return;
+      }
       try {
         origins.push(new URL(effectiveWebdavUrl).origin + "/*");
       } catch {

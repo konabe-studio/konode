@@ -637,7 +637,7 @@
     "description": "Most WebDAV servers want an app-specific token here rather than the account password, which is why both words appear."
   },
   "opt_webdav_http_warn": {
-    "message": "This is an $SCHEME$ URL, so your password would be sent unencrypted.",
+    "message": "Konode does not connect over $SCHEME$, because your password would be sent unencrypted.",
     "description": "Warning under a WebDAV card whose address would send credentials in the clear. $SCHEME$ is rendered as code and is never translated. Split around the placeholder with tParts, so word order stays yours.",
     "placeholders": {
       "scheme": {
@@ -691,6 +691,10 @@
   },
   "opt_err_perms_denied": {
     "message": "Permission to access the WebDAV server was not granted."
+  },
+  "webdav_err_http": {
+    "message": "Konode does not connect to a WebDAV server over http://, because your username and password would be sent unencrypted with every request. Use an https:// address. http:// works only for a server on this computer (localhost).",
+    "description": "Shown on Save, on Test connection and on the setup wizard's Finish when the WebDAV address is http:// on any host other than this computer. Keep http://, https:// and localhost exactly as they are."
   },
   "opt_err_pass_too_short": {
     "message": "Use at least $MIN$ characters. Synced data can be attacked offline, so a short passphrase is guessable. Longer is better, or generate a key.",
