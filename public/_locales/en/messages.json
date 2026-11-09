@@ -1382,7 +1382,7 @@
   },
   "opt_forget_confirm_one": {
     "message": "Deletes the one file this device has in your storage ($TYPES$). No bookmarks are removed from any browser, here or there. If that browser is still running it will upload itself again and reappear; to keep it out, turn Konode off there first.",
-    "description": "$TYPES$ is the list of data types, already translated elsewhere and joined with commas.",
+    "description": "$TYPES$ is the list of data types, already translated elsewhere and punctuated the way this language punctuates a list.",
     "placeholders": {
       "types": {
         "content": "$2",

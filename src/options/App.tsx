@@ -272,6 +272,18 @@ const auditTime = (iso: string): string =>
 const browserText = (b: DeviceBrowser): string =>
   b.name ? t("opt_device_browser", [isolate(b.name), ENGINE_LABEL[b.engine]]) : ENGINE_LABEL[b.engine];
 
+// The data types a device syncs, as the words the rest of the UI already uses. A `DataType`
+// is an id, not text: printed raw, a Hungarian page read "bookmarks · utolsó feltöltés: 40
+// nappal ezelőtt". The punctuation comes from the locale the catalogue names, the way the
+// relative time takes its wording from `Intl.RelativeTimeFormat`, so Chinese gets "、" and
+// nobody has to translate a comma. NARROW conjunction, not `type: "unit"`: a unit list is
+// "3 ft 7 in", and it joins zh_CN with nothing at all and Russian with a bare space.
+// Narrow drops the "and" where the language allows a bare list (en, zh_CN, ru) and keeps it
+// where it does not (hu, de, es, it).
+const typeList = (types: DataType[]): string =>
+  new Intl.ListFormat(catalogueLocale(), { style: "narrow", type: "conjunction" })
+    .format(types.map((ty) => t(`datatype_${ty}`)));
+
 // Backend label stamped on a newly created BackendConfig. The user-facing card
 // copy and icons live in the shared storage-providers module.
 
@@ -2247,7 +2259,7 @@ export default function OptionsApp() {
                               {isDormant(d.lastSeen, d.isSelf, Date.now()) && <span className="badge-quiet">{t("opt_device_dormant")}</span>}
                             </div>
                             <div className="row-desc">
-                              {d.types.join(", ")}
+                              {typeList(d.types)}
                               {/* "39 days ago" is what tells a ghost from a live device at a
                                   glance; the exact time stays one hover away. */}
                               {d.lastSeen && <> <span title={new Date(d.lastSeen).toLocaleString()}>
@@ -2277,7 +2289,7 @@ export default function OptionsApp() {
                         <div className="settings-row">
                           <div className="settings-row-left">
                             <div className="row-desc">
-                              {plural("opt_forget_confirm", d.types.length, [String(d.types.length), d.types.join(", ")])}
+                              {plural("opt_forget_confirm", d.types.length, [String(d.types.length), typeList(d.types)])}
                             </div>
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>

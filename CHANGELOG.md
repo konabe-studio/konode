@@ -70,6 +70,13 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **The device list names what each device syncs in your language.** Every row's second
+  line listed the data types by their internal names, always in English, so a Hungarian or
+  Chinese page read "bookmarks, sessions" in the middle of its own sentence. It now uses
+  the same words as the toggles that turn those types on, and the list is punctuated the
+  way the language punctuates a list. The confirmation that appears when you press Forget
+  names them the same way.
+
 - **A new device on a Chromium-based browser is named after the engine, not after Chrome.**
   Every Chromium-based browser carries Chrome's name in what it tells websites, so a fresh
   install on Helium, Vivaldi or ungoogled-chromium was called "Linux · Chrome". It is now
