@@ -558,7 +558,7 @@
     "message": "Passwort / App-Token"
   },
   "opt_webdav_http_warn": {
-    "message": "Das ist eine $SCHEME$-Adresse, dein Passwort würde also unverschlüsselt übertragen.",
+    "message": "Konode verbindet sich nicht über $SCHEME$, weil dein Passwort sonst unverschlüsselt übertragen würde.",
     "placeholders": {
       "scheme": {
         "content": "$1",
@@ -607,6 +607,9 @@
   },
   "opt_err_perms_denied": {
     "message": "Die Berechtigung für den Zugriff auf den WebDAV-Server wurde nicht erteilt."
+  },
+  "webdav_err_http": {
+    "message": "Konode verbindet sich nicht über http:// mit einem WebDAV-Server, weil dein Benutzername und dein Passwort sonst bei jeder Anfrage unverschlüsselt übertragen würden. Verwende eine https://-Adresse. http:// funktioniert nur für einen Server auf diesem Computer (localhost)."
   },
   "opt_err_pass_too_short": {
     "message": "Verwende mindestens $MIN$ Zeichen. Synchronisierte Daten lassen sich offline angreifen, eine kurze Passphrase ist also erratbar. Länger ist besser, oder generiere einen Schlüssel.",

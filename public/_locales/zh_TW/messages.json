@@ -558,7 +558,7 @@
     "message": "密碼 / 應用程式權杖"
   },
   "opt_webdav_http_warn": {
-    "message": "這是 $SCHEME$ 網址，你的密碼會以未加密的方式送出。",
+    "message": "Konode 不會透過 $SCHEME$ 連線，因為你的密碼會以未加密的方式送出。",
     "placeholders": {
       "scheme": {
         "content": "$1",
@@ -607,6 +607,9 @@
   },
   "opt_err_perms_denied": {
     "message": "沒有取得存取 WebDAV 伺服器的權限。"
+  },
+  "webdav_err_http": {
+    "message": "Konode 不會透過 http:// 連線到 WebDAV 伺服器，因為每次請求都會以未加密的方式送出你的使用者名稱和密碼。請改用 https:// 網址。http:// 只適用於這台電腦上的伺服器（localhost）。"
   },
   "opt_err_pass_too_short": {
     "message": "請至少用 $MIN$ 個字元。同步過的資料可能被離線破解，太短的通關密語會被破解出來。越長越好，或是產生一把金鑰。",

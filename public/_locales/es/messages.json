@@ -549,7 +549,7 @@
     "message": "Contraseña / Token de la aplicación"
   },
   "opt_webdav_http_warn": {
-    "message": "Esta es una URL $SCHEME$, por lo que tu contraseña se enviará sin cifrar.",
+    "message": "Konode no se conecta por $SCHEME$, porque tu contraseña se enviaría sin cifrar.",
     "placeholders": {
       "scheme": {
         "content": "$1",
@@ -598,6 +598,9 @@
   },
   "opt_err_perms_denied": {
     "message": "No se autorizó el permiso para acceder al servidor WebDAV."
+  },
+  "webdav_err_http": {
+    "message": "Konode no se conecta a un servidor WebDAV por http://, porque tu nombre de usuario y tu contraseña se enviarían sin cifrar en cada solicitud. Usa una dirección https://. http:// solo funciona con un servidor en este equipo (localhost)."
   },
   "opt_err_pass_too_short": {
     "message": "Usa al menos $MIN$ caracteres. Los datos sincronizados pueden ser objeto de ataques sin conexión, por lo que una passphrase corta es fácil de adivinar. Cuanto más larga, mejor; o bien, genera una clave.",

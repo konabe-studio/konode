@@ -7,6 +7,14 @@ All notable changes to Konode. Format loosely follows
 
 ### Added
 
+- **Konode is on Microsoft Edge Add-ons.** The listing went live on 2026-11-06 with 1.5.1,
+  the same package as the Chrome Web Store, and Google Drive sign-in works from it. If you
+  already installed Konode in Edge from the Chrome Web Store, keep that install: it updates
+  the same way, and a second install would join your sync group as a new device. From this
+  version, an install from the Edge listing gets the "Rate it in the store" row in Settings
+  and the one-time rating card, both pointing at the Edge listing. Until now it had neither,
+  because Konode did not know that store's id yet.
+
 - **A conflict shows what differs before you choose (#35).** With conflict resolution set
   to Manual, the popup asked you to Keep local or Use remote and said nothing about either
   version, so the choice was a guess. The card now has a Resolve button that opens
@@ -81,6 +89,16 @@ All notable changes to Konode. Format loosely follows
   encryption without a passphrase was a broken sentence about a "plaintext password", and
   the passphrase fields in Settings said "password" (密码) where setup says "passphrase"
   (密码短语).
+
+- **A WebDAV address on plain http:// says why it is refused (#83).** Konode connects to a
+  WebDAV server only over https://, or over http:// to a server on the same computer,
+  because WebDAV sends your username and password with every request and http:// sends
+  them readable to anyone on the way. That has not changed. What changed is the message:
+  Save, Test connection and the setup wizard used to say the permission to reach the
+  server was not granted, which looked like a problem with your server account. They now
+  say that http:// is not allowed and what to use instead, and the note under the address
+  no longer reads as if http:// would work with a risk. The setup wizard says it right under
+  the address as you type it and holds Continue, instead of at Finish, two steps later.
 
 ## [1.5.1] - 2026-11-02
 
