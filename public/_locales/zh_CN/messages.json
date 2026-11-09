@@ -549,7 +549,7 @@
     "message": "密码/密钥"
   },
   "opt_webdav_http_warn": {
-    "message": "这是一个 $SCHEME$ URL，因此您的密码将以未加密的方式发送。",
+    "message": "Konode 不会通过 $SCHEME$ 连接，因为您的密码将以未加密的方式发送。",
     "placeholders": {
       "scheme": {
         "content": "$1",
@@ -598,6 +598,9 @@
   },
   "opt_err_perms_denied": {
     "message": "未获得访问 WebDAV 服务器的权限。"
+  },
+  "webdav_err_http": {
+    "message": "Konode 不会通过 http:// 连接 WebDAV 服务器，因为每次请求都会以未加密的方式发送您的用户名和密码。请使用 https:// 地址。http:// 仅适用于本机上的服务器（localhost）。"
   },
   "opt_err_pass_too_short": {
     "message": "使用至少 $MIN$ 个字符。同步的数据可能离线被攻击，因此短的密码短语容易被猜到。越长越好，或者生成密钥。",
