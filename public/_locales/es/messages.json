@@ -692,6 +692,9 @@
   "opt_github_branch_label": {
     "message": "Branch"
   },
+  "opt_test_connection": {
+    "message": "Probar la conexión"
+  },
   "opt_stat_never": {
     "message": "Nunca"
   },

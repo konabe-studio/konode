@@ -701,6 +701,9 @@
   "opt_github_branch_label": {
     "message": "Branch"
   },
+  "opt_test_connection": {
+    "message": "Kapcsolat tesztelése"
+  },
   "opt_stat_never": {
     "message": "Soha"
   },
@@ -1027,7 +1030,7 @@
     "message": "Nem sikerült összevetni a két változatot."
   },
   "opt_diff_only_remote": {
-    "message": "Csak itt: $DEVICE$ ($COUNT$)",
+    "message": "Csak a másik eszközön: $DEVICE$ ($COUNT$)",
     "placeholders": {
       "device": {
         "content": "$1",

@@ -692,6 +692,9 @@
   "opt_github_branch_label": {
     "message": "分支"
   },
+  "opt_test_connection": {
+    "message": "测试连接"
+  },
   "opt_stat_never": {
     "message": "从未"
   },

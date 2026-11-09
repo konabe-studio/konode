@@ -100,6 +100,15 @@ All notable changes to Konode. Format loosely follows
   no longer reads as if http:// would work with a risk. The setup wizard says it right under
   the address as you type it and holds Continue, instead of at Finish, two steps later.
 
+- **The Test connection button is translated.** On the Storage card in Settings its label
+  was English on every page, in the middle of fields and messages that were in your
+  language. It now reads in the language the rest of the page reads in.
+
+- **Hungarian: the heading over the other device's bookmarks said "only here".** In the list
+  of what a conflict is about, the heading over the bookmarks that only the OTHER device has
+  read "Csak itt", only here, while the heading right below it said "only on this device".
+  It now names the other device the way every other language does.
+
 ## [1.5.1] - 2026-11-02
 
 ### Fixed

@@ -1700,7 +1700,7 @@ export default function OptionsApp() {
                         <div className="card-test">
                           <button className="btn-secondary" onClick={testBackend} disabled={testing}>
                             {testing && <Loader2 size={12} className="spin" />}
-                            Test Connection
+                            {t("opt_test_connection")}
                           </button>
                           {testStatus && (
                             <span className={`test-result ${testStatus.ok ? "ok" : "fail"}`}>

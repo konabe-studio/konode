@@ -701,6 +701,9 @@
   "opt_github_branch_label": {
     "message": "Ветка"
   },
+  "opt_test_connection": {
+    "message": "Проверить подключение"
+  },
   "opt_stat_never": {
     "message": "Никогда"
   },

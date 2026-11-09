@@ -701,6 +701,9 @@
   "opt_github_branch_label": {
     "message": "分支"
   },
+  "opt_test_connection": {
+    "message": "測試連線"
+  },
   "opt_stat_never": {
     "message": "從未"
   },

@@ -801,6 +801,10 @@
     "message": "Branch",
     "description": "The git branch. Most languages keep the English word here; use whatever git's own interface uses in yours."
   },
+  "opt_test_connection": {
+    "message": "Test connection",
+    "description": "The button under the storage fields that checks the address and credentials without saving them. Sentence case, like the Save changes button beside it."
+  },
   "opt_stat_never": {
     "message": "Never",
     "description": "Value of the 'Last sync' tile when this device has never completed a sync."
