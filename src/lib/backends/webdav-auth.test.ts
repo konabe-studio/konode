@@ -190,3 +190,46 @@ describe("WebDAV 401: a refused SCHEME is not a wrong password", () => {
     expect(state.calls).toBe(2); // MKCOL, then the PROPFIND that asks whether it exists
   });
 });
+
+// #90: the same Nextcloud account worked in one browser and got "Authentication failed"
+// in another. A request that carries the user's Nextcloud session cookie (signed in to its
+// web interface in that browser) is treated as a browser session and refused for want of
+// a CSRF token, password or not. Konode authenticates with the Basic header alone, so no
+// request may carry cookies, and that includes the peer-file GETs inside downloadAll.
+describe("WebDAV requests never carry the browser's cookies", () => {
+  it("sends credentials: omit on every request, whichever method makes it", async () => {
+    const seen: { method: string; credentials: RequestCredentials | undefined }[] = [];
+    const listing = `<?xml version="1.0"?><d:multistatus xmlns:d="DAV:">
+      <d:response><d:href>/remote.php/dav/files/ben/konode/konode_bookmarks_peer.json</d:href></d:response>
+    </d:multistatus>`;
+    vi.stubGlobal("fetch", (_url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      seen.push({ method, credentials: init?.credentials });
+      const body = method === "PROPFIND" ? listing : JSON.stringify(packet());
+      return Promise.resolve({
+        ok: true,
+        status: method === "PROPFIND" ? 207 : 200,
+        redirected: false,
+        headers: new Headers(),
+        text: () => Promise.resolve(body),
+        json: () => Promise.resolve(JSON.parse(body)),
+      } as Response);
+    });
+
+    const dav = new WebDAVBackend(config("ben", "pw"));
+    await dav.connect();
+    await dav.testConnection();
+    await dav.upload(packet());
+    await dav.downloadAll("bookmarks", "dev-1").catch(() => []);
+    await dav.putFile("x.json", "{}");
+    await dav.getFile("x.json");
+    await dav.listFiles("konode_");
+    await dav.listFilesWithTimes("konode_");
+    await dav.deleteFile("x.json");
+
+    // The peer file itself was fetched, not only the listing.
+    expect(seen.filter((s) => s.method === "GET").length).toBeGreaterThanOrEqual(2);
+    expect(seen.length).toBeGreaterThanOrEqual(10);
+    expect(seen.filter((s) => s.credentials !== "omit")).toEqual([]);
+  });
+});

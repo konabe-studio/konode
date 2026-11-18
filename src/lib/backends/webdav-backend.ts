@@ -7,6 +7,23 @@ import { utf8ToBase64 } from "@/lib/utils/base64";
 const INSECURE_URL_MSG =
   "WebDAV over plain http:// is not allowed. Your username and password would be sent unencrypted on every request. Use an https:// URL (http is permitted only for localhost).";
 
+/**
+ * Every WebDAV request goes through here, so none of them carries the browser's cookies.
+ *
+ * Konode authenticates with the Basic header alone, and a cookie can only get in its way.
+ * When the user is also signed in to Nextcloud's web interface in the same browser, a
+ * request that carries the session cookie is treated as a browser session, and Nextcloud
+ * then wants the CSRF token that only its own pages hold. It refuses with a 401, and the
+ * 401 still offers Basic, so the user is told to check a password that is correct (#90:
+ * the same account worked in one browser and failed in another).
+ *
+ * One function on purpose, like authHeader: eleven call sites setting the option by hand
+ * is how one of them would have been missed.
+ */
+function davFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  return fetch(url, { ...init, credentials: "omit" });
+}
+
 /** The last path segment of a PROPFIND href, decoded when it can be. */
 function hrefBasename(href: string): string {
   try { return decodeURIComponent(href).split("/").pop() ?? ""; }
@@ -127,7 +144,7 @@ export class WebDAVBackend implements IBackend {
   private async ensureFolder(): Promise<void> {
     // MKCOL creates the folder if it doesn't exist
     // 405 = already exists, which is fine
-    const res = await fetch(this.baseUrl, {
+    const res = await davFetch(this.baseUrl, {
       method: "MKCOL",
       headers: this.headers(),
     });
@@ -164,7 +181,7 @@ export class WebDAVBackend implements IBackend {
     // Don't guess from the status code, though: WebDAV servers answer MKCOL with a wide
     // spread of codes, and a 403 can mean "you may not create it" on a collection that
     // already exists. Ask.
-    const check = await fetch(this.baseUrl + "/", {
+    const check = await davFetch(this.baseUrl + "/", {
       method: "PROPFIND",
       headers: { ...this.headers(), Depth: "0" },
       cache: "no-store",
@@ -182,7 +199,7 @@ export class WebDAVBackend implements IBackend {
   async upload(packet: SyncPacket): Promise<void> {
     await withRetry(async () => {
       const name = `konode_${packet.data_type}_${packet.device_id}.json`;
-      const res = await fetch(`${this.baseUrl}/${name}`, {
+      const res = await davFetch(`${this.baseUrl}/${name}`, {
         method: "PUT",
         headers: this.headers(),
         body: JSON.stringify(packet, null, 2),
@@ -199,7 +216,7 @@ export class WebDAVBackend implements IBackend {
   async downloadAll(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket[]> {
     return withRetry(async () => {
       // PROPFIND to list files in folder
-      const res = await fetch(this.baseUrl + "/", {
+      const res = await davFetch(this.baseUrl + "/", {
         method: "PROPFIND",
         headers: { ...this.headers(), Depth: "1" },
         body: `<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/></d:prop></d:propfind>`,
@@ -234,7 +251,7 @@ export class WebDAVBackend implements IBackend {
       const packets: SyncPacket[] = [];
       for (const href of hrefs) {
         const fullUrl = href.startsWith("http") ? href : new URL(href, this.w.url).href;
-        const r = await fetch(fullUrl, {
+        const r = await davFetch(fullUrl, {
           headers: { Authorization: this.authHeader() },
           cache: "no-store", // avoid a stale peer file from the browser HTTP cache
         });
@@ -267,14 +284,14 @@ export class WebDAVBackend implements IBackend {
 
   async putFile(name: string, content: string): Promise<void> {
     await withRetry(async () => {
-      const res = await fetch(`${this.baseUrl}/${name}`, { method: "PUT", headers: this.headers(), body: content });
+      const res = await davFetch(`${this.baseUrl}/${name}`, { method: "PUT", headers: this.headers(), body: content });
       if (!res.ok) throw new HttpError(res.status, `WebDAV PUT failed: ${res.status}`);
     });
   }
 
   async getFile(name: string): Promise<string | null> {
     return withRetry(async () => {
-      const res = await fetch(`${this.baseUrl}/${name}`, { headers: this.headers(), cache: "no-store" });
+      const res = await davFetch(`${this.baseUrl}/${name}`, { headers: this.headers(), cache: "no-store" });
       if (res.status === 404) return null;
       if (!res.ok) throw new HttpError(res.status, `WebDAV GET failed: ${res.status}`);
       return res.text();
@@ -283,7 +300,7 @@ export class WebDAVBackend implements IBackend {
 
   async listFiles(prefix: string): Promise<string[]> {
     return withRetry(async () => {
-      const res = await fetch(this.baseUrl + "/", {
+      const res = await davFetch(this.baseUrl + "/", {
         method: "PROPFIND",
         headers: { ...this.headers(), Depth: "1" },
         body: `<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/></d:prop></d:propfind>`,
@@ -300,7 +317,7 @@ export class WebDAVBackend implements IBackend {
 
   async listFilesWithTimes(prefix: string): Promise<ListedFile[]> {
     return withRetry(async () => {
-      const res = await fetch(this.baseUrl + "/", {
+      const res = await davFetch(this.baseUrl + "/", {
         method: "PROPFIND",
         headers: { ...this.headers(), Depth: "1" },
         body: `<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/><d:getlastmodified/></d:prop></d:propfind>`,
@@ -314,7 +331,7 @@ export class WebDAVBackend implements IBackend {
 
   async deleteFile(name: string): Promise<void> {
     await withRetry(async () => {
-      const res = await fetch(`${this.baseUrl}/${name}`, { method: "DELETE", headers: this.headers() });
+      const res = await davFetch(`${this.baseUrl}/${name}`, { method: "DELETE", headers: this.headers() });
       if (!res.ok && res.status !== 404) throw new HttpError(res.status, `WebDAV DELETE failed: ${res.status}`);
     });
   }
@@ -323,7 +340,7 @@ export class WebDAVBackend implements IBackend {
   async testConnection(): Promise<{ ok: boolean; message: string }> {
     try {
       if (!isSecureBackendUrl(this.w.url)) return { ok: false, message: INSECURE_URL_MSG };
-      const res = await fetch(this.w.url, {
+      const res = await davFetch(this.w.url, {
         method: "PROPFIND",
         headers: { ...this.headers(), Depth: "0" },
         body: `<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/></d:prop></d:propfind>`,

@@ -70,6 +70,15 @@ All notable changes to Konode. Format loosely follows
 
 ### Fixed
 
+- **Nextcloud no longer refuses a correct password because you are signed in to it (#90).**
+  Konode's WebDAV requests could carry the browser's cookies for your server. If you were
+  also signed in to Nextcloud's web interface in that browser, Nextcloud took the request
+  for a browser session, asked for a security token only its own pages have, and refused
+  it. Konode then said "Authentication failed. Check username/password" about a password
+  that was right, and the same account kept working in a browser where you weren't signed
+  in. Konode signs in with your username and password alone, so its requests no longer
+  send cookies at all.
+
 - **The device list names what each device syncs in your language.** Every row's second
   line listed the data types by their internal names, always in English, so a Hungarian or
   Chinese page read "bookmarks, sessions" in the middle of its own sentence. It now uses
