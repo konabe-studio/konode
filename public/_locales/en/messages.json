@@ -122,8 +122,8 @@
     "description": "Button on a conflict card in the popup, next to the other device's name. Opens Settings → Activity, which lists what differs between the two devices and offers the same two answers."
   },
   "popup_active_streams": {
-    "message": "Active streams",
-    "description": "Heading above the four data-type dots. The stylesheet displays it in capitals, so do not capitalise it here."
+    "message": "Data types",
+    "description": "Heading in the popup above the four data types, each shown with its sync state. Sentence case, as written."
   },
   "popup_missing_extensions_one": {
     "message": "$COUNT$ missing extension",
@@ -150,8 +150,8 @@
     "description": "Opens a store page for every missing extension, one tab each."
   },
   "popup_sessions_head": {
-    "message": "Sessions from other devices",
-    "description": "Heading above the restorable sessions list. The stylesheet displays it in capitals, so do not capitalise it here."
+    "message": "Other devices",
+    "description": "Heading in the popup above the open tabs of your other devices, which can be restored here. Sentence case, as written."
   },
   "popup_unknown_device": {
     "message": "Unknown device",
@@ -246,10 +246,6 @@
     "message": "Device",
     "description": "Footer label before this device's name."
   },
-  "popup_configure": {
-    "message": "Configure →",
-    "description": "Footer link to Settings. Keep the arrow."
-  },
   "popup_activity_log": {
     "message": "Activity log →",
     "description": "Footer link that opens Settings on the Activity tab. Keep the arrow."
@@ -287,8 +283,16 @@
     "message": "Syncs straight to your own Google Drive. Thanks to OAuth, the access token is kept on this device only.",
     "description": "Storage provider card description."
   },
+  "provider_gdrive_hint": {
+    "message": "Google account",
+    "description": "One short line under the provider's name on its tile in Settings, Storage. Keep it to about three words: the tile is narrow and the line is cut, not wrapped."
+  },
   "provider_nextcloud_desc": {
     "message": "Your own Nextcloud or ownCloud server."
+  },
+  "provider_nextcloud_hint": {
+    "message": "Your own server",
+    "description": "One short line under the provider's name on its tile in Settings, Storage. Keep it to about three words: the tile is narrow and the line is cut, not wrapped."
   },
   "provider_nextcloud_note": {
     "message": "Enter just your server host; use an App Password (Settings → Security).",
@@ -296,6 +300,10 @@
   },
   "provider_pcloud_desc": {
     "message": "pCloud storage. Needs a paid pCloud plan."
+  },
+  "provider_pcloud_hint": {
+    "message": "EU or US region",
+    "description": "One short line under the provider's name on its tile in Settings, Storage. Keep it to about three words: the tile is narrow and the line is cut, not wrapped."
   },
   "provider_pcloud_note": {
     "message": "Pick the $REGION$ region if that is where your pCloud account lives.",
@@ -309,11 +317,19 @@
   "provider_koofr_desc": {
     "message": "Koofr cloud storage."
   },
+  "provider_koofr_hint": {
+    "message": "Koofr account",
+    "description": "One short line under the provider's name on its tile in Settings, Storage. Keep it to about three words: the tile is narrow and the line is cut, not wrapped."
+  },
   "provider_koofr_note": {
     "message": "Use your Koofr email as the username, and a Koofr app password as the password."
   },
   "provider_fastmail_desc": {
     "message": "Fastmail file storage."
+  },
+  "provider_fastmail_hint": {
+    "message": "Fastmail account",
+    "description": "One short line under the provider's name on its tile in Settings, Storage. Keep it to about three words: the tile is narrow and the line is cut, not wrapped."
   },
   "provider_fastmail_note": {
     "message": "Use your full Fastmail address as the username, and an app password that has Files (WebDAV) access."
@@ -321,14 +337,26 @@
   "provider_jianguoyun_desc": {
     "message": "Nutstore cloud storage, widely used in mainland China."
   },
+  "provider_jianguoyun_hint": {
+    "message": "Nutstore account",
+    "description": "One short line under the provider's name on its tile in Settings, Storage. Keep it to about three words: the tile is narrow and the line is cut, not wrapped."
+  },
   "provider_jianguoyun_note": {
     "message": "Use your Nutstore email as the username, and a third-party app password as the password. On a free account, raise Sync interval to 120 seconds or more once you have three devices: Nutstore allows 600 WebDAV requests every 30 minutes."
   },
   "provider_github_desc": {
     "message": "Your synced data lives in a private GitHub repository, which Konode reaches with a Personal Access Token."
   },
+  "provider_github_hint": {
+    "message": "Private repository",
+    "description": "One short line under the provider's name on its tile in Settings, Storage. Keep it to about three words: the tile is narrow and the line is cut, not wrapped."
+  },
   "provider_webdav_desc": {
     "message": "Synology, kDrive, or any other WebDAV server."
+  },
+  "provider_webdav_hint": {
+    "message": "Any WebDAV server",
+    "description": "One short line under the provider's name on its tile in Settings, Storage. Keep it to about three words: the tile is narrow and the line is cut, not wrapped."
   },
   "provider_syncing_to": {
     "message": "Syncing to $URL$.",
@@ -344,10 +372,11 @@
     "message": "Welcome to Konode"
   },
   "onb_welcome_subtitle": {
-    "message": "Browser sync where your data stays genuinely yours. Your bookmarks, sessions and extensions go straight to storage you own. No server in between."
+    "message": "Browser sync to storage you own. Your bookmarks, sessions and extensions go straight there, with no Konode server in between."
   },
-  "onb_feature_storage": {
-    "message": "Your data always stays on storage you own."
+  "onb_feature_encryption": {
+    "message": "Optional end-to-end encryption, set up in a later step.",
+    "description": "First of three points on the setup wizard's welcome card. The wizard asks about encryption two steps later."
   },
   "onb_feature_instant": {
     "message": "Syncs every change as it happens."
@@ -355,11 +384,8 @@
   "onb_feature_browsers": {
     "message": "Works in Chromium and Firefox based browsers."
   },
-  "onb_feature_providers": {
-    "message": "You decide where your data lives."
-  },
   "onb_get_started": {
-    "message": "Get started"
+    "message": "Choose storage"
   },
   "onb_backend_title": {
     "message": "Choose your storage"
@@ -389,7 +415,7 @@
   },
   "opt_provider_active": {
     "message": "active",
-    "description": "Badge on the storage card that is saved and in use. Shown in capitals."
+    "description": "Badge on the storage tile that is saved and in use. Write it in lower case: the page raises the first letter."
   },
   "opt_drive_disconnect": {
     "message": "Disconnect",
@@ -398,6 +424,10 @@
   "opt_drive_unavailable": {
     "message": "Google sign-in isn't available in this browser. Pick another option.",
     "description": "On the Google Drive card in Settings, on a browser with no way to sign in to Google (Firefox for Android has no identity API). The same sentence as setup's."
+  },
+  "opt_drive_unavailable_short": {
+    "message": "Not available in this browser",
+    "description": "The Google Drive tile's short line when this browser has no Google sign-in (Firefox for Android, Orion). The full sentence is opt_drive_unavailable, shown once the tile is picked."
   },
   "provider_webdav_other": {
     "message": "WebDAV (other)",
@@ -1331,8 +1361,8 @@
     }
   },
   "opt_this_device": {
-    "message": "THIS DEVICE",
-    "description": "Badge marking your own device in the list. Upper case matches the other badges; use whatever reads as a badge in your language."
+    "message": "This device",
+    "description": "Badge marking your own device in the list. Sentence case, like the other badges."
   },
   "opt_last_upload_ago": {
     "message": "· last upload $WHEN$",
@@ -1359,8 +1389,8 @@
     }
   },
   "opt_device_dormant": {
-    "message": "INACTIVE",
-    "description": "Badge on a device in the list that has uploaded nothing for a long time (the line under it says how long). Calm, not alarming: nothing is wrong and nothing happens to the device. Upper case matches the other badges; use whatever reads as a badge in your language."
+    "message": "Inactive",
+    "description": "Badge on a device in the list that has uploaded nothing for a long time (the line under it says how long). Calm, not alarming: nothing is wrong and nothing happens to the device. Sentence case, like the other badges."
   },
   "opt_device_dormant_note_one": {
     "message": "Nothing uploaded in over a day. That can mean nothing changed there, or that this browser is gone. If it is gone, you can forget it.",
@@ -1427,32 +1457,59 @@
     "message": "$COUNT$ of your $TOTAL$ bookmarks",
     "description": "How big the blocked deletion is. The proportion is the whole point, so both numbers stay in the sentence.",
     "placeholders": {
-      "count": { "content": "$1", "example": "1" },
-      "total": { "content": "$2", "example": "49" }
+      "count": {
+        "content": "$1",
+        "example": "1"
+      },
+      "total": {
+        "content": "$2",
+        "example": "49"
+      }
     }
   },
   "opt_blocked_headline_other": {
     "message": "$COUNT$ of your $TOTAL$ bookmarks",
     "description": "Plural of opt_blocked_headline_one.",
     "placeholders": {
-      "count": { "content": "$1", "example": "48" },
-      "total": { "content": "$2", "example": "49" }
+      "count": {
+        "content": "$1",
+        "example": "48"
+      },
+      "total": {
+        "content": "$2",
+        "example": "49"
+      }
     }
   },
   "opt_blocked_count_one": {
     "message": "$COUNT$ bookmark",
     "description": "Fallback headline for a notice saved by an older version, which recorded the count but not the size of the tree.",
-    "placeholders": { "count": { "content": "$1", "example": "1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
   },
   "opt_blocked_count_other": {
     "message": "$COUNT$ bookmarks",
     "description": "Plural of opt_blocked_count_one.",
-    "placeholders": { "count": { "content": "$1", "example": "48" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "48"
+      }
+    }
   },
   "opt_blocked_from": {
     "message": "Asked for by $DEVICE$.",
     "description": "Names the peer device that sent the deletion. $DEVICE$ is a name the user chose.",
-    "placeholders": { "device": { "content": "$1", "example": "boxbox" } }
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "boxbox"
+      }
+    }
   },
   "opt_blocked_from_unknown": {
     "message": "Asked for by another device.",
@@ -1465,12 +1522,22 @@
   "opt_blocked_recent_one": {
     "message": "Other devices already removed $COUNT$ bookmark here in the last 24 hours, and this would take the total past your bulk-delete limit.",
     "description": "Under the blocked-deletion headline, only when earlier deletions from other devices are why a deletion smaller than the limit was held back: the guard adds up what peers removed here over a day (#41). The limit is the 'Max bulk delete from a peer' setting.",
-    "placeholders": { "count": { "content": "$1", "example": "1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
   },
   "opt_blocked_recent_other": {
     "message": "Other devices already removed $COUNT$ bookmarks here in the last 24 hours, and this would take the total past your bulk-delete limit.",
     "description": "Plural of opt_blocked_recent_one.",
-    "placeholders": { "count": { "content": "$1", "example": "30" } }
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "30"
+      }
+    }
   },
   "opt_blocked_apply": {
     "message": "Apply the deletion",

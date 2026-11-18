@@ -291,6 +291,21 @@ const typeList = (types: DataType[]): string =>
 // setup wizard so the two screens cannot describe the same toggle differently again.
 const DATA_TYPES: DataType[] = ["bookmarks", "sessions", "history", "extensions"];
 
+// The provider grid's column count, from the same breakpoint as `.provider-grid` in STYLES.
+// The grid needs it in script as well as in CSS: it decides after which tile the settings
+// panel goes, which is the last tile of the selected one's row.
+const PROVIDER_GRID_ONE_COL = "(max-width: 479px)";
+function useMediaMatch(query: string): boolean {
+  const [match, setMatch] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const on = () => setMatch(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, [query]);
+  return match;
+}
+
 // ─── App ──────────────────────────────────────────────────────────────────
 
 export default function OptionsApp() {
@@ -401,6 +416,7 @@ export default function OptionsApp() {
   // Selected storage-provider card — seeded from the saved config (below), then
   // user-driven. null = nothing chosen yet.
   const [selectedProvider, setSelectedProvider] = useState<ProviderId | null>(null);
+  const gridCols = useMediaMatch(PROVIDER_GRID_ONE_COL) ? 1 : 2;
 
   // The provider that is actually PERSISTED, i.e. the one the sync engine uses.
   // Kept apart from `selectedProvider` because clicking a card only *stages* a
@@ -1447,43 +1463,61 @@ export default function OptionsApp() {
               <h1 className="page-title">{t("opt_backend_head")}</h1>
               <p className="page-subtitle">{t("opt_backend_head_sub")}</p>
 
-              <div className="card-list">
-                {providerCards(t("locale_bcp47")).map((p) => {
-                  // Selection drives the card UI (expanded config, radio); only the
-                  // persisted provider earns the "active" badge.
-                  const isActive = selectedProvider === p.id;
-                  const isSaved = savedProvider === p.id;
-                  // No Google sign-in here at all (Firefox for Android has no identity API):
-                  // said on the card itself, as an unsupported data type is, not only once picked.
-                  const driveOff = p.id === "gdrive" && !DRIVE_AVAILABLE;
-
-                  return (
-                    <div
-                      key={p.id}
-                      className={`backend-card ${isActive ? "selected" : ""}`}
-                      role="button"
-                      tabIndex={0}
-                      aria-pressed={isActive}
-                      aria-label={t("opt_use_provider", providerLabel(p))}
-                      style={driveOff ? { opacity: 0.55 } : undefined}
-                      onClick={() => pickProvider(p.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          pickProvider(p.id);
-                        }
-                      }}
-                    >
-                      <div className="backend-card-header">
-                        <div className="backend-icon-wrap"><ProviderLogo id={p.id} size={16} /></div>
-                        <div className="backend-info">
-                          <div className="backend-name">
-                            {providerLabel(p)}
-                            {isSaved && <span className="badge-active">{t("opt_provider_active")}</span>}
+              {/* A grid of tiles, and the chosen provider's settings in a full-width panel
+                  under ITS row. Eight cards stacked with one expanded pushed most of the
+                  choices below the fold; as tiles they stay in view while one is open, and the
+                  panel sits next to the tile it belongs to rather than at the end. Two columns,
+                  so eight providers fill every row and a translated hint fits on one line;
+                  one on a phone. `gridCols` must say what the CSS draws, since it decides
+                  which tile the panel follows. */}
+              <div className="provider-grid">
+                {(() => {
+                  const cards = providerCards(t("locale_bcp47"));
+                  const sel = cards.findIndex((c) => c.id === selectedProvider);
+                  const panelAfter = sel < 0 ? -1 : Math.min(cards.length - 1, sel - (sel % gridCols) + gridCols - 1);
+                  return cards.map((card, i) => {
+                    // Selection drives the panel; only the persisted provider earns "active".
+                    const isSel = selectedProvider === card.id;
+                    const isSaved = savedProvider === card.id;
+                    // No Google sign-in here at all (Firefox for Android has no identity API):
+                    // said on the tile itself, as an unsupported data type is, not only once picked.
+                    const tileOff = card.id === "gdrive" && !DRIVE_AVAILABLE;
+                    return (
+                      <Fragment key={card.id}>
+                        <div
+                          className={`provider-tile ${isSel ? "selected" : ""}`}
+                          role="button"
+                          tabIndex={0}
+                          aria-pressed={isSel}
+                          aria-label={t("opt_use_provider", providerLabel(card))}
+                          style={tileOff ? { opacity: 0.55 } : undefined}
+                          onClick={() => pickProvider(card.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              pickProvider(card.id);
+                            }
+                          }}
+                        >
+                          <ProviderLogo id={card.id} size={20} />
+                          <div className="provider-tile-text">
+                            <div className="provider-tile-name">{providerLabel(card)}</div>
+                            <div className="provider-tile-hint">{tileOff ? t("opt_drive_unavailable_short") : t(card.hintKey)}</div>
                           </div>
-                          <div className="backend-desc">{driveOff ? t("opt_drive_unavailable") : t(p.descKey)}</div>
+                          {isSaved && <span className="badge-active">{t("opt_provider_active")}</span>}
                         </div>
-                        <div className={`radio-circle ${isActive ? "checked" : ""}`} />
+                        {i === panelAfter && (() => {
+                    // The selected provider's settings, rendered after the last tile of its
+                    // row. Named `p` and `isActive` so the blocks below read as they did when
+                    // each card carried its own.
+                    const p = cards[sel];
+                    const isActive = true;
+                    const driveOff = p.id === "gdrive" && !DRIVE_AVAILABLE;
+                    return (
+                    <div className="provider-panel" role="group" aria-label={providerLabel(p)}>
+                      <div className="provider-panel-head">
+                        <div className="provider-panel-name">{providerLabel(p)}</div>
+                        <div className="backend-desc">{driveOff ? t("opt_drive_unavailable") : t(p.descKey)}</div>
                       </div>
 
                       {/* ── Google Drive ── */}
@@ -1711,8 +1745,12 @@ export default function OptionsApp() {
                         </div>
                       )}
                     </div>
-                  );
-                })}
+                    );
+                        })()}
+                      </Fragment>
+                    );
+                  });
+                })()}
               </div>
 
               {/* Under the provider list, not on Advanced. The question encryption answers
@@ -2761,11 +2799,13 @@ const STYLES = `
      drift apart the next time one of them is tuned. */
   .content-inner { width: 100%; max-width: var(--content-max); min-height: 100%; margin: 0 auto; background: var(--bg-sheet); padding: var(--sheet-pad); }
   .section-wrap { padding-bottom: var(--sp-lg); }
-  .page-title { font-size: var(--fs-lg); font-weight: 400; color: var(--text-primary); margin-bottom: var(--sp-2xs); }
+  .page-title { font-size: var(--fs-lg); font-weight: 600; color: var(--text-primary); margin-bottom: var(--sp-2xs); }
   .page-subtitle { font-size: var(--fs-sm); color: var(--text-secondary); margin-bottom: var(--sp-xl); line-height: 1.5; }
   /* Card header lives INSIDE the section so the whole group reads as one titled
      card (a single shadow/ring — no seam from stacking two shadowed elements). */
-  .settings-card-head { padding: var(--sp-xl); border-bottom: 1px solid var(--border); font-size: var(--fs-sm); font-weight: 600; color: var(--text-primary); background: var(--bg); }
+  /* The heading carries the group by size, not by a grey strip and a rule under it: a band
+     of page colour inside every bordered box was a box in a box. */
+  .settings-card-head { padding: var(--sp-xl) var(--sp-xl) var(--sp-2xs); font-size: var(--fs-md); font-weight: 600; color: var(--text-primary); }
   .settings-card-head .head-sub { display: block; font-size: var(--fs-xs); font-weight: 400; color: var(--text-secondary); margin-top: var(--sp-3xs); line-height: 1.45; }
 
   .settings-section { background: transparent; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; margin-bottom: var(--sp-lg); }
@@ -2789,21 +2829,31 @@ const STYLES = `
     /* Same radius and the same bottom gap as .settings-section: it IS one of these groups,
      it just happens to hold provider cards. It was the only 16px corner on the page, and
      the only group that let the next section butt straight up against it. */
-  .card-list { background: transparent; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; margin-bottom: var(--sp-lg); }
-  .backend-card { padding: var(--sp-xl); cursor: pointer; border-bottom: 1px solid var(--border); transition: background .1s; background: transparent; }
-  .backend-card:last-child { border-bottom: none; }
-  .backend-card:hover { background: var(--bg-hover); }
-  .backend-card.selected { background: var(--bg-card-sel); }
-  .backend-card-header { display: flex; align-items: flex-start; gap: var(--sp-md); }
-  .backend-icon-wrap { width: 30px; height: 30px; background: var(--bg-hover); border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); flex-shrink: 0; margin-top: 1px; }
-  .backend-card.selected .backend-icon-wrap { background: var(--accent); color: white; }
-  .backend-info { flex: 1; min-width: 0; }
-  .backend-name { display: flex; align-items: center; gap: var(--sp-xs); font-size: var(--fs-sm); color: var(--text-primary); margin-bottom: var(--sp-3xs); }
+  /* Storage providers: tiles in a grid, the selected one's settings in a panel spanning the
+     row under it. The column count is mirrored in script (PROVIDER_GRID_ONE_COL), which
+     places the panel, so change both together. */
+  .provider-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-md); margin-bottom: var(--sp-lg); }
+  @media (max-width: 479px) { .provider-grid { grid-template-columns: minmax(0, 1fr); } }
+  .provider-tile { display: flex; align-items: center; gap: var(--sp-ms); min-width: 0; padding: var(--sp-md) var(--sp-md) var(--sp-md) var(--sp-lg); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg-card); color: var(--text-secondary); cursor: pointer; transition: background .1s, border-color .1s; }
+  .provider-tile:hover { background: var(--bg-hover); }
+  .provider-tile.selected { background: var(--bg-card-sel); border-color: var(--accent); color: var(--text-primary); }
+  .provider-tile > svg { flex-shrink: 0; }
+  .provider-tile-text { flex: 1; min-width: 0; }
+  .provider-tile-name { font-size: var(--fs-sm); font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .provider-tile-hint { font-size: var(--fs-xs); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .provider-panel { grid-column: 1 / -1; padding: var(--sp-xl); border-radius: var(--r-md); background: var(--bg-card-sel); }
+  .provider-panel-head { margin-bottom: var(--sp-2xs); }
+  .provider-panel-name { font-size: var(--fs-md); font-weight: 600; color: var(--text-primary); margin-bottom: var(--sp-3xs); }
+  .provider-panel-head + .backend-config { margin-top: var(--sp-sm); padding-top: 0; border-top: none; }
   .backend-desc { font-size: var(--fs-xs); color: var(--text-secondary); line-height: 1.4; }
-  .badge-active { font-size: var(--fs-2xs); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; background: var(--accent-solid); color: var(--on-accent); padding: var(--sp-3xs) var(--sp-xs); border-radius: var(--r-xs); }
+  /* Sentence case, not spaced capitals: the badge is a word, not a label. The message is
+     lower case (it once leaned on text-transform), so the first letter is raised here; that
+     needs an inline-block for ::first-letter to apply. */
+  .badge-active { display: inline-block; font-size: var(--fs-xs); font-weight: 500; background: var(--accent-solid); color: var(--on-accent); padding: 0 var(--sp-xs); border-radius: var(--r-xs); white-space: nowrap; flex-shrink: 0; }
+  .badge-active::first-letter, .badge-quiet::first-letter { text-transform: uppercase; }
   /* The inactive device mark. Calm on purpose: an outline in the secondary text colour, not
      the danger red, because nothing is wrong and nothing will happen to that device. */
-  .badge-quiet { font-size: var(--fs-2xs); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); border: 1px solid var(--border-input); padding: 0 var(--sp-xs); border-radius: var(--r-xs); margin-left: var(--sp-sm); white-space: nowrap; }
+  .badge-quiet { display: inline-block; font-size: var(--fs-xs); font-weight: 500; color: var(--text-secondary); border: 1px solid var(--border-input); padding: 0 var(--sp-xs); border-radius: var(--r-xs); margin-left: var(--sp-sm); white-space: nowrap; }
   .device-browser { font-size: var(--fs-xs); color: var(--text-secondary); margin-left: var(--sp-sm); }
   .radio-circle { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border-input); flex-shrink: 0; margin-top: var(--sp-2xs); background: var(--bg-card); transition: border-color .15s; }
   .radio-circle.checked { border-color: var(--accent); background: radial-gradient(circle at center, var(--accent) 38%, transparent 42%); }
@@ -2908,7 +2958,7 @@ const STYLES = `
   .slider-wrap { display: flex; align-items: center; gap: var(--sp-sm); }
   .slider { width: 110px; accent-color: var(--accent); cursor: pointer; -webkit-appearance: none; height: 4px; background: var(--border); border-radius: var(--sp-3xs); outline: none; }
   .slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; }
-  .slider-val { font-size: var(--fs-xs); font-family: var(--font-mono); color: var(--text-secondary); min-width: 30px; text-align: right; }
+  .slider-val { font-size: var(--fs-xs); font-variant-numeric: tabular-nums; color: var(--text-secondary); min-width: 30px; text-align: right; }
   .mono-value { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-secondary); }
 
   /* Sized by padding, like .btn-install, instead of a fixed control height. Ben wanted

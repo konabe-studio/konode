@@ -19,7 +19,10 @@ export interface ProviderDef {
   labelKey?: string;
   /** Message key, not text — resolve with `t()` at the render site. */
   descKey: string;
-  fixedUrl?: string;                                        // koofr, fastmail, jianguoyun
+  /** Message key for the one short line under the name on a grid tile (Settings, Storage).
+   *  The full description moves into the settings panel the tile opens. */
+  hintKey: string;
+  fixedUrl?: string;                                       // koofr, fastmail, jianguoyun
   regions?: { id: string; label: string; url: string }[];  // pcloud (EU/US)
   needsHost?: boolean;                                      // nextcloud/ownCloud
   custom?: boolean;                                         // generic WebDAV (Synology, kDrive, …)
@@ -38,15 +41,18 @@ export const PROVIDERS: ProviderDef[] = [
   {
     id: "gdrive", backend: "gdrive", label: "Google Drive",
     descKey: "provider_gdrive_desc",
+    hintKey: "provider_gdrive_hint",
   },
   {
     id: "nextcloud", backend: "webdav", label: "Nextcloud / ownCloud", needsHost: true,
     descKey: "provider_nextcloud_desc",
+    hintKey: "provider_nextcloud_hint",
     noteKey: "provider_nextcloud_note",
   },
   {
     id: "pcloud", backend: "webdav", label: "pCloud",
     descKey: "provider_pcloud_desc",
+    hintKey: "provider_pcloud_hint",
     regions: [
       { id: "eu", label: "EU", url: "https://ewebdav.pcloud.com" },
       { id: "us", label: "US", url: "https://webdav.pcloud.com" },
@@ -56,11 +62,13 @@ export const PROVIDERS: ProviderDef[] = [
   {
     id: "koofr", backend: "webdav", label: "Koofr", fixedUrl: "https://app.koofr.net/dav/Koofr",
     descKey: "provider_koofr_desc",
+    hintKey: "provider_koofr_hint",
     noteKey: "provider_koofr_note",
   },
   {
     id: "fastmail", backend: "webdav", label: "Fastmail", fixedUrl: "https://myfiles.fastmail.com",
     descKey: "provider_fastmail_desc",
+    hintKey: "provider_fastmail_hint",
     noteKey: "provider_fastmail_note",
   },
   {
@@ -77,6 +85,7 @@ export const PROVIDERS: ProviderDef[] = [
     id: "jianguoyun", backend: "webdav", label: "Nutstore / 坚果云",
     fixedUrl: "https://dav.jianguoyun.com/dav/",
     descKey: "provider_jianguoyun_desc",
+    hintKey: "provider_jianguoyun_hint",
     noteKey: "provider_jianguoyun_note",
   },
   {
@@ -89,10 +98,12 @@ export const PROVIDERS: ProviderDef[] = [
     // advertise them.
     id: "github", backend: "github", label: "GitHub",
     descKey: "provider_github_desc",
+    hintKey: "provider_github_hint",
   },
   {
     id: "webdav", backend: "webdav", label: "WebDAV (other)", labelKey: "provider_webdav_other", custom: true,
     descKey: "provider_webdav_desc",
+    hintKey: "provider_webdav_hint",
   },
 ];
 
