@@ -389,6 +389,14 @@ export interface SyncSettings {
   excluded_bookmarks?: BookmarkExclusion[];
   auto_sync: boolean;
   sync_on_change: boolean;       // trigger sync immediately on bookmark change
+  /**
+   * The popup's pause (#89). Holds BOTH automatic triggers, the bookmark-change
+   * sync and the periodic one, without touching `sync_on_change` or `auto_sync`, so
+   * resuming returns exactly the setup the user had. Sync now, and every other sync a
+   * click asks for, still runs. Nothing is lost meanwhile: the bookmark logs are recorded
+   * locally as always and go out with the next sync. Optional: absent means not paused.
+   */
+  sync_paused?: boolean;
   notifications_enabled: boolean;
   debug_mode: boolean;
   // E2EE (opt-in) — wired into the sync engine; see src/lib/crypto/encryption.ts

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ensureSyncAlarm, SYNC_ALARM } from "@/lib/utils/alarms";
+import { ensureSyncAlarm, SYNC_ALARM, periodicSyncWanted, changeSyncWanted } from "@/lib/utils/alarms";
 
 // MV3 recreates the service worker for every event it listens for — a popup opening, a
 // message, a bookmark change — and init() runs once per worker lifetime. Setup used to
@@ -54,5 +54,32 @@ describe("ensureSyncAlarm", () => {
   it("floors the period at the platform minimum of 30s", async () => {
     await ensureSyncAlarm(5); // 5s would be 0.083 min
     expect((await alarm())?.periodInMinutes).toBe(0.5);
+  });
+});
+
+// The popup's pause (#89) holds both automatic triggers without touching the two
+// Settings toggles, so resuming returns exactly the setup the user had.
+describe("pausing sync", () => {
+  const base = { auto_sync: true, sync_on_change: true, enabled_types: ["bookmarks" as const] };
+
+  it("leaves both automatic syncs on when it was never touched", () => {
+    expect(periodicSyncWanted(base)).toBe(true);
+    expect(changeSyncWanted(base)).toBe(true);
+  });
+
+  it("holds both while paused", () => {
+    const paused = { ...base, sync_paused: true };
+    expect(periodicSyncWanted(paused)).toBe(false);
+    expect(changeSyncWanted(paused)).toBe(false);
+  });
+
+  it("gives back each Settings toggle as it was when resumed", () => {
+    const resumed = { ...base, auto_sync: false, sync_paused: false };
+    expect(periodicSyncWanted(resumed)).toBe(false); // off in Settings stays off
+    expect(changeSyncWanted(resumed)).toBe(true);
+  });
+
+  it("never syncs a bookmark edit when bookmarks are not synced at all", () => {
+    expect(changeSyncWanted({ ...base, enabled_types: [] })).toBe(false);
   });
 });

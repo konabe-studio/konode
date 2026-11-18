@@ -7,6 +7,15 @@ All notable changes to Konode. Format loosely follows
 
 ### Added
 
+- **Pause automatic sync from the popup (#89).** The pause icon beside the settings gear
+  holds both automatic syncs: Sync on change and Auto sync. Sync now keeps working while
+  paused, the popup's status says Paused, and the same icon turns into a play button that
+  resumes. Edits you make meanwhile are kept and go out with the next sync, and resuming
+  syncs straight away. Your
+  Sync on change and Auto sync settings are left as they were, so they come back exactly as
+  you had them. While sync is paused, Settings says so under Sync behavior, greys out those
+  two toggles, and has a Resume button there too.
+
 - **Konode is on Microsoft Edge Add-ons.** The listing went live on 2026-11-06 with 1.5.1,
   the same package as the Chrome Web Store, and Google Drive sign-in works from it. If you
   already installed Konode in Edge from the Chrome Web Store, keep that install: it updates

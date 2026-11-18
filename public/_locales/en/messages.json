@@ -79,6 +79,22 @@
     "message": "Sync now",
     "description": "The popup's primary button. While a sync runs it shows status_syncing instead."
   },
+  "popup_pause": {
+    "message": "Pause automatic sync",
+    "description": "Tooltip and screen-reader name of the popup's pause icon, beside the settings gear (#89). Pausing holds Sync on change and Auto sync; Sync now keeps working."
+  },
+  "popup_resume": {
+    "message": "Resume",
+    "description": "Link beside popup_status_paused, the play icon's name, and the button on Settings' paused row. Turns automatic sync back on and syncs."
+  },
+  "popup_paused_hint": {
+    "message": "Automatic sync is paused. Until you resume it, only Sync now syncs.",
+    "description": "Tooltip on popup_status_paused. Names the Sync now button (popup_sync_now) in the same words."
+  },
+  "popup_status_paused": {
+    "message": "Paused",
+    "description": "The popup's status line while automatic sync is paused and nothing else needs saying. A one- or two-word state, like status_idle."
+  },
   "popup_load_error": {
     "message": "Couldn't reach Konode. Tap to retry.",
     "description": "The popup could not read its own state. The whole banner is a button, hence 'tap to retry'."
@@ -975,6 +991,14 @@
   },
   "opt_auto_sync_desc": {
     "message": "Also sync on a regular schedule. History, open tabs and the extension list travel only this way."
+  },
+  "opt_paused_label": {
+    "message": "Sync is paused",
+    "description": "Settings, Device, Sync behavior: a row shown only while automatic sync is paused from the popup."
+  },
+  "opt_paused_desc": {
+    "message": "Paused from the popup. Sync on change and Auto sync wait until you resume. Sync now still works.",
+    "description": "Under opt_paused_label. Names opt_sync_on_change_label, opt_auto_sync_label and popup_sync_now in the same words those labels use."
   },
   "opt_notifications_label": {
     "message": "Notifications"

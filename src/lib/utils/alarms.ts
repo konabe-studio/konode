@@ -3,6 +3,7 @@
 // the SW registers listeners at module load, so it can't be imported from a test.
 
 import { browser } from "@/lib/utils/ext";
+import type { SyncSettings } from "@/lib/types";
 
 /** Periodic pull — how this device learns about its PEERS' changes. */
 export const SYNC_ALARM = "konode-sync";
@@ -41,4 +42,24 @@ export async function ensureSyncAlarm(intervalSeconds: number, force = false): P
   // receiving side can never pull faster than this regardless of what's configured.
   await browser.alarms.create(SYNC_ALARM, { periodInMinutes: Math.max(0.5, intervalSeconds / 60) });
   return true;
+}
+
+/**
+ * Whether the periodic alarm should exist. Off when the user turned Auto sync off in
+ * Settings, and off while sync is paused from the popup (#89). One rule for the
+ * worker's start, a settings save and the alarm itself, so the three cannot disagree.
+ */
+export function periodicSyncWanted(s: Pick<SyncSettings, "auto_sync" | "sync_paused">): boolean {
+  return s.auto_sync && !s.sync_paused;
+}
+
+/**
+ * Whether a bookmark edit should sync on its own. A paused device still RECORDS the edit
+ * (the listeners write the tombstone, move and rename logs regardless); it only does not
+ * upload it until the next sync someone asks for.
+ */
+export function changeSyncWanted(
+  s: Pick<SyncSettings, "sync_on_change" | "sync_paused" | "enabled_types">,
+): boolean {
+  return s.sync_on_change && !s.sync_paused && s.enabled_types.includes("bookmarks");
 }
