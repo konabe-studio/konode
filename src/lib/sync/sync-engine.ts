@@ -9,7 +9,7 @@ import {
 } from "@/lib/handlers/bookmarks-handler";
 import { diffBookmarks, diffHistory } from "./conflict-diff";
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
-import { exportHistory, importHistory, buildLocalHistoryIndex } from "@/lib/handlers/history-handler";
+import { exportHistory, importHistory, newLocalHistoryIndex, type LocalHistoryIndex } from "@/lib/handlers/history-handler";
 import { exchangeSentTabs, queueSentTab, sentFileName } from "@/lib/sync/sent-tabs";
 import { openSentTabs } from "@/lib/sent-tabs-browser";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
@@ -42,6 +42,8 @@ import {
   dropRemoteDevice,
   getRemoteDeviceIds,
   dropRemoteDevices,
+  getAppliedHistory,
+  recordAppliedHistory,
 } from "@/lib/utils/storage";
 import { logger } from "@/lib/utils/logger";
 import { noteCleanSync } from "@/lib/rate-prompt";
@@ -330,10 +332,10 @@ export class SyncEngine {
    * Losing an approval is recoverable in one click; leaving one armed is not.
    */
   private bulkApprovedThisSync = 0;
-  // Canonical URL -> local last-visit time, built at most once per sync and shared by
-  // every peer's history import. Null until a history import needs it, so a cycle that
-  // syncs no history never pays for it. See `buildLocalHistoryIndex`.
-  private historyIndexThisSync: Map<string, number> | null = null;
+  // Canonical URL -> local last-visit time, shared by every peer's history import in one
+  // sync and read only as far back as those peers reach. Null until a history import needs
+  // it, so a cycle that imports no history never pays for it. See `LocalHistoryIndex`.
+  private historyIndexThisSync: LocalHistoryIndex | null = null;
 
   constructor(
     private settings: SyncSettings,
@@ -1529,6 +1531,18 @@ export class SyncEngine {
     packet: SyncPacket,
     isLocalEmpty = false
   ): Promise<void> {
+    // A peer's history that has not changed since we imported it holds nothing new (#96).
+    // Skipped before anything else, since opening it means a decrypt with E2EE on and
+    // importing it means reading local history to compare. The checksum is over the
+    // plaintext and travels outside the payload, so it can be compared unopened. Only for
+    // history: the bookmark merge also acts on local changes (moves, approvals, kept
+    // shells), so it has to run even against a packet it has seen before.
+    const unchangedHistory = dataType === "history" && !!packet.checksum &&
+      (await getAppliedHistory())[packet.device_id] === packet.checksum;
+    if (unchangedHistory) {
+      logger.debug("SyncEngine", `history: ${packet.device_id.slice(0, 8)} unchanged since its last import, skipping`);
+      return;
+    }
     const payload = await this.openPacket(packet);
     await this.applyPayload(dataType, payload, {
       device_id: packet.device_id,
@@ -1537,6 +1551,9 @@ export class SyncEngine {
       // recovery notice shows instead of a truncated id when the guard blocks.
       device_label: packet.device_label ?? null,
     }, isLocalEmpty);
+    // Recorded only once the import went through: openPacket has verified the checksum by
+    // now, and a failed import must be tried again on the next sync.
+    if (dataType === "history") await recordAppliedHistory(packet.device_id, packet.checksum);
   }
 
   /**
@@ -1647,7 +1664,7 @@ export class SyncEngine {
         // devices meant three full scans a minute at the default interval. The import
         // writes every page it stores back into the map, so the peers folded after this
         // one still see an accurate answer.
-        this.historyIndexThisSync ??= await buildLocalHistoryIndex();
+        this.historyIndexThisSync ??= newLocalHistoryIndex();
         await importHistory(payload as never, this.historyIndexThisSync);
         break;
       case "sessions":

@@ -126,6 +126,7 @@ export const KEYS = {
   HIST_IMPORTED: "konode_hist_imported",
   HIST_REJECTED: "konode_hist_rejected",
   HIST_VISITTIME_OK: "konode_hist_visittime_ok",
+  HIST_APPLIED: "konode_hist_applied",
   // Sent tabs (#92, lib/sync/sent-tabs.ts).
   SENT_OUT: "konode_sent_out",
   SENT_OPENED: "konode_sent_opened",
@@ -599,6 +600,24 @@ export async function recordRejectedHistoryUrls(urls: string[], at: number): Pro
     for (const k of keys.slice(0, keys.length - HIST_REJECTED_CAP)) delete map[k];
     return map;
   }, {});
+}
+
+/**
+ * The checksum of each peer's history packet this device last imported in full, by
+ * device id (#96). A packet that has not changed since holds nothing new for us, so the
+ * next sync skips it before decrypting it or reading local history to compare. Persisted,
+ * because the worker is usually gone between two syncs.
+ */
+export async function getAppliedHistory(): Promise<Record<string, string>> {
+  const v = await get<Record<string, string>>(KEYS.HIST_APPLIED, {});
+  return v && typeof v === "object" ? v : {};
+}
+export async function recordAppliedHistory(deviceId: string, checksum: string): Promise<void> {
+  if (!deviceId) return;
+  await updateKey<Record<string, string>>(KEYS.HIST_APPLIED, (current) => ({
+    ...(current ?? {}),
+    [deviceId]: checksum,
+  }), {});
 }
 
 /**

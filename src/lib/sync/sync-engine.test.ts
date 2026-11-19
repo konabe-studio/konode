@@ -2178,3 +2178,73 @@ describe("SyncEngine.syncType — the payload is rebuilt only where the merge ca
   });
 });
 
+
+describe("SyncEngine: a peer's unchanged history is not imported again (#96)", () => {
+  // Every sync imported every peer's history packet, and every import read local history
+  // to compare, even when the packet was the one imported a minute before. On a long
+  // history that read froze Edge. An unchanged packet holds nothing new.
+
+  const VISIT = Date.now() - 60_000;
+  async function historyPeer(engine: SyncEngine, deviceId: string, urls: string[]): Promise<SyncPacket> {
+    const packet = await priv(engine).buildPacket(
+      "history",
+      // One fixed time, so a second packet listing the same page carries the same visit.
+      urls.map((url) => ({ url, title: url, lastVisitTime: VISIT, visitCount: 1 }))
+    );
+    packet.device_id = deviceId; // the checksum is over the payload, so it stays valid
+    return packet;
+  }
+
+  /** What `sync()` does before each cycle: the local-history index lives for one sync. */
+  const nextSync = (engine: SyncEngine) => { (engine as unknown as { historyIndexThisSync: unknown }).historyIndexThisSync = null; };
+
+  /** history.search calls made by an import's local read (the export asks for 5,000 rows). */
+  function countImportReads(): { n: number } {
+    const c = { n: 0 };
+    const h = chrome.history as unknown as { search: (q: { maxResults?: number }) => Promise<unknown> };
+    const real = h.search.bind(h);
+    h.search = async (q) => { if ((q.maxResults ?? 0) > 5000) c.n++; return real(q); };
+    return c;
+  }
+
+  it("skips a packet it has already imported, and takes it again once it changes", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.spyOn(console, "debug").mockImplementation(() => {});
+    const engine = new SyncEngine({ ...DEFAULT_SETTINGS, device_id: "me" }, () => {});
+    const backend = new FakeBackend();
+    backend.files.set("history_peer1", await historyPeer(engine, "peer1", ["https://one.example/"]));
+    const adds = vi.spyOn(chrome.history, "addUrl");
+
+    await priv(engine).syncType("history", backend, DEFAULT_STATE);
+    expect(adds).toHaveBeenCalledTimes(1);
+    const applied = (await chrome.storage.local.get(KEYS.HIST_APPLIED))[KEYS.HIST_APPLIED];
+    expect(applied).toEqual({ peer1: backend.files.get("history_peer1")!.checksum });
+
+    const reads = countImportReads();
+    nextSync(engine);
+    await priv(engine).syncType("history", backend, DEFAULT_STATE);
+    expect(adds).toHaveBeenCalledTimes(1);
+    expect(reads.n).toBe(0);
+
+    backend.files.set("history_peer1", await historyPeer(engine, "peer1", ["https://one.example/", "https://two.example/"]));
+    nextSync(engine);
+    await priv(engine).syncType("history", backend, DEFAULT_STATE);
+    expect(reads.n).toBe(1); // a changed packet is read against local history again
+    expect(adds).toHaveBeenCalledTimes(2); // and only the new page is taken
+  });
+
+  it("does not remember a packet whose import failed, so the next sync tries it again", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const engine = new SyncEngine({ ...DEFAULT_SETTINGS, device_id: "me" }, () => {});
+    const backend = new FakeBackend();
+    const packet = await historyPeer(engine, "peer1", ["https://one.example/"]);
+    backend.files.set("history_peer1", { ...packet, checksum: "0".repeat(64) }); // fails verification
+
+    await priv(engine).syncType("history", backend, DEFAULT_STATE).catch(() => {});
+
+    const applied = (await chrome.storage.local.get(KEYS.HIST_APPLIED))[KEYS.HIST_APPLIED];
+    expect(applied?.peer1).toBeUndefined();
+  });
+});

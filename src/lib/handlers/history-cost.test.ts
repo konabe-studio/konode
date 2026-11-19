@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { importHistory, exportHistory } from "@/lib/handlers/history-handler";
+import { importHistory, exportHistory, newLocalHistoryIndex, historyWindowStart } from "@/lib/handlers/history-handler";
 import { KEYS } from "@/lib/utils/storage";
 
 // A guard on the WORK a sync does, not on its wall-clock.
@@ -297,43 +297,34 @@ describe("the visit time is only sent to a browser that takes it", () => {
 });
 
 describe("the local-history scan is paid once per SYNC, not once per peer", () => {
-  // `importHistory` reads the WHOLE local history into a map to answer "is the peer's
-  // visit newer than ours". That read is the expensive part of an import, and the engine
-  // calls importHistory once per PEER: three other devices meant three full scans a
-  // minute at the default interval, each allocating a map of every page ever visited.
-
-  /** Counts history.search calls, which is the scan we are trying not to repeat. */
-  function countSearches(): { n: number } {
-    const c = { n: 0 };
-    const h = chrome.history as unknown as {
-      search: (q: unknown) => Promise<chrome.history.HistoryItem[]>;
-    };
-    const real = h.search.bind(h);
-    h.search = async (q) => { c.n++; return real(q); };
-    return c;
-  }
+  // `importHistory` reads local history into a map to answer "is the peer's visit newer
+  // than ours". That read is the expensive part of an import, and the engine calls
+  // importHistory once per PEER: three other devices meant three full scans a minute at
+  // the default interval, each allocating a map of every page ever visited.
 
   function items(urls: string[], at = 1_700_000_000_000) {
     return urls.map((url, i) => ({ url, title: url, lastVisitTime: at + i, visitCount: 1 }));
   }
 
-  it("does not scan at all when it is handed an index", async () => {
+  it("reads nothing more for a second peer the index already covers", async () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
-    const c = countSearches();
+    const shared = newLocalHistoryIndex();
+    await importHistory(items(["https://one.example/"]), shared);
+    const seen = recordSearches();
 
-    await importHistory(items(["https://one.example/"]), new Map());
+    await importHistory(items(["https://two.example/"], 1_700_000_000_500), shared);
 
-    expect(c.n).toBe(0);
+    expect(seen).toEqual([]);
   });
 
   it("still scans for a caller that hands it nothing", async () => {
     // The engine passes one; anything else (a test, a future caller) must still work.
     vi.spyOn(console, "info").mockImplementation(() => {});
-    const c = countSearches();
+    const seen = recordSearches();
 
     await importHistory(items(["https://two.example/"]));
 
-    expect(c.n).toBe(1);
+    expect(seen).toHaveLength(1);
   });
 
   it("keeps a shared index current, so a later peer does not re-add the same page", async () => {
@@ -343,16 +334,109 @@ describe("the local-history scan is paid once per SYNC, not once per peer", () =
     // record a visit, which is the visit-count inflation this test suite already guards
     // against elsewhere.
     vi.spyOn(console, "info").mockImplementation(() => {});
-    const shared = new Map<string, number>();
+    const shared = newLocalHistoryIndex();
     const both = items(["https://shared.example/"]);
 
     await importHistory(both, shared); // peer A
-    const c = countSearches();
+    const seen = recordSearches();
     await importHistory(both, shared); // peer B, same page, same visit time
 
-    expect(c.n).toBe(0);
-    expect(shared.has("https://shared.example/")).toBe(true);
+    expect(seen).toEqual([]);
+    expect(shared.visits.has("https://shared.example/")).toBe(true);
     const all = await chrome.history.search({ text: "", startTime: 0, maxResults: 100 });
     expect(all.filter((h) => h.url === "https://shared.example/")).toHaveLength(1);
   });
 });
+
+describe("the local-history scan reads only the window a peer reaches back to (#96)", () => {
+  // It read every page the browser had ever stored, up to 100,000 rows, on every sync,
+  // and on a long history that froze Edge. A page last visited here before the peer's
+  // oldest entry is older than every visit the peer sends, so reading it changes nothing.
+
+  const DAY = 24 * 60 * 60 * 1000;
+  const NOW = 1_800_000_000_000;
+
+  /** A local visit at a given time (the firefox fake keeps the time it is given). */
+  const visitHere = (url: string, at: number) =>
+    (chrome.history as unknown as { addUrl: (d: { url: string; visitTime: number }) => Promise<void> })
+      .addUrl({ url, visitTime: at });
+  const peer = (url: string, at: number) => ({ url, title: url, lastVisitTime: at, visitCount: 1 });
+  const row = async (url: string) =>
+    (await chrome.history.search({ text: "", startTime: 0, maxResults: 1000 })).find((h) => h.url === url);
+
+  it("starts the read just under the peer's oldest visit, and leaves older pages unread", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    await visitHere("https://years-ago.example/", NOW - 900 * DAY);
+    const seen = recordSearches();
+    const index = newLocalHistoryIndex();
+
+    await importHistory([peer("https://a.example/", NOW - 2 * DAY), peer("https://b.example/", NOW - DAY)], index);
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0].startTime).toBe(historyWindowStart([peer("https://a.example/", NOW - 2 * DAY)]));
+    expect(seen[0].startTime).toBeLessThanOrEqual(NOW - 2 * DAY);
+    expect(index.visits.has("https://years-ago.example/")).toBe(false);
+  });
+
+  it("takes the peer's newer visit to a page last opened here before the window", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    await visitHere("https://old.example/", NOW - 400 * DAY);
+
+    await importHistory([peer("https://old.example/", NOW - DAY)], newLocalHistoryIndex());
+
+    expect((await row("https://old.example/"))?.lastVisitTime).toBe(NOW - DAY);
+  });
+
+  it("leaves a page alone when the visit here is newer than the peer's", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    await visitHere("https://mine.example/", NOW - 1000);
+
+    await importHistory([peer("https://mine.example/", NOW - DAY)], newLocalHistoryIndex());
+
+    const r = await row("https://mine.example/");
+    expect(r?.lastVisitTime).toBe(NOW - 1000);
+    expect(r?.visitCount).toBe(1);
+  });
+
+  it("does not take a visit again on the next sync", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const packet = [peer("https://again.example/", NOW - DAY)];
+
+    await importHistory(packet, newLocalHistoryIndex());
+    await importHistory(packet, newLocalHistoryIndex()); // the next sync builds a new index
+
+    expect((await row("https://again.example/"))?.visitCount).toBe(1);
+  });
+
+  it("reads only the extra stretch for a later peer that reaches further back", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    await visitHere("https://ten-days.example/", NOW - 10 * DAY);
+    const index = newLocalHistoryIndex();
+    await importHistory([peer("https://a.example/", NOW - DAY)], index);
+    const firstSince = index.since;
+    const seen = recordSearches();
+
+    await importHistory([peer("https://ten-days.example/", NOW - 20 * DAY)], index);
+
+    expect(seen).toEqual([{ startTime: index.since, endTime: firstSince }]);
+    // Visited here after the peer's visit, so the peer's older one is not taken.
+    expect((await row("https://ten-days.example/"))?.lastVisitTime).toBe(NOW - 10 * DAY);
+  });
+
+  it("reads the whole history when a peer entry carries no visit time", () => {
+    // Nothing to place the window by, so it falls back to the old full read.
+    expect(historyWindowStart([{ url: "https://x.example/", title: "", lastVisitTime: 0, visitCount: 1 }])).toBe(0);
+    expect(historyWindowStart([])).toBe(Infinity);
+  });
+});
+
+/** Records every history.search query, which is the scan these tests count. */
+function recordSearches(): Array<{ startTime?: number; endTime?: number }> {
+  const seen: Array<{ startTime?: number; endTime?: number }> = [];
+  const h = chrome.history as unknown as {
+    search: (q: { startTime?: number; endTime?: number }) => Promise<chrome.history.HistoryItem[]>;
+  };
+  const real = h.search.bind(h);
+  h.search = async (q) => { seen.push({ startTime: q.startTime, endTime: q.endTime }); return real(q); };
+  return seen;
+}
