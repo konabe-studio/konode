@@ -56,6 +56,18 @@
   "popup_sync_now": {
     "message": "立即同步"
   },
+  "popup_pause": {
+    "message": "暂停自动同步"
+  },
+  "popup_resume": {
+    "message": "恢复"
+  },
+  "popup_paused_hint": {
+    "message": "自动同步已暂停。恢复之前，只有“立即同步”会进行同步。"
+  },
+  "popup_status_paused": {
+    "message": "已暂停"
+  },
   "popup_load_error": {
     "message": "无法连接 Konode。点击重试。"
   },
@@ -81,7 +93,7 @@
     "message": "处理"
   },
   "popup_active_streams": {
-    "message": "活跃数据流"
+    "message": "数据类型"
   },
   "popup_missing_extensions_one": {
     "message": "$COUNT$ 缺失的扩展",
@@ -105,7 +117,7 @@
     "message": "打开全部"
   },
   "popup_sessions_head": {
-    "message": "其他设备的会话"
+    "message": "其他设备"
   },
   "popup_unknown_device": {
     "message": "未知设备"
@@ -188,9 +200,6 @@
   "popup_device_label": {
     "message": "设备"
   },
-  "popup_configure": {
-    "message": "配置 →"
-  },
   "popup_activity_log": {
     "message": "活动日志 →"
   },
@@ -221,14 +230,23 @@
   "provider_gdrive_desc": {
     "message": "直接同步至您的个人 Google Drive。得益于 OAuth，访问令牌仅保存在此设备上。"
   },
+  "provider_gdrive_hint": {
+    "message": "Google 账号"
+  },
   "provider_nextcloud_desc": {
     "message": "您自己的 Nextcloud 或 ownCloud 服务器。"
+  },
+  "provider_nextcloud_hint": {
+    "message": "你自己的服务器"
   },
   "provider_nextcloud_note": {
     "message": "输入您的服务器主机地址；请使用应用专用密码（设置 → 安全）。"
   },
   "provider_pcloud_desc": {
     "message": "pCloud 存储。需要付费的 pCloud 计划。"
+  },
+  "provider_pcloud_hint": {
+    "message": "欧盟或美国区域"
   },
   "provider_pcloud_note": {
     "message": "如果你的 pCloud 账户位于 $REGION$ 区域，请选择 $REGION$ 区域。",
@@ -242,11 +260,17 @@
   "provider_koofr_desc": {
     "message": "Koofr 云端存储。"
   },
+  "provider_koofr_hint": {
+    "message": "Koofr 账号"
+  },
   "provider_koofr_note": {
     "message": "使用您的 Koofr 邮箱作为用户名，使用 Koofr 应用专用密码作为密码。"
   },
   "provider_fastmail_desc": {
     "message": "Fastmail 文件存储。"
+  },
+  "provider_fastmail_hint": {
+    "message": "Fastmail 账号"
   },
   "provider_fastmail_note": {
     "message": "使用您的 Fastmail 完整邮箱地址作为用户名，并使用具备文件（WebDAV）访问权限的应用专用密码。"
@@ -254,14 +278,23 @@
   "provider_jianguoyun_desc": {
     "message": "坚果云云端存储，在中国大陆广泛使用。"
   },
+  "provider_jianguoyun_hint": {
+    "message": "坚果云账号"
+  },
   "provider_jianguoyun_note": {
     "message": "使用您的坚果云账号邮箱作为用户名，并使用在安全选项中生成的第三方应用密码作为密码。免费账户在三台及以上设备时，请将同步间隔调高到 120 秒以上：坚果云每 30 分钟允许 600 次 WebDAV 请求。"
   },
   "provider_github_desc": {
     "message": "你的同步数据存放在一个私有的 GitHub 仓库中，Konode 通过个人访问令牌进行访问。"
   },
+  "provider_github_hint": {
+    "message": "私有仓库"
+  },
   "provider_webdav_desc": {
     "message": "Synology、kDrive，或任何其他 WebDAV 服务器。"
+  },
+  "provider_webdav_hint": {
+    "message": "任意 WebDAV 服务器"
   },
   "provider_syncing_to": {
     "message": "正在同步至 $URL$。",
@@ -276,10 +309,10 @@
     "message": "欢迎使用Konode"
   },
   "onb_welcome_subtitle": {
-    "message": "浏览器同步，让你的数据真正属于你。你的书签、会话和扩展直接保存到你自己的存储空间。没有中间服务器。"
+    "message": "把浏览器同步到你自己的存储空间。你的书签、会话和扩展直接保存到那里，中间没有 Konode 服务器。"
   },
-  "onb_feature_storage": {
-    "message": "您的数据始终保存在您自己的存储空间中。"
+  "onb_feature_encryption": {
+    "message": "可选的端对端加密，在后面的步骤中设置。"
   },
   "onb_feature_instant": {
     "message": "实时同步每一次更改。"
@@ -287,11 +320,8 @@
   "onb_feature_browsers": {
     "message": "适用于基于 Chromium 和 Firefox 的浏览器。"
   },
-  "onb_feature_providers": {
-    "message": "由您决定数据存放在哪里。"
-  },
   "onb_get_started": {
-    "message": "开始使用"
+    "message": "选择存储"
   },
   "onb_backend_title": {
     "message": "选择你的存储"
@@ -325,6 +355,9 @@
   },
   "opt_drive_unavailable": {
     "message": "此浏览器不支持 Google 登录。请选择其他选项。"
+  },
+  "opt_drive_unavailable_short": {
+    "message": "此浏览器不可用"
   },
   "provider_webdav_other": {
     "message": "WebDAV（其他）"
@@ -820,6 +853,12 @@
   },
   "opt_auto_sync_desc": {
     "message": "并按常规计划同步。历史记录、打开的标签页和扩展列表仅通过这种方式同步。"
+  },
+  "opt_paused_label": {
+    "message": "同步已暂停"
+  },
+  "opt_paused_desc": {
+    "message": "已在弹窗中暂停。“更改时同步”和“自动同步”会等到你恢复。“立即同步”仍然可用。"
   },
   "opt_notifications_label": {
     "message": "通知"
@@ -1639,5 +1678,26 @@
   },
   "popup_setup_cta": {
     "message": "开始设置"
+  },
+  "popup_send_done": {
+    "message": "已发送到 $DEVICE$。它会在该设备下次同步时打开。",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "Laptop"
+      }
+    }
+  },
+  "popup_send_later": {
+    "message": "无法连接到你的存储，标签页将随下次同步发送。"
+  },
+  "send_menu_title": {
+    "message": "发送到设备"
+  },
+  "send_menu_none": {
+    "message": "暂无可以接收标签页的设备"
+  },
+  "popup_send_label": {
+    "message": "发送此标签页"
   }
 }

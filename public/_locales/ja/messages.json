@@ -134,9 +134,6 @@
   "popup_device_label": {
     "message": "デバイス"
   },
-  "popup_configure": {
-    "message": "設定 →"
-  },
   "popup_activity_log": {
     "message": "アクティビティログ →"
   },

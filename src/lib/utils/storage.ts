@@ -127,6 +127,11 @@ export const KEYS = {
   HIST_REJECTED: "konode_hist_rejected",
   HIST_VISITTIME_OK: "konode_hist_visittime_ok",
   HIST_APPLIED: "konode_hist_applied",
+  // Sent tabs (#92, lib/sync/sent-tabs.ts).
+  SENT_OUT: "konode_sent_out",
+  SENT_OPENED: "konode_sent_opened",
+  SENT_SYNC: "konode_sent_sync",
+  SEND_TARGETS: "konode_send_targets",
   TABS_SINGLE_OPEN: "konode_tabs_single_open",
   REMOTE_SESSIONS: "konode_remote_sessions",
   REMOTE_EXTENSIONS: "konode_remote_extensions",

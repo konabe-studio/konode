@@ -18,16 +18,8 @@ import {
 import {
   Bookmark,
   Clock, Puzzle, Globe, CheckCircle2, ArrowRight,
-  Loader2, XCircle, Eye, EyeOff, Lock, Key,
+  Loader2, XCircle, Eye, EyeOff, Lock, Key, RefreshCw, Check,
 } from "lucide-react";
-// Konode brand mark — the glyph only; the container supplies the green tile.
-function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="48 48 160 160" fill="none" aria-hidden="true">
-      <path d="M152 192C152 196.418 155.582 200 160 200H192C196.418 200 200 196.418 200 192V157.601C200 154.322 197.342 151.664 194.063 151.664H178.723C176.899 151.664 175.231 150.635 174.413 149.005C170.523 141.251 172.071 131.874 178.249 125.783L198.313 105.999C199.392 104.935 200 103.482 200 101.966V64C200 59.5817 196.418 56 192 56H157.119C153.998 56 151.163 57.8143 149.855 60.6475L107.816 151.732C106.917 153.679 104 153.039 104 150.894V111.329C104 106.91 100.418 103.329 96 103.329H64C59.5817 103.329 56 106.91 56 111.329V192C56 196.418 59.5817 200 64 200H100.67C102.801 200 104.845 199.149 106.346 197.637L141.743 161.993C145.516 158.193 152 160.866 152 166.221V192Z" fill={color} />
-    </svg>
-  );
-}
 
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
 import {
@@ -601,20 +593,20 @@ export default function OnboardingApp() {
       {/* ── Welcome ── */}
       {step === "welcome" && (
         <div style={S.card}>
-          <div style={S.logoWrap}>
-            <BrandMark size={32} color="white" />
-          </div>
+          {/* No logo tile above the title: the title already names Konode, and a tile
+              stacked on a heading is one of the marks of a generated page. Three points,
+              not four: the old first and last both said "storage you own", which the
+              subtitle says already. Icons, not emoji, so they take the text colour. */}
           <h1 style={S.h1}>{t("onb_welcome_title")}</h1>
           <p style={S.subtitle}>{t("onb_welcome_subtitle")}</p>
           <div style={S.featureList}>
-            {[
-              ["🔒", "onb_feature_storage"],
-              ["⚡", "onb_feature_instant"],
-              ["🌐", "onb_feature_browsers"],
-              ["📦", "onb_feature_providers"],
-            ].map(([icon, key]) => (
+            {([
+              [Lock, "onb_feature_encryption"],
+              [RefreshCw, "onb_feature_instant"],
+              [Globe, "onb_feature_browsers"],
+            ] as const).map(([Icon, key]) => (
               <div key={key} style={S.featureRow}>
-                <span>{icon}</span>
+                <Icon size={16} style={{ color: "var(--text-secondary)", flexShrink: 0 }} />
                 <span style={{ color: "var(--text-secondary)", fontSize: 14 }}>{t(key)}</span>
               </div>
             ))}
@@ -1090,7 +1082,7 @@ export default function OnboardingApp() {
       {/* ── Done ── */}
       {step === "done" && (
         <div style={{ ...S.card, textAlign: "center" }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
+          <CheckCircle2 size={40} strokeWidth={1.75} style={{ color: "var(--accent)", marginBottom: 16 }} />
           <h1 style={S.h1}>{t("onb_done_title")}</h1>
           <p style={S.subtitle}>
             {doneNote[0]}
@@ -1098,9 +1090,12 @@ export default function OnboardingApp() {
             {doneNote[1]}
           </p>
           <div style={{ ...S.featureList, marginBottom: 24 }}>
-            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 14, color: "var(--text-secondary)" }}>{t("onb_done_backend")}</span></div>
-            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 14, color: "var(--text-secondary)" }}>{t("onb_done_autosync")}</span></div>
-            <div style={S.featureRow}><span>✅</span><span style={{ fontSize: 14, color: "var(--text-secondary)" }}>{t("onb_done_adjust")}</span></div>
+            {["onb_done_backend", "onb_done_autosync", "onb_done_adjust"].map((key) => (
+              <div key={key} style={S.featureRow}>
+                <Check size={16} style={{ color: "var(--accent)", flexShrink: 0 }} />
+                <span style={{ fontSize: 14, color: "var(--text-secondary)" }}>{t(key)}</span>
+              </div>
+            ))}
           </div>
           <button style={S.btnPrimary} onClick={() => window.close()}>
             {t("common_close")} <ArrowRight size={16} />
@@ -1136,15 +1131,10 @@ const S: Record<string, React.CSSProperties> = {
     background: "var(--bg-card)",
     borderRadius: 20,
     padding: "36px 36px 30px",
-    boxShadow: "0 1px 2px rgba(17,21,26,.04), 0 12px 28px -8px rgba(17,21,26,.12), 0 0 0 1px rgba(17,21,26,.05)",
+    // A ring and a 2px lift. The 28px blur under a 1px ring was the "hairline with a wide
+    // shadow" look; the page tone behind the card already separates it.
+    boxShadow: "0 1px 2px rgba(17,21,26,.06), 0 0 0 1px rgba(17,21,26,.08)",
     marginTop: 20,
-  },
-  logoWrap: {
-    width: 56, height: 56, borderRadius: 16,
-    background: "var(--accent)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    marginBottom: 22,
-    boxShadow: "0 6px 16px -4px rgba(18,183,106,.45)",
   },
   h1: { fontSize: 24, fontWeight: 600, letterSpacing: "-0.02em", color: "var(--text-primary)", margin: "0 0 8px" },
   subtitle: { fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.55, margin: "0 0 24px" },

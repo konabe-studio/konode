@@ -56,6 +56,18 @@
   "popup_sync_now": {
     "message": "Sincronizar ahora"
   },
+  "popup_pause": {
+    "message": "Pausar la sincronización automática"
+  },
+  "popup_resume": {
+    "message": "Reanudar"
+  },
+  "popup_paused_hint": {
+    "message": "La sincronización automática está en pausa. Hasta que la reanudes, solo sincroniza «Sincronizar ahora»."
+  },
+  "popup_status_paused": {
+    "message": "En pausa"
+  },
   "popup_load_error": {
     "message": "No se pudo contactar a Konode. Toca para reintentar."
   },
@@ -81,7 +93,7 @@
     "message": "Resolver"
   },
   "popup_active_streams": {
-    "message": "Transmisiones activas"
+    "message": "Tipos de datos"
   },
   "popup_missing_extensions_one": {
     "message": "Falta $COUNT$ extensión",
@@ -105,7 +117,7 @@
     "message": "Abrir todo"
   },
   "popup_sessions_head": {
-    "message": "Sesiones desde otros dispositivos"
+    "message": "Otros dispositivos"
   },
   "popup_unknown_device": {
     "message": "Dispositivo desconocido"
@@ -188,9 +200,6 @@
   "popup_device_label": {
     "message": "Dispositivo"
   },
-  "popup_configure": {
-    "message": "Configurar →"
-  },
   "popup_activity_log": {
     "message": "Registro de actividades →"
   },
@@ -221,14 +230,23 @@
   "provider_gdrive_desc": {
     "message": "Se sincroniza directamente con tu propio Google Drive. Gracias a OAuth, el token de acceso se guarda únicamente en este dispositivo."
   },
+  "provider_gdrive_hint": {
+    "message": "Cuenta de Google"
+  },
   "provider_nextcloud_desc": {
     "message": "Tu propio servidor de Nextcloud u ownCloud."
+  },
+  "provider_nextcloud_hint": {
+    "message": "Tu propio servidor"
   },
   "provider_nextcloud_note": {
     "message": "Ingresa solo el nombre de host de tu servidor; usa una contraseña de aplicación (Configuración → Seguridad)."
   },
   "provider_pcloud_desc": {
     "message": "Almacenamiento en pCloud. Requiere un plan de pago de pCloud."
+  },
+  "provider_pcloud_hint": {
+    "message": "Región UE o EE. UU."
   },
   "provider_pcloud_note": {
     "message": "Selecciona la región $REGION$ si es ahí donde está tu cuenta de pCloud.",
@@ -242,11 +260,17 @@
   "provider_koofr_desc": {
     "message": "Almacenamiento en la nube de Koofr."
   },
+  "provider_koofr_hint": {
+    "message": "Cuenta de Koofr"
+  },
   "provider_koofr_note": {
     "message": "Usa tu correo electrónico de Koofr como nombre de usuario y una contraseña de aplicación de Koofr como contraseña."
   },
   "provider_fastmail_desc": {
     "message": "Almacenamiento de archivos de Fastmail."
+  },
+  "provider_fastmail_hint": {
+    "message": "Cuenta de Fastmail"
   },
   "provider_fastmail_note": {
     "message": "Usa tu dirección completa de Fastmail como nombre de usuario y una contraseña de aplicación que tenga acceso a archivos (WebDAV)."
@@ -254,14 +278,23 @@
   "provider_jianguoyun_desc": {
     "message": "Almacenamiento en la nube de Nutstore, muy usado en China continental."
   },
+  "provider_jianguoyun_hint": {
+    "message": "Cuenta de Nutstore"
+  },
   "provider_jianguoyun_note": {
     "message": "Usa tu correo de Nutstore como nombre de usuario y una contraseña de aplicación de terceros como contraseña. En una cuenta gratuita, sube el Intervalo de sincronización a 120 segundos o más a partir de tres dispositivos: Nutstore permite 600 peticiones WebDAV cada 30 minutos."
   },
   "provider_github_desc": {
     "message": "Tus datos sincronizados se almacenan en un repositorio privado de GitHub, al que Konode accede mediante un token de acceso personal."
   },
+  "provider_github_hint": {
+    "message": "Repositorio privado"
+  },
   "provider_webdav_desc": {
     "message": "Synology, kDrive o cualquier otro servidor WebDAV."
+  },
+  "provider_webdav_hint": {
+    "message": "Cualquier servidor WebDAV"
   },
   "provider_syncing_to": {
     "message": "Sincronizando a $URL$.",
@@ -276,10 +309,10 @@
     "message": "Bienvenidos a Konode"
   },
   "onb_welcome_subtitle": {
-    "message": "Sincronización del navegador en la que tus datos se mantienen realmente en tu poder. Tus marcadores, sesiones y extensiones se guardan directamente en tu propia solución de almacenamiento. Sin ningún servidor de por medio."
+    "message": "Sincronización del navegador con tu propio almacenamiento. Tus marcadores, sesiones y extensiones van directamente allí, sin ningún servidor de Konode de por medio."
   },
-  "onb_feature_storage": {
-    "message": "Tus datos siempre permanecen en un espacio de almacenamiento de tu propiedad."
+  "onb_feature_encryption": {
+    "message": "Cifrado de extremo a extremo opcional, que se configura en un paso posterior."
   },
   "onb_feature_instant": {
     "message": "Sincroniza cada cambio en el momento en que ocurre."
@@ -287,11 +320,8 @@
   "onb_feature_browsers": {
     "message": "Funciona en navegadores basados en Chromium y Firefox."
   },
-  "onb_feature_providers": {
-    "message": "Tú decides dónde se almacenan tus datos."
-  },
   "onb_get_started": {
-    "message": "Comenzar"
+    "message": "Elegir almacenamiento"
   },
   "onb_backend_title": {
     "message": "Elige tu solución de almacenamiento"
@@ -325,6 +355,9 @@
   },
   "opt_drive_unavailable": {
     "message": "El inicio de sesión con Google no está disponible en este navegador. Elige otra opción."
+  },
+  "opt_drive_unavailable_short": {
+    "message": "No disponible en este navegador"
   },
   "provider_webdav_other": {
     "message": "WebDAV (otro)"
@@ -821,6 +854,12 @@
   "opt_auto_sync_desc": {
     "message": "Además, sincroniza de forma periódica. El historial, las pestañas abiertas y la lista de extensiones solo se sincronizan de esta forma."
   },
+  "opt_paused_label": {
+    "message": "Sincronización en pausa"
+  },
+  "opt_paused_desc": {
+    "message": "Pausada desde la ventana emergente. «Sincronizar al haber cambios» y «Sincronización automática» esperan hasta que la reanudes. «Sincronizar ahora» sigue funcionando."
+  },
   "opt_notifications_label": {
     "message": "Notificaciones"
   },
@@ -912,7 +951,7 @@
     }
   },
   "opt_this_device": {
-    "message": "ESTE DISPOSITIVO"
+    "message": "Este dispositivo"
   },
   "opt_last_upload_ago": {
     "message": "· última subida $WHEN$",
@@ -937,7 +976,7 @@
     }
   },
   "opt_device_dormant": {
-    "message": "INACTIVO"
+    "message": "Inactivo"
   },
   "opt_device_dormant_note_one": {
     "message": "No ha subido nada en más de un día. Puede que allí no haya cambiado nada o que este navegador ya no exista. Si ya no existe, puedes olvidarlo."
@@ -1639,5 +1678,26 @@
   },
   "opt_snapshots_section_sub": {
     "message": "Copias con marca de tiempo de tus marcadores en el servidor, compartidas por todos tus dispositivos. Al restaurar, se vuelven a agregar los marcadores que falten en este dispositivo (nunca los elimina). Se conservan las 10 más recientes; las más antiguas se eliminan automáticamente y puedes borrar cualquiera de ellas aquí."
+  },
+  "popup_send_done": {
+    "message": "Enviada a $DEVICE$. Se abrirá allí en su próxima sincronización.",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "Laptop"
+      }
+    }
+  },
+  "popup_send_later": {
+    "message": "No se pudo acceder a tu almacenamiento, así que la pestaña se enviará con la próxima sincronización."
+  },
+  "send_menu_title": {
+    "message": "Enviar a un dispositivo"
+  },
+  "send_menu_none": {
+    "message": "Ningún dispositivo puede recibir pestañas todavía"
+  },
+  "popup_send_label": {
+    "message": "Enviar esta pestaña"
   }
 }

@@ -7,6 +7,28 @@ All notable changes to Konode. Format loosely follows
 
 ### Added
 
+- **Send a tab to another device (#92).** Right-click a page or a link and choose Send to
+  device, then the device; in Firefox the same entry is on a tab's own menu. The popup has
+  a paper-plane icon beside the pause and settings icons that opens the same list for the
+  page you are on, which is the way to send from Firefox for Android. Konode has no server, so the tab travels through
+  your own storage and opens on the other device at its next sync, not at once: within a
+  minute or so with Auto sync on, and once that browser starts if it is closed. It opens
+  quietly in a background tab, without a notification. A device is
+  offered once it runs this version, since an older one would never open what it was sent.
+  With end-to-end encryption on, a sent tab is encrypted like everything else, and a device
+  that cannot read your encrypted data is not offered. A tab its device never picks up is
+  dropped after 14 days. This adds two permissions that ask nothing at install: the context
+  menu, and access to the tab you are on at the moment you click Konode or that menu entry.
+
+- **Pause automatic sync from the popup (#89).** The pause icon beside the settings gear
+  holds both automatic syncs: Sync on change and Auto sync. Sync now keeps working while
+  paused, the popup's status says Paused, and the same icon turns into a play button that
+  resumes. Edits you make meanwhile are kept and go out with the next sync, and resuming
+  syncs straight away. Your
+  Sync on change and Auto sync settings are left as they were, so they come back exactly as
+  you had them. While sync is paused, Settings says so under Sync behavior, greys out those
+  two toggles, and has a Resume button there too.
+
 - **Konode is on Microsoft Edge Add-ons.** The listing went live on 2026-11-06 with 1.5.1,
   the same package as the Chrome Web Store, and Google Drive sign-in works from it. If you
   already installed Konode in Edge from the Chrome Web Store, keep that install: it updates
@@ -46,6 +68,25 @@ All notable changes to Konode. Format loosely follows
   look identical here, and the upload time is what tells those apart (#10).
 
 ### Changed
+
+- **Storage providers are a grid, and a provider's settings open right under it.** Settings →
+  Storage listed eight providers one below the other, and the one you picked expanded in
+  place, which pushed most of the others below the fold. They are now tiles, two to a row
+  (one on a phone), each with its name and a few words on what it needs ("Google account",
+  "Your own server"). Picking one opens its settings in a panel under that tile's row, so
+  the rest stay in view. The full description moved into the panel.
+
+- **The popup says each data type's state in words.** The four circles under the Sync
+  button showed the state by colour alone. Each data type is now a line with its icon, its
+  name and its state ("Synced", "Not synced yet", "Last sync failed", "Off"), and the icon
+  keeps the colour, so a glance still works. The heading reads "Data types", and the
+  sessions list "Other devices".
+
+- **A plainer look.** Section headings and badges are no longer spaced capitals, the
+  monospace type is kept for addresses and ids, the status dot pulses only while a sync
+  runs, the popup's second link to Settings is gone (the gear is the one), the setup
+  wizard's welcome has no logo tile or emoji and its button says "Choose storage", and the
+  groups in Settings carry their title in the type rather than in a grey band.
 
 - **A blocked deletion shows which bookmarks it would remove (#23).** When another device
   asks to delete more of your bookmarks than the bulk-delete limit allows, the card in

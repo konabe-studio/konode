@@ -14,6 +14,18 @@
   "popup_sync_now": {
     "message": "立即同步"
   },
+  "popup_pause": {
+    "message": "暫停自動同步"
+  },
+  "popup_resume": {
+    "message": "繼續"
+  },
+  "popup_paused_hint": {
+    "message": "自動同步已暫停。繼續之前，只有「立即同步」會進行同步。"
+  },
+  "popup_status_paused": {
+    "message": "已暫停"
+  },
   "extension_name": {
     "message": "Konode | 私人書籤與分頁同步"
   },
@@ -93,7 +105,7 @@
     "message": "處理"
   },
   "popup_active_streams": {
-    "message": "使用中的資料流"
+    "message": "資料類型"
   },
   "popup_missing_extensions_one": {
     "message": "$COUNT$ 個缺少的擴充功能",
@@ -117,7 +129,7 @@
     "message": "全部開啟"
   },
   "popup_sessions_head": {
-    "message": "其他裝置的分頁"
+    "message": "其他裝置"
   },
   "popup_unknown_device": {
     "message": "不明裝置"
@@ -200,9 +212,6 @@
   "popup_device_label": {
     "message": "裝置"
   },
-  "popup_configure": {
-    "message": "設定 →"
-  },
   "popup_activity_log": {
     "message": "活動紀錄 →"
   },
@@ -233,14 +242,23 @@
   "provider_gdrive_desc": {
     "message": "直接同步到你自己的 Google Drive。透過 OAuth，存取權杖只會留在這台裝置上。"
   },
+  "provider_gdrive_hint": {
+    "message": "Google 帳戶"
+  },
   "provider_nextcloud_desc": {
     "message": "你自己的 Nextcloud 或 ownCloud 伺服器。"
+  },
+  "provider_nextcloud_hint": {
+    "message": "你自己的伺服器"
   },
   "provider_nextcloud_note": {
     "message": "只要輸入你的伺服器主機位址；請使用應用程式密碼（設定 → 安全性）。"
   },
   "provider_pcloud_desc": {
     "message": "pCloud 儲存空間。需要付費的 pCloud 方案。"
+  },
+  "provider_pcloud_hint": {
+    "message": "歐盟或美國區域"
   },
   "provider_pcloud_note": {
     "message": "如果你的 pCloud 帳戶在 $REGION$ 地區，請選擇 $REGION$ 地區。",
@@ -254,11 +272,17 @@
   "provider_koofr_desc": {
     "message": "Koofr 雲端儲存空間。"
   },
+  "provider_koofr_hint": {
+    "message": "Koofr 帳戶"
+  },
   "provider_koofr_note": {
     "message": "使用者名稱請填你的 Koofr 電子郵件，密碼請用 Koofr 應用程式密碼。"
   },
   "provider_fastmail_desc": {
     "message": "Fastmail 檔案儲存空間。"
+  },
+  "provider_fastmail_hint": {
+    "message": "Fastmail 帳戶"
   },
   "provider_fastmail_note": {
     "message": "使用者名稱請填你完整的 Fastmail 位址，密碼請用具備檔案（WebDAV）存取權的應用程式密碼。"
@@ -266,14 +290,23 @@
   "provider_jianguoyun_desc": {
     "message": "堅果雲雲端儲存空間，在中國大陸相當普及。"
   },
+  "provider_jianguoyun_hint": {
+    "message": "堅果雲帳戶"
+  },
   "provider_jianguoyun_note": {
     "message": "使用者名稱請填你的堅果雲電子郵件，密碼請用第三方應用程式密碼。免費帳戶接到第三台裝置之後，請把同步間隔調到 120 秒以上：堅果雲每 30 分鐘只允許 600 次 WebDAV 請求。"
   },
   "provider_github_desc": {
     "message": "你的同步資料放在一個私人的 GitHub 儲存庫裡，Konode 透過個人存取權杖存取它。"
   },
+  "provider_github_hint": {
+    "message": "私人儲存庫"
+  },
   "provider_webdav_desc": {
     "message": "Synology、kDrive，或任何其他 WebDAV 伺服器。"
+  },
+  "provider_webdav_hint": {
+    "message": "任何 WebDAV 伺服器"
   },
   "provider_syncing_to": {
     "message": "正在同步到 $URL$。",
@@ -288,10 +321,10 @@
     "message": "歡迎使用 Konode"
   },
   "onb_welcome_subtitle": {
-    "message": "瀏覽器同步，而你的資料真的還是你的。書籤、分頁和擴充功能直接進到你自己的儲存空間。中間沒有伺服器。"
+    "message": "把瀏覽器同步到你自己的儲存空間。書籤、分頁和擴充功能直接進到那裡，中間沒有 Konode 伺服器。"
   },
-  "onb_feature_storage": {
-    "message": "你的資料始終放在你自己的儲存空間。"
+  "onb_feature_encryption": {
+    "message": "可選用的端對端加密，在後面的步驟設定。"
   },
   "onb_feature_instant": {
     "message": "每一次變更都即時同步。"
@@ -299,11 +332,8 @@
   "onb_feature_browsers": {
     "message": "支援 Chromium 和 Firefox 系列的瀏覽器。"
   },
-  "onb_feature_providers": {
-    "message": "資料放在哪裡由你決定。"
-  },
   "onb_get_started": {
-    "message": "開始使用"
+    "message": "選擇儲存空間"
   },
   "onb_backend_title": {
     "message": "選擇你的儲存空間"
@@ -337,6 +367,9 @@
   },
   "opt_drive_unavailable": {
     "message": "這個瀏覽器無法使用 Google 登入。請選擇其他選項。"
+  },
+  "opt_drive_unavailable_short": {
+    "message": "此瀏覽器無法使用"
   },
   "provider_webdav_other": {
     "message": "WebDAV（其他）"
@@ -829,6 +862,12 @@
   },
   "opt_auto_sync_desc": {
     "message": "另外也依固定排程同步。歷史記錄、開啟的分頁與擴充功能清單僅透過此方式傳輸。"
+  },
+  "opt_paused_label": {
+    "message": "同步已暫停"
+  },
+  "opt_paused_desc": {
+    "message": "已在對話方塊中暫停。「變更時同步」和「自動同步」會等到你繼續。「立即同步」仍然可用。"
   },
   "opt_notifications_label": {
     "message": "通知"
@@ -1639,5 +1678,26 @@
   },
   "opt_devices_bad_reply": {
     "message": "無法讀取裝置清單。"
+  },
+  "popup_send_done": {
+    "message": "已傳送到 $DEVICE$。它會在該裝置下次同步時開啟。",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "Laptop"
+      }
+    }
+  },
+  "popup_send_later": {
+    "message": "無法連線到你的儲存空間，分頁將隨下次同步傳送。"
+  },
+  "send_menu_title": {
+    "message": "傳送到裝置"
+  },
+  "send_menu_none": {
+    "message": "目前沒有可以接收分頁的裝置"
+  },
+  "popup_send_label": {
+    "message": "傳送此分頁"
   }
 }

@@ -59,6 +59,18 @@
   "popup_sync_now": {
     "message": "Szinkronizálás most"
   },
+  "popup_pause": {
+    "message": "Automatikus szinkron szüneteltetése"
+  },
+  "popup_resume": {
+    "message": "Folytatás"
+  },
+  "popup_paused_hint": {
+    "message": "Az automatikus szinkron szünetel. Amíg nem folytatod, csak a Szinkronizálás most gomb szinkronizál."
+  },
+  "popup_status_paused": {
+    "message": "Szüneteltetve"
+  },
   "popup_load_error": {
     "message": "A Konode nem érhető el. Kattints az újrapróbálkozáshoz."
   },
@@ -93,7 +105,7 @@
     "message": "Feloldás"
   },
   "popup_active_streams": {
-    "message": "Aktív adatfolyamok"
+    "message": "Adattípusok"
   },
   "popup_missing_extensions_one": {
     "message": "$COUNT$ hiányzó bővítmény",
@@ -117,7 +129,7 @@
     "message": "Összes megnyitása"
   },
   "popup_sessions_head": {
-    "message": "Más eszközök lapjai"
+    "message": "Más eszközök"
   },
   "popup_unknown_device": {
     "message": "Ismeretlen eszköz"
@@ -200,9 +212,6 @@
   "popup_device_label": {
     "message": "Eszköz"
   },
-  "popup_configure": {
-    "message": "Beállítás →"
-  },
   "popup_activity_log": {
     "message": "Tevékenységnapló →"
   },
@@ -233,14 +242,23 @@
   "provider_gdrive_desc": {
     "message": "Közvetlen szinkronizálás a saját Google Drive-odra. Az OAuth-hitelesítésnek köszönhetően a hozzáférési token csak ezen az eszközön tárolódik."
   },
+  "provider_gdrive_hint": {
+    "message": "Google-fiók"
+  },
   "provider_nextcloud_desc": {
     "message": "A saját Nextcloud vagy ownCloud szervered."
+  },
+  "provider_nextcloud_hint": {
+    "message": "Saját szerver"
   },
   "provider_nextcloud_note": {
     "message": "Csak a szerver címét add meg, és használj alkalmazásjelszót (Beállítások → Biztonság)."
   },
   "provider_pcloud_desc": {
     "message": "pCloud tárhely. Fizetős pCloud-előfizetés kell hozzá."
+  },
+  "provider_pcloud_hint": {
+    "message": "EU-s vagy USA-beli régió"
   },
   "provider_pcloud_note": {
     "message": "Válaszd ki az $REGION$ régiót, ha ott található a pCloud-fiókod.",
@@ -254,11 +272,17 @@
   "provider_koofr_desc": {
     "message": "Koofr felhőtárhely."
   },
+  "provider_koofr_hint": {
+    "message": "Koofr-fiók"
+  },
   "provider_koofr_note": {
     "message": "Felhasználónévként a Koofr e-mail-címedet, jelszóként pedig egy Koofr alkalmazásjelszót használj."
   },
   "provider_fastmail_desc": {
     "message": "Fastmail fájltárhely."
+  },
+  "provider_fastmail_hint": {
+    "message": "Fastmail-fiók"
   },
   "provider_fastmail_note": {
     "message": "Felhasználónévként a teljes Fastmail e-mail címedet add meg, jelszóként pedig egy olyan alkalmazásjelszót, amely rendelkezik Files (WebDAV) jogosultsággal."
@@ -266,14 +290,23 @@
   "provider_jianguoyun_desc": {
     "message": "Nutstore felhőtárhely, Kínában széles körben használt."
   },
+  "provider_jianguoyun_hint": {
+    "message": "Nutstore-fiók"
+  },
   "provider_jianguoyun_note": {
     "message": "Felhasználónévként a Nutstore e-mail címedet add meg, jelszóként pedig egy harmadik féltől származó alkalmazásjelszót. Ingyenes fióknál három eszköztől emeld a Szinkronizálási időköz értékét legalább 120 másodpercre: a Nutstore 30 percenként 600 WebDAV-kérést enged."
   },
   "provider_github_desc": {
     "message": "A szinkronizált adatok egy privát GitHub-repóban tárolódnak, amelyhez Personal Access Tokennel fér hozzá a Konode."
   },
+  "provider_github_hint": {
+    "message": "Privát GitHub-repó"
+  },
   "provider_webdav_desc": {
     "message": "Synology, kDrive vagy bármelyik más WebDAV szerver."
+  },
+  "provider_webdav_hint": {
+    "message": "Bármilyen WebDAV szerver"
   },
   "provider_syncing_to": {
     "message": "Szinkronizálás ide: $URL$.",
@@ -288,10 +321,10 @@
     "message": "Üdv a Konodeban"
   },
   "onb_welcome_subtitle": {
-    "message": "Biztonságos böngészőszinkronizálás, ahol az adataid valóban a tieid maradnak. Könyvjelzőid, lapjaid és bővítményeid közvetlenül a saját tárhelyedre kerülnek. Nincs köztes szerver."
+    "message": "Böngészőszinkronizálás a saját tárhelyedre. A könyvjelzőid, lapjaid és bővítményeid közvetlenül oda kerülnek, Konode-szerver nélkül."
   },
-  "onb_feature_storage": {
-    "message": "Az adataid mindig a saját tárhelyeden maradnak."
+  "onb_feature_encryption": {
+    "message": "Választható végpontok közötti titkosítás, egy későbbi lépésben állíthatod be."
   },
   "onb_feature_instant": {
     "message": "Minden módosítást azonnal szinkronizál."
@@ -299,11 +332,8 @@
   "onb_feature_browsers": {
     "message": "Működik Chromium- és Firefox-alapú böngészőkben."
   },
-  "onb_feature_providers": {
-    "message": "Te döntöd el, hol tárolod az adataidat."
-  },
   "onb_get_started": {
-    "message": "Kezdjük"
+    "message": "Tárhely kiválasztása"
   },
   "onb_backend_title": {
     "message": "Válaszd ki a tárhelyet"
@@ -337,6 +367,9 @@
   },
   "opt_drive_unavailable": {
     "message": "A Google-bejelentkezés ebben a böngészőben nem működik. Válassz másik lehetőséget."
+  },
+  "opt_drive_unavailable_short": {
+    "message": "Ebben a böngészőben nem érhető el"
   },
   "provider_webdav_other": {
     "message": "WebDAV (egyéb)"
@@ -830,6 +863,12 @@
   "opt_auto_sync_desc": {
     "message": "Rendszeres időzítés szerint is szinkronizál. Az előzmények, a nyitott lapok és a bővítménylista csak így szinkronizálódnak."
   },
+  "opt_paused_label": {
+    "message": "A szinkronizálás szünetel"
+  },
+  "opt_paused_desc": {
+    "message": "A felugró ablakban szüneteltetted. A Szinkronizálás változáskor és az Automatikus szinkronizálás addig vár, amíg nem folytatod. A Szinkronizálás most továbbra is működik."
+  },
   "opt_notifications_label": {
     "message": "Értesítések"
   },
@@ -1173,7 +1212,7 @@
     }
   },
   "opt_this_device": {
-    "message": "EZ AZ ESZKÖZ"
+    "message": "Ez az eszköz"
   },
   "opt_last_upload_ago": {
     "message": "· utolsó feltöltés: $WHEN$",
@@ -1198,7 +1237,7 @@
     }
   },
   "opt_device_dormant": {
-    "message": "INAKTÍV"
+    "message": "Inaktív"
   },
   "opt_device_dormant_note_one": {
     "message": "Több mint egy napja nem töltött fel semmit. Ez jelentheti azt, hogy ott semmi sem változott, vagy azt, hogy ez a böngésző már nincs meg. Ha nincs meg, elfelejtheted."
@@ -1639,5 +1678,26 @@
   },
   "opt_devices_bad_reply": {
     "message": "Nem sikerült beolvasni az eszközlistát."
+  },
+  "popup_send_done": {
+    "message": "Elküldve ide: $DEVICE$. Ott a következő szinkronnál nyílik meg.",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "Laptop"
+      }
+    }
+  },
+  "popup_send_later": {
+    "message": "A tárhely nem érhető el, ezért a lap a következő szinkronnal megy el."
+  },
+  "send_menu_title": {
+    "message": "Küldés eszközre"
+  },
+  "send_menu_none": {
+    "message": "Még egyik eszköz sem tud lapot fogadni"
+  },
+  "popup_send_label": {
+    "message": "Lap küldése"
   }
 }

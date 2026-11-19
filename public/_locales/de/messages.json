@@ -59,6 +59,18 @@
   "popup_sync_now": {
     "message": "Jetzt synchronisieren"
   },
+  "popup_pause": {
+    "message": "Automatische Synchronisierung pausieren"
+  },
+  "popup_resume": {
+    "message": "Fortsetzen"
+  },
+  "popup_paused_hint": {
+    "message": "Die automatische Synchronisierung ist pausiert. Bis du sie fortsetzt, synchronisiert nur „Jetzt synchronisieren“."
+  },
+  "popup_status_paused": {
+    "message": "Pausiert"
+  },
   "popup_load_error": {
     "message": "Konode war nicht erreichbar. Zum erneuten Versuch klicken."
   },
@@ -93,7 +105,7 @@
     "message": "Auflösen"
   },
   "popup_active_streams": {
-    "message": "Aktive Datenströme"
+    "message": "Datentypen"
   },
   "popup_missing_extensions_one": {
     "message": "$COUNT$ fehlende Erweiterung",
@@ -117,7 +129,7 @@
     "message": "Alle öffnen"
   },
   "popup_sessions_head": {
-    "message": "Tabs anderer Geräte"
+    "message": "Andere Geräte"
   },
   "popup_unknown_device": {
     "message": "Unbekanntes Gerät"
@@ -200,9 +212,6 @@
   "popup_device_label": {
     "message": "Gerät"
   },
-  "popup_configure": {
-    "message": "Einrichten →"
-  },
   "popup_activity_log": {
     "message": "Aktivitätsprotokoll →"
   },
@@ -233,14 +242,23 @@
   "provider_gdrive_desc": {
     "message": "Synchronisiert direkt in dein eigenes Google Drive. Dank OAuth wird das Zugriffstoken nur auf diesem Gerät gespeichert."
   },
+  "provider_gdrive_hint": {
+    "message": "Google-Konto"
+  },
   "provider_nextcloud_desc": {
     "message": "Dein eigener Nextcloud- oder ownCloud-Server."
+  },
+  "provider_nextcloud_hint": {
+    "message": "Eigener Server"
   },
   "provider_nextcloud_note": {
     "message": "Gib nur den Server-Host ein und verwende ein App-Passwort (Einstellungen → Sicherheit)."
   },
   "provider_pcloud_desc": {
     "message": "pCloud-Speicher. Erfordert einen kostenpflichtigen pCloud-Tarif."
+  },
+  "provider_pcloud_hint": {
+    "message": "Region EU oder US"
   },
   "provider_pcloud_note": {
     "message": "Wähle die Region $REGION$, wenn dort dein pCloud-Konto liegt.",
@@ -254,11 +272,17 @@
   "provider_koofr_desc": {
     "message": "Koofr-Cloud-Speicher."
   },
+  "provider_koofr_hint": {
+    "message": "Koofr-Konto"
+  },
   "provider_koofr_note": {
     "message": "Verwende deine Koofr-E-Mail-Adresse als Benutzernamen und ein Koofr-App-Passwort als Passwort."
   },
   "provider_fastmail_desc": {
     "message": "Fastmail-Dateispeicher."
+  },
+  "provider_fastmail_hint": {
+    "message": "Fastmail-Konto"
   },
   "provider_fastmail_note": {
     "message": "Verwende deine vollständige Fastmail-Adresse als Benutzernamen und ein App-Passwort mit Files-(WebDAV-)Zugriff."
@@ -266,14 +290,23 @@
   "provider_jianguoyun_desc": {
     "message": "Nutstore-Cloud-Speicher, in Festlandchina weit verbreitet."
   },
+  "provider_jianguoyun_hint": {
+    "message": "Nutstore-Konto"
+  },
   "provider_jianguoyun_note": {
     "message": "Verwende deine Nutstore-E-Mail-Adresse als Benutzernamen und ein Anwendungspasswort für Drittanbieter als Passwort. Erhöhe bei einem kostenlosen Konto ab drei Geräten das Synchronisierungsintervall auf mindestens 120 Sekunden: Nutstore erlaubt 600 WebDAV-Anfragen pro 30 Minuten."
   },
   "provider_github_desc": {
     "message": "Deine Sync-Daten liegen in einem privaten GitHub-Repository, auf das Konode mit einem Personal Access Token zugreift."
   },
+  "provider_github_hint": {
+    "message": "Privates Repository"
+  },
   "provider_webdav_desc": {
     "message": "Synology, kDrive oder ein beliebiger anderer WebDAV-Server."
+  },
+  "provider_webdav_hint": {
+    "message": "Beliebiger WebDAV-Server"
   },
   "provider_syncing_to": {
     "message": "Synchronisierung nach $URL$.",
@@ -288,10 +321,10 @@
     "message": "Willkommen bei Konode"
   },
   "onb_welcome_subtitle": {
-    "message": "Browser-Synchronisierung, bei der deine Daten wirklich dir gehören. Deine Lesezeichen, Tabs und Erweiterungen gehen direkt in deinen eigenen Speicher. Kein Server dazwischen."
+    "message": "Browser-Synchronisierung in deinen eigenen Speicher. Deine Lesezeichen, Tabs und Erweiterungen gehen direkt dorthin, ohne Konode-Server dazwischen."
   },
-  "onb_feature_storage": {
-    "message": "Deine Daten bleiben immer in deinem eigenen Speicher."
+  "onb_feature_encryption": {
+    "message": "Optionale Ende-zu-Ende-Verschlüsselung, einzurichten in einem späteren Schritt."
   },
   "onb_feature_instant": {
     "message": "Synchronisiert jede Änderung sofort."
@@ -299,11 +332,8 @@
   "onb_feature_browsers": {
     "message": "Funktioniert in Chromium- und Firefox-basierten Browsern."
   },
-  "onb_feature_providers": {
-    "message": "Du entscheidest, wo deine Daten liegen."
-  },
   "onb_get_started": {
-    "message": "Los geht's"
+    "message": "Speicher wählen"
   },
   "onb_backend_title": {
     "message": "Wähle deinen Speicher"
@@ -337,6 +367,9 @@
   },
   "opt_drive_unavailable": {
     "message": "Die Google-Anmeldung ist in diesem Browser nicht verfügbar. Wähle eine andere Option."
+  },
+  "opt_drive_unavailable_short": {
+    "message": "In diesem Browser nicht verfügbar"
   },
   "provider_webdav_other": {
     "message": "WebDAV (andere)"
@@ -830,6 +863,12 @@
   "opt_auto_sync_desc": {
     "message": "Synchronisiert außerdem regelmäßig nach Zeitplan. Verlauf, offene Tabs und die Erweiterungsliste werden nur auf diesem Weg übertragen."
   },
+  "opt_paused_label": {
+    "message": "Synchronisierung pausiert"
+  },
+  "opt_paused_desc": {
+    "message": "Im Popup pausiert. „Bei Änderung synchronisieren“ und „Automatische Synchronisierung“ warten, bis du fortsetzt. „Jetzt synchronisieren“ funktioniert weiterhin."
+  },
   "opt_notifications_label": {
     "message": "Benachrichtigungen"
   },
@@ -1173,7 +1212,7 @@
     }
   },
   "opt_this_device": {
-    "message": "DIESES GERÄT"
+    "message": "Dieses Gerät"
   },
   "opt_last_upload_ago": {
     "message": "· letzter Upload $WHEN$",
@@ -1198,7 +1237,7 @@
     }
   },
   "opt_device_dormant": {
-    "message": "INAKTIV"
+    "message": "Inaktiv"
   },
   "opt_device_dormant_note_one": {
     "message": "Seit über einem Tag nichts hochgeladen. Das kann heißen, dass sich dort nichts geändert hat, oder dass es diesen Browser nicht mehr gibt. Wenn es ihn nicht mehr gibt, kannst du ihn vergessen."
@@ -1639,5 +1678,26 @@
   },
   "opt_devices_bad_reply": {
     "message": "Die Geräteliste konnte nicht gelesen werden."
+  },
+  "popup_send_done": {
+    "message": "An $DEVICE$ gesendet. Er öffnet sich dort bei der nächsten Synchronisierung.",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "Laptop"
+      }
+    }
+  },
+  "popup_send_later": {
+    "message": "Dein Speicher war nicht erreichbar, daher geht der Tab mit der nächsten Synchronisierung raus."
+  },
+  "send_menu_title": {
+    "message": "An Gerät senden"
+  },
+  "send_menu_none": {
+    "message": "Noch kann kein Gerät Tabs empfangen"
+  },
+  "popup_send_label": {
+    "message": "Diesen Tab senden"
   }
 }

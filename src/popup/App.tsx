@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import type { SyncState, SyncSettings, DataType, SyncExtension, RemoteSessionEntry } from "@/lib/types";
+import type { SyncState, SyncSettings, DataType, SyncExtension, RemoteSessionEntry, SendTarget } from "@/lib/types";
+import { sendableUrl } from "@/lib/sync/sent-tabs";
 import { providerFromConfig, providerById, providerLabel } from "@/lib/storage-providers";
 import { sendMessage, request } from "@/lib/utils/messaging";
 import { browser, currentStore } from "@/lib/utils/ext";
@@ -11,12 +12,12 @@ import { reviewPageFor } from "@/lib/store-review";
 import { STATE_UPDATE } from "@/lib/constants";
 import { streamState, streamInputFor, streamColor, streamLabelKey } from "@/popup/stream-state";
 import { groupConflictsByDevice } from "@/popup/conflict-groups";
-import { t, plural } from "@/lib/utils/i18n";
+import { t, plural, isolate } from "@/lib/utils/i18n";
 import { dataTypeApiPresent, hasPermission } from "@/lib/utils/capabilities";
 import {
   RefreshCw, Settings, Bookmark, Clock, Globe,
   AlertCircle, Loader2, ChevronRight,
-  Wifi, Puzzle, ExternalLink, GitMerge, RotateCcw, Star,
+  Wifi, Puzzle, ExternalLink, GitMerge, RotateCcw, Star, Pause, Play, Send, Check,
 } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────
@@ -67,6 +68,14 @@ export default function PopupApp() {
   // still open (lib/session-restore). Undefined entries: no `tabs` permission to read them.
   const [openUrls, setOpenUrls] = useState<Array<string | undefined>>([]);
   const [loadError, setLoadError] = useState(false);
+  // Send to device (#92): who can receive, the page in front, and what the last send did.
+  const [sendTargets, setSendTargets] = useState<SendTarget[]>([]);
+  const [activeTab, setActiveTab] = useState<{ url: string; title?: string } | null>(null);
+  const [sendResult, setSendResult] = useState<{ device_id: string; ok: boolean } | null>(null);
+  const [sendingTo, setSendingTo] = useState<string | null>(null);
+  const [sendMenuOpen, setSendMenuOpen] = useState(false);
+  const sendMenuRef = useRef<HTMLDivElement | null>(null);
+  const sendButtonRef = useRef<HTMLButtonElement | null>(null);
   // Why the last button press did nothing. Every one of these handlers used to
   // `await sendMessage(...)` and drop the answer, so an ERROR response — "a sync is
   // already running", a peer whose data can't be applied — looked like a dead button.
@@ -161,8 +170,9 @@ export default function PopupApp() {
 
   const loadPeerCaches = useCallback(async () => {
     try {
-      const r = await browser.storage.local.get([KEYS.REMOTE_SESSIONS, KEYS.REMOTE_EXTENSIONS]);
+      const r = await browser.storage.local.get([KEYS.REMOTE_SESSIONS, KEYS.REMOTE_EXTENSIONS, KEYS.SEND_TARGETS]);
       setRemoteSessions(normalizeRemoteSessions(r[KEYS.REMOTE_SESSIONS]));
+      setSendTargets(Array.isArray(r[KEYS.SEND_TARGETS]) ? (r[KEYS.SEND_TARGETS] as SendTarget[]) : []);
       void loadOpenTabs();
       // Union of every peer device's extension list (deduped by id).
       const remote = normalizeRemoteExtensions(r[KEYS.REMOTE_EXTENSIONS]);
@@ -198,6 +208,14 @@ export default function PopupApp() {
   useEffect(() => {
     load();
     void loadPeerCaches();
+    // The page this popup was opened over. Opening the popup grants activeTab, which is
+    // what lets its address be read without the tabs permission.
+    void (async () => {
+      try {
+        const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+        if (tab && sendableUrl(tab.url)) setActiveTab({ url: tab.url!, ...(tab.title ? { title: tab.title } : {}) });
+      } catch { /* no tabs API: nothing to send */ }
+    })();
 
     return () => {
       if (animTimerRef.current) clearInterval(animTimerRef.current);
@@ -255,6 +273,27 @@ export default function PopupApp() {
     if (!r.ok) setActionError(r.error);
   };
 
+  /**
+   * Pause and resume (#89). Paused holds both automatic triggers; Sync now keeps working.
+   *
+   * Shown at once and put back if the save fails, so the popup never claims a
+   * state the worker did not take. Resuming syncs straight away: whatever was
+   * changed while paused has been waiting for exactly this, and the person who resumes
+   * expects to see sync happen, not to wait out an interval.
+   */
+  const setPaused = async (paused: boolean) => {
+    if (!settings) return;
+    setActionError(null);
+    setSettings((s) => (s ? { ...s, sync_paused: paused } : s));
+    const r = await request({ type: "SAVE_SETTINGS", payload: { sync_paused: paused } });
+    if (!r.ok) {
+      setSettings((s) => (s ? { ...s, sync_paused: !paused } : s));
+      setActionError(r.error);
+      return;
+    }
+    if (!paused && !isSyncing && (settings.enabled_types?.length ?? 0) > 0) await handleSyncNow();
+  };
+
   const openOptions = () => browser.runtime.openOptionsPage();
 
   // Opened from a click, never from a lifecycle event — see `showSetupCard`.
@@ -309,6 +348,48 @@ export default function PopupApp() {
       await load();
     } finally {
       setResolving(null);
+    }
+  };
+
+  // The send menu closes on a click outside it and on Escape, like the browser's own menus.
+  useEffect(() => {
+    if (!sendMenuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!sendMenuRef.current?.contains(e.target as Node)) setSendMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setSendMenuOpen(false);
+      sendButtonRef.current?.focus();
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    sendMenuRef.current?.querySelector<HTMLButtonElement>("[role=menuitem]")?.focus();
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [sendMenuOpen]);
+
+  useEffect(() => {
+    if (!sendResult) return;
+    const timer = setTimeout(() => setSendResult(null), 6000);
+    return () => clearTimeout(timer);
+  }, [sendResult]);
+
+  /** Send the page in front to another device (#92). */
+  const sendTab = async (to: string) => {
+    if (!activeTab || sendingTo) return;
+    setSendMenuOpen(false);
+    setSendResult(null);
+    setSendingTo(to);
+    try {
+      const r = await request({ type: "SEND_TAB", payload: { to, url: activeTab.url, title: activeTab.title } });
+      // A failed publish leaves the tab queued for the next sync, which is what the
+      // message says; it is not an error to report as one.
+      setSendResult({ device_id: to, ok: r.ok });
+    } finally {
+      setSendingTo(null);
     }
   };
 
@@ -370,7 +451,16 @@ export default function PopupApp() {
     const pid = providerFromConfig(settings.active_backend, dav?.url, dav?.username);
     return pid ? providerLabel(providerById(pid)) : settings.active_backend;
   })();
-  const pulsing = status === "syncing" || status === "success";
+  // Only while something is happening. A dot pulsing at rest says nothing the colour does
+  // not, and a status dot that breathes forever is one of the marks of a generated page.
+  const pulsing = status === "syncing";
+  // Pause only means something when there is somewhere to sync to and Settings has at
+  // least one automatic sync on. With both of those off there is nothing to pause.
+  const paused = !!settings?.sync_paused;
+  const pauseAvailable = hasBackend && !!(settings?.sync_on_change || settings?.auto_sync);
+  // Paused says so in place of a resting status. A running sync, an error or a conflict
+  // still shows: those are news, and Sync now works while paused.
+  const showPaused = paused && pauseAvailable && (status === "idle" || status === "success");
   const conflictGroups = groupConflictsByDevice(state?.pending_conflicts ?? []);
   // Settings loaded and every data type switched off. `settingsLoaded` matters: before the
   // read lands, enabled_types is undefined and an empty list would be indistinguishable
@@ -394,18 +484,91 @@ export default function PopupApp() {
       <div className="shrink-0 px-4 pt-4">
       {/* ── Status + settings (the toolbar icon already identifies the popup,
             so the wordmark header is dropped; settings moves to the top-right) ── */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <span className="relative flex h-2 w-2 items-center justify-center">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="relative flex h-2 w-2 shrink-0 items-center justify-center">
             {pulsing && (
               <span className={`absolute h-2 w-2 rounded-full border-[1.5px] ${statusCfg.ring} animate-konode-pulse`} />
             )}
-            <span className={`h-2 w-2 rounded-full ${statusCfg.dot}`} />
+            <span className={`h-2 w-2 rounded-full ${showPaused ? "bg-sk-subtle" : statusCfg.dot}`} />
           </span>
-          <span className={`text-sm font-medium ${statusCfg.color}`}>{t(`status_${status}`)}</span>
+          <span
+            className={`truncate text-sm font-medium ${showPaused ? "text-sk-muted" : statusCfg.color}`}
+            title={showPaused ? t("popup_paused_hint") : undefined}
+          >
+            {showPaused ? t("popup_status_paused") : t(`status_${status}`)}
+          </span>
         </div>
-        <div className="flex items-center gap-2">
-          {lastSync && <span className="font-mono text-[14px] tabular-nums text-sk-muted">{lastSync}</span>}
+        <div className="flex shrink-0 items-center gap-1">
+          {lastSync && <span className="mr-1 whitespace-nowrap text-[14px] tabular-nums text-sk-muted">{lastSync}</span>}
+          {/* Send this tab (#92): an icon here rather than a row in the body, which it would
+              take for something used now and then. Shown only when there is a page to send
+              and a device to send it to. */}
+          {hasBackend && activeTab && sendTargets.length > 0 && (
+            <div ref={sendMenuRef} className="relative">
+              <button
+                ref={sendButtonRef}
+                onClick={() => setSendMenuOpen((o) => !o)}
+                disabled={!!sendingTo}
+                aria-haspopup="menu"
+                aria-expanded={sendMenuOpen}
+                aria-label={t("send_menu_title")}
+                title={t("send_menu_title")}
+                className="flex h-8 w-8 items-center justify-center rounded-icon text-sk-muted transition-colors hover:bg-sk-raised disabled:cursor-default"
+              >
+                {sendingTo
+                  ? <Loader2 size={18} className="animate-spin" />
+                  : sendResult?.ok ? <Check size={18} strokeWidth={1.75} className="text-sk-signal" /> : <Send size={18} strokeWidth={1.75} />}
+              </button>
+              {sendMenuOpen && (
+                <div
+                  role="menu"
+                  aria-label={t("send_menu_title")}
+                  className="absolute right-0 top-full z-20 mt-1 w-64 rounded-box border border-sk-hairline bg-sk-surface py-1 shadow-lg"
+                >
+                  <div className="border-b border-sk-hairline px-3 pb-2 pt-1">
+                    <span className="block text-[12px] text-sk-subtle">{t("popup_send_label")}</span>
+                    <span className="block truncate text-[12px] text-sk-muted">
+                      {activeTab.title ? <bdi>{activeTab.title}</bdi> : activeTab.url}
+                    </span>
+                  </div>
+                  {sendTargets.map((target) => (
+                    <button
+                      key={target.device_id}
+                      role="menuitem"
+                      onClick={() => void sendTab(target.device_id)}
+                      className="block w-full truncate px-3 py-2 text-left text-[14px] text-sk-text transition-colors hover:bg-sk-tint focus:bg-sk-tint focus:outline-none"
+                    >
+                      {target.label ? <bdi>{target.label}</bdi> : t("popup_unknown_device")}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {/* Pause (#89): one icon in one place, whatever the status is doing, the same size
+              and weight in both states. Most people never pause, so it costs them nothing;
+              while paused, the status line is what says so. It used to move to the status
+              line once a sync ended, so the button just pressed turned up somewhere else. */}
+          {pauseAvailable && (paused ? (
+            <button
+              onClick={() => void setPaused(false)}
+              aria-label={t("popup_resume")}
+              title={t("popup_resume")}
+              className="flex h-8 w-8 items-center justify-center rounded-icon text-sk-muted transition-colors hover:bg-sk-raised"
+            >
+              <Play size={18} strokeWidth={1.75} />
+            </button>
+          ) : (
+            <button
+              onClick={() => void setPaused(true)}
+              aria-label={t("popup_pause")}
+              title={t("popup_pause")}
+              className="flex h-8 w-8 items-center justify-center rounded-icon text-sk-muted transition-colors hover:bg-sk-raised"
+            >
+              <Pause size={18} strokeWidth={1.75} />
+            </button>
+          ))}
           <button
             onClick={openOptions}
             aria-label={t("popup_settings_aria")}
@@ -415,6 +578,13 @@ export default function PopupApp() {
           </button>
         </div>
       </div>
+
+      {/* What the last Send did, for a few seconds: the menu that was clicked is gone. */}
+      {sendResult && (
+        <p role="status" className={`mt-1 text-[12px] ${sendResult.ok ? "text-sk-subtle" : "text-sk-warn"}`}>
+          {sendResult.ok ? t("popup_send_done", isolate(sendTargets.find((x) => x.device_id === sendResult.device_id)?.label ?? t("popup_unknown_device"))) : t("popup_send_later")}
+        </p>
+      )}
 
       {/* ── First-run setup ── */}
       {showSetupCard && (
@@ -583,16 +753,19 @@ export default function PopupApp() {
       {/* Scrollable body — the popup grows to fit this; when it would exceed
           Chrome's ~600px ceiling, this region scrolls and the header stays pinned. */}
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-      {/* ── Active streams (live per-type status) ── */}
+      {/* ── Data types (live per-type status) ──
+          Icon, name and the state in words, two to a row. The four circles before this
+          told the state by colour alone, which a colour-blind reader and a screen reader
+          both lose; the colour stays on the icon, so a glance still reads green as done. */}
       <section className="mt-4">
-        <h2 className="mb-2 pl-0.5 font-mono text-[12px] font-medium uppercase tracking-[0.08em] text-sk-subtle">
+        <h2 className="mb-1.5 pl-0.5 text-[12px] font-medium text-sk-muted">
           {t("popup_active_streams")}
         </h2>
-        <div className="grid grid-cols-4 gap-2.5">
+        <ul className="grid grid-cols-2 gap-x-2 gap-y-1">
           {SYNC_ORDER.map((type) => {
             const Icon = DATA_TYPE_META[type].icon;
             const typeLabel = t(`datatype_${type}`);
-            // Derived in one tested place — see popup/stream-state.ts. Inline, this
+            // Derived in one tested place: see popup/stream-state.ts. Inline, this
             // collapsed to green/"synced" for every enabled type whenever a sync wasn't
             // running, including before the first one and right after a failure.
             const ss = streamState(
@@ -604,23 +777,27 @@ export default function PopupApp() {
               })
             );
             const iconColor = streamColor(ss);
+            const off = ss === "off";
 
             return (
-              <div
-                key={type}
-                title={`${typeLabel}: ${t(streamLabelKey(ss))}`}
-                aria-label={`${typeLabel}: ${t(streamLabelKey(ss))}`}
-                className={`flex aspect-square items-center justify-center rounded-full border border-sk-hairline bg-sk-tint ${ss === "off" ? "opacity-40" : ""}`}
-              >
+              <li key={type} className="flex min-w-0 items-center gap-2.5 px-0.5 py-1.5">
                 {ss === "syncing" ? (
-                  <Loader2 size={22} className={`animate-spin ${iconColor}`} />
+                  <Loader2 size={18} className={`shrink-0 animate-spin ${iconColor}`} aria-hidden="true" />
                 ) : (
-                  <Icon size={22} strokeWidth={1.75} className={iconColor} />
+                  <Icon size={18} strokeWidth={1.75} className={`shrink-0 ${iconColor}`} aria-hidden="true" />
                 )}
-              </div>
+                <span className="min-w-0 flex-1">
+                  <span className={`block truncate text-[14px] ${off ? "text-sk-subtle" : "text-sk-text"}`}>{typeLabel}</span>
+                  {/* The stream_* words are lower case for the tooltip they used to be;
+                      standing alone under a name they start with a capital. */}
+                  <span className={`block truncate text-[12px] first-letter:uppercase ${ss === "stale" ? "text-sk-danger" : "text-sk-muted"}`}>
+                    {t(streamLabelKey(ss))}
+                  </span>
+                </span>
+              </li>
             );
           })}
-        </div>
+        </ul>
       </section>
 
       {/* ── Missing extensions ── */}
@@ -642,7 +819,7 @@ export default function PopupApp() {
       {/* ── Restore sessions (one per peer device) ── */}
       {remoteSessions.length > 0 && (
         <section className="mt-4">
-          <h2 className="mb-2 pl-0.5 font-mono text-[12px] font-medium uppercase tracking-[0.08em] text-sk-subtle">
+          <h2 className="mb-2 pl-0.5 text-[12px] font-medium text-sk-muted">
             {t("popup_sessions_head")}
           </h2>
           <div className="space-y-1.5">
@@ -654,7 +831,7 @@ export default function PopupApp() {
               <div key={entry.session.id} className="flex items-center gap-2 px-0.5 py-0.5">
                 <div className="min-w-0 flex-1">
                   <span className="block truncate text-[14px]">{entry.session.label ? <bdi>{entry.session.label}</bdi> : t("popup_unknown_device")}</span>
-                  <span className="block truncate font-mono text-[12px] text-sk-subtle">
+                  <span className="block truncate text-[12px] tabular-nums text-sk-subtle">
                     {plural("popup_tabs", total)}
                     {openHere > 0 && ` · ${plural("popup_tabs_open_here", openHere)}`}
                     {entry.timestamp &&
@@ -724,24 +901,18 @@ export default function PopupApp() {
           {settings?.device_label && (
             <div className="flex items-center gap-2">
               <span className="text-xs text-sk-muted">{t("popup_device_label")}</span>
-              <bdi className="font-mono text-xs">{settings.device_label}</bdi>
+              <bdi className="text-xs">{settings.device_label}</bdi>
             </div>
           )}
         </div>
-        <div className="flex flex-col items-end gap-1.5">
-          <button
-            onClick={openOptions}
-            className="text-[14px] font-medium text-sk-text hover:underline hover:underline-offset-2"
-          >
-            {t("popup_configure")}
-          </button>
-          <button
-            onClick={openActivityLog}
-            className="text-[12px] text-sk-muted hover:text-sk-text hover:underline hover:underline-offset-2"
-          >
-            {t("popup_activity_log")}
-          </button>
-        </div>
+        {/* Settings is the gear at the top; a second "Configure" link here opened the
+            same page and only competed with it. */}
+        <button
+          onClick={openActivityLog}
+          className="text-[12px] text-sk-muted hover:text-sk-text hover:underline hover:underline-offset-2"
+        >
+          {t("popup_activity_log")}
+        </button>
       </footer>
       </div>
     </div>
