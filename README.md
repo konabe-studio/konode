@@ -59,6 +59,11 @@ provider can't read it.
 When two devices disagree, you choose how it's resolved: newest change wins, always
 prefer this device, always prefer the other, or resolve it yourself from the popup.
 
+**[See every feature, with screenshots →](docs/FEATURES.md)** What each one is for, when to
+use it and where to find it: the popup, conflict resolution, restore points and the
+mass-deletion guard, keeping bookmarks out of sync, the device list, and what is coming in the
+next version (pausing sync, and sending a tab to another device).
+
 ## Where your data goes
 
 | Backend | Auth | Notes |
@@ -123,8 +128,11 @@ you had in mind. Picking one system for bookmarks is the simple answer.
 - **Integrity checks.** Every payload carries a SHA-256 checksum that's verified on
   download before anything is imported.
 - **Least privilege.** `history`, `tabs`, and `management` are requested only when you
-  turn those data types on. The extension-list permission is read-only: Konode never
-  installs or removes anything.
+  turn those data types on, and `tabGroups` (group names and colours) along with open tabs.
+  The extension-list permission is read-only: Konode never installs or removes anything.
+  The next version adds `contextMenus` and `activeTab` for Send to device. Neither asks
+  anything at install: one adds the right-click entry, the other lets Konode read the tab
+  you are on only at the moment you click Konode or that entry.
 
 ## Browser support
 
@@ -270,17 +278,21 @@ use a dedicated manager like [Bitwarden](https://bitwarden.com),
   **Microsoft Edge Add-ons listing** ·
   **translated interface** (English, Hungarian, German, Spanish, Italian, Russian, Chinese
   (Simplified and Traditional)).
-- **Next**: a held-back deletion that lists the bookmarks it holds
-  ([#23](https://github.com/konabe-studio/konode/issues/23)) · a device list that says when
-  each device was last active ([#10](https://github.com/konabe-studio/konode/issues/10)) ·
-  a conflict card that shows what differs ([#35](https://github.com/konabe-studio/konode/issues/35)) ·
-  the reading list ([#77](https://github.com/konabe-studio/konode/issues/77)) · more backends, cheapest sign-in first (Dropbox token and S3-compatible, then Dropbox OAuth
+- **Coming in the next version**: send a tab to another device
+  ([#92](https://github.com/konabe-studio/konode/issues/92)) · pause automatic sync from the
+  popup ([#89](https://github.com/konabe-studio/konode/issues/89)) · a held-back deletion that
+  lists the bookmarks it holds ([#23](https://github.com/konabe-studio/konode/issues/23)) · a
+  device list that says when each device was last active and which browser it is
+  ([#10](https://github.com/konabe-studio/konode/issues/10)) · a conflict view that shows what
+  differs ([#35](https://github.com/konabe-studio/konode/issues/35)).
+- **Next**: the reading list ([#77](https://github.com/konabe-studio/konode/issues/77)) · more backends, cheapest sign-in first (Dropbox token and S3-compatible, then Dropbox OAuth
   and OneDrive) · faster history sync · more languages (Japanese, Estonian, Arabic).
 - **Later**: right-to-left languages · incremental diff for very large bookmark trees ·
   diffs between restore points.
 
 ## Support & feedback
 
+Want to know what a setting does? **[Features](docs/FEATURES.md)** goes through each one.
 Something not working? Check **[Troubleshooting](TROUBLESHOOTING.md)** first. Still
 stuck, or have an idea? **Open an issue**. It's the best way to reach us:
 [github.com/konabe-studio/konode/issues](https://github.com/konabe-studio/konode/issues).
@@ -302,7 +314,7 @@ design decisions, the review before release and the testing stay with us. In pra
 
 - each release goes through a QA pass on real browsers and devices (Chromium browsers,
   Firefox, Firefox for Android), plus headless runs that play out multi-device scenarios;
-- close to 900 automated tests run on every change;
+- more than 900 automated tests run on every change;
 - builds are reproducible, see [Verifying a build](#verifying-a-build);
 - bug reports get an answer, and when the bug is ours, a fix with an explanation of what
   went wrong.
