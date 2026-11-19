@@ -589,6 +589,7 @@ export type ExtensionMessage =
   | { type: "RESTORE_SNAPSHOT"; payload: { name: string } }
   | { type: "DELETE_SNAPSHOT"; payload: { name: string } }
   | { type: "LIST_DEVICES" }
+  | { type: "SEND_TAB"; payload: { to: string; url: string; title?: string } }
   | { type: "FORGET_DEVICE"; payload: { device_id: string } }
   // "Yes, apply the deletion the guard blocked." One-shot: consumed by the next merge.
   // `blocked` is the count the UI actually showed, not a number re-read in the worker:
@@ -612,6 +613,43 @@ export interface DeviceBrowser {
   engine: BrowserEngine;
   /** "Brave", "Firefox", "Zen". Absent where the browser does not name itself to an extension, the usual case on WebKit. */
   name?: string;
+}
+
+// ─── Sent tabs (#92) ──────────────────────────────────────────────────────
+
+/** A tab one device sent to another. Travels in the sender's `konode_sent_<id>.json`. */
+export interface SentTab {
+  id: string;
+  /** The receiving device's id. */
+  to: string;
+  url: string;
+  title?: string;
+  /** Epoch ms. */
+  sent_at: number;
+}
+
+/** What a device publishes about sent tabs, inside the (optionally encrypted) payload. */
+export interface SentTabsPayload {
+  /** Tabs this device sent that the receiver has not confirmed yet. */
+  sent: SentTab[];
+  /** Ids of tabs this device opened, so their senders can drop them. */
+  received: string[];
+}
+
+/** The file itself: the same envelope as a sync packet, minus the data type. */
+export interface SentTabsFile {
+  version: "1.0";
+  device_id: string;
+  device_label?: string | null;
+  checksum: string;
+  encrypted: boolean;
+  payload: string;
+}
+
+/** A device this one can send a tab to: one whose build publishes a sent-tabs file. */
+export interface SendTarget {
+  device_id: string;
+  label: string | null;
 }
 
 export interface DeviceInfo {

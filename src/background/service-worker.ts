@@ -13,6 +13,8 @@ import { ensureSyncAlarm, SYNC_ALARM, BOOKMARK_ALARM, periodicSyncWanted, change
 import { eventPresent } from "@/lib/utils/capabilities";
 import { clearExpiredDraft } from "@/lib/onboarding-draft";
 import { openConflictFromNotification } from "@/lib/sync/conflict-resolver";
+import { getSendTargets } from "@/lib/sync/sent-tabs";
+import { menusApi, rebuildSendMenu, sendRequestFromMenu } from "@/lib/sent-tabs-browser";
 
 // ─── State ────────────────────────────────────────────────────────────────
 
@@ -295,6 +297,13 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
       return { type: "DEVICES", payload: await syncEngine.listDevices() };
     }
 
+    case "SEND_TAB": {
+      if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
+      const { to, url, title } = message.payload;
+      await syncEngine.sendTab(to, url, title);
+      return { type: "OK" };
+    }
+
     case "FORGET_DEVICE": {
       if (!syncEngine) return { type: "ERROR", payload: "Engine not initialized" };
       const removed = await syncEngine.forgetDevice(message.payload.device_id);
@@ -448,11 +457,45 @@ on("runtime", "onInstalled", () => browser.runtime.onInstalled.addListener(async
     browser.tabs.create({ url: browser.runtime.getURL("onboarding.html") });
   }
   await ensureInit();
+  await rebuildSendMenu(await getSendTargets());
 }));
 
 on("runtime", "onStartup", () => browser.runtime.onStartup.addListener(async () => {
   await ensureInit();
+  await rebuildSendMenu(await getSendTargets());
 }));
+
+// ─── Send to device (#92) ─────────────────────────────────────────────────
+
+// The menu follows the targets the last exchange found, whichever context wrote them.
+on("storage", "onChanged", () => browser.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local" || !(KEYS.SEND_TARGETS in changes)) return;
+  const before = JSON.stringify(changes[KEYS.SEND_TARGETS].oldValue ?? []);
+  const after = changes[KEYS.SEND_TARGETS].newValue ?? [];
+  if (before !== JSON.stringify(after)) void rebuildSendMenu(after);
+}));
+
+{
+  const menus = menusApi();
+  if (menus?.onClicked) {
+    menus.onClicked.addListener((info, tab) => {
+      const req = sendRequestFromMenu(info, tab);
+      if (!req) return;
+      void (async () => {
+        await ensureInit();
+        if (!syncEngine) return;
+        try {
+          await syncEngine.sendTab(req.to, req.url, req.title);
+        } catch (e) {
+          // Queued all the same: it leaves with the next sync.
+          logger.warn("SentTabs", `Sending a tab now failed, it goes with the next sync: ${e instanceof Error ? e.message : e}`);
+        }
+      })();
+    });
+  } else {
+    logger.info("ServiceWorker", "This browser has no context menus, so Send to device is in the popup only");
+  }
+}
 
 // ─── Notifications ────────────────────────────────────────────────────────
 

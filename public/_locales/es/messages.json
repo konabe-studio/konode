@@ -1678,5 +1678,26 @@
   },
   "opt_snapshots_section_sub": {
     "message": "Copias con marca de tiempo de tus marcadores en el servidor, compartidas por todos tus dispositivos. Al restaurar, se vuelven a agregar los marcadores que falten en este dispositivo (nunca los elimina). Se conservan las 10 más recientes; las más antiguas se eliminan automáticamente y puedes borrar cualquiera de ellas aquí."
+  },
+  "popup_send_done": {
+    "message": "Enviada a $DEVICE$. Se abrirá allí en su próxima sincronización.",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "Laptop"
+      }
+    }
+  },
+  "popup_send_later": {
+    "message": "No se pudo acceder a tu almacenamiento, así que la pestaña se enviará con la próxima sincronización."
+  },
+  "send_menu_title": {
+    "message": "Enviar a un dispositivo"
+  },
+  "send_menu_none": {
+    "message": "Ningún dispositivo puede recibir pestañas todavía"
+  },
+  "popup_send_label": {
+    "message": "Enviar esta pestaña"
   }
 }

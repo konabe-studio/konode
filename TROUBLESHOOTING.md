@@ -2,7 +2,9 @@
 
 Common issues and how to fix them. If none of these help,
 [open an issue](https://github.com/konabe-studio/konode/issues) with your browser, the
-backend you use, and what you saw.
+backend you use, and what you saw. **Copy log** under Settings → Activity puts the whole
+Activity log on your clipboard for the issue; it includes your storage server's address, so
+read it before you post it. For what each setting does, see [Features](docs/FEATURES.md).
 
 ## Sync
 
@@ -13,6 +15,21 @@ on its next scheduled pull, which is every 60 seconds by default. You can move t
 anywhere between 30 and 600 seconds under **Settings → Device → Sync interval**; 30s is the
 browser's minimum for a background check, so that's the floor, not a bug. History, open
 tabs and the extension list have no instant path at all: they travel on that same interval.
+
+**Nothing syncs on its own any more, but Sync now works.**
+Check the popup's status. If it says **Paused**, automatic sync was paused from the popup's
+pause icon (coming in the next version): press the play icon in the same place, or **Resume**
+under Settings → Device → Sync behavior. Otherwise, check that **Auto sync** and **Sync on
+change** are on under Settings → Device.
+
+**The browser freezes or stutters about once a minute, with History on.**
+Reported on Edge ([#96](https://github.com/konabe-studio/konode/issues/96)). On every sync,
+Konode compares the other devices' history with this browser's, and to do that it reads the
+local history, up to 100,000 pages, whether or not anything changed. With a long history,
+that is a lot of work every minute. Until a fix ships, turn **History** off under Settings →
+Data Types and click **Save changes**, or raise **Sync interval** under Settings → Device so
+it happens less often. A fix that reads only the stretch of history your other devices
+actually cover is being worked on.
 
 **Bookmarks I deleted came back / a big cleanup didn't propagate.**
 Konode has a safety cap: it won't apply other devices' deletions that would remove more
@@ -25,7 +42,8 @@ restore point and shows "an unusual deletion was blocked", so nothing is lost ei
 **To let the deletion through**, open **Settings → Activity** on the device showing the
 warning and use **Apply the deletion** on the card at the top. It names the device that
 is asking and how many bookmarks are involved, and the restore point is already saved
-before you decide.
+before you decide. From the next version the card also lists the first bookmarks it would
+remove, so you can see whether it is a cleanup you meant.
 
 **To keep the bookmarks instead**, undo the deletion on the device that made it: open
 **Settings → Activity** there and restore a point from before the cleanup. That puts the
@@ -48,6 +66,18 @@ set a page's original visit time, so an arriving page carries the moment it reac
 Firefox does allow it and Konode uses it there, so the same sync keeps the original dates
 on Firefox. Visit counts can't be restored on either. History is a synced list, not a
 faithful timeline.
+
+**A device isn't offered under Send to device** (coming in the next version).
+A device appears there once it has synced on the version that has Send to device, since an
+older one would never open what it was sent. Update it and let it sync once. With
+end-to-end encryption on, a device that cannot read your encrypted data (a different
+passphrase, or encryption off) is not offered either.
+
+**I sent a tab and it hasn't opened on the other device.**
+It opens at that device's next sync, not at once: Konode has no server to push it there, so
+it waits in your storage until the other device looks. With Auto sync on that is within a
+minute or so; a browser that is closed opens it once it starts. It opens in a background tab
+without a notification. A tab that is never picked up is dropped after 14 days.
 
 ## Encryption
 
@@ -132,9 +162,25 @@ repo) will fail.
 
 ## WebDAV
 
-**"WebDAV must use https" / connection rejected.**
-Plain `http://` is rejected for security (credentials would travel in the clear). Use
-`https://`. `http://localhost` is allowed for local testing.
+**An `http://` address is refused.**
+Konode connects to a WebDAV server only over `https://`, because WebDAV sends your username
+and password with every request and `http://` sends them readable to anyone on the way
+([#83](https://github.com/konabe-studio/konode/issues/83)). The one exception is a server on
+the same computer (`localhost` or `127.0.0.1`). Use your server's `https://` address; for a
+home server, a reverse proxy with a certificate (for example from Let's Encrypt) does it. In
+1.5.1 the refusal reads as if permission to reach the server was not granted, which looks
+like an account problem but is the same thing. From the next version the message says
+`http://` is not allowed.
+
+**The same username and password work in one browser but fail in another (Nextcloud).**
+Konode says the username or password is wrong, yet the same account syncs from another
+browser. If you are signed in to Nextcloud's web page in the browser that fails, that is the
+cause ([#90](https://github.com/konabe-studio/konode/issues/90)): the browser added its
+Nextcloud session cookie to Konode's requests, and Nextcloud treated them as a web session
+missing its security token and refused them. Sign out of the Nextcloud web page in that
+browser, or clear that site's cookies, then press **Sync now**. From the next version Konode
+sends no cookies with WebDAV requests, so a session open in the same browser can no longer
+get in the way.
 
 **Connected but I don't see my files.**
 Check that the account can create a `konode/` folder at that path. Some providers gate

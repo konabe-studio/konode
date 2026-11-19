@@ -1678,5 +1678,26 @@
   },
   "opt_devices_bad_reply": {
     "message": "Impossibile leggere l'elenco dei dispositivi."
+  },
+  "popup_send_done": {
+    "message": "Inviata a $DEVICE$. Si aprirà lì alla prossima sincronizzazione.",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "Laptop"
+      }
+    }
+  },
+  "popup_send_later": {
+    "message": "Lo spazio di archiviazione non è raggiungibile, quindi la scheda partirà con la prossima sincronizzazione."
+  },
+  "send_menu_title": {
+    "message": "Invia a un dispositivo"
+  },
+  "send_menu_none": {
+    "message": "Nessun dispositivo può ancora ricevere schede"
+  },
+  "popup_send_label": {
+    "message": "Invia questa scheda"
   }
 }

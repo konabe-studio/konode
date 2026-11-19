@@ -1892,5 +1892,31 @@
   "opt_devices_bad_reply": {
     "message": "Couldn't read the device list.",
     "description": "Reported through opt_devices_error when the extension replies in a shape the page did not expect. An empty list must never stand in for a list that failed to load."
+  },
+  "popup_send_done": {
+    "message": "Sent to $DEVICE$. It opens there at its next sync.",
+    "description": "Shown for a few seconds under the popup's status line after a tab was sent (#92). There is no server: the receiving device opens it the next time it syncs, not at once.",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "Laptop"
+      }
+    }
+  },
+  "popup_send_later": {
+    "message": "Your storage couldn't be reached, so the tab goes out with the next sync.",
+    "description": "Shown for a few seconds under the popup's status line when the tab could not be uploaded right now (#92). It is kept and goes out with this device's next sync, so this is not a failure."
+  },
+  "send_menu_title": {
+    "message": "Send to device",
+    "description": "Right-click menu entry on a page, a link and (in Firefox) a tab, with one sub-item per device (#92)."
+  },
+  "send_menu_none": {
+    "message": "No device can receive tabs yet",
+    "description": "The one, greyed-out sub-item of Send to device while no device can receive tabs: a device appears once it runs a version of Konode that can (#92)."
+  },
+  "popup_send_label": {
+    "message": "Send this tab",
+    "description": "Heading of the popup's Send to device menu, opened from the paper-plane icon beside the pause and settings icons (#92). The page's title is shown under it, then one item per device. Sentence case."
   }
 }

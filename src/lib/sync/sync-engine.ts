@@ -10,6 +10,8 @@ import {
 import { diffBookmarks, diffHistory } from "./conflict-diff";
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
 import { exportHistory, importHistory, buildLocalHistoryIndex } from "@/lib/handlers/history-handler";
+import { exchangeSentTabs, queueSentTab, sentFileName } from "@/lib/sync/sent-tabs";
+import { openSentTabs } from "@/lib/sent-tabs-browser";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
 import { dataTypeAvailability, unsupportedReason, hasPermission } from "@/lib/utils/capabilities";
 import { detectBrowser, readDeviceBrowser } from "@/lib/utils/browser-identity";
@@ -491,6 +493,7 @@ export class SyncEngine {
       await backend.connect();
 
       const typeErrors = await this.syncAllTypes(typesToSync, backend, state);
+      await this.exchangeSentTabsSafely(backend);
 
       // A device that disagrees on encryption isn't a hard failure — we still synced
       // and re-uploaded our own (correctly-encrypted) data, so the group self-heals
@@ -935,6 +938,9 @@ export class SyncEngine {
         try { await b.deleteFile(`konode_${t}_${deviceId}.json`); n++; }
         catch { /* not every device syncs every type; a missing file is the normal case */ }
       }
+      // Its sent-tabs file too, or it would still be offered as a target. Not counted: it is
+      // not one of the data the user sees listed for the device.
+      try { await b.deleteFile(sentFileName(deviceId)); } catch { /* an older build never wrote one */ }
       return n;
     });
     // Its cached session and extension list are local to us, so they have to go too or the
@@ -942,6 +948,29 @@ export class SyncEngine {
     await dropRemoteDevice(deviceId);
     logger.event("forgetDevice", `Removed ${removed} file(s) for a device that is no longer in use`);
     return removed;
+  }
+
+  /**
+   * Send a tab to another device (#92): queue it, then publish at once rather than at the
+   * next sync, so the receiver can take it on ITS next sync. When the publish fails the tab
+   * stays queued and goes out with the next sync, and the error tells the caller so.
+   */
+  async sendTab(to: string, url: string, title?: string): Promise<void> {
+    await queueSentTab(to, url, title);
+    await this.withBackend((b) => exchangeSentTabs(b, this.settings, (tabs) => openSentTabs(tabs)));
+  }
+
+  /**
+   * The sent-tabs exchange inside a sync. Never fails the sync: a tab that could not be
+   * delivered this time is delivered by the next one, and the data types are what a sync
+   * reports on.
+   */
+  private async exchangeSentTabsSafely(backend: ReturnType<typeof createBackend>): Promise<void> {
+    try {
+      await exchangeSentTabs(backend, this.settings, (tabs) => openSentTabs(tabs));
+    } catch (e) {
+      logger.warn("SentTabs", `Sent tabs were not exchanged this time: ${e instanceof Error ? e.message : e}`);
+    }
   }
 
   /** Write a snapshot of the current bookmark tree to the backend. */

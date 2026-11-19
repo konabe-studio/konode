@@ -1678,5 +1678,26 @@
   },
   "opt_devices_bad_reply": {
     "message": "Nem sikerült beolvasni az eszközlistát."
+  },
+  "popup_send_done": {
+    "message": "Elküldve ide: $DEVICE$. Ott a következő szinkronnál nyílik meg.",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "Laptop"
+      }
+    }
+  },
+  "popup_send_later": {
+    "message": "A tárhely nem érhető el, ezért a lap a következő szinkronnal megy el."
+  },
+  "send_menu_title": {
+    "message": "Küldés eszközre"
+  },
+  "send_menu_none": {
+    "message": "Még egyik eszköz sem tud lapot fogadni"
+  },
+  "popup_send_label": {
+    "message": "Lap küldése"
   }
 }

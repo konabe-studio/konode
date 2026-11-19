@@ -15,13 +15,20 @@ adding a second device.
 - [End-to-end encryption](#end-to-end-encryption)
 - [Adding a second device](#adding-a-second-device)
 - [How syncing works](#how-syncing-works)
+- [What next](#what-next)
 
 ## Install
 
 - **Chrome / Brave / Helium / other Chromium browsers**: install from the
   [Chrome Web Store](https://chromewebstore.google.com/detail/konode/mmlfiiimnpnjcjhhbldenpcmnibedkfa).
+- **Microsoft Edge**: install from
+  [Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/acmngpjfommajbkfbfmdfemlheiamfoe).
+  It is the same package as the Chrome Web Store one. If you already installed Konode in Edge
+  from the Chrome Web Store, keep that install: a second one would join your sync group as a
+  new device.
 - **Firefox / Waterfox**: install from
-  [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/).
+  [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/). On Firefox for
+  Android, Konode syncs open tabs and the extension list, on GitHub or WebDAV storage.
 
 You can also build and load Konode yourself; see **Build from source** in the
 [README](README.md). Those builds need your own Google OAuth client for Drive sync,
@@ -33,19 +40,24 @@ change anything.
 
 ## First run (onboarding)
 
-On install Konode opens a short setup wizard:
+On install Konode opens a short setup wizard. Press **Choose storage** on the welcome
+card, then:
+
+<img src="docs/images/setup-storage.png" alt="The setup wizard's Choose your storage step, listing Google Drive, Nextcloud / ownCloud, pCloud, Koofr, Fastmail, Nutstore, GitHub and WebDAV (other)" width="380">
 
 1. **Choose where your data goes**: a card each for Google Drive, Nextcloud / ownCloud,
    pCloud, Koofr, Fastmail, Nutstore (坚果云), GitHub, and WebDAV (other), details below.
    With Konode in Simplified Chinese, Nutstore comes first.
-2. **Sign in / enter your credentials** for that backend.
+2. **Sign in / enter your credentials** for that backend, on the same step.
 3. **Choose what to sync**: bookmarks are on by default; history, open tabs, and the
    extension list are opt-in.
 4. **Choose encryption**: decide, consciously, whether to turn on end-to-end
    encryption. It's off by default; nothing is uploaded until you've made this choice.
 5. **Finish**: Konode does its first sync and you're done.
 
-You can change any of this later in the options page.
+You can change any of this later in Settings: click the gear icon in the popup.
+If you close the wizard partway, it picks up where you were when you open it again within a
+day, apart from the encryption step, which asks again.
 
 ## Connecting a backend
 
@@ -54,11 +66,12 @@ if you enable encryption, the **same passphrase**) to sync together.
 
 ### Google Drive
 
-1. Select **Google Drive** and click **Connect**.
+1. Select **Google Drive** and click **Sign in with Google**.
 2. Sign in to your Google account and approve access.
 3. That's it. Konode uses the `drive.file` scope, so it can only see and touch the
    files it creates, never the rest of your Drive. It writes a small set of JSON files
-   to a `Konode` folder.
+   to a `Konode` folder. In Settings you can name a different folder by its ID under
+   **Drive Folder ID** (optional).
 
 > Works on any Chromium browser (Chrome, Brave, Helium, ungoogled-chromium) and on
 > Firefox. The sign-in uses a browser-agnostic flow, not Chrome-only Google
@@ -74,6 +87,8 @@ if you enable encryption, the **same passphrase**) to sync together.
    paste the full repo URL; Konode normalizes it). GitHub itself only: Gitea and GitLab
    aren't supported, so don't point it at a self-hosted instance.
 4. Konode refuses a **public** repository: your sync data should live in a private one.
+   It writes to a `konode` folder in the repository, on the **Branch** you name in Settings
+   (`main` unless you change it).
 
 ### WebDAV
 
@@ -92,8 +107,12 @@ if you enable encryption, the **same passphrase**) to sync together.
    security settings) with your Nutstore email. A free Nutstore account allows 600
    requests every 30 minutes, so with three or more devices raise **Sync interval** to 120
    seconds under Settings → Device; the card says so too.
-4. Plain `http://` is rejected for security (except `http://localhost`). Konode creates a
-   `konode/` folder for its files.
+4. Press **Test connection** to check the details. Plain `http://` is refused, because
+   WebDAV sends your password with every request and `http://` would send it readable to
+   anyone on the way. The one exception is a server on the same computer (`localhost` or
+   `127.0.0.1`). Konode creates a `konode/` folder for its files.
+
+<img src="docs/images/settings-storage.png" alt="Settings, Storage: the provider tiles with the Nextcloud / ownCloud panel open, asking for Server host, Username and Password / App token" width="560">
 
 ## Choosing what to sync
 
@@ -106,7 +125,8 @@ if you enable encryption, the **same passphrase**) to sync together.
   you turn one on, the browser asks for the matching permission at that moment. If you
   never enable it, Konode never holds that permission. Open tabs carry their tab groups;
   the groups' names and colours need one more permission, asked along with Open tabs and
-  switchable on its own in Settings.
+  switchable on its own in Settings. History goes back 30 days unless you change **Days to
+  sync** in Settings → Data Types (7 to 365).
 
 ## End-to-end encryption
 
@@ -147,6 +167,14 @@ Optional, and a conscious choice. It's **off by default**.
   date. **Chromium** browsers give an extension no way to set it, so on Chrome, Brave and
   the rest an arriving page is stamped with the moment it reached you. Visit counts can't
   be restored on either. Treat history as a synced list, not a faithful timeline.
+
+## What next
+
+- Click the Konode icon for the popup: the sync status, **Sync now**, and the open tabs of
+  your other devices, ready to restore.
+- **[Features](docs/FEATURES.md)** walks through everything else with screenshots: conflict
+  resolution, restore points and the mass-deletion guard, keeping bookmarks out of sync, and
+  the device list.
 
 Stuck on something? See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) or
 [open an issue](https://github.com/konabe-studio/konode/issues).
