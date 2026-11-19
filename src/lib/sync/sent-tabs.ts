@@ -42,10 +42,6 @@ export function sendableUrl(url: string | undefined | null): boolean {
 interface ExchangeMemory {
   /** Checksum of the payload last written to our own file, so an unchanged one is not rewritten. */
   written: string | null;
-  /** Peer file name → the modification time it had when we last read it. */
-  seen: Record<string, number>;
-  /** The encryption setting `seen` was read under. A change makes every file worth reading again. */
-  mode?: "enc" | "plain";
 }
 
 async function read<T>(key: string, fallback: T): Promise<T> {
@@ -134,32 +130,27 @@ async function exchange(backend: IBackend, settings: SyncSettings, open: OpenSen
   const me = settings.device_id;
   if (!me) return;
   const ownName = sentFileName(me);
-  const listed = backend.listFilesWithTimes
-    ? await backend.listFilesWithTimes(PREFIX)
-    : (await backend.listFiles(PREFIX)).map((name) => ({ name, modified: null as number | null }));
+  const listed = (await backend.listFiles(PREFIX)).map((name) => ({ name }));
   const mode = e2eeActive(settings) ? "enc" : "plain";
-  const memory = await read<ExchangeMemory>(KEYS.SENT_SYNC, { written: null, seen: {} });
-  if (memory.mode !== mode) memory.seen = {};
+  const memory = await read<ExchangeMemory>(KEYS.SENT_SYNC, { written: null });
   const previousTargets = new Map((await getSendTargets()).map((t) => [t.device_id, t]));
   const opened = await read<Record<string, number>>(KEYS.SENT_OPENED, {});
 
   const targets: SendTarget[] = [];
   const confirmed = new Set<string>();
-  const seen: Record<string, number> = {};
   let ownListed = false;
 
-  for (const { name, modified } of listed) {
+  for (const { name } of listed) {
     if (name === ownName) { ownListed = true; continue; }
     const m = /^konode_sent_(.+)\.json$/.exec(name);
     if (!m) continue;
     const deviceId = m[1];
     // Unchanged since we last read it: nothing new was sent to us and nothing new was
     // confirmed, so the target we built from it last time still stands.
-    if (modified !== null && memory.seen[name] === modified && previousTargets.has(deviceId)) {
-      targets.push(previousTargets.get(deviceId)!);
-      seen[name] = modified;
-      continue;
-    }
+    // Every peer's file is read on every exchange. They are a few hundred bytes, and the
+    // listing's modification time cannot stand in for a read: WebDAV gives it to the second,
+    // so a Send landing in the same second as a read (or two) left it unchanged, and the tab
+    // in it waited for the sender's next change. Seen on Firefox and Android in QA, 2026-11-19.
     let raw: string | null;
     try { raw = await backend.getFile(name); }
     catch (e) {
@@ -177,7 +168,7 @@ async function exchange(backend: IBackend, settings: SyncSettings, open: OpenSen
     const { file, payload } = opened_;
     const from: SendTarget = { device_id: deviceId, label: typeof file.device_label === "string" && file.device_label ? file.device_label : null };
     targets.push(from);
-    if (modified !== null) seen[name] = modified;
+    // Settled once a read follows a listing that already showed this time.
     for (const id of payload.received) confirmed.add(id);
 
     const arrived = payload.sent.filter((t) =>
@@ -209,5 +200,5 @@ async function exchange(backend: IBackend, settings: SyncSettings, open: OpenSen
     await writeFile(backend, settings, payload, checksum);
     memory.written = fingerprint;
   }
-  await browser.storage.local.set({ [KEYS.SENT_SYNC]: { written: memory.written, seen, mode } satisfies ExchangeMemory });
+  await browser.storage.local.set({ [KEYS.SENT_SYNC]: { written: memory.written } satisfies ExchangeMemory });
 }

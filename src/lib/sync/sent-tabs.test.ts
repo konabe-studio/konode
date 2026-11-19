@@ -4,7 +4,7 @@ import { DEFAULT_SETTINGS, KEYS } from "@/lib/utils/storage";
 import {
   exchangeSentTabs, queueSentTab, getSendTargets, getSentOut, sentFileName, SENT_TAB_TTL_MS,
 } from "@/lib/sync/sent-tabs";
-import { sendRequestFromMenu } from "@/lib/sent-tabs-browser";
+import { sendRequestFromMenu, pageToSend, type TabsForSend } from "@/lib/sent-tabs-browser";
 
 // Send to device (#92): every device publishes konode_sent_<id>.json; a receiver opens what
 // was sent to it on its next exchange and confirms it, and the sender then drops it.
@@ -146,18 +146,37 @@ describe("sending a tab to another device (#92)", () => {
     expect(await as("A", getSentOut)).toEqual([]);
   });
 
-  it("does not rewrite its own file when nothing changed, nor re-read an unchanged peer", async () => {
+  it("does not rewrite its own file when nothing changed", async () => {
     const folder = new Folder();
     const A = settings("A"), B = settings("B");
     await as("A", () => exchange(folder, A));
     await as("B", () => exchange(folder, B));
     await as("A", () => exchange(folder, A));
-    folder.puts = []; folder.reads = [];
+    folder.puts = [];
 
     await as("A", () => exchange(folder, A));
     expect(folder.puts).toEqual([]);
-    expect(folder.reads).toEqual([]);
     expect(await as("A", getSendTargets)).toEqual([{ device_id: "B", label: "Device B" }]);
+  });
+
+  it("still finds a tab written in the same second as its last read", async () => {
+    // WebDAV lists times to the second. A's second Send lands in the second B read A's file
+    // after the first one, so the listed time does not move; trusting it at once lost the
+    // second tab until A's file changed again.
+    const folder = new Folder();
+    const A = settings("A"), B = settings("B");
+    await as("A", () => exchange(folder, A));
+    await as("B", () => exchange(folder, B));
+    await as("A", () => queueSentTab("B", "https://example.com/first", undefined));
+    await as("A", () => exchange(folder, A));
+    const stamp = folder.files.get(sentFileName("A"))!.modified;
+    await as("B", () => exchange(folder, B)); // reads A's file within that second
+    await as("A", () => queueSentTab("B", "https://example.com/second", undefined));
+    await as("A", () => exchange(folder, A));
+    folder.files.get(sentFileName("A"))!.modified = stamp; // still the same second, as WebDAV lists it
+
+    const arrived = await as("B", () => exchange(folder, B));
+    expect(arrived.flatMap((x) => x.tabs.map((t) => t.url))).toEqual(["https://example.com/second"]);
   });
 
   it("publishes a rename even with nothing else new", async () => {
@@ -210,5 +229,29 @@ describe("the Send to device menu", () => {
       { url: "https://example.com/p", title: "Page" },
     )).toEqual({ to: "B", url: "https://example.com/p", title: "Page" });
     expect(sendRequestFromMenu({ menuItemId: "something-else" })).toBeNull();
+  });
+});
+
+describe("the page the popup sends", () => {
+  const tab = (id: number, url: string | undefined, extra: Partial<chrome.tabs.Tab> = {}) =>
+    ({ id, url, title: `T${id}`, active: false, windowId: 1, ...extra }) as chrome.tabs.Tab;
+  /** A tabs API over fixed windows; the popup's window is window 1. */
+  const fake = (all: chrome.tabs.Tab[]): TabsForSend => ({
+    query: (async (q: chrome.tabs.QueryInfo) =>
+      all.filter((t) => (!q.active || t.active) && (!q.currentWindow || t.windowId === 1))) as TabsForSend["query"],
+  });
+
+  it("is the active tab of the popup's window", async () => {
+    const all = [tab(1, "https://a.example/"), tab(2, "https://b.example/", { active: true })];
+    expect(await pageToSend(fake(all))).toEqual({ url: "https://b.example/", title: "T2" });
+  });
+
+  it("is nothing when that tab is not a web page, never another window's tab", async () => {
+    const all = [tab(1, "chrome://newtab/", { active: true }), tab(2, "https://other.example/", { active: true, windowId: 2 })];
+    expect(await pageToSend(fake(all))).toBeNull();
+  });
+
+  it("is nothing where the popup sees only itself, as on Firefox for Android", async () => {
+    expect(await pageToSend(fake([tab(9, "about:blank", { active: true })]))).toBeNull();
   });
 });
