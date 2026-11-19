@@ -9,7 +9,7 @@ import { createBackend } from "@/lib/backends/abstract-backend";
 import { logger, setLoggerDebug } from "@/lib/utils/logger";
 import { BADGE_COLORS, BADGE_TEXT, STATE_UPDATE } from "@/lib/constants";
 import { browser } from "@/lib/utils/ext";
-import { ensureSyncAlarm, SYNC_ALARM, BOOKMARK_ALARM } from "@/lib/utils/alarms";
+import { ensureSyncAlarm, SYNC_ALARM, BOOKMARK_ALARM, periodicSyncWanted, changeSyncWanted } from "@/lib/utils/alarms";
 import { eventPresent } from "@/lib/utils/capabilities";
 import { clearExpiredDraft } from "@/lib/onboarding-draft";
 import { openConflictFromNotification } from "@/lib/sync/conflict-resolver";
@@ -70,7 +70,7 @@ async function init(): Promise<void> {
 
   // NOT forced: init() runs on every worker wake, and re-creating the alarm each time
   // reset its next fire and starved the periodic pull. See ensureSyncAlarm.
-  if (settings.auto_sync) {
+  if (periodicSyncWanted(settings)) {
     await ensureSyncAlarm(settings.sync_interval_seconds);
   }
 
@@ -132,12 +132,7 @@ function onBookmarkChange(): void {
     bookmarkDebounce = null;
     await ensureInit();
     const settings = await getSettings();
-    if (
-      settings.sync_on_change &&
-      settings.enabled_types.includes("bookmarks") &&
-      syncEngine &&
-      !syncEngine.isSyncing
-    ) {
+    if (changeSyncWanted(settings) && syncEngine && !syncEngine.isSyncing) {
       // We're handling it now — drop the backstop so it doesn't double-sync.
       await browser.alarms.clear(BOOKMARK_ALARM);
       await syncEngine.sync(["bookmarks"]);
@@ -238,9 +233,13 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
       // clears the upload checksums so the next sync re-uploads in the new form).
       await syncEngine?.updateSettings(updated);
 
-      // Reconfigure alarm if interval changed
-      if ("sync_interval_seconds" in message.payload || "auto_sync" in message.payload) {
-        if (updated.auto_sync) {
+      // Reconfigure the alarm when the interval, Auto sync or the popup's pause changed.
+      if (
+        "sync_interval_seconds" in message.payload ||
+        "auto_sync" in message.payload ||
+        "sync_paused" in message.payload
+      ) {
+        if (periodicSyncWanted(updated)) {
           // FORCED: a real interval change is the one case that must restart the timer.
           await ensureSyncAlarm(updated.sync_interval_seconds, true);
         } else {
@@ -383,15 +382,17 @@ on("alarms", "onAlarm", () => browser.alarms.onAlarm.addListener(async (alarm) =
   await ensureInit();
   if (!syncEngine) return;
   if (alarm.name === SYNC_ALARM) {
+    // The alarm is cleared when sync is paused, but one may fire in the gap between the
+    // save and the clear, or survive from a build that did not know about the pause.
+    if (!periodicSyncWanted(await getSettings())) {
+      await browser.alarms.clear(SYNC_ALARM);
+      return;
+    }
     logger.info("Alarm", "Periodic sync triggered");
     await syncEngine.sync();
   } else if (alarm.name === BOOKMARK_ALARM) {
     const settings = await getSettings();
-    if (
-      settings.sync_on_change &&
-      settings.enabled_types.includes("bookmarks") &&
-      !syncEngine.isSyncing
-    ) {
+    if (changeSyncWanted(settings) && !syncEngine.isSyncing) {
       logger.info("Alarm", "Bookmark-change sync triggered");
       await syncEngine.sync(["bookmarks"]);
     }

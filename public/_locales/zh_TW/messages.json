@@ -14,6 +14,18 @@
   "popup_sync_now": {
     "message": "立即同步"
   },
+  "popup_pause": {
+    "message": "暫停自動同步"
+  },
+  "popup_resume": {
+    "message": "繼續"
+  },
+  "popup_paused_hint": {
+    "message": "自動同步已暫停。繼續之前，只有「立即同步」會進行同步。"
+  },
+  "popup_status_paused": {
+    "message": "已暫停"
+  },
   "extension_name": {
     "message": "Konode | 私人書籤與分頁同步"
   },
@@ -850,6 +862,12 @@
   },
   "opt_auto_sync_desc": {
     "message": "另外也依固定排程同步。歷史記錄、開啟的分頁與擴充功能清單僅透過此方式傳輸。"
+  },
+  "opt_paused_label": {
+    "message": "同步已暫停"
+  },
+  "opt_paused_desc": {
+    "message": "已在對話方塊中暫停。「變更時同步」和「自動同步」會等到你繼續。「立即同步」仍然可用。"
   },
   "opt_notifications_label": {
     "message": "通知"

@@ -59,6 +59,18 @@
   "popup_sync_now": {
     "message": "Jetzt synchronisieren"
   },
+  "popup_pause": {
+    "message": "Automatische Synchronisierung pausieren"
+  },
+  "popup_resume": {
+    "message": "Fortsetzen"
+  },
+  "popup_paused_hint": {
+    "message": "Die automatische Synchronisierung ist pausiert. Bis du sie fortsetzt, synchronisiert nur „Jetzt synchronisieren“."
+  },
+  "popup_status_paused": {
+    "message": "Pausiert"
+  },
   "popup_load_error": {
     "message": "Konode war nicht erreichbar. Zum erneuten Versuch klicken."
   },
@@ -850,6 +862,12 @@
   },
   "opt_auto_sync_desc": {
     "message": "Synchronisiert außerdem regelmäßig nach Zeitplan. Verlauf, offene Tabs und die Erweiterungsliste werden nur auf diesem Weg übertragen."
+  },
+  "opt_paused_label": {
+    "message": "Synchronisierung pausiert"
+  },
+  "opt_paused_desc": {
+    "message": "Im Popup pausiert. „Bei Änderung synchronisieren“ und „Automatische Synchronisierung“ warten, bis du fortsetzt. „Jetzt synchronisieren“ funktioniert weiterhin."
   },
   "opt_notifications_label": {
     "message": "Benachrichtigungen"

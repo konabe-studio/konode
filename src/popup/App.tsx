@@ -16,7 +16,7 @@ import { dataTypeApiPresent, hasPermission } from "@/lib/utils/capabilities";
 import {
   RefreshCw, Settings, Bookmark, Clock, Globe,
   AlertCircle, Loader2, ChevronRight,
-  Wifi, Puzzle, ExternalLink, GitMerge, RotateCcw, Star,
+  Wifi, Puzzle, ExternalLink, GitMerge, RotateCcw, Star, Pause, Play,
 } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────
@@ -255,6 +255,27 @@ export default function PopupApp() {
     if (!r.ok) setActionError(r.error);
   };
 
+  /**
+   * Pause and resume (#89). Paused holds both automatic triggers; Sync now keeps working.
+   *
+   * Shown at once and put back if the save fails, so the popup never claims a
+   * state the worker did not take. Resuming syncs straight away: whatever was
+   * changed while paused has been waiting for exactly this, and the person who resumes
+   * expects to see sync happen, not to wait out an interval.
+   */
+  const setPaused = async (paused: boolean) => {
+    if (!settings) return;
+    setActionError(null);
+    setSettings((s) => (s ? { ...s, sync_paused: paused } : s));
+    const r = await request({ type: "SAVE_SETTINGS", payload: { sync_paused: paused } });
+    if (!r.ok) {
+      setSettings((s) => (s ? { ...s, sync_paused: !paused } : s));
+      setActionError(r.error);
+      return;
+    }
+    if (!paused && !isSyncing && (settings.enabled_types?.length ?? 0) > 0) await handleSyncNow();
+  };
+
   const openOptions = () => browser.runtime.openOptionsPage();
 
   // Opened from a click, never from a lifecycle event — see `showSetupCard`.
@@ -373,6 +394,13 @@ export default function PopupApp() {
   // Only while something is happening. A dot pulsing at rest says nothing the colour does
   // not, and a status dot that breathes forever is one of the marks of a generated page.
   const pulsing = status === "syncing";
+  // Pause only means something when there is somewhere to sync to and Settings has at
+  // least one automatic sync on. With both of those off there is nothing to pause.
+  const paused = !!settings?.sync_paused;
+  const pauseAvailable = hasBackend && !!(settings?.sync_on_change || settings?.auto_sync);
+  // Paused says so in place of a resting status. A running sync, an error or a conflict
+  // still shows: those are news, and Sync now works while paused.
+  const showPaused = paused && pauseAvailable && (status === "idle" || status === "success");
   const conflictGroups = groupConflictsByDevice(state?.pending_conflicts ?? []);
   // Settings loaded and every data type switched off. `settingsLoaded` matters: before the
   // read lands, enabled_types is undefined and an empty list would be indistinguishable
@@ -396,18 +424,46 @@ export default function PopupApp() {
       <div className="shrink-0 px-4 pt-4">
       {/* ── Status + settings (the toolbar icon already identifies the popup,
             so the wordmark header is dropped; settings moves to the top-right) ── */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <span className="relative flex h-2 w-2 items-center justify-center">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="relative flex h-2 w-2 shrink-0 items-center justify-center">
             {pulsing && (
               <span className={`absolute h-2 w-2 rounded-full border-[1.5px] ${statusCfg.ring} animate-konode-pulse`} />
             )}
-            <span className={`h-2 w-2 rounded-full ${statusCfg.dot}`} />
+            <span className={`h-2 w-2 rounded-full ${showPaused ? "bg-sk-subtle" : statusCfg.dot}`} />
           </span>
-          <span className={`text-sm font-medium ${statusCfg.color}`}>{t(`status_${status}`)}</span>
+          <span
+            className={`truncate text-sm font-medium ${showPaused ? "text-sk-muted" : statusCfg.color}`}
+            title={showPaused ? t("popup_paused_hint") : undefined}
+          >
+            {showPaused ? t("popup_status_paused") : t(`status_${status}`)}
+          </span>
         </div>
-        <div className="flex items-center gap-2">
-          {lastSync && <span className="text-[14px] tabular-nums text-sk-muted">{lastSync}</span>}
+        <div className="flex shrink-0 items-center gap-1">
+          {lastSync && <span className="mr-1 whitespace-nowrap text-[14px] tabular-nums text-sk-muted">{lastSync}</span>}
+          {/* Pause (#89): one icon in one place, whatever the status is doing, the same size
+              and weight in both states. Most people never pause, so it costs them nothing;
+              while paused, the status line is what says so. It used to move to the status
+              line once a sync ended, so the button just pressed turned up somewhere else. */}
+          {pauseAvailable && (paused ? (
+            <button
+              onClick={() => void setPaused(false)}
+              aria-label={t("popup_resume")}
+              title={t("popup_resume")}
+              className="flex h-8 w-8 items-center justify-center rounded-icon text-sk-muted transition-colors hover:bg-sk-raised"
+            >
+              <Play size={18} strokeWidth={1.75} />
+            </button>
+          ) : (
+            <button
+              onClick={() => void setPaused(true)}
+              aria-label={t("popup_pause")}
+              title={t("popup_pause")}
+              className="flex h-8 w-8 items-center justify-center rounded-icon text-sk-muted transition-colors hover:bg-sk-raised"
+            >
+              <Pause size={18} strokeWidth={1.75} />
+            </button>
+          ))}
           <button
             onClick={openOptions}
             aria-label={t("popup_settings_aria")}

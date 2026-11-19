@@ -481,8 +481,9 @@ export default function OptionsApp() {
 
   const settingsFingerprint = (s: SyncSettings | null): string => {
     if (!s) return "";
+    // sync_paused is the popup's pause, not something this page saves (see handleSave).
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { onboarding_completed, device_id, ...userEditable } = s;
+    const { onboarding_completed, device_id, sync_paused, ...userEditable } = s;
     return JSON.stringify(userEditable);
   };
 
@@ -669,8 +670,16 @@ export default function OptionsApp() {
   useEffect(() => {
     if (!eventPresent("storage", "onChanged")) return;
     const handler = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
-      if (area !== "local" || !changes[KEYS.AUDIT_LOG]) return;
-      setAudit((changes[KEYS.AUDIT_LOG].newValue as AuditEntry[] | undefined) ?? []);
+      if (area !== "local") return;
+      if (changes[KEYS.AUDIT_LOG]) {
+        setAudit((changes[KEYS.AUDIT_LOG].newValue as AuditEntry[] | undefined) ?? []);
+      }
+      // The popup's pause, followed live so the note under Sync behaviour is never
+      // stale. Only that field: anything else would overwrite edits not saved yet.
+      if (changes[KEYS.SETTINGS]) {
+        const next = changes[KEYS.SETTINGS].newValue as Partial<SyncSettings> | undefined;
+        setSettings((p) => (p ? { ...p, sync_paused: !!next?.sync_paused } : p));
+      }
     };
     browser.storage.onChanged.addListener(handler);
     return () => browser.storage.onChanged.removeListener(handler);
@@ -733,6 +742,16 @@ export default function OptionsApp() {
 
   const update = (partial: Partial<SyncSettings>) =>
     setSettings((p) => p ? { ...p, ...partial } : p);
+
+  /** The popup's pause, resumed from here (#89). Saved on its own, at once, like
+   *  the popup does: it is not one of the edits the Save button collects. Then a sync, for
+   *  the same reason the popup runs one: whatever waited while paused goes now. */
+  const resumeSync = async () => {
+    const r = await request({ type: "SAVE_SETTINGS", payload: { sync_paused: false } });
+    if (!r.ok) { setSaveError(r.error); return; }
+    update({ sync_paused: false });
+    void sendMessage({ type: "SYNC_NOW" }).catch(() => {});
+  };
 
   const updateBackend = (type: BackendType, partial: Partial<BackendConfig>) => {
     if (!settings) return;
@@ -1015,7 +1034,12 @@ export default function OptionsApp() {
       }
     }
     setSaving(true);
-    const r = await request({ type: "SAVE_SETTINGS", payload: settings });
+    // Everything but the popup's pause. This page holds a copy of the settings from
+    // when it loaded, so saving that copy whole would quietly undo a pause (or a resume)
+    // made in the popup since.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { sync_paused, ...payload } = settings;
+    const r = await request({ type: "SAVE_SETTINGS", payload });
     if (!r.ok) {
       // Don't claim "Saved" for a write we never confirmed.
       setSaveError(r.error);
@@ -2112,12 +2136,25 @@ export default function OptionsApp() {
 
               <div className="settings-section">
                 <div className="settings-card-head">{t("opt_behavior_section")}</div>
+                {/* The popup's pause holds both toggles below without changing them (#89),
+                    so they would read "on" while nothing syncs on its own. Say so here. */}
+                {settings.sync_paused && (
+                  <div className="settings-row">
+                    <div className="settings-row-left">
+                      <div><div className="row-label">{t("opt_paused_label")}</div><div className="row-desc">{t("opt_paused_desc")}</div></div>
+                    </div>
+                    <button className="btn-secondary" onClick={() => void resumeSync()}>{t("popup_resume")}</button>
+                  </div>
+                )}
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div><div className="row-label">{t("opt_sync_on_change_label")}</div><div className="row-desc">{t("opt_sync_on_change_desc")}</div></div>
                   </div>
                   <label className="toggle-wrap">
+                    {/* Disabled while paused: they keep showing what comes back when sync
+                        is turned on again, but cannot claim to be running meanwhile. */}
                     <input type="checkbox" className="toggle-input" checked={settings.sync_on_change ?? true}
+                      disabled={!!settings.sync_paused}
                       onChange={(e) => update({ sync_on_change: e.target.checked })} />
                     <span className="toggle-track"><span className="toggle-thumb" /></span>
                   </label>
@@ -2128,6 +2165,7 @@ export default function OptionsApp() {
                   </div>
                   <label className="toggle-wrap">
                     <input type="checkbox" className="toggle-input" checked={settings.auto_sync}
+                      disabled={!!settings.sync_paused}
                       onChange={(e) => update({ auto_sync: e.target.checked })} />
                     <span className="toggle-track"><span className="toggle-thumb" /></span>
                   </label>

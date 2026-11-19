@@ -56,6 +56,18 @@
   "popup_sync_now": {
     "message": "Sincronizar ahora"
   },
+  "popup_pause": {
+    "message": "Pausar la sincronización automática"
+  },
+  "popup_resume": {
+    "message": "Reanudar"
+  },
+  "popup_paused_hint": {
+    "message": "La sincronización automática está en pausa. Hasta que la reanudes, solo sincroniza «Sincronizar ahora»."
+  },
+  "popup_status_paused": {
+    "message": "En pausa"
+  },
   "popup_load_error": {
     "message": "No se pudo contactar a Konode. Toca para reintentar."
   },
@@ -841,6 +853,12 @@
   },
   "opt_auto_sync_desc": {
     "message": "Además, sincroniza de forma periódica. El historial, las pestañas abiertas y la lista de extensiones solo se sincronizan de esta forma."
+  },
+  "opt_paused_label": {
+    "message": "Sincronización en pausa"
+  },
+  "opt_paused_desc": {
+    "message": "Pausada desde la ventana emergente. «Sincronizar al haber cambios» y «Sincronización automática» esperan hasta que la reanudes. «Sincronizar ahora» sigue funcionando."
   },
   "opt_notifications_label": {
     "message": "Notificaciones"

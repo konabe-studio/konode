@@ -53,6 +53,18 @@
   "popup_sync_now": {
     "message": "Sincronizza ora"
   },
+  "popup_pause": {
+    "message": "Metti in pausa la sincronizzazione automatica"
+  },
+  "popup_resume": {
+    "message": "Riprendi"
+  },
+  "popup_paused_hint": {
+    "message": "La sincronizzazione automatica è in pausa. Finché non la riprendi, sincronizza solo «Sincronizza ora»."
+  },
+  "popup_status_paused": {
+    "message": "In pausa"
+  },
   "popup_load_error": {
     "message": "Impossibile raggiungere Konode. Tocca per riprovare."
   },
@@ -850,6 +862,12 @@
   },
   "opt_auto_sync_desc": {
     "message": "Sincronizza anche a intervalli regolari. La cronologia, le schede aperte e l'elenco delle estensioni viaggiano solo in questo modo."
+  },
+  "opt_paused_label": {
+    "message": "Sincronizzazione in pausa"
+  },
+  "opt_paused_desc": {
+    "message": "Messa in pausa dal popup. «Sincronizza a ogni modifica» e «Sincronizzazione automatica» attendono finché non riprendi. «Sincronizza ora» funziona comunque."
   },
   "opt_notifications_label": {
     "message": "Notifiche"

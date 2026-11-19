@@ -59,6 +59,18 @@
   "popup_sync_now": {
     "message": "Szinkronizálás most"
   },
+  "popup_pause": {
+    "message": "Automatikus szinkron szüneteltetése"
+  },
+  "popup_resume": {
+    "message": "Folytatás"
+  },
+  "popup_paused_hint": {
+    "message": "Az automatikus szinkron szünetel. Amíg nem folytatod, csak a Szinkronizálás most gomb szinkronizál."
+  },
+  "popup_status_paused": {
+    "message": "Szüneteltetve"
+  },
   "popup_load_error": {
     "message": "A Konode nem érhető el. Kattints az újrapróbálkozáshoz."
   },
@@ -850,6 +862,12 @@
   },
   "opt_auto_sync_desc": {
     "message": "Rendszeres időzítés szerint is szinkronizál. Az előzmények, a nyitott lapok és a bővítménylista csak így szinkronizálódnak."
+  },
+  "opt_paused_label": {
+    "message": "A szinkronizálás szünetel"
+  },
+  "opt_paused_desc": {
+    "message": "A felugró ablakban szüneteltetted. A Szinkronizálás változáskor és az Automatikus szinkronizálás addig vár, amíg nem folytatod. A Szinkronizálás most továbbra is működik."
   },
   "opt_notifications_label": {
     "message": "Értesítések"

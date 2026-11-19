@@ -56,6 +56,18 @@
   "popup_sync_now": {
     "message": "立即同步"
   },
+  "popup_pause": {
+    "message": "暂停自动同步"
+  },
+  "popup_resume": {
+    "message": "恢复"
+  },
+  "popup_paused_hint": {
+    "message": "自动同步已暂停。恢复之前，只有“立即同步”会进行同步。"
+  },
+  "popup_status_paused": {
+    "message": "已暂停"
+  },
   "popup_load_error": {
     "message": "无法连接 Konode。点击重试。"
   },
@@ -841,6 +853,12 @@
   },
   "opt_auto_sync_desc": {
     "message": "并按常规计划同步。历史记录、打开的标签页和扩展列表仅通过这种方式同步。"
+  },
+  "opt_paused_label": {
+    "message": "同步已暂停"
+  },
+  "opt_paused_desc": {
+    "message": "已在弹窗中暂停。“更改时同步”和“自动同步”会等到你恢复。“立即同步”仍然可用。"
   },
   "opt_notifications_label": {
     "message": "通知"
