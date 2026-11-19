@@ -38,6 +38,10 @@ choices, Konode may read:
   enable extension-list sync (this surfaces which extensions are "missing on this
   device"). Konode reads this list only; it **cannot install, remove, enable, or disable**
   any extension.
+- **Tabs you send to another device**: when you choose Send to device, the address and
+  title of that one page or link, and which of your devices it is for. It waits in your
+  storage until that device opens it and confirms it, at most 14 days, and is then removed.
+  Nothing is sent unless you choose it.
 
 Konode reads this data **only to sync it to the storage backend you selected.** It
 is not used for any other purpose.
@@ -48,6 +52,11 @@ install time. If you never enable them, Konode never holds those permissions and
 never reads that data. Open tabs asks for the **tab groups** permission in the same
 request, where your browser has it, so group names and colours can travel; you can
 switch that part off in Settings and keep syncing the tabs.
+
+Send to device holds two permissions that ask nothing at install: **context menus**, for
+its right-click entry, and **active tab**, which lets Konode read the address and title of
+the tab you are on only after you click its toolbar button or that menu entry, and only for
+that tab.
 
 ## Where your data goes
 

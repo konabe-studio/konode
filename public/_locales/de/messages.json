@@ -1678,5 +1678,26 @@
   },
   "opt_devices_bad_reply": {
     "message": "Die Geräteliste konnte nicht gelesen werden."
+  },
+  "popup_send_done": {
+    "message": "An $DEVICE$ gesendet. Er öffnet sich dort bei der nächsten Synchronisierung.",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "Laptop"
+      }
+    }
+  },
+  "popup_send_later": {
+    "message": "Dein Speicher war nicht erreichbar, daher geht der Tab mit der nächsten Synchronisierung raus."
+  },
+  "send_menu_title": {
+    "message": "An Gerät senden"
+  },
+  "send_menu_none": {
+    "message": "Noch kann kein Gerät Tabs empfangen"
+  },
+  "popup_send_label": {
+    "message": "Diesen Tab senden"
   }
 }

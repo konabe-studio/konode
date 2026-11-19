@@ -7,6 +7,19 @@ All notable changes to Konode. Format loosely follows
 
 ### Added
 
+- **Send a tab to another device (#92).** Right-click a page or a link and choose Send to
+  device, then the device; in Firefox the same entry is on a tab's own menu. The popup has
+  a paper-plane icon beside the pause and settings icons that opens the same list for the
+  page you are on, which is the way to send from Firefox for Android. Konode has no server, so the tab travels through
+  your own storage and opens on the other device at its next sync, not at once: within a
+  minute or so with Auto sync on, and once that browser starts if it is closed. It opens
+  quietly in a background tab, without a notification. A device is
+  offered once it runs this version, since an older one would never open what it was sent.
+  With end-to-end encryption on, a sent tab is encrypted like everything else, and a device
+  that cannot read your encrypted data is not offered. A tab its device never picks up is
+  dropped after 14 days. This adds two permissions that ask nothing at install: the context
+  menu, and access to the tab you are on at the moment you click Konode or that menu entry.
+
 - **Pause automatic sync from the popup (#89).** The pause icon beside the settings gear
   holds both automatic syncs: Sync on change and Auto sync. Sync now keeps working while
   paused, the popup's status says Paused, and the same icon turns into a play button that

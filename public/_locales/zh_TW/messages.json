@@ -1678,5 +1678,26 @@
   },
   "opt_devices_bad_reply": {
     "message": "無法讀取裝置清單。"
+  },
+  "popup_send_done": {
+    "message": "已傳送到 $DEVICE$。它會在該裝置下次同步時開啟。",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "Laptop"
+      }
+    }
+  },
+  "popup_send_later": {
+    "message": "無法連線到你的儲存空間，分頁將隨下次同步傳送。"
+  },
+  "send_menu_title": {
+    "message": "傳送到裝置"
+  },
+  "send_menu_none": {
+    "message": "目前沒有可以接收分頁的裝置"
+  },
+  "popup_send_label": {
+    "message": "傳送此分頁"
   }
 }

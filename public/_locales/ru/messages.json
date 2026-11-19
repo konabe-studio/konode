@@ -1678,5 +1678,26 @@
   },
   "opt_devices_bad_reply": {
     "message": "Не удалось прочитать список устройств."
+  },
+  "popup_send_done": {
+    "message": "Отправлено на $DEVICE$. Вкладка откроется там при следующей синхронизации.",
+    "placeholders": {
+      "device": {
+        "content": "$1",
+        "example": "Laptop"
+      }
+    }
+  },
+  "popup_send_later": {
+    "message": "Хранилище недоступно, поэтому вкладка уйдёт со следующей синхронизацией."
+  },
+  "send_menu_title": {
+    "message": "Отправить на устройство"
+  },
+  "send_menu_none": {
+    "message": "Пока ни одно устройство не может принимать вкладки"
+  },
+  "popup_send_label": {
+    "message": "Отправить эту вкладку"
   }
 }

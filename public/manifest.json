@@ -33,7 +33,9 @@
     "identity",
     "alarms",
     "notifications",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "contextMenus",
+    "activeTab"
   ],
   "optional_permissions": [
     "history",
