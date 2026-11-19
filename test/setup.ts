@@ -51,8 +51,15 @@ resetBookmarks();
 let histEntries = new Map();
 const histApi = {
   __engine: "firefox",
-  search: ({ maxResults } = {}) =>
-    Promise.resolve([...histEntries.values()].slice(0, maxResults ?? Infinity)),
+  // The time range is honoured (#96): the import reads only the window a peer's packet
+  // reaches back to, and a fake that returned everything whatever the range would hide a
+  // window that leaves pages out. A browser matches a page by its visits in the range; the
+  // fake keeps only the last visit, so it matches on that.
+  search: ({ maxResults, startTime, endTime } = {}) =>
+    Promise.resolve([...histEntries.values()]
+      .filter((h) => (startTime === undefined || h.lastVisitTime >= startTime) &&
+        (endTime === undefined || h.lastVisitTime < endTime))
+      .slice(0, maxResults ?? Infinity)),
   addUrl: ({ url, visitTime }) => {
     // Chrome validates `details` STRICTLY and throws on an unknown property. It does not
     // quietly ignore visitTime, which the handler assumed for a long time — so on Chromium

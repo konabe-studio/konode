@@ -120,32 +120,75 @@ export async function exportHistory(daysLimit = 30): Promise<SyncHistoryItem[]> 
 // ─── Import (merge remote history) ───────────────────────────────────────
 
 /**
- * Canonical URL → local last-visit time, for every page this browser holds.
+ * Canonical URL → local last-visit time, for the pages this browser visited since `since`.
  *
- * Split out and passed in because of what it costs. It reads the WHOLE local history
- * (up to 100k rows) and builds a map of it, and `importHistory` runs once per PEER, not
- * once per sync: three other devices meant three full scans a minute at the default
- * interval, each one allocating a map of every page the user has ever visited. The engine
- * now builds this once per sync and hands the same map to every peer's import.
+ * Shared by every peer's import in one sync, because reading it is the expensive part of an
+ * import. The import keeps it CURRENT: every page it stores is written back, so the second
+ * peer sees what the first one added and "is the peer's visit newer than ours" still
+ * answers correctly.
  *
- * Which is only safe because the import keeps it CURRENT: every page it stores is written
- * back into the map, so the second peer sees what the first one added and the "is the
- * peer's visit newer than ours" test still answers correctly. Re-reading from the browser
- * was what used to make that true.
+ * It holds only the window the peers' packets reach back to, never the whole history
+ * (#96). It used to read every page the browser had ever stored, up to 100,000 rows, once
+ * a sync, which is once a minute at the default interval. On a long history that request
+ * froze Edge. The window is enough: a page last visited here before a peer's oldest entry
+ * is older than every visit that peer sends, so the import takes the peer's visit whether
+ * or not the page is in the map, exactly as it would with the whole history read.
  */
-export async function buildLocalHistoryIndex(): Promise<Map<string, number>> {
-  assertDataTypeApi("history");
-  const existing = await browser.history.search({ text: "", startTime: 0, maxResults: 100000 });
-  const index = new Map<string, number>();
-  for (const h of existing) {
-    if (h.url) index.set(canonicalUrlKey(h.url), h.lastVisitTime ?? 0);
+export interface LocalHistoryIndex {
+  visits: Map<string, number>;
+  /** How far back `visits` has been read. Infinity: nothing read yet. */
+  since: number;
+}
+
+export function newLocalHistoryIndex(): LocalHistoryIndex {
+  return { visits: new Map(), since: Infinity };
+}
+
+/** Read slack under the oldest peer visit, so rounding never leaves a local visit out. */
+const WINDOW_SLACK_MS = 1_000;
+const INDEX_MAX_RESULTS = 100_000;
+
+/**
+ * Where the local read has to start for these peer entries: just under the oldest visit
+ * they carry. An entry without a visit time can only be judged against the whole history,
+ * so it asks for all of it, as before. Infinity when there is nothing to compare.
+ */
+export function historyWindowStart(items: SyncHistoryItem[]): number {
+  let oldest = Infinity;
+  for (const item of items) {
+    if (!item.url) continue;
+    if (!item.lastVisitTime) return 0;
+    if (item.lastVisitTime < oldest) oldest = item.lastVisitTime;
   }
-  return index;
+  return oldest === Infinity ? Infinity : Math.max(0, Math.floor(oldest) - WINDOW_SLACK_MS);
+}
+
+/**
+ * Make `index` reach back to `since`, reading only the stretch it does not cover yet. A
+ * later peer whose history reaches further back than the first one's extends it; one that
+ * fits inside costs nothing.
+ */
+async function coverLocalHistory(index: LocalHistoryIndex, since: number): Promise<void> {
+  if (!(since < index.since)) return;
+  const query: { text: string; startTime: number; maxResults: number; endTime?: number } = {
+    text: "", startTime: since, maxResults: INDEX_MAX_RESULTS,
+  };
+  if (Number.isFinite(index.since)) query.endTime = index.since;
+  const rows = await browser.history.search(query);
+  for (const h of rows) {
+    if (!h.url) continue;
+    const key = canonicalUrlKey(h.url);
+    const t = h.lastVisitTime ?? 0;
+    // Never lower a time: the import may already have written a newer one for this page.
+    const known = index.visits.get(key);
+    if (known === undefined || t > known) index.visits.set(key, t);
+  }
+  index.since = since;
 }
 
 export async function importHistory(
   items: SyncHistoryItem[],
-  localIndex?: Map<string, number>
+  localIndex: LocalHistoryIndex = newLocalHistoryIndex()
 ): Promise<void> {
   assertDataTypeApi("history");
   // NOTE: on Chrome, history.addUrl records a visit only at the *current* time
@@ -165,9 +208,11 @@ export async function importHistory(
   // browsing the same sites synced nothing and the log read "Added 0 new history entries"
   // forever. Reported from the field as a full day of browsing that never showed up.
   //
-  // Built here only when nobody handed us one. The sync engine does, once per cycle,
-  // because this scan is the expensive part of an import and it was being paid per peer.
-  const localLastVisit = localIndex ?? (await buildLocalHistoryIndex());
+  // The sync engine hands every peer's import the same index, once per cycle, because
+  // reading local history is the expensive part of an import and it was being paid per
+  // peer. Only the window these entries reach back to is read (see LocalHistoryIndex).
+  await coverLocalHistory(localIndex, historyWindowStart(items));
+  const localLastVisit = localIndex.visits;
 
   // One stamp for the whole batch: the moment these visits arrived here. exportHistory
   // compares against it to tell an import apart from the user's own later visit.

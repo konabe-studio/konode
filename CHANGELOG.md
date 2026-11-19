@@ -79,6 +79,15 @@ All notable changes to Konode. Format loosely follows
   in. Konode signs in with your username and password alone, so its requests no longer
   send cookies at all.
 
+- **Syncing history no longer reads your whole browsing history on every sync (#96).**
+  To decide which of another device's visits are new, Konode read every page this browser
+  had ever stored, up to 100,000 of them, once a sync, which is once a minute by default.
+  On a long history that is a large request to the browser every minute, and Edge stopped
+  responding for a user with History turned on. Konode now reads only as far back as the
+  other device's history reaches (30 days by default), and skips a device's history
+  entirely when it has not changed since the last time it was taken, which is most syncs.
+  What arrives is the same as before.
+
 - **The device list names what each device syncs in your language.** Every row's second
   line listed the data types by their internal names, always in English, so a Hungarian or
   Chinese page read "bookmarks, sessions" in the middle of its own sentence. It now uses
