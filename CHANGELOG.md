@@ -47,6 +47,25 @@ All notable changes to Konode. Format loosely follows
 
 ### Changed
 
+- **Storage providers are a grid, and a provider's settings open right under it.** Settings →
+  Storage listed eight providers one below the other, and the one you picked expanded in
+  place, which pushed most of the others below the fold. They are now tiles, two to a row
+  (one on a phone), each with its name and a few words on what it needs ("Google account",
+  "Your own server"). Picking one opens its settings in a panel under that tile's row, so
+  the rest stay in view. The full description moved into the panel.
+
+- **The popup says each data type's state in words.** The four circles under the Sync
+  button showed the state by colour alone. Each data type is now a line with its icon, its
+  name and its state ("Synced", "Not synced yet", "Last sync failed", "Off"), and the icon
+  keeps the colour, so a glance still works. The heading reads "Data types", and the
+  sessions list "Other devices".
+
+- **A plainer look.** Section headings and badges are no longer spaced capitals, the
+  monospace type is kept for addresses and ids, the status dot pulses only while a sync
+  runs, the popup's second link to Settings is gone (the gear is the one), the setup
+  wizard's welcome has no logo tile or emoji and its button says "Choose storage", and the
+  groups in Settings carry their title in the type rather than in a grey band.
+
 - **A blocked deletion shows which bookmarks it would remove (#23).** When another device
   asks to delete more of your bookmarks than the bulk-delete limit allows, the card in
   Settings → Activity used to say how many, and who asked, and nothing about which ones.

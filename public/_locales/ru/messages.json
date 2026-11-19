@@ -93,7 +93,7 @@
     "message": "Решить"
   },
   "popup_active_streams": {
-    "message": "Активные потоки"
+    "message": "Типы данных"
   },
   "popup_missing_extensions_one": {
     "message": "$COUNT$ расширение не установлено",
@@ -117,7 +117,7 @@
     "message": "Открыть все"
   },
   "popup_sessions_head": {
-    "message": "Сессии с других устройств"
+    "message": "Другие устройства"
   },
   "popup_unknown_device": {
     "message": "Неизвестное устройство"
@@ -200,9 +200,6 @@
   "popup_device_label": {
     "message": "Устройство"
   },
-  "popup_configure": {
-    "message": "Настроить →"
-  },
   "popup_activity_log": {
     "message": "Журнал активности →"
   },
@@ -233,14 +230,23 @@
   "provider_gdrive_desc": {
     "message": "Синхронизация напрямую с вашим Google Drive. Благодаря OAuth токен доступа хранится только на этом устройстве."
   },
+  "provider_gdrive_hint": {
+    "message": "Аккаунт Google"
+  },
   "provider_nextcloud_desc": {
     "message": "Ваш собственный сервер Nextcloud или ownCloud."
+  },
+  "provider_nextcloud_hint": {
+    "message": "Ваш сервер"
   },
   "provider_nextcloud_note": {
     "message": "Укажите только имя хоста сервера; используйте пароль приложения (Настройки → Безопасность)."
   },
   "provider_pcloud_desc": {
     "message": "Хранилище pCloud. Нужен платный тариф pCloud."
+  },
+  "provider_pcloud_hint": {
+    "message": "Регион ЕС или США"
   },
   "provider_pcloud_note": {
     "message": "Выберите регион $REGION$, если ваш аккаунт pCloud находится там.",
@@ -254,11 +260,17 @@
   "provider_koofr_desc": {
     "message": "Облачное хранилище Koofr."
   },
+  "provider_koofr_hint": {
+    "message": "Аккаунт Koofr"
+  },
   "provider_koofr_note": {
     "message": "Имя пользователя: ваш email в Koofr. Пароль: пароль приложения Koofr."
   },
   "provider_fastmail_desc": {
     "message": "Файловое хранилище Fastmail."
+  },
+  "provider_fastmail_hint": {
+    "message": "Аккаунт Fastmail"
   },
   "provider_fastmail_note": {
     "message": "Имя пользователя: ваш полный адрес Fastmail. Пароль: пароль приложения с доступом к Files (WebDAV)."
@@ -266,14 +278,23 @@
   "provider_jianguoyun_desc": {
     "message": "Облачное хранилище Nutstore, популярное в материковом Китае."
   },
+  "provider_jianguoyun_hint": {
+    "message": "Аккаунт Nutstore"
+  },
   "provider_jianguoyun_note": {
     "message": "Имя пользователя: ваш email в Nutstore. Пароль: пароль стороннего приложения. На бесплатном аккаунте, если у вас от трёх устройств, увеличьте «Интервал синхронизации» хотя бы до 120 секунд: Nutstore разрешает 600 запросов WebDAV за 30 минут."
   },
   "provider_github_desc": {
     "message": "Синхронизированные данные хранятся в приватном репозитории GitHub, к которому Konode получает доступ с помощью Personal Access Token."
   },
+  "provider_github_hint": {
+    "message": "Приватный репозиторий"
+  },
   "provider_webdav_desc": {
     "message": "Synology, kDrive или любой другой сервер WebDAV."
+  },
+  "provider_webdav_hint": {
+    "message": "Любой сервер WebDAV"
   },
   "provider_syncing_to": {
     "message": "Синхронизация с $URL$.",
@@ -288,10 +309,10 @@
     "message": "Добро пожаловать в Konode"
   },
   "onb_welcome_subtitle": {
-    "message": "Синхронизация браузера, при которой ваши данные действительно остаются вашими. Закладки, сессии и расширения отправляются прямо в ваше собственное хранилище. Без серверов посередине."
+    "message": "Синхронизация браузера в ваше собственное хранилище. Закладки, сессии и расширения отправляются прямо туда, без серверов Konode посередине."
   },
-  "onb_feature_storage": {
-    "message": "Ваши данные всегда остаются в вашем собственном хранилище."
+  "onb_feature_encryption": {
+    "message": "Сквозное шифрование по желанию: его можно включить на одном из следующих шагов."
   },
   "onb_feature_instant": {
     "message": "Синхронизирует каждое изменение в момент, когда оно происходит."
@@ -299,11 +320,8 @@
   "onb_feature_browsers": {
     "message": "Работает в браузерах на базе Chromium и Firefox."
   },
-  "onb_feature_providers": {
-    "message": "Вы сами решаете, где хранить данные."
-  },
   "onb_get_started": {
-    "message": "Начать"
+    "message": "Выбрать хранилище"
   },
   "onb_backend_title": {
     "message": "Выберите хранилище"
@@ -337,6 +355,9 @@
   },
   "opt_drive_unavailable": {
     "message": "Вход через Google в этом браузере недоступен. Выберите другой вариант."
+  },
+  "opt_drive_unavailable_short": {
+    "message": "Недоступно в этом браузере"
   },
   "provider_webdav_other": {
     "message": "WebDAV (другой)"
@@ -1173,7 +1194,7 @@
     }
   },
   "opt_this_device": {
-    "message": "ЭТО УСТРОЙСТВО"
+    "message": "Это устройство"
   },
   "opt_last_upload_ago": {
     "message": "· последняя отправка: $WHEN$",
@@ -1198,7 +1219,7 @@
     }
   },
   "opt_device_dormant": {
-    "message": "НЕАКТИВНО"
+    "message": "Неактивно"
   },
   "opt_device_dormant_note_one": {
     "message": "Больше суток ничего не отправлялось. Возможно, там просто ничего не менялось, а возможно, этого браузера больше нет. Если его больше нет, устройство можно забыть."

@@ -370,7 +370,9 @@ export default function PopupApp() {
     const pid = providerFromConfig(settings.active_backend, dav?.url, dav?.username);
     return pid ? providerLabel(providerById(pid)) : settings.active_backend;
   })();
-  const pulsing = status === "syncing" || status === "success";
+  // Only while something is happening. A dot pulsing at rest says nothing the colour does
+  // not, and a status dot that breathes forever is one of the marks of a generated page.
+  const pulsing = status === "syncing";
   const conflictGroups = groupConflictsByDevice(state?.pending_conflicts ?? []);
   // Settings loaded and every data type switched off. `settingsLoaded` matters: before the
   // read lands, enabled_types is undefined and an empty list would be indistinguishable
@@ -405,7 +407,7 @@ export default function PopupApp() {
           <span className={`text-sm font-medium ${statusCfg.color}`}>{t(`status_${status}`)}</span>
         </div>
         <div className="flex items-center gap-2">
-          {lastSync && <span className="font-mono text-[14px] tabular-nums text-sk-muted">{lastSync}</span>}
+          {lastSync && <span className="text-[14px] tabular-nums text-sk-muted">{lastSync}</span>}
           <button
             onClick={openOptions}
             aria-label={t("popup_settings_aria")}
@@ -583,16 +585,19 @@ export default function PopupApp() {
       {/* Scrollable body — the popup grows to fit this; when it would exceed
           Chrome's ~600px ceiling, this region scrolls and the header stays pinned. */}
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-      {/* ── Active streams (live per-type status) ── */}
+      {/* ── Data types (live per-type status) ──
+          Icon, name and the state in words, two to a row. The four circles before this
+          told the state by colour alone, which a colour-blind reader and a screen reader
+          both lose; the colour stays on the icon, so a glance still reads green as done. */}
       <section className="mt-4">
-        <h2 className="mb-2 pl-0.5 font-mono text-[12px] font-medium uppercase tracking-[0.08em] text-sk-subtle">
+        <h2 className="mb-1.5 pl-0.5 text-[12px] font-medium text-sk-muted">
           {t("popup_active_streams")}
         </h2>
-        <div className="grid grid-cols-4 gap-2.5">
+        <ul className="grid grid-cols-2 gap-x-2 gap-y-1">
           {SYNC_ORDER.map((type) => {
             const Icon = DATA_TYPE_META[type].icon;
             const typeLabel = t(`datatype_${type}`);
-            // Derived in one tested place — see popup/stream-state.ts. Inline, this
+            // Derived in one tested place: see popup/stream-state.ts. Inline, this
             // collapsed to green/"synced" for every enabled type whenever a sync wasn't
             // running, including before the first one and right after a failure.
             const ss = streamState(
@@ -604,23 +609,27 @@ export default function PopupApp() {
               })
             );
             const iconColor = streamColor(ss);
+            const off = ss === "off";
 
             return (
-              <div
-                key={type}
-                title={`${typeLabel}: ${t(streamLabelKey(ss))}`}
-                aria-label={`${typeLabel}: ${t(streamLabelKey(ss))}`}
-                className={`flex aspect-square items-center justify-center rounded-full border border-sk-hairline bg-sk-tint ${ss === "off" ? "opacity-40" : ""}`}
-              >
+              <li key={type} className="flex min-w-0 items-center gap-2.5 px-0.5 py-1.5">
                 {ss === "syncing" ? (
-                  <Loader2 size={22} className={`animate-spin ${iconColor}`} />
+                  <Loader2 size={18} className={`shrink-0 animate-spin ${iconColor}`} aria-hidden="true" />
                 ) : (
-                  <Icon size={22} strokeWidth={1.75} className={iconColor} />
+                  <Icon size={18} strokeWidth={1.75} className={`shrink-0 ${iconColor}`} aria-hidden="true" />
                 )}
-              </div>
+                <span className="min-w-0 flex-1">
+                  <span className={`block truncate text-[14px] ${off ? "text-sk-subtle" : "text-sk-text"}`}>{typeLabel}</span>
+                  {/* The stream_* words are lower case for the tooltip they used to be;
+                      standing alone under a name they start with a capital. */}
+                  <span className={`block truncate text-[12px] first-letter:uppercase ${ss === "stale" ? "text-sk-danger" : "text-sk-muted"}`}>
+                    {t(streamLabelKey(ss))}
+                  </span>
+                </span>
+              </li>
             );
           })}
-        </div>
+        </ul>
       </section>
 
       {/* ── Missing extensions ── */}
@@ -642,7 +651,7 @@ export default function PopupApp() {
       {/* ── Restore sessions (one per peer device) ── */}
       {remoteSessions.length > 0 && (
         <section className="mt-4">
-          <h2 className="mb-2 pl-0.5 font-mono text-[12px] font-medium uppercase tracking-[0.08em] text-sk-subtle">
+          <h2 className="mb-2 pl-0.5 text-[12px] font-medium text-sk-muted">
             {t("popup_sessions_head")}
           </h2>
           <div className="space-y-1.5">
@@ -654,7 +663,7 @@ export default function PopupApp() {
               <div key={entry.session.id} className="flex items-center gap-2 px-0.5 py-0.5">
                 <div className="min-w-0 flex-1">
                   <span className="block truncate text-[14px]">{entry.session.label ? <bdi>{entry.session.label}</bdi> : t("popup_unknown_device")}</span>
-                  <span className="block truncate font-mono text-[12px] text-sk-subtle">
+                  <span className="block truncate text-[12px] tabular-nums text-sk-subtle">
                     {plural("popup_tabs", total)}
                     {openHere > 0 && ` · ${plural("popup_tabs_open_here", openHere)}`}
                     {entry.timestamp &&
@@ -724,24 +733,18 @@ export default function PopupApp() {
           {settings?.device_label && (
             <div className="flex items-center gap-2">
               <span className="text-xs text-sk-muted">{t("popup_device_label")}</span>
-              <bdi className="font-mono text-xs">{settings.device_label}</bdi>
+              <bdi className="text-xs">{settings.device_label}</bdi>
             </div>
           )}
         </div>
-        <div className="flex flex-col items-end gap-1.5">
-          <button
-            onClick={openOptions}
-            className="text-[14px] font-medium text-sk-text hover:underline hover:underline-offset-2"
-          >
-            {t("popup_configure")}
-          </button>
-          <button
-            onClick={openActivityLog}
-            className="text-[12px] text-sk-muted hover:text-sk-text hover:underline hover:underline-offset-2"
-          >
-            {t("popup_activity_log")}
-          </button>
-        </div>
+        {/* Settings is the gear at the top; a second "Configure" link here opened the
+            same page and only competed with it. */}
+        <button
+          onClick={openActivityLog}
+          className="text-[12px] text-sk-muted hover:text-sk-text hover:underline hover:underline-offset-2"
+        >
+          {t("popup_activity_log")}
+        </button>
       </footer>
       </div>
     </div>

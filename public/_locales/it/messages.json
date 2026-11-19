@@ -78,7 +78,7 @@
     "message": "Risolvi"
   },
   "popup_active_streams": {
-    "message": "Flussi attivi"
+    "message": "Tipi di dati"
   },
   "popup_missing_extensions_one": {
     "message": "$COUNT$ estensione mancante",
@@ -102,7 +102,7 @@
     "message": "Apri tutte"
   },
   "popup_sessions_head": {
-    "message": "Sessioni su altri dispositivi"
+    "message": "Altri dispositivi"
   },
   "popup_unknown_device": {
     "message": "Dispositivo sconosciuto"
@@ -185,9 +185,6 @@
   "popup_device_label": {
     "message": "Dispositivo"
   },
-  "popup_configure": {
-    "message": "Configura →"
-  },
   "popup_activity_log": {
     "message": "Registro attività →"
   },
@@ -218,14 +215,23 @@
   "provider_gdrive_desc": {
     "message": "Sincronizzazione diretta sul tuo Google Drive. Grazie a OAuth, il token di accesso viene conservato esclusivamente su questo dispositivo."
   },
+  "provider_gdrive_hint": {
+    "message": "Account Google"
+  },
   "provider_nextcloud_desc": {
     "message": "Il tuo server Nextcloud o ownCloud personale."
+  },
+  "provider_nextcloud_hint": {
+    "message": "Il tuo server"
   },
   "provider_nextcloud_note": {
     "message": "Inserisci solo l'host del server; usa una password per l'app (Impostazioni → Sicurezza)."
   },
   "provider_pcloud_desc": {
     "message": "Spazio di archiviazione pCloud. Richiede un piano pCloud a pagamento."
+  },
+  "provider_pcloud_hint": {
+    "message": "Regione UE o USA"
   },
   "provider_pcloud_note": {
     "message": "Seleziona la regione $REGION$ se è lì che si trova il tuo account pCloud.",
@@ -239,11 +245,17 @@
   "provider_koofr_desc": {
     "message": "Spazio di archiviazione cloud Koofr."
   },
+  "provider_koofr_hint": {
+    "message": "Account Koofr"
+  },
   "provider_koofr_note": {
     "message": "Usa la tua email di Koofr come nome utente e una password per l'app Koofr come password."
   },
   "provider_fastmail_desc": {
     "message": "Spazio di archiviazione file Fastmail."
+  },
+  "provider_fastmail_hint": {
+    "message": "Account Fastmail"
   },
   "provider_fastmail_note": {
     "message": "Usa il tuo indirizzo Fastmail completo come nome utente e una password per l'app con accesso a Files (WebDAV)."
@@ -263,8 +275,14 @@
   "provider_github_desc": {
     "message": "I tuoi dati sincronizzati risiedono in un repository privato su GitHub, a cui Konode accede con un Personal Access Token."
   },
+  "provider_github_hint": {
+    "message": "Repository privato"
+  },
   "provider_webdav_desc": {
     "message": "Synology, kDrive o qualsiasi altro server WebDAV."
+  },
+  "provider_webdav_hint": {
+    "message": "Qualsiasi server WebDAV"
   },
   "provider_syncing_to": {
     "message": "Sincronizzazione su $URL$.",
@@ -279,10 +297,10 @@
     "message": "Ti diamo il benvenuto in Konode"
   },
   "onb_welcome_subtitle": {
-    "message": "Sincronizzazione del browser in cui i tuoi dati rimangono veramente tuoi. I tuoi segnalibri, le tue sessioni e le tue estensioni vanno direttamente nello spazio di archiviazione di tua proprietà. Nessun server in mezzo."
+    "message": "Sincronizzazione del browser verso il tuo spazio di archiviazione. Segnalibri, sessioni ed estensioni vanno direttamente lì, senza nessun server Konode in mezzo."
   },
-  "onb_feature_storage": {
-    "message": "I tuoi dati rimangono sempre nel tuo spazio di archiviazione."
+  "onb_feature_encryption": {
+    "message": "Crittografia end-to-end facoltativa, da impostare in un passaggio successivo."
   },
   "onb_feature_instant": {
     "message": "Sincronizza ogni modifica quando avviene."
@@ -290,11 +308,8 @@
   "onb_feature_browsers": {
     "message": "Funziona su browser basati su Chromium e su Firefox."
   },
-  "onb_feature_providers": {
-    "message": "Decidi tu dove i tuoi dati vivono."
-  },
   "onb_get_started": {
-    "message": "Per iniziare"
+    "message": "Scegli lo spazio di archiviazione"
   },
   "onb_backend_title": {
     "message": "Scegli il tuo storage"
@@ -307,6 +322,9 @@
   },
   "provider_jianguoyun_desc": {
     "message": "Spazio di archiviazione cloud Nutstore, molto diffuso nella Cina continentale."
+  },
+  "provider_jianguoyun_hint": {
+    "message": "Account Nutstore"
   },
   "provider_jianguoyun_note": {
     "message": "Usa la tua email di Nutstore come nome utente e una password per app di terze parti come password. Con un account gratuito, se usi tre o più dispositivi porta l'Intervallo di sincronizzazione ad almeno 120 secondi: Nutstore consente 600 richieste WebDAV ogni 30 minuti."
@@ -337,6 +355,9 @@
   },
   "opt_drive_unavailable": {
     "message": "L'accesso con Google non è disponibile in questo browser. Scegli un'altra opzione."
+  },
+  "opt_drive_unavailable_short": {
+    "message": "Non disponibile in questo browser"
   },
   "provider_webdav_other": {
     "message": "WebDAV (altro)"
@@ -1173,7 +1194,7 @@
     }
   },
   "opt_this_device": {
-    "message": "QUESTO DISPOSITIVO"
+    "message": "Questo dispositivo"
   },
   "opt_last_upload_ago": {
     "message": "· ultimo caricamento: $WHEN$",
@@ -1198,7 +1219,7 @@
     }
   },
   "opt_device_dormant": {
-    "message": "INATTIVO"
+    "message": "Inattivo"
   },
   "opt_device_dormant_note_one": {
     "message": "Nessun caricamento da più di un giorno. Può voler dire che lì non è cambiato nulla, oppure che questo browser non c'è più. Se non c'è più, puoi dimenticarlo."
