@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { SyncState, SyncSettings, DataType, SyncExtension, RemoteSessionEntry, SendTarget } from "@/lib/types";
-import { sendableUrl } from "@/lib/sync/sent-tabs";
+import { pageToSend } from "@/lib/sent-tabs-browser";
 import { providerFromConfig, providerById, providerLabel } from "@/lib/storage-providers";
 import { sendMessage, request } from "@/lib/utils/messaging";
 import { browser, currentStore } from "@/lib/utils/ext";
@@ -208,12 +208,10 @@ export default function PopupApp() {
   useEffect(() => {
     load();
     void loadPeerCaches();
-    // The page this popup was opened over. Opening the popup grants activeTab, which is
-    // what lets its address be read without the tabs permission.
+    // The page this popup was opened over (see pageToSend for Firefox for Android).
     void (async () => {
       try {
-        const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-        if (tab && sendableUrl(tab.url)) setActiveTab({ url: tab.url!, ...(tab.title ? { title: tab.title } : {}) });
+        setActiveTab(await pageToSend());
       } catch { /* no tabs API: nothing to send */ }
     })();
 

@@ -10,7 +10,9 @@ All notable changes to Konode. Format loosely follows
 - **Send a tab to another device (#92).** Right-click a page or a link and choose Send to
   device, then the device; in Firefox the same entry is on a tab's own menu. The popup has
   a paper-plane icon beside the pause and settings icons that opens the same list for the
-  page you are on, which is the way to send from Firefox for Android. Konode has no server, so the tab travels through
+  page you are on. Firefox for Android receives tabs but cannot send them: it has no
+  right-click menu for extensions, and its popup cannot see the page it was opened over.
+  Konode has no server, so the tab travels through
   your own storage and opens on the other device at its next sync, not at once: within a
   minute or so with Auto sync on, and once that browser starts if it is closed. It opens
   quietly in a background tab, without a notification. A device is

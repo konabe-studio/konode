@@ -291,12 +291,14 @@ before your other devices see the result, or on a slow or metered connection.
 <img src="images/popup-send-menu.png" alt="The popup with the Send to device menu open: Send this tab, How rivers shape a valley, then the devices Home desktop and Old netbook" width="360">
 
 Send the page you are on to another of your devices. Use it to carry an article from your
-phone to your computer, or a page from work to home, without bookmarking it.
+computer to your phone, or a page from work to home, without bookmarking it.
 
 - Right-click a page or a link and choose **Send to device**, then the device. In Firefox the
   entry is on a tab's own menu as well.
 - Or press the paper-plane icon in the popup, which lists your devices for the page you are
-  on. On Firefox for Android this is the way to send.
+  on.
+- Firefox for Android receives tabs but cannot send them: it gives extensions no right-click
+  menu, and its popup cannot see the page it was opened over.
 - Konode has no server, so the tab travels through your storage and opens on the other device
   at its next sync, quietly, in a background tab. With Auto sync on that is within a minute or
   so. A device that is off opens it when it starts.
