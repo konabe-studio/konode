@@ -186,18 +186,38 @@ are built by hand with Konode's own OAuth client compiled in and live in
 keeps the two from being confused.
 
 ## Next
-- **The next release**, set on 2026-11-04 from the issue round after 1.5.1. No date, the
-  same as everything else here:
+- **1.6.0, the next release**, in preparation since 2026-11-19 and not yet in any store. Its
+  scope was set on 2026-11-04 from the issue round after 1.5.1 and grew on the way; everything
+  below is merged to `main`:
   - [#23](https://github.com/konabe-studio/konode/issues/23): a held-back deletion lists
     the bookmarks it holds, title and address, capped with "and N more", and the four
     conflict-resolution options say what each does with another device's deletions.
   - [#10](https://github.com/konabe-studio/konode/issues/10): the device list says when a
     device was last active in human terms ("39 days ago") and flags the ones that are
     plainly dead, then shows the browser on each row. Taking over an identity and
-    renaming a peer wait on the open questions in the issue.
+    renaming a peer wait on the open questions in the issue, which stays open.
   - [#35](https://github.com/konabe-studio/konode/issues/35): a Resolve button on the
     conflict card opens a full tab in Settings that lists what differs, next to the
     held-back deletion card from #23. #34, which it was waiting for, shipped in 1.5.1.
+  - [#89](https://github.com/konabe-studio/konode/issues/89): a pause icon in the popup
+    holds both automatic syncs; Sync now keeps working.
+  - [#92](https://github.com/konabe-studio/konode/issues/92): Send to device, from the
+    right-click menu and the popup, through the user's own storage. Firefox for Android
+    receives but cannot send (its popup sees no page, and it has no extension menus).
+  - [#96](https://github.com/konabe-studio/konode/issues/96): history sync reads only the
+    window the other devices' history reaches back to, and skips a packet it already
+    imported. This closes the *History sync performance* item that sat here.
+  - The provider grid in Settings and a plainer look across the views, and a feature guide
+    with screenshots (`docs/FEATURES.md`, and konode.org/features.html).
+
+  Before it ships: the Web Store permission justifications for `contextMenus` and
+  `activeTab`, which are new required permissions.
+- **1.7.0: Dropbox**, the first new backend, moved here from 1.6.0 on 2026-11-19 when that
+  version went to the release above. It leads the backends because Dropbox signs in with PKCE
+  and a public client, so unlike Drive it needs no client secret and works in the GitHub
+  release build as well as the store build. OneDrive follows it, gated on whether Entra
+  accepts a `chromiumapp.org` redirect; MEGA waits for appetite for a provider-side crypto
+  library. See *Platform priority* item 3 below.
 - **[#11](https://github.com/konabe-studio/konode/issues/11): tab groups have shipped, the
   reading list is next.** Moved ahead of backend expansion on 2026-10-01, after a Helium user
   with dozens of grouped tabs asked whether the browser blocks it. It does not: live groups
@@ -211,11 +231,8 @@ keeps the two from being confused.
   from 139, grants it without a prompt, and shares Chrome's nine colours. Wherever groups do
   not exist (Firefox for Android, Safari, older Firefox), a session restores ungrouped, as
   before. The reading list continues in [#77](https://github.com/konabe-studio/konode/issues/77).
-- **Backend expansion**, cheapest sign-in first. See *Platform priority* item 3 below.
-- **History sync performance**: the full-history dedup scan. It is now built once per
-  SYNC rather than once per peer (1.3.1), which was the larger half of the cost with more
-  than one other device; what remains is that a sync which imports any history at all
-  still reads the whole local history once to answer "is the peer's visit newer".
+- **Backend expansion after Dropbox**, cheapest sign-in first. See *Platform priority* item 3
+  below.
 - **More languages.** Japanese, Estonian and Arabic are open
   volunteer work on Weblate with no target date. Arabic is the first right-to-left one, so
   it brings the layout work under *Later* with it. A language joins `shipped-languages.json`
