@@ -5,6 +5,8 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-19
+
 ### Added
 
 - **Send a tab to another device (#92).** Right-click a page or a link and choose Send to
