@@ -26,11 +26,16 @@ export const AMO_SEARCH_BASE = "https://addons.mozilla.org/firefox/search/?q=";
 /** Toolbar badge TEXT per sync status. A pending conflict needs the user to choose, so
  *  it has to be visible without opening the popup — it used to render as empty text, i.e.
  *  no badge at all, while `BADGE_COLORS.conflict` sat here unused. An empty string means
- *  "no badge", which is right only for the two quiet states. */
+ *  "no badge": the badge is for what needs the user, never for routine work.
+ *
+ *  `syncing` used to be an amber "↑". It flashed on every sync, every minute or so with
+ *  Auto sync, in the colour family the error and conflict badges use, so routine work
+ *  read as a warning in the corner of the eye (reported on Reddit after 1.6.0). The popup
+ *  still says when a sync is running. */
 export const BADGE_TEXT: Record<SyncStatus, string> = {
   idle: "",
   success: "",
-  syncing: "↑",
+  syncing: "",
   error: "!",
   conflict: "?",
 };

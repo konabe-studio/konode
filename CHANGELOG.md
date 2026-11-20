@@ -14,6 +14,11 @@ All notable changes to Konode. Format loosely follows
   Sessions card; they then open pinned, as before. The popup's tab count follows the same
   setting, and a device whose only tabs are pinned is not listed. Your devices still share
   their pinned tabs, so the setting can be changed at any time.
+- **The toolbar icon stays still while Konode syncs.** Every sync used to flash an amber
+  arrow on the icon, every minute or so with Auto sync on, in the colours Konode uses for
+  an error or a conflict, so routine work looked like a warning. The icon now changes only
+  when something needs you: a red **!** for an error, an orange **?** for a conflict. The
+  popup still shows when a sync is running.
 
 ## [1.6.0] - 2026-11-19
 
