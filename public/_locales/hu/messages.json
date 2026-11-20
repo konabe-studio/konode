@@ -764,6 +764,12 @@
   "opt_tab_groups_denied": {
     "message": "Ehhez a Konodenak a „tabGroups” engedély kell. A csoportok így is visszatérnek, csak név nélkül."
   },
+  "opt_restore_pinned_label": {
+    "message": "Rögzített lapok visszaállítása"
+  },
+  "opt_restore_pinned_desc": {
+    "message": "A rögzített lapok gyakran egy adott eszközhöz tartoznak, például a levelezés vagy a naptár, ezért a visszaállítás kihagyja őket. Ha ez be van kapcsolva, ezek is megnyílnak, rögzítve."
+  },
   "opt_history_days_label": {
     "message": "Szinkronizált napok száma"
   },

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { openTabUrl, openTabUrls, rememberOpened, tabsToRestore } from "@/lib/session-restore";
+import { openTabUrl, openTabUrls, rememberOpened, restorableTabs, tabsToRestore } from "@/lib/session-restore";
 
 const tabs = (...urls: string[]) => urls.map((url) => ({ url }));
 
@@ -22,6 +22,26 @@ describe("tabsToRestore", () => {
 
   it("ignores open tabs whose URL it cannot read", () => {
     expect(tabsToRestore(tabs("https://a.com/"), [undefined, undefined])).toEqual(tabs("https://a.com/"));
+  });
+});
+
+describe("restorableTabs", () => {
+  const session = [
+    { url: "https://mail.example/", pinned: true },
+    { url: "https://a.com/", pinned: false },
+    { url: "https://b.com/" },
+  ];
+
+  it("leaves pinned tabs out unless asked for them", () => {
+    expect(restorableTabs(session, false)).toEqual(session.slice(1));
+  });
+
+  it("keeps every tab, in order, when pinned ones are wanted", () => {
+    expect(restorableTabs(session, true)).toEqual(session);
+  });
+
+  it("is what tabsToRestore counts from, so the popup's number is the number that opens", () => {
+    expect(tabsToRestore(restorableTabs(session, false), ["https://a.com/"])).toEqual([session[2]]);
   });
 });
 

@@ -5,6 +5,16 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Restoring another device's tabs leaves its pinned tabs out.** Pinned tabs are usually
+  a device's own, such as mail or a calendar, and their addresses change as you use them,
+  so they rarely matched the ones pinned here and a restore opened them again beside yours.
+  To have them back, turn on **Restore pinned tabs** under Settings → Data Types, in the
+  Sessions card; they then open pinned, as before. The popup's tab count follows the same
+  setting, and a device whose only tabs are pinned is not listed. Your devices still share
+  their pinned tabs, so the setting can be changed at any time.
+
 ## [1.6.0] - 2026-11-19
 
 ### Added

@@ -764,6 +764,12 @@
   "opt_tab_groups_denied": {
     "message": "這需要「tabGroups」權限。沒有它，群組還是會回來，只是沒有名稱。"
   },
+  "opt_restore_pinned_label": {
+    "message": "還原固定分頁"
+  },
+  "opt_restore_pinned_desc": {
+    "message": "固定分頁通常是各裝置自己的，例如郵件或行事曆，因此還原時會略過它們。開啟後，它們也會一併開啟，並保持固定。"
+  },
   "opt_history_days_label": {
     "message": "同步天數"
   },

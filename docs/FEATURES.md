@@ -83,7 +83,9 @@ off on another.
 - Tab groups come back as groups. With **Tab group names and colours** on (Settings → Data
   Types), they keep their names and colours too. Firefox has tab groups from version 138, and
   their names and colours from 139.
-- Pinned tabs stay pinned. Whether a group was collapsed is not synced.
+- A restore leaves pinned tabs out, because they are usually a device's own, such as mail or
+  a calendar. Turn on **Restore pinned tabs** (Settings → Data Types) to open them too; they
+  come back pinned. Whether a group was collapsed is not synced.
 
 ### History
 

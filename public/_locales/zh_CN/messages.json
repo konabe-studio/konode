@@ -755,6 +755,12 @@
   "opt_tab_groups_denied": {
     "message": "此功能需要 “tabGroups” 权限。即使没有它，分组也会恢复，只是没有名称。"
   },
+  "opt_restore_pinned_label": {
+    "message": "恢复固定的标签页"
+  },
+  "opt_restore_pinned_desc": {
+    "message": "固定的标签页通常是各设备自己的，例如邮箱或日历，因此恢复时会跳过它们。开启后，它们也会打开，并保持固定。"
+  },
   "opt_history_days_label": {
     "message": "同步天数"
   },

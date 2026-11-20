@@ -755,6 +755,12 @@
   "opt_tab_groups_denied": {
     "message": "Konode necesita el permiso «tabGroups» para esto. Tus grupos vuelven igualmente, aunque sin nombre."
   },
+  "opt_restore_pinned_label": {
+    "message": "Restaurar pestañas fijadas"
+  },
+  "opt_restore_pinned_desc": {
+    "message": "Las pestañas fijadas suelen ser propias de cada dispositivo, como el correo o el calendario, así que al restaurar se omiten. Con esto activado, también se abren y siguen fijadas."
+  },
   "opt_history_days_label": {
     "message": "Días a sincronizar"
   },
