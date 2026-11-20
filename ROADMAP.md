@@ -97,8 +97,9 @@ on any Chromium browser and on Firefox.
   findings", because the second one never arrives.
 
 ## Now live
-Konode is live on three stores. **1.6.0 is live on Firefox Add-ons since 2026-11-20** and in
-review on the Chrome Web Store and Edge Add-ons, which serve 1.5.1 until it passes. 1.5.1
+Konode is live on three stores. **1.6.0 is live on Firefox Add-ons and the Chrome Web Store
+since 2026-11-20**, the day it was submitted, and in review on Edge Add-ons, which serves
+1.5.1 until it passes. 1.5.1
 reached Firefox Add-ons within minutes of the upload on 2026-11-02, listed for Firefox for
 Android too from that version, and the Chrome Web Store the same day, after a few hours in
 review. **Microsoft Edge
@@ -158,8 +159,9 @@ out says which half of his problem the release solves and which half it does not
   the same morning and was superseded within two hours. AMO auto-approves and signs an
   update on upload, so each goes out within minutes; the source submission a bundled add-on
   requires is reviewed afterwards rather than before.
-- Chrome Web Store: **1.6.0 submitted 2026-11-20, in review**, with justifications for the
-  two new permissions. Serving 1.5.1 since 2026-11-02, out the same day it was submitted.
+- Chrome Web Store: **serving 1.6.0 since 2026-11-20**, out the same day it was submitted,
+  with justifications for the two new permissions. Before it 1.5.1 from 2026-11-02, also out
+  the same day it was submitted.
   Before it 1.4.0 from 2026-09-30, a day after it was submitted. 1.3.2
   was served from 2026-09-13, after a second review. 1.3.1 was
   submitted on 2026-09-10 and withdrawn the same day in favour of 1.3.2, so it never reached
