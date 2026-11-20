@@ -1,6 +1,6 @@
 # Konode Privacy Policy
 
-_Last updated: November 4, 2026_
+_Last updated: November 19, 2026_
 
 ## The short version
 
