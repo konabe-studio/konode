@@ -24,3 +24,6 @@ internal/
 # template has a line meant to be filled with the Google OAuth client secret at paste
 # time, which must never reach a commit.
 store-listing/
+
+# Promo video frames and renders, see scripts/promo/README.md
+promo-out/
