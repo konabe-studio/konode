@@ -1504,9 +1504,11 @@ describe("BADGE_TEXT — every status the user must act on is visible on the too
     expect(BADGE_TEXT.conflict).not.toBe(BADGE_TEXT.error);
   });
 
-  it("keeps the two quiet states quiet", () => {
+  it("keeps the quiet states quiet, routine syncing included", () => {
     expect(BADGE_TEXT.idle).toBe("");
     expect(BADGE_TEXT.success).toBe("");
+    // An amber arrow on every sync read as a warning; the badge is only for what needs you.
+    expect(BADGE_TEXT.syncing).toBe("");
   });
 
   it("covers every status, and every colour has matching text", () => {
