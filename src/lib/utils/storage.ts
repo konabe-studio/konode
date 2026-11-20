@@ -262,6 +262,16 @@ export async function getBookmarkExclusions(): Promise<BookmarkExclusion[]> {
   return sanitizeExclusions(stored.excluded_bookmarks);
 }
 
+/**
+ * Whether a session restore opens the peer's pinned tabs, straight from the stored settings.
+ * Not through getSettings(), which mints a device id when there is none: a restore has no
+ * business doing that. Absent means off.
+ */
+export async function getRestorePinnedTabs(): Promise<boolean> {
+  const stored = await get<Partial<SyncSettings>>(KEYS.SETTINGS, {});
+  return stored.restore_pinned_tabs === true;
+}
+
 export async function saveSettings(partial: Partial<SyncSettings>): Promise<SyncSettings> {
   const current = await getSettings();
   const next = { ...current, ...partial };

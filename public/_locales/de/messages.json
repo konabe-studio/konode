@@ -764,6 +764,12 @@
   "opt_tab_groups_denied": {
     "message": "Dafür braucht Konode die Berechtigung „tabGroups“. Deine Gruppen kommen trotzdem zurück, nur ohne Namen."
   },
+  "opt_restore_pinned_label": {
+    "message": "Angeheftete Tabs wiederherstellen"
+  },
+  "opt_restore_pinned_desc": {
+    "message": "Angeheftete Tabs gehören oft zu einem bestimmten Gerät, etwa E-Mail oder Kalender, deshalb lässt die Wiederherstellung sie aus. Ist dies an, öffnen sie sich ebenfalls und bleiben angeheftet."
+  },
   "opt_history_days_label": {
     "message": "Zu synchronisierende Tage"
   },

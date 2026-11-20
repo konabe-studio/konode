@@ -881,6 +881,14 @@
   "opt_tab_groups_denied": {
     "message": "Konode needs the \"tabGroups\" permission for this. Your groups still come back, without names."
   },
+  "opt_restore_pinned_label": {
+    "message": "Restore pinned tabs",
+    "description": "Settings, Sessions card: a switch. When on, restoring another device's tabs also opens its pinned tabs, pinned. Off by default."
+  },
+  "opt_restore_pinned_desc": {
+    "message": "Pinned tabs are often a device's own, such as mail or a calendar, so a restore leaves them out. With this on, they open too, and stay pinned.",
+    "description": "Under opt_restore_pinned_label. Pinned tabs are the ones a browser keeps small at the left of the tab strip; use the browser's own word for them."
+  },
   "opt_history_days_label": {
     "message": "Days to sync"
   },

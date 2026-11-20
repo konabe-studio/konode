@@ -5,8 +5,8 @@ import { logger } from "@/lib/utils/logger";
 import { canonicalUrlKey, isSafeContentUrl, isSensitiveUrl } from "@/lib/utils/url";
 import { browser } from "@/lib/utils/ext";
 import { assertDataTypeApi, isIOS, tabGroupSupport } from "@/lib/utils/capabilities";
-import { getSingleTabOpenLimit, setSingleTabOpenLimit } from "@/lib/utils/storage";
-import { openTabUrls, rememberOpened, tabsToRestore } from "@/lib/session-restore";
+import { getRestorePinnedTabs, getSingleTabOpenLimit, setSingleTabOpenLimit } from "@/lib/utils/storage";
+import { openTabUrls, rememberOpened, restorableTabs, tabsToRestore } from "@/lib/session-restore";
 
 // ─── Export Current Tabs ──────────────────────────────────────────────────
 
@@ -127,11 +127,18 @@ export async function importSession(session: SyncSession): Promise<void> {
   assertDataTypeApi("sessions");
   // Never open a non-web URL from a remote packet (javascript:/data:/file: are
   // an injection/exfiltration vector); only http(s) tabs are restored.
-  const safe = session.tabs.filter((t) => {
+  const web = session.tabs.filter((t) => {
     if (isSafeContentUrl(t.url)) return true;
     logger.warn("importSession", "Skipping an unsafe tab URL");
     return false;
   });
+  // Pinned tabs stay out unless the user asked for them in Settings (see lib/session-restore).
+  // Filtered here, before anything is counted or opened, so the single-window path below
+  // skips them too, and the popup applies the same filter to the number it shows.
+  const safe = restorableTabs(web, await getRestorePinnedTabs());
+  if (safe.length < web.length) {
+    logger.event("importSession", `Leaving out ${web.length - safe.length} pinned tab(s), as set in Settings`);
+  }
   // Only what is not open here yet, so a second restore of a session that has grown opens
   // the new tabs instead of every tab again (see lib/session-restore).
   const missing = tabsToRestore(safe, await openTabUrls(await browser.tabs.query({})));

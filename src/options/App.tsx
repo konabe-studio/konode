@@ -2007,12 +2007,31 @@ export default function OptionsApp() {
                 );
               })()}
 
-              {/* Open tabs carry their groups wherever the browser has them; this row adds the
-                  names and colours. Shown only where tabGroups can be asked for at all, so a
-                  browser without it never sees a switch that can only fail. */}
-              {settings.enabled_types.includes("sessions") && groupNames.askable && (
+              {settings.enabled_types.includes("sessions") && (
               <div className="settings-section">
                 <div className="settings-card-head">{t("datatype_sessions")}</div>
+                {/* Off by default: pinned tabs are usually a device's own app tabs, whose
+                    addresses drift, so a restore opened them again beside the ones pinned
+                    here. The popup's count follows the same switch (lib/session-restore). */}
+                <div className="settings-row">
+                  <div className="settings-row-left">
+                    <div>
+                      <div className="row-label">{t("opt_restore_pinned_label")}</div>
+                      <div className="row-desc">{t("opt_restore_pinned_desc")}</div>
+                    </div>
+                  </div>
+                  <label className="toggle-wrap">
+                    <input type="checkbox" className="toggle-input"
+                      checked={!!settings.restore_pinned_tabs}
+                      aria-label={t("opt_restore_pinned_label")}
+                      onChange={(e) => update({ restore_pinned_tabs: e.target.checked })} />
+                    <span className="toggle-track"><span className="toggle-thumb" /></span>
+                  </label>
+                </div>
+                {/* Open tabs carry their groups wherever the browser has them; this row adds the
+                    names and colours. Shown only where tabGroups can be asked for at all, so a
+                    browser without it never sees a switch that can only fail. */}
+                {groupNames.askable && (
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div>
@@ -2033,6 +2052,7 @@ export default function OptionsApp() {
                     <span className="toggle-track"><span className="toggle-thumb" /></span>
                   </label>
                 </div>
+                )}
               </div>
               )}
 

@@ -3,7 +3,7 @@ import { cleanGroup, exportOpenTabs, exportSession, importSession } from "@/lib/
 import {
   permissionsToEnable, resetCapabilityCache, tabGroupSupport, tabGroupsAskable,
 } from "@/lib/utils/capabilities";
-import { setSingleTabOpenLimit } from "@/lib/utils/storage";
+import { KEYS, setSingleTabOpenLimit } from "@/lib/utils/storage";
 import type { SyncSession } from "@/lib/types";
 
 // Tab groups in the open-tabs session (#11). Uses the tabs/tabGroups/windows fakes in
@@ -146,6 +146,8 @@ describe("restoring groups", () => {
 
   it("checks everything a hostile packet could put in", async () => {
     await setSingleTabOpenLimit(false);
+    // Pinned tabs open only when Settings asks for them, and this one has to open to be checked.
+    await chrome.storage.local.set({ [KEYS.SETTINGS]: { restore_pinned_tabs: true } });
     await importSession(session(
       [
         { url: "https://a.example/", group: 0 },

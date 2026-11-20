@@ -7,7 +7,7 @@ import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl } from "@/lib/utils/extensions-match";
 import { KEYS, getSettings, getState, normalizeRemoteSessions, normalizeRemoteExtensions, getRateProgress, getRateAnswered, setRateAnswered } from "@/lib/utils/storage";
 import { rateCardDue, stateNeedsUser } from "@/lib/rate-prompt";
-import { openTabUrls, tabsToRestore } from "@/lib/session-restore";
+import { openTabUrls, restorableTabs, tabsToRestore } from "@/lib/session-restore";
 import { reviewPageFor } from "@/lib/store-review";
 import { STATE_UPDATE } from "@/lib/constants";
 import { streamState, streamInputFor, streamColor, streamLabelKey } from "@/popup/stream-state";
@@ -463,6 +463,14 @@ export default function PopupApp() {
   // Settings loaded and every data type switched off. `settingsLoaded` matters: before the
   // read lands, enabled_types is undefined and an empty list would be indistinguishable
   // from "we don't know yet".
+  // Each peer session with the tabs a restore would consider: pinned ones only when Settings
+  // asks for them, the same filter importSession applies, so the count is the number that
+  // opens. A session left with nothing to restore is not listed at all: an "All open" button
+  // for a device whose only tabs are pinned would say something untrue.
+  const restorePinned = !!settings?.restore_pinned_tabs;
+  const restorable = remoteSessions
+    .map((entry) => ({ entry, tabs: restorableTabs(entry.session.tabs, restorePinned) }))
+    .filter((s) => s.tabs.length > 0);
   const nothingEnabled = settingsLoaded && (settings?.enabled_types?.length ?? 0) === 0;
   // Never during setup, never beside anything that needs the user. Once something does, the
   // card is gone for as long as this popup stays open: the retry that follows clears the
@@ -815,15 +823,15 @@ export default function PopupApp() {
       )}
 
       {/* ── Restore sessions (one per peer device) ── */}
-      {remoteSessions.length > 0 && (
+      {restorable.length > 0 && (
         <section className="mt-4">
           <h2 className="mb-2 pl-0.5 text-[12px] font-medium text-sk-muted">
             {t("popup_sessions_head")}
           </h2>
           <div className="space-y-1.5">
-            {remoteSessions.map((entry) => {
-              const total = entry.session.tabs.length;
-              const missing = tabsToRestore(entry.session.tabs, openUrls).length;
+            {restorable.map(({ entry, tabs }) => {
+              const total = tabs.length;
+              const missing = tabsToRestore(tabs, openUrls).length;
               const openHere = total - missing;
               return (
               <div key={entry.session.id} className="flex items-center gap-2 px-0.5 py-0.5">

@@ -397,6 +397,14 @@ export interface SyncSettings {
    * locally as always and go out with the next sync. Optional: absent means not paused.
    */
   sync_paused?: boolean;
+  /**
+   * Whether restoring a peer's session also opens its pinned tabs. Pinned tabs are usually a
+   * device's own app tabs (mail, calendar), whose addresses drift as they are used, so they
+   * rarely match what is already pinned here and a restore opened them again as duplicates.
+   * Optional: absent, as in settings stored by an older build, means off. Export is not
+   * affected: pinned tabs are still published, marked `pinned`.
+   */
+  restore_pinned_tabs?: boolean;
   notifications_enabled: boolean;
   debug_mode: boolean;
   // E2EE (opt-in) — wired into the sync engine; see src/lib/crypto/encryption.ts

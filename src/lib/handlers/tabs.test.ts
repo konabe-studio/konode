@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { importSession, exportCurrentTabs } from "@/lib/handlers/tabs-handler";
 import { RESTORE_PENDING_MS } from "@/lib/session-restore";
-import { getSingleTabOpenLimit, setSingleTabOpenLimit } from "@/lib/utils/storage";
+import { KEYS, getSingleTabOpenLimit, setSingleTabOpenLimit } from "@/lib/utils/storage";
 import { resetCapabilityCache } from "@/lib/utils/capabilities";
 import type { SyncSession } from "@/lib/types";
 
@@ -117,8 +117,9 @@ describe("restoring a session lands in the window you're already in", () => {
     expect(windowsFake.__created()).toEqual([]); // the assertion the old test was missing
   });
 
-  it("brings pinned tabs back pinned", async () => {
+  it("brings pinned tabs back pinned when Settings asks for them", async () => {
     // The url-array form of windows.create has no way to carry this, so it was lost.
+    await chrome.storage.local.set({ [KEYS.SETTINGS]: { restore_pinned_tabs: true } });
     await importSession(withPinned(["https://a.com/", "https://b.com/"], [1]));
 
     const tabs = await chrome.tabs.query({});
@@ -146,6 +147,58 @@ describe("restoring a session lands in the window you're already in", () => {
 // like the tab was. Measuring after the fact therefore cannot work, and the field proved
 // it — a 10-tab session restored as 1 tab on Orion while this suite was green, because the
 // fake used to exempt windows.create from the blocker.
+// Pinned tabs are usually a device's own app tabs (mail, a calendar) whose addresses drift,
+// so a restore opened them again beside the ones pinned here. Off unless Settings says so.
+describe("pinned tabs in a restore", () => {
+  const mixed = (): SyncSession => ({
+    id: "s1", device_id: "peer", savedAt: "2026-07-21T00:00:00.000Z", label: "Peer session",
+    tabs: [
+      { url: "https://mail.example/inbox/123", pinned: true },
+      { url: "https://a.com/", pinned: false },
+      { url: "https://b.com/", pinned: false },
+    ],
+  });
+
+  it("leaves them out by default", async () => {
+    await importSession(mixed());
+    expect((await chrome.tabs.query({})).map((t) => t.url)).toEqual(["https://a.com/", "https://b.com/"]);
+  });
+
+  it("leaves them out when settings stored by an older build have no answer", async () => {
+    await chrome.storage.local.set({ [KEYS.SETTINGS]: { device_id: "here" } });
+    await importSession(mixed());
+    expect((await chrome.tabs.query({})).map((t) => t.url)).toEqual(["https://a.com/", "https://b.com/"]);
+  });
+
+  it("opens them, pinned, when the switch is on", async () => {
+    await chrome.storage.local.set({ [KEYS.SETTINGS]: { restore_pinned_tabs: true } });
+    await importSession(mixed());
+    const tabs = await chrome.tabs.query({});
+    expect(tabs.map((t) => [t.url, t.pinned])).toEqual([
+      ["https://mail.example/inbox/123", true],
+      ["https://a.com/", false],
+      ["https://b.com/", false],
+    ]);
+  });
+
+  it("leaves them out of the single window on an engine that allows one open per click", async () => {
+    await setSingleTabOpenLimit(true);
+    tabsFake.__popupBlocked = true;
+
+    await importSession(mixed());
+
+    const wins = windowsFake.__created();
+    expect(wins).toHaveLength(1);
+    expect(wins[0].urls).toEqual(["https://a.com/", "https://b.com/"]);
+  });
+
+  it("opens nothing for a session that holds only pinned tabs", async () => {
+    await importSession({ ...mixed(), tabs: [{ url: "https://mail.example/", pinned: true }] });
+    expect(await chrome.tabs.query({})).toEqual([]);
+    expect(windowsFake.__created()).toEqual([]);
+  });
+});
+
 describe("a session restore on an engine that allows one open per click", () => {
   const many = (n: number): SyncSession => ({
     id: "s1", device_id: "peer", savedAt: "2026-07-21T00:00:00.000Z", label: "Peer session",

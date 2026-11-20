@@ -100,3 +100,14 @@ export function tabsToRestore<T extends { url?: string }>(tabs: T[], openUrls: A
     return false;
   });
 }
+
+/**
+ * The tabs of a session a restore considers at all: every tab, or every tab but the pinned
+ * ones when `restorePinned` is off (the default). Pinned tabs are usually a device's own app
+ * tabs, mail or a calendar, whose addresses drift as they are used, so they rarely match what
+ * is pinned here already and a restore opened them again beside it. Applied before
+ * `tabsToRestore` by both the popup and importSession, so the count stays the number that opens.
+ */
+export function restorableTabs<T extends { pinned?: boolean }>(tabs: T[], restorePinned: boolean): T[] {
+  return restorePinned ? tabs : tabs.filter((t) => !t.pinned);
+}
