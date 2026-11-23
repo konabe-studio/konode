@@ -3,7 +3,7 @@ import type { RootKind } from "@/lib/utils/bookmark-roots";
 // ─── Core Types ────────────────────────────────────────────────────────────
 
 export type DataType = "bookmarks" | "history" | "sessions" | "extensions";
-export type BackendType = "gdrive" | "webdav" | "github" | "gitea";
+export type BackendType = "gdrive" | "webdav" | "github" | "gitea" | "dropbox";
 export type SyncStatus = "idle" | "syncing" | "success" | "error" | "conflict";
 export type ConflictStrategy = "lww" | "prefer-local" | "prefer-remote" | "manual";
 
@@ -375,6 +375,13 @@ export interface BackendConfig {
     repo?: string; // "owner/repo"
     branch?: string;
     path?: string; // subfolder in repo, default "konode"
+  };
+  // Dropbox: no fields to type, the sign-in is the setup. `account` is the account id the
+  // device signed in with (`dbid:…`), written at sign-in. It is in the config so the
+  // destination tag changes with the account, and a device moved to another Dropbox
+  // re-uploads into it instead of trusting checksums recorded for the old one.
+  dropbox?: {
+    account?: string;
   };
 }
 

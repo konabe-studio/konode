@@ -146,6 +146,9 @@ export const KEYS = {
   SYNC_LOCK: "konode_sync_lock",
   GDRIVE_SESSION: "konode_gdrive_session",
   GDRIVE_FOLDER: "konode_gdrive_folder",
+  // Dropbox's OAuth session (lib/backends/dropbox-oauth.ts): refresh token, access token,
+  // the account it belongs to. Device-local like every credential.
+  DROPBOX_SESSION: "konode_dropbox_session",
   ONBOARDING_DRAFT: "konode_onboarding_draft",
   // The one-time rating card (lib/rate-prompt.ts). Two keys because two contexts write:
   // the service worker counts into PROGRESS, the popup records the answer in ANSWERED.
