@@ -7,6 +7,12 @@ All notable changes to Konode. Format loosely follows
 
 ### Added
 
+- **Dropbox storage.** A new **Dropbox** card, in setup and under Settings → Storage, next to
+  Google Drive. Sign in once and Konode syncs to a folder of its own, `Apps/Konode`, in your
+  Dropbox: it can't see or open anything else there. Konode asks your browser for permission
+  to reach Dropbox when you sign in. Each device signs in on its own, and **Disconnect** also
+  withdraws that device's access at Dropbox. Not available on Firefox for Android, which has
+  no sign-in window for extensions.
 - **Gitea and Forgejo storage (#32).** A new **Gitea / Forgejo** card, in setup and under
   Settings → Storage, syncs to a private repository on your own Gitea or Forgejo server, the
   way the GitHub card does on GitHub. Enter the server's address, the repository and an

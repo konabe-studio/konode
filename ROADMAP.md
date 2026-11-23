@@ -215,7 +215,10 @@ keeps the two from being confused.
 - **1.7.0: Dropbox**, the first new backend, moved here from 1.6.0 on 2026-11-19 when that
   version went to the release above. It leads the backends because Dropbox signs in with PKCE
   and a public client, so unlike Drive it needs no client secret and works in the GitHub
-  release build as well as the store build. OneDrive follows it, gated on whether Entra
+  release build as well as the store build. **Built on 2026-11-23** (branch `feat/dropbox`):
+  an App folder app (`Apps/Konode`), PKCE with `token_access_type=offline`, the listing's
+  `content_hash` as the #96 marker, and the bare redirect URL registered for the Web Store,
+  Edge, Firefox and `dist/` ids. OneDrive follows it, gated on whether Entra
   accepts a `chromiumapp.org` redirect; MEGA waits for appetite for a provider-side crypto
   library. See *Platform priority* item 3 below.
 - **[#11](https://github.com/konabe-studio/konode/issues/11): tab groups have shipped, the
