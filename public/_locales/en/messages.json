@@ -1927,10 +1927,6 @@
     "message": "Send to device",
     "description": "Right-click menu entry on a page, a link and (in Firefox) a tab, with one sub-item per device (#92)."
   },
-  "send_menu_none": {
-    "message": "No device can receive tabs yet",
-    "description": "The one, greyed-out sub-item of Send to device while no device can receive tabs: a device appears once it runs a version of Konode that can (#92)."
-  },
   "popup_send_label": {
     "message": "Send this tab",
     "description": "Heading of the popup's Send to device menu, opened from the paper-plane icon beside the pause and settings icons (#92). The page's title is shown under it, then one item per device. Sentence case."

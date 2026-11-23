@@ -1706,9 +1706,6 @@
   "send_menu_title": {
     "message": "傳送到裝置"
   },
-  "send_menu_none": {
-    "message": "目前沒有可以接收分頁的裝置"
-  },
   "popup_send_label": {
     "message": "傳送此分頁"
   }

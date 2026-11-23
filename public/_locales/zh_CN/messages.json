@@ -1706,9 +1706,6 @@
   "send_menu_title": {
     "message": "发送到设备"
   },
-  "send_menu_none": {
-    "message": "暂无可以接收标签页的设备"
-  },
   "popup_send_label": {
     "message": "发送此标签页"
   }

@@ -50,7 +50,6 @@ export async function pageToSend(tabs: TabsForSend = browser.tabs): Promise<{ ur
 
 export const MENU_PARENT = "konode-send";
 const MENU_TARGET = "konode-send:";
-const MENU_NONE = "konode-send-none";
 
 type MenusApi = typeof chrome.contextMenus;
 
@@ -65,7 +64,10 @@ export function menusApi(): MenusApi | null {
  * Rebuild "Send to device ▸" from the current targets. On a page and on a link everywhere,
  * and on a tab's own menu in Firefox, the only engine that has one (Chrome rejects the
  * whole item over an unknown context). With `enabled` off (Settings, Device) the menu is
- * only cleared, so nothing of Konode's is left in it.
+ * only cleared, so nothing of Konode's is left in it, and the same goes while no device can
+ * receive: until 1.7.0 the entry held one greyed-out "no device" item, which every
+ * one-device install and every unconfigured one carried in each right-click menu for
+ * nothing. The popup's paper plane already showed only with a target.
  */
 export async function rebuildSendMenu(targets: SendTarget[], enabled = true): Promise<void> {
   const menus = menusApi();
@@ -79,12 +81,8 @@ export async function rebuildSendMenu(targets: SendTarget[], enabled = true): Pr
     });
   try {
     await menus.removeAll();
-    if (!enabled) return;
+    if (!enabled || !targets.length) return;
     await create({ id: MENU_PARENT, title: t("send_menu_title"), contexts });
-    if (!targets.length) {
-      await create({ id: MENU_NONE, parentId: MENU_PARENT, title: t("send_menu_none"), contexts, enabled: false });
-      return;
-    }
     for (const target of targets) {
       await create({
         id: `${MENU_TARGET}${target.device_id}`,

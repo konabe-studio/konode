@@ -71,7 +71,10 @@ faithful timeline.
 A device appears there once it has synced on the version that has Send to device, since an
 older one would never open what it was sent. Update it and let it sync once. With
 end-to-end encryption on, a device that cannot read your encrypted data (a different
-passphrase, or encryption off) is not offered either.
+passphrase, or encryption off) is not offered either. Until one of your other devices can
+receive, the right-click menu has no Send to device entry at all. If it is still missing
+after that, check that **Send to device in the right-click menu** is on under Settings →
+Device → Sync behavior.
 
 **I sent a tab and it hasn't opened on the other device.**
 It opens at that device's next sync, not at once: Konode has no server to push it there, so

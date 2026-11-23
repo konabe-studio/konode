@@ -1706,9 +1706,6 @@
   "send_menu_title": {
     "message": "An Gerät senden"
   },
-  "send_menu_none": {
-    "message": "Noch kann kein Gerät Tabs empfangen"
-  },
   "popup_send_label": {
     "message": "Diesen Tab senden"
   }

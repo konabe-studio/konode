@@ -293,6 +293,16 @@ describe("taking Send to device out of the right-click menu", () => {
     expect([...items.keys()]).toEqual([MENU_PARENT, "konode-send:B", "konode-send:C"]);
   });
 
+  it("adds nothing while no device can receive, and the entry once one can", async () => {
+    const { items } = installMenus();
+    await rebuildSendMenu([], true);
+    expect(items.size).toBe(0);
+    await rebuildSendMenu(targets.slice(0, 1), true);
+    expect([...items.keys()]).toEqual([MENU_PARENT, "konode-send:B"]);
+    await rebuildSendMenu([], true);
+    expect(items.size).toBe(0);
+  });
+
   it("reads the switch and the targets from storage", async () => {
     await as("A", async () => {
       const { items } = installMenus();

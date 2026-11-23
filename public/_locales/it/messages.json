@@ -1706,9 +1706,6 @@
   "send_menu_title": {
     "message": "Invia a un dispositivo"
   },
-  "send_menu_none": {
-    "message": "Nessun dispositivo può ancora ricevere schede"
-  },
   "popup_send_label": {
     "message": "Invia questa scheda"
   }

@@ -306,7 +306,8 @@ computer to your phone, or a page from work to home, without bookmarking it.
 - Konode has no server, so the tab travels through your storage and opens on the other device
   at its next sync, quietly, in a background tab. With Auto sync on that is within a minute or
   so. A device that is off opens it when it starts.
-- A device is offered once it runs this version. With encryption on, a sent tab is encrypted
+- A device is offered once it runs this version, and the right-click entry appears once one
+  of your other devices can receive. With encryption on, a sent tab is encrypted
   like everything else, and a device that cannot read your encrypted data is not offered.
 - A tab that is never picked up is dropped after 14 days.
 - This adds two permissions that ask nothing at install: the right-click menu, and access to

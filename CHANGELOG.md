@@ -15,6 +15,10 @@ All notable changes to Konode. Format loosely follows
 
 ### Changed
 
+- **The Send to device entry waits for a device that can receive.** Until now every
+  right-click menu carried it, holding only a greyed-out "No device can receive tabs yet" on
+  a browser with no other device to send to. It now appears once one of your other devices
+  can receive, as the popup's paper-plane icon already did.
 - **Restoring another device's tabs leaves its pinned tabs out.** Pinned tabs are usually
   a device's own, such as mail or a calendar, and their addresses change as you use them,
   so they rarely matched the ones pinned here and a restore opened them again beside yours.

@@ -1706,9 +1706,6 @@
   "send_menu_title": {
     "message": "Enviar a un dispositivo"
   },
-  "send_menu_none": {
-    "message": "Ningún dispositivo puede recibir pestañas todavía"
-  },
   "popup_send_label": {
     "message": "Enviar esta pestaña"
   }

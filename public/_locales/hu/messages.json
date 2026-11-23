@@ -1706,9 +1706,6 @@
   "send_menu_title": {
     "message": "Küldés eszközre"
   },
-  "send_menu_none": {
-    "message": "Még egyik eszköz sem tud lapot fogadni"
-  },
   "popup_send_label": {
     "message": "Lap küldése"
   }
