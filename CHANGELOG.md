@@ -74,22 +74,22 @@ All notable changes to Konode. Format loosely follows
 - **The unsaved-changes note in Settings is translated.** The line beside **Save changes**
   that says an edit is still waiting showed in English in every language since 1.2.0.
 
-### Fixed
+- **A bookmark deleted on Opera or Vivaldi is now deleted on your other devices.** Neither
+  browser deletes a bookmark straight away: each moves it into its Trash, and Konode took
+  that for an ordinary move, so the bookmark stayed on every other device. A bookmark or
+  folder that goes into the Trash now counts as deleted, and one you take back out comes
+  back on your other devices. Deletions made on your other devices already reached both
+  browsers. Bookmarks you deleted there before this version are still on your other
+  devices, so they come back once; delete them again and the deletion reaches every device.
 
-- **A bookmark deleted on Opera is now deleted on your other devices.** Opera doesn't
-  delete a bookmark straight away: it moves it into its Trash, and Konode took that for an
-  ordinary move, so the bookmark stayed on every other device. A bookmark or folder that
-  goes into Opera's Trash now counts as deleted, and one you take back out comes back on
-  your other devices. Deletions made on your other devices already reached Opera.
-- **Opera's Speed Dials, Pinboards and Trash stay on Opera.** Konode synced them like
-  bookmarks, so your other devices got your Speed Dials, your Pinboard entries and what you
-  had deleted in their Other bookmarks, and deleting one of those copies on another device
-  sent the Speed Dial on Opera to its Trash. They are now left out of the sync, the way a
-  folder you exclude in Settings is. If you used Konode on Opera before, your other devices
-  keep the copies they were given, and Opera gets them back as ordinary bookmarks on its
-  first sync. Delete them on any device and they go everywhere, while your Speed Dials stay
-  as they are. Bookmarks you deleted on Opera before this version come back on Opera the
-  same way, and deleting them again now reaches every device.
+- **The Trash of Opera and Vivaldi, and Opera's Speed Dials and Pinboards, stay on that
+  browser.** Konode synced them like bookmarks, so your other devices got what you had
+  deleted, your Speed Dials and your Pinboard entries, and deleting one of those copies on
+  another device sent the Speed Dial on Opera to its Trash. They are now left out of the
+  sync, the way a folder you exclude in Settings is. If you used Konode on Opera before,
+  your other devices keep the copies they were given, and Opera gets them back as ordinary
+  bookmarks on its first sync. Delete them on any device and they go everywhere, while your
+  Speed Dials stay as they are.
 
 ## [1.6.0] - 2026-11-19
 
