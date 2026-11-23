@@ -28,6 +28,13 @@ All notable changes to Konode. Format loosely follows
 
 ### Changed
 
+- **The Chrome zip on the GitHub release loads with a fixed extension id.** It used to get an
+  id made from the folder you unpacked it into, different on every computer, so no sign-in
+  that sends you back to the extension could ever work in it. It now carries the same id as a
+  build from source, which Dropbox sign-in is set up for. If you run an unpacked copy from an
+  older release zip, the new one loads as a separate extension: set it up again (your synced
+  data is in your storage, not in the extension), then remove the old copy. The store
+  versions are not affected.
 - **The Send to device entry waits for a device that can receive.** Until now every
   right-click menu carried it, holding only a greyed-out "No device can receive tabs yet" on
   a browser with no other device to send to. It now appears once one of your other devices
