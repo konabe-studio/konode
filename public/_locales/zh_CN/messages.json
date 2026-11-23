@@ -872,6 +872,12 @@
   "opt_notifications_desc": {
     "message": "同步状态和冲突警报。"
   },
+  "opt_send_menu_label": {
+    "message": "在右键菜单中显示“发送到设备”"
+  },
+  "opt_send_menu_desc": {
+    "message": "右键点击网页或链接时显示“发送到设备”。无论是否开启，弹窗中的纸飞机按钮都可以使用。"
+  },
   "opt_interval_label": {
     "message": "同步间隔"
   },
@@ -1699,9 +1705,6 @@
   },
   "send_menu_title": {
     "message": "发送到设备"
-  },
-  "send_menu_none": {
-    "message": "暂无可以接收标签页的设备"
   },
   "popup_send_label": {
     "message": "发送此标签页"

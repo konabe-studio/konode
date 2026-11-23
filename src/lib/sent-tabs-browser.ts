@@ -6,6 +6,7 @@ import type { SentTab, SendTarget } from "@/lib/types";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { t } from "@/lib/utils/i18n";
 import { logger } from "@/lib/utils/logger";
+import { KEYS, getSendContextMenu } from "@/lib/utils/storage";
 import { isSafeContentUrl } from "@/lib/utils/url";
 
 /**
@@ -49,7 +50,6 @@ export async function pageToSend(tabs: TabsForSend = browser.tabs): Promise<{ ur
 
 export const MENU_PARENT = "konode-send";
 const MENU_TARGET = "konode-send:";
-const MENU_NONE = "konode-send-none";
 
 type MenusApi = typeof chrome.contextMenus;
 
@@ -63,9 +63,13 @@ export function menusApi(): MenusApi | null {
 /**
  * Rebuild "Send to device ▸" from the current targets. On a page and on a link everywhere,
  * and on a tab's own menu in Firefox, the only engine that has one (Chrome rejects the
- * whole item over an unknown context).
+ * whole item over an unknown context). With `enabled` off (Settings, Device) the menu is
+ * only cleared, so nothing of Konode's is left in it, and the same goes while no device can
+ * receive: until 1.7.0 the entry held one greyed-out "no device" item, which every
+ * one-device install and every unconfigured one carried in each right-click menu for
+ * nothing. The popup's paper plane already showed only with a target.
  */
-export async function rebuildSendMenu(targets: SendTarget[]): Promise<void> {
+export async function rebuildSendMenu(targets: SendTarget[], enabled = true): Promise<void> {
   const menus = menusApi();
   if (!menus) return;
   const contexts = (currentStore() === "firefox" ? ["page", "link", "tab"] : ["page", "link"]) as chrome.contextMenus.ContextType[];
@@ -77,11 +81,8 @@ export async function rebuildSendMenu(targets: SendTarget[]): Promise<void> {
     });
   try {
     await menus.removeAll();
+    if (!enabled || !targets.length) return;
     await create({ id: MENU_PARENT, title: t("send_menu_title"), contexts });
-    if (!targets.length) {
-      await create({ id: MENU_NONE, parentId: MENU_PARENT, title: t("send_menu_none"), contexts, enabled: false });
-      return;
-    }
     for (const target of targets) {
       await create({
         id: `${MENU_TARGET}${target.device_id}`,
@@ -93,6 +94,27 @@ export async function rebuildSendMenu(targets: SendTarget[]): Promise<void> {
   } catch (e) {
     logger.warn("SentTabs", `Couldn't build the Send to device menu: ${e instanceof Error ? e.message : e}`);
   }
+}
+
+let menuQueue: Promise<void> = Promise.resolve();
+
+/**
+ * Rebuild the menu from what storage holds now: the targets and the Settings switch. One
+ * rebuild at a time, each reading storage when its turn comes. Two that overlapped could
+ * interleave their removeAll and creates, so a switch turned off just as the targets changed
+ * could be followed by the other rebuild putting the menu back.
+ */
+export function refreshSendMenu(): Promise<void> {
+  menuQueue = menuQueue
+    .then(async () => {
+      // Read here rather than through lib/sync/sent-tabs' getSendTargets: the popup imports
+      // this file, and that one would bring the crypto module into the popup for one read.
+      const stored = await browser.storage.local.get(KEYS.SEND_TARGETS);
+      const targets = (stored[KEYS.SEND_TARGETS] ?? []) as SendTarget[];
+      await rebuildSendMenu(targets, await getSendContextMenu());
+    })
+    .catch((e) => logger.warn("SentTabs", `Couldn't refresh the Send to device menu: ${e instanceof Error ? e.message : e}`));
+  return menuQueue;
 }
 
 /** What a click on a menu item asks to send, or null when it is not one of ours. */

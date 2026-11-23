@@ -881,6 +881,12 @@
   "opt_notifications_desc": {
     "message": "Synchronisierungsstatus und Konflikthinweise."
   },
+  "opt_send_menu_label": {
+    "message": "„An Gerät senden“ im Kontextmenü"
+  },
+  "opt_send_menu_desc": {
+    "message": "Zeigt „An Gerät senden“, wenn du mit der rechten Maustaste auf eine Seite oder einen Link klickst. Der Papierflieger-Button im Popup funktioniert in jedem Fall."
+  },
   "opt_interval_label": {
     "message": "Synchronisierungsintervall"
   },
@@ -1699,9 +1705,6 @@
   },
   "send_menu_title": {
     "message": "An Gerät senden"
-  },
-  "send_menu_none": {
-    "message": "Noch kann kein Gerät Tabs empfangen"
   },
   "popup_send_label": {
     "message": "Diesen Tab senden"

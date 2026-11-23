@@ -1,10 +1,12 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { IBackend, SentTab, SendTarget, SyncSettings } from "@/lib/types";
-import { DEFAULT_SETTINGS, KEYS } from "@/lib/utils/storage";
+import { DEFAULT_SETTINGS, KEYS, sendContextMenuOn } from "@/lib/utils/storage";
 import {
   exchangeSentTabs, queueSentTab, getSendTargets, getSentOut, sentFileName, SENT_TAB_TTL_MS,
 } from "@/lib/sync/sent-tabs";
-import { sendRequestFromMenu, pageToSend, type TabsForSend } from "@/lib/sent-tabs-browser";
+import {
+  sendRequestFromMenu, pageToSend, rebuildSendMenu, refreshSendMenu, MENU_PARENT, type TabsForSend,
+} from "@/lib/sent-tabs-browser";
 
 // Send to device (#92): every device publishes konode_sent_<id>.json; a receiver opens what
 // was sent to it on its next exchange and confirms it, and the sender then drops it.
@@ -229,6 +231,103 @@ describe("the Send to device menu", () => {
       { url: "https://example.com/p", title: "Page" },
     )).toEqual({ to: "B", url: "https://example.com/p", title: "Page" });
     expect(sendRequestFromMenu({ menuItemId: "something-else" })).toBeNull();
+  });
+});
+
+describe("taking Send to device out of the right-click menu", () => {
+  /**
+   * A context menu API that keeps its items by id and logs every call, installed as
+   * `contextMenus` on the fake browser (the test setup has none). A create answers through
+   * its callback a macrotask later, as a real one does after a round trip to the browser.
+   */
+  function installMenus() {
+    const items = new Map<string, chrome.contextMenus.CreateProperties>();
+    const calls: string[] = [];
+    let created!: () => void;
+    const firstCreate = new Promise<void>((r) => { created = r; });
+    const api = {
+      create: (props: chrome.contextMenus.CreateProperties, cb?: () => void) => {
+        calls.push(`create ${props.id}`);
+        items.set(String(props.id), props);
+        created();
+        setTimeout(() => cb?.(), 0);
+      },
+      removeAll: async () => { calls.push("removeAll"); items.clear(); },
+      onClicked: { addListener: () => {} },
+    };
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    (globalThis as any).chrome.contextMenus = api;
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+    return { items, calls, firstCreate };
+  }
+  afterEach(() => {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    delete (globalThis as any).chrome.contextMenus;
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+  });
+
+  const targets: SendTarget[] = [{ device_id: "B", label: "Device B" }, { device_id: "C", label: "Device C" }];
+  const store = (s: Partial<SyncSettings>, t: SendTarget[] = targets) =>
+    chrome.storage.local.set({ [KEYS.SETTINGS]: { ...DEFAULT_SETTINGS, ...s }, [KEYS.SEND_TARGETS]: t });
+
+  it("is on unless the switch says false, so settings from 1.6.0 keep the menu", () => {
+    expect(sendContextMenuOn(undefined)).toBe(true);
+    expect(sendContextMenuOn({})).toBe(true);
+    expect(sendContextMenuOn({ send_context_menu: true })).toBe(true);
+    expect(sendContextMenuOn({ send_context_menu: false })).toBe(false);
+  });
+
+  it("builds the entry with one item per device while the switch is on", async () => {
+    const { items } = installMenus();
+    await rebuildSendMenu(targets, true);
+    expect([...items.keys()]).toEqual([MENU_PARENT, "konode-send:B", "konode-send:C"]);
+  });
+
+  it("leaves nothing of Konode's in the menu when the switch is off, and puts it back when on", async () => {
+    const { items, calls } = installMenus();
+    await rebuildSendMenu(targets, true);
+    await rebuildSendMenu(targets, false);
+    expect(items.size).toBe(0);
+    expect(calls.at(-1)).toBe("removeAll");
+    await rebuildSendMenu(targets, true);
+    expect([...items.keys()]).toEqual([MENU_PARENT, "konode-send:B", "konode-send:C"]);
+  });
+
+  it("adds nothing while no device can receive, and the entry once one can", async () => {
+    const { items } = installMenus();
+    await rebuildSendMenu([], true);
+    expect(items.size).toBe(0);
+    await rebuildSendMenu(targets.slice(0, 1), true);
+    expect([...items.keys()]).toEqual([MENU_PARENT, "konode-send:B"]);
+    await rebuildSendMenu([], true);
+    expect(items.size).toBe(0);
+  });
+
+  it("reads the switch and the targets from storage", async () => {
+    await as("A", async () => {
+      const { items } = installMenus();
+      await store({ send_context_menu: false });
+      await refreshSendMenu();
+      expect(items.size).toBe(0);
+      await store({});
+      await refreshSendMenu();
+      expect([...items.keys()]).toEqual([MENU_PARENT, "konode-send:B", "konode-send:C"]);
+    });
+  });
+
+  it("does not let a rebuild still creating items put the menu back after the switch went off", async () => {
+    await as("A", async () => {
+      const { items, calls, firstCreate } = installMenus();
+      await store({});
+      const first = refreshSendMenu();
+      await firstCreate; // mid-build: the parent is there, the devices are not yet
+      await store({ send_context_menu: false });
+      const second = refreshSendMenu();
+      await Promise.all([first, second]);
+      expect(items.size).toBe(0);
+      // The second rebuild began only once the first had finished.
+      expect(calls).toEqual(["removeAll", `create ${MENU_PARENT}`, "create konode-send:B", "create konode-send:C", "removeAll"]);
+    });
   });
 });
 

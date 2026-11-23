@@ -881,6 +881,12 @@
   "opt_notifications_desc": {
     "message": "同步狀態和衝突提醒。"
   },
+  "opt_send_menu_label": {
+    "message": "在右鍵選單中顯示「傳送到裝置」"
+  },
+  "opt_send_menu_desc": {
+    "message": "在網頁或連結上按右鍵時顯示「傳送到裝置」。無論是否開啟，對話方塊中的紙飛機按鈕都可以使用。"
+  },
   "opt_interval_label": {
     "message": "同步間隔"
   },
@@ -1699,9 +1705,6 @@
   },
   "send_menu_title": {
     "message": "傳送到裝置"
-  },
-  "send_menu_none": {
-    "message": "目前沒有可以接收分頁的裝置"
   },
   "popup_send_label": {
     "message": "傳送此分頁"

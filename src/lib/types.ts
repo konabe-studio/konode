@@ -405,6 +405,12 @@ export interface SyncSettings {
    * affected: pinned tabs are still published, marked `pinned`.
    */
   restore_pinned_tabs?: boolean;
+  /**
+   * Whether "Send to device" sits in the browser's right-click menu. Device-local, like every
+   * setting. The popup's paper-plane icon is not affected. Optional: absent, as in settings
+   * stored by an older build, means on, so the menu stays where 1.6.0 put it.
+   */
+  send_context_menu?: boolean;
   notifications_enabled: boolean;
   debug_mode: boolean;
   // E2EE (opt-in) — wired into the sync engine; see src/lib/crypto/encryption.ts

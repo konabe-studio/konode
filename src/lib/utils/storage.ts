@@ -272,6 +272,19 @@ export async function getRestorePinnedTabs(): Promise<boolean> {
   return stored.restore_pinned_tabs === true;
 }
 
+/**
+ * Whether "Send to device" belongs in the right-click menu, straight from the stored settings
+ * for the same reason as getRestorePinnedTabs: the worker rebuilds the menu at startup, before
+ * anything should mint a device id. Absent means on.
+ */
+export async function getSendContextMenu(): Promise<boolean> {
+  const stored = await get<Partial<SyncSettings>>(KEYS.SETTINGS, {});
+  return sendContextMenuOn(stored);
+}
+
+/** The switch as a settings object holds it: anything but an explicit `false` is on. */
+export const sendContextMenuOn = (s: Partial<SyncSettings> | undefined): boolean => s?.send_context_menu !== false;
+
 export async function saveSettings(partial: Partial<SyncSettings>): Promise<SyncSettings> {
   const current = await getSettings();
   const next = { ...current, ...partial };
