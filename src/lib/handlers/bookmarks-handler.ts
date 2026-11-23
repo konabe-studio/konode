@@ -17,8 +17,8 @@ import {
   getTrashMark, setTrashMark,
 } from "@/lib/utils/storage";
 import {
-  asRootKind, browserOwnRootIds, defaultOtherRootId, findLocalRootByKind, matchLocalRoot, matchLocalRootEx,
-  rootKindOf, trashMarkOf,
+  asRootKind, browserOwnRootIds, defaultOtherRootId, findLocalRootByKind, hasFlaggedRoot, matchLocalRoot,
+  matchLocalRootEx, rootKindOf, trashMarkOf,
 } from "@/lib/utils/bookmark-roots";
 import { isOpera } from "@/lib/utils/browser-identity";
 import { canonicalUrlKey } from "@/lib/utils/url";
@@ -32,10 +32,12 @@ import { noteSelfTitleWrite, takeSelfTitleWrite } from "@/lib/utils/self-writes"
 
 // Chromium 134+ types its permanent folders on the node (`folderType`) and tells an
 // account root from a local-only one (`syncing`); @types/chrome doesn't carry either yet.
-// Both are optional, so a plain BookmarkTreeNode still satisfies this.
+// Vivaldi marks its Trash root `trash: true`. All optional, so a plain BookmarkTreeNode still
+// satisfies this.
 type BookmarkNode = chrome.bookmarks.BookmarkTreeNode & {
   folderType?: string;
   syncing?: boolean;
+  trash?: boolean;
 };
 
 // ─── Read ─────────────────────────────────────────────────────────────────
@@ -55,18 +57,18 @@ interface LocalExclusions {
   rules: BookmarkExclusion[];
   part: Partition<SyncBookmark>;
   /** The real roots this device syncs, excluded nodes included. The browser's own roots
-   *  (Opera's Trash, Speed Dials and Pinboards, see `browserOwnRootIds`) are not among them:
-   *  nothing is ever matched to those. */
+   *  (Opera's and Vivaldi's Trash, Opera's Speed Dials and Pinboards, see `browserOwnRootIds`)
+   *  are not among them: nothing is ever matched to those. */
   roots: BookmarkNode[];
 }
 
 /**
  * This device's tree, split into what syncs and what it keeps to itself (#54).
  *
- * What the browser keeps for itself is set aside the same way: Opera's Trash, Speed Dials and
- * Pinboards are roots of the bookmark tree, and a bookmark deleted on Opera is MOVED into that
- * Trash rather than removed. Left in, a deletion made on Opera was a move that never reached
- * another device, and everything in those roots went to every peer's Other bookmarks.
+ * What the browser keeps for itself is set aside the same way. Opera and Vivaldi have a Trash
+ * root, and a bookmark deleted on either is MOVED into it rather than removed; Opera keeps its
+ * Speed Dials and Pinboards as roots too. Left in, a deletion made there was a move that never
+ * reached another device, and everything in those roots went to every peer's Other bookmarks.
  */
 async function localExclusions(rules?: BookmarkExclusion[]): Promise<LocalExclusions> {
   const opera = isOpera();
@@ -109,11 +111,11 @@ function setAsideOwnRoots(
 
 /**
  * `roots` without the browser's own (see `browserOwnRootIds`): a merge, a replace and a restore
- * never match a peer's root to one of those, so nothing is ever created in Opera's Trash.
+ * never match a peer's root to one of those, so nothing is ever created in a browser's Trash.
  */
 async function syncRoots(roots: BookmarkNode[]): Promise<BookmarkNode[]> {
-  if (!isOpera()) return roots;
-  const own = browserOwnRootIds(roots, { opera: true, trash: await getTrashMark() });
+  const opera = isOpera();
+  const own = browserOwnRootIds(roots, { opera, trash: opera ? await getTrashMark() : null });
   return own.size ? roots.filter((r) => !own.has(r.id)) : roots;
 }
 
@@ -1191,7 +1193,7 @@ async function clearAndImport(tree: SyncBookmark[], excluded: Set<string> = new 
   // Get the local root folders. Ids are browser-specific (Chrome numbers them
   // "1"/"2"/"3"; Firefox uses "toolbar_____"/"unfiled_____"/…) — bookmark-roots.ts
   // maps between them by kind, so nothing here hardcodes Chrome ids.
-  // Not the browser's own roots (Opera's Trash, Speed Dials, Pinboards): nothing of the
+  // Not the browser's own roots (a Trash, Opera's Speed Dials and Pinboards): nothing of the
   // peer's belongs there, and clearing one would empty the user's Speed Dials.
   const localTree = await browser.bookmarks.getTree();
   const localRoots = await syncRoots(localTree[0]?.children ?? []);
@@ -1316,7 +1318,7 @@ async function mergeBookmarks(
   // crbug 456225717) a root's id matches no table, and a folder the user named "Favorites
   // bar" matches the title table, so neither id nor title can answer it.
   // Every root is a root, never a shell to prune, but only the ones that sync are matched to
-  // a peer's: Opera's Trash, Speed Dials and Pinboards are the browser's own (browserOwnRootIds).
+  // a peer's: a Trash, Opera's Speed Dials and Pinboards are the browser's own (browserOwnRootIds).
   const allRoots = (await browser.bookmarks.getTree())[0]?.children ?? [];
   const localRootIds = new Set(allRoots.map((r) => r.id));
   const localRoots = await syncRoots(allRoots);
@@ -2346,11 +2348,25 @@ export type BookmarkChangeCallback = () => void;
  * removal it is asked about, and by then it cannot say where the node itself was. The parent
  * is there on both sides of the event; the node's own rules are checked separately.
  *
- * On Opera the set is never empty, rules or not: it holds Opera's Trash, Speed Dials and
- * Pinboards (browserOwnRootIds). That is what turns a bookmark deleted on Opera, which arrives
- * as a move into the Trash, into the deletion it is, and one taken back out into an arrival.
+ * On Opera and Vivaldi the set is never empty, rules or not: it holds the browser's Trash,
+ * and Opera's Speed Dials and Pinboards (browserOwnRootIds). That is what turns a bookmark
+ * deleted there, which arrives as a move into the Trash, into the deletion it is, and one taken
+ * back out into an arrival.
  */
 let excludedCache: { sig: string; rules: BookmarkExclusion[]; ids: Set<string> } | null = null;
+
+/**
+ * Does this browser mark a root as its own (Vivaldi's Trash)? Asked once per worker, since the
+ * roots never change while it runs, so a browser with neither rules nor such a root still reads
+ * no tree on every bookmark event.
+ */
+let flaggedRootsHere: Promise<boolean> | null = null;
+function hasFlaggedRootHere(): Promise<boolean> {
+  flaggedRootsHere ??= browser.bookmarks.getTree()
+    .then((raw) => hasFlaggedRoot(raw[0]?.children ?? []))
+    .catch(() => false);
+  return flaggedRootsHere;
+}
 
 async function excludedNow(): Promise<typeof excludedCache> {
   const opera = isOpera();
@@ -2358,7 +2374,7 @@ async function excludedNow(): Promise<typeof excludedCache> {
     getBookmarkExclusions(),
     opera ? getTrashMark() : Promise.resolve(null),
   ]);
-  if (!rules.length && !opera) return (excludedCache = null);
+  if (!rules.length && !opera && !(await hasFlaggedRootHere())) return (excludedCache = null);
   const sig = JSON.stringify({ rules, trash });
   if (excludedCache?.sig !== sig) {
     excludedCache = { sig, rules, ids: (await localExclusions(rules)).part.excludedIds };
@@ -2369,6 +2385,7 @@ async function excludedNow(): Promise<typeof excludedCache> {
 /** Test seam: forget the set, so one test's tree cannot answer for the next one's. */
 export function resetExclusionCache(): void {
   excludedCache = null;
+  flaggedRootsHere = null;
 }
 
 /** A local folder's path the way the exclusion rules spell it (rootKey first), or null. */
@@ -2414,8 +2431,9 @@ async function subtreeNodes(id: string): Promise<BookmarkNode[]> {
  * Recorded as the deletion it is to them: they still hold it under its old folder, and the
  * next merge would put it straight back here as a second copy outside the excluded one.
  *
- * This is also how a bookmark deleted on Opera is recorded: Opera moves it into its Trash, a
- * folder alone in a single event, and the Trash is set aside like an excluded folder. Its
+ * This is also how a bookmark deleted on Opera or Vivaldi is recorded: the browser moves it
+ * into its Trash, a folder alone in a single event, and the Trash is set aside like an
+ * excluded folder. Its
  * contents are still under it there. If the Trash was emptied before the worker this move woke
  * got here, the last synced snapshot still knows what went.
  */
@@ -2618,8 +2636,8 @@ export function registerBookmarkListeners(onChange: BookmarkChangeCallback): voi
       const ex = await exclusions();
       if (ex) {
         const [node] = await browser.bookmarks.get(id).catch(() => [] as BookmarkNode[]);
-        // A node that is gone already is judged by its parents alone: Opera's Trash emptied
-        // before the event that moved something into it was handled.
+        // A node that is gone already is judged by its parents alone: a Trash emptied before
+        // the event that moved something into it was handled.
         const was = node ? await excludedUnder(ex, moveInfo.oldParentId, node) : ex.ids.has(moveInfo.oldParentId);
         const now = node ? await excludedUnder(ex, moveInfo.parentId, node) : ex.ids.has(moveInfo.parentId);
         if (was && now) return; // reshuffled inside: nothing syncs

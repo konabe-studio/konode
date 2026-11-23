@@ -5,16 +5,16 @@ import {
 import { getAppeared, getFolderDeletes, getTombstones, getTrashMark, setBookmarkCache } from "@/lib/utils/storage";
 import type { BookmarkPayload, SyncBookmark } from "@/lib/types";
 
-// A bookmark deleted on Opera never reached the other devices. Opera's `bookmarks.remove()`
-// does not remove anything: it moves the node into Opera's Trash and fires `onMoved`, never
-// `onRemoved` (Opera 140, Chromium 157, measured 2026-11-23, also from the "Move to Trash"
-// button in opera://bookmarks). Konode recorded a move. And everything in Opera's Trash, Speed
-// Dials and Pinboards was published as bookmarks, so a peer that deleted its copy of a Speed
-// Dial sent Opera's real one to the Trash.
+// A bookmark deleted on Opera or Vivaldi never reached the other devices. On both,
+// `bookmarks.remove()` does not remove anything: it moves the node into the browser's Trash and
+// fires `onMoved`, never `onRemoved` (Opera 140 and Vivaldi 8.3, measured 2026-11-23; on Opera
+// also from the "Move to Trash" button in opera://bookmarks). Konode recorded a move. And
+// everything in Opera's Trash, Speed Dials and Pinboards was published as bookmarks, so a peer
+// that deleted its copy of a Speed Dial sent Opera's real one to the Trash.
 
 type Node = chrome.bookmarks.BookmarkTreeNode;
 type Fake = typeof chrome.bookmarks & {
-  __setRoots: (roots: { id: string; title: string; folderType?: string; syncing?: boolean }[]) => void;
+  __setRoots: (roots: { id: string; title: string; folderType?: string; syncing?: boolean; trash?: boolean }[]) => void;
   __setTrash: (id: string | null) => void;
 };
 const fake = () => chrome.bookmarks as Fake;
@@ -65,10 +65,10 @@ function capture(onChange: () => void = () => {}): Listeners {
 }
 
 /** Delete `id` the way Opera does, and fire the one event Opera fires for it. */
-async function operaDelete(l: Listeners, id: string): Promise<void> {
+async function operaDelete(l: Listeners, id: string, trash = TRASH): Promise<void> {
   const [before] = await chrome.bookmarks.get(id);
   await chrome.bookmarks.removeTree(id);
-  l.moved!(id, { parentId: TRASH, oldParentId: before.parentId!, index: 0, oldIndex: before.index ?? 0 });
+  l.moved!(id, { parentId: trash, oldParentId: before.parentId!, index: 0, oldIndex: before.index ?? 0 });
   await settle();
 }
 
@@ -283,6 +283,74 @@ describe("the Trash on an Opera whose numbering is not the one measured", () => 
     l.moved!(b.id, { parentId: RENUMBERED_TRASH, oldParentId: "20", index: 0, oldIndex: before.index ?? 0 });
     await settle();
     expect((await getTombstones()).filter((t) => t.own).map((t) => t.url)).toEqual(["https://b.com/"]);
+  });
+});
+
+describe("Vivaldi's Trash", () => {
+  // Vivaldi 8.3 (Chromium 156), 2026-11-23, Hungarian UI: three roots, the Trash flagged
+  // `trash: true` with no folderType. Vivaldi names itself nowhere an extension can read (its
+  // brands are Chrome's), so the flag is the whole signal: no navigator is stubbed here.
+  const VIVALDI_ROOTS = [
+    { id: "1", title: "Könyvjelzők", folderType: "bookmarks-bar", syncing: false, trash: false },
+    { id: "2", title: "További könyvjelzők", folderType: "other", syncing: false, trash: false },
+    { id: "4", title: "Kuka", syncing: false, trash: true },
+  ];
+  const V_TRASH = "4";
+  const vivaldi = (): void => {
+    fake().__setRoots(VIVALDI_ROOTS);
+    fake().__setTrash(V_TRASH);
+  };
+
+  it("records a bookmark moved into it as deleted, and never publishes what is in it", async () => {
+    vivaldi();
+    const l = capture();
+    const work = await chrome.bookmarks.create({ parentId: "1", title: "Work" });
+    await chrome.bookmarks.create({ parentId: work.id, title: "x", url: "https://x.com/" });
+    await chrome.bookmarks.create({ parentId: "1", title: "b", url: "https://b.com/" });
+
+    await operaDelete(l, work.id, V_TRASH);
+
+    expect((await chrome.bookmarks.get(work.id))[0].parentId).toBe(V_TRASH);
+    expect((await getTombstones()).map((t) => t.url)).toEqual(["https://x.com/"]);
+    const { tree, tombstones } = await exportBookmarkPayload();
+    expect(publishedUrls(tree)).toEqual(["https://b.com/"]);
+    expect(tombstones.map((t) => t.url)).toEqual(["https://x.com/"]);
+  });
+
+  it("brings back what is taken out of it", async () => {
+    vivaldi();
+    const l = capture();
+    const a = await chrome.bookmarks.create({ parentId: "1", title: "a", url: "https://a.com/" });
+    await operaDelete(l, a.id, V_TRASH);
+    expect((await getTombstones()).map((t) => t.url)).toEqual(["https://a.com/"]);
+    await new Promise((r) => setTimeout(r, 5));
+
+    await chrome.bookmarks.move(a.id, { parentId: "1" });
+    l.moved!(a.id, { parentId: "1", oldParentId: V_TRASH, index: 0, oldIndex: 0 });
+    await settle();
+
+    expect((await getAppeared()).map((r) => r.url)).toEqual(["https://a.com/"]);
+    const { tree, tombstones } = await exportBookmarkPayload();
+    expect(publishedUrls(tree)).toEqual(["https://a.com/"]);
+    expect(tombstones).toEqual([]);
+  });
+
+  it("is never filled from a peer, even a Vivaldi on 1.6.0 that published its own", async () => {
+    vivaldi();
+    const old: BookmarkPayload = {
+      tree: [{
+        id: "0", parentId: null, title: "", dateAdded: 0,
+        children: VIVALDI_ROOTS.map((r) => ({
+          id: r.id, parentId: "0", title: r.title, dateAdded: 0,
+          children: r.id === V_TRASH ? [link("https://their-trash.com/")] : [],
+        })),
+      }],
+      tombstones: [],
+    };
+
+    await importBookmarks(old, "merge", "lww");
+
+    expect(await urlsIn(V_TRASH)).toEqual([]);
   });
 });
 

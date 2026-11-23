@@ -25,9 +25,10 @@ const sessionStore = new Map();
 let bmSeq = 100;
 let alarmStore = new Map();
 let bmNodes = new Map();
-// Opera keeps what `remove()` is given (Opera 140, 2026-11-23): the node, a folder with all it
-// holds, goes into its Trash root at index 0, and only a remove of something already in the
-// Trash removes it. `__setTrash(id)` plays that with root `id`; null is every other browser.
+// Opera and Vivaldi keep what `remove()` is given (Opera 140, Vivaldi 8.3, 2026-11-23): the
+// node, a folder with all it holds, goes into the Trash root at index 0, and only a remove of
+// something already in the Trash removes it. `__setTrash(id)` plays that with root `id`; null
+// is every other browser.
 // The fake fires no events, so a test fires the `onMoved` Opera would, as for any move.
 let bmTrash = null;
 
@@ -41,8 +42,8 @@ function resetBookmarks(roots) {
     { id: "2", title: "Other bookmarks", folderType: "other" },
     { id: "3", title: "Mobile bookmarks", folderType: "mobile" },
   ];
-  (roots ?? defaults).forEach(({ id, title, folderType, syncing }, i) =>
-    bmNodes.set(id, { id, parentId: "0", title, index: i, folderType, syncing })
+  (roots ?? defaults).forEach(({ id, title, folderType, syncing, trash }, i) =>
+    bmNodes.set(id, { id, parentId: "0", title, index: i, folderType, syncing, trash })
   );
 }
 resetBookmarks();
@@ -241,6 +242,8 @@ function bmBuild(id) {
   // could not see Edge's renumbered roots (#66) — root resolution reads these first.
   if (n.folderType !== undefined) node.folderType = n.folderType;
   if (n.syncing !== undefined) node.syncing = n.syncing;
+  // Vivaldi flags its Trash root (`trash: true`).
+  if (n.trash !== undefined) node.trash = n.trash;
   if (typeof n.url === "string") node.url = n.url;
   else node.children = bmChildren(id).map((c) => bmBuild(c.id));
   return node;

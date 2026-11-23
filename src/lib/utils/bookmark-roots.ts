@@ -125,6 +125,8 @@ export type RootLike = {
   title?: string;
   folderType?: string;
   syncing?: boolean;
+  /** Vivaldi marks its Trash root `trash: true` (see `browserOwnRootIds`). */
+  trash?: boolean;
   rootKind?: RootKind;
 };
 
@@ -264,15 +266,20 @@ export function matchLocalRootEx(
   return { id: candidates[index]?.id ?? defaultOtherRootId(localRoots), confident: false };
 }
 
-// ─── The browser's own roots (Opera) ────────────────────────────────────────
+// ─── The browser's own roots (Opera, Vivaldi) ───────────────────────────────
 //
-// Opera keeps more under the bookmark tree than bookmarks: its Speed Dials, its two Pinboards
-// and its Trash are roots there too, and `bookmarks.remove()` does not remove anything on
-// Opera, it moves the node into that Trash and fires `onMoved`. Konode read all of it as
-// bookmarks: a deletion made on Opera was a move that never reached another device, and the
-// Speed Dials, Pinboards and Trash went to every peer's Other bookmarks.
+// Opera and Vivaldi keep more under the bookmark tree than bookmarks. Both have a Trash root,
+// and on both `bookmarks.remove()` does not remove anything: it moves the node into that Trash
+// and fires `onMoved`, never `onRemoved`. Opera also keeps its Speed Dials and two Pinboards
+// there as roots. Konode read all of it as bookmarks: a deletion made on either browser was a
+// move that never reached another device, and those roots went to every peer's Other
+// bookmarks.
 //
-// None of these roots says what it is. Measured on Opera 140 (Chromium 157), 2026-11-23: no
+// Vivaldi says which root is its Trash: the node carries `trash: true` (Vivaldi 8.3, Chromium
+// 156, 2026-11-23), on root "4", titled "Kuka" in a Hungarian UI. That flag is taken on any
+// engine, since nothing else sets it.
+//
+// Opera's roots say nothing. Measured on Opera 140 (Chromium 157), 2026-11-23: no
 // `folderType` (only the bar and Chromium's other node carry one), no `unmodifiable`,
 // `syncing: false` like every other root, and localized titles (the Trash is "Kuka" in a
 // Hungarian UI). What is fixed is the numbering and the order, so a root is taken for one of
@@ -302,6 +309,11 @@ export interface TrashMark {
   slot: number;
 }
 
+/** Does this browser mark a root as its own (Vivaldi's Trash)? Read without knowing the engine. */
+export function hasFlaggedRoot(roots: RootLike[]): boolean {
+  return roots.some((r) => r.trash === true && !r.folderType);
+}
+
 /** The roots without a `folderType`, in the order the engine lists them. */
 function untypedRoots(roots: RootLike[]): RootLike[] {
   return roots.filter((r) => !r.folderType);
@@ -317,15 +329,16 @@ export function trashMarkOf(roots: RootLike[], rootId: string): TrashMark | null
  * The roots the browser keeps for itself, which never sync: nothing in them is published, and
  * the merge never matches, creates, moves or deletes anything there.
  *
- * Only Opera has any. `trash` is the root a `remove()` of Konode's own was seen to fill, the
- * one signal that is about behaviour rather than numbering, and it counts while that root is
- * still where it was found.
+ * Vivaldi's Trash, by its flag, and Opera's own roots. `trash` is the root a `remove()` of
+ * Konode's own was seen to fill on Opera, the one signal there that is about behaviour rather
+ * than numbering, and it counts while that root is still where it was found.
  */
 export function browserOwnRootIds(
   roots: RootLike[],
   { opera, trash }: { opera: boolean; trash?: TrashMark | null },
 ): Set<string> {
   const own = new Set<string>();
+  for (const r of roots) if (r.trash === true && !r.folderType) own.add(r.id);
   if (!opera) return own;
   const untyped = untypedRoots(roots);
   for (const { id, slot } of OPERA_OWN_ROOTS) {

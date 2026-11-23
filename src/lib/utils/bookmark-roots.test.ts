@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   rootKind, rootKindFromTitle, rootKindFromFolderType, rootKindOf, asRootKind,
   defaultOtherRootId, findLocalRootByKind, matchLocalRoot, matchLocalRootEx,
-  browserOwnRootIds, trashMarkOf,
+  browserOwnRootIds, hasFlaggedRoot, trashMarkOf,
 } from "./bookmark-roots";
 
 // Chrome numbers its roots; Firefox uses stable guids.
@@ -418,5 +418,27 @@ describe("browserOwnRootIds (Opera's Trash, Speed Dials and Pinboards)", () => {
   it("marks only a root without a folderType", () => {
     expect(trashMarkOf(OPERA_ROOTS, "1")).toBeNull();
     expect(trashMarkOf(OPERA_ROOTS, "9")).toEqual({ id: "9", slot: 2 });
+  });
+});
+
+// Vivaldi 8.3 (Chromium 156), 2026-11-23, Hungarian UI. Its remove() moves into the Trash too,
+// and the Trash says so itself. Vivaldi's brands are Chrome's, so no engine test applies.
+const VIVALDI_ROOTS = [
+  { id: "1", title: "Könyvjelzők", folderType: "bookmarks-bar", syncing: false, trash: false },
+  { id: "2", title: "További könyvjelzők", folderType: "other", syncing: false, trash: false },
+  { id: "4", title: "Kuka", syncing: false, trash: true },
+];
+
+describe("browserOwnRootIds (Vivaldi's Trash)", () => {
+  it("takes the root Vivaldi flags as its Trash, on any engine", () => {
+    expect(sorted(browserOwnRootIds(VIVALDI_ROOTS, { opera: false }))).toEqual(["4"]);
+    expect(hasFlaggedRoot(VIVALDI_ROOTS)).toBe(true);
+  });
+
+  it("ignores the flag on a root the engine types as one of its own", () => {
+    const odd = [{ id: "1", title: "Bookmarks", folderType: "bookmarks-bar", trash: true }];
+    expect(browserOwnRootIds(odd, { opera: false }).size).toBe(0);
+    expect(hasFlaggedRoot(odd)).toBe(false);
+    expect(hasFlaggedRoot(CHROME_ROOTS)).toBe(false);
   });
 });
