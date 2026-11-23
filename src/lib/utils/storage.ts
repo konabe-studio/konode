@@ -127,6 +127,8 @@ export const KEYS = {
   HIST_REJECTED: "konode_hist_rejected",
   HIST_VISITTIME_OK: "konode_hist_visittime_ok",
   HIST_APPLIED: "konode_hist_applied",
+  HIST_REACH: "konode_hist_reach",
+  HIST_PUBLISHED: "konode_hist_published",
   // One key per data type, `konode_peer_files_<type>` (#96, see peerFilesKey).
   PEER_FILES_PREFIX: "konode_peer_files_",
   // Sent tabs (#92, lib/sync/sent-tabs.ts).
@@ -637,12 +639,55 @@ export async function getAppliedHistory(): Promise<Record<string, string>> {
   const v = await get<Record<string, string>>(KEYS.HIST_APPLIED, {});
   return v && typeof v === "object" ? v : {};
 }
-export async function recordAppliedHistory(deviceId: string, checksum: string): Promise<void> {
+export async function recordAppliedHistory(
+  deviceId: string,
+  checksum: string,
+  reach?: HistoryReach | null,
+): Promise<void> {
   if (!deviceId) return;
   await updateKey<Record<string, string>>(KEYS.HIST_APPLIED, (current) => ({
     ...(current ?? {}),
     [deviceId]: checksum,
   }), {});
+  await updateKey<Record<string, HistoryReach>>(KEYS.HIST_REACH, (current) => {
+    const map = { ...(current ?? {}) };
+    // A packet with no dated entry says nothing about where the next one starts, so the
+    // old record goes rather than standing for a packet it no longer describes.
+    if (reach) map[deviceId] = reach;
+    else delete map[deviceId];
+    return map;
+  }, {});
+}
+
+/**
+ * The visit times a peer's last imported history packet spanned (#96): its newest and its
+ * oldest `lastVisitTime`, in the peer's own clock. The next CHANGED packet from that peer
+ * is compared against local history only from `newest` on, since everything before it was
+ * weighed by that import already. See `historySinceApplied`.
+ */
+export interface HistoryReach {
+  newest: number;
+  oldest: number;
+}
+
+/** Device id → the reach of its last imported history packet. Written with konode_hist_applied. */
+export async function getHistoryReach(): Promise<Record<string, HistoryReach>> {
+  const v = await get<Record<string, HistoryReach>>(KEYS.HIST_REACH, {});
+  return v && typeof v === "object" ? v : {};
+}
+
+/**
+ * When this device last exported its history to decide what to publish, epoch ms (#96).
+ * History is published at most every `HISTORY_PUBLISH_EVERY_MS` on a scheduled sync, so
+ * a device in use does not rewrite its whole history file, and every peer download it,
+ * once a minute. Null before the first.
+ */
+export async function getHistoryPublishedAt(): Promise<number | null> {
+  const v = await get<number | null>(KEYS.HIST_PUBLISHED, null);
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+export async function setHistoryPublishedAt(at: number): Promise<void> {
+  await set(KEYS.HIST_PUBLISHED, at);
 }
 
 // ─── Peer files read (#96) ──────────────────────────────────────────────────

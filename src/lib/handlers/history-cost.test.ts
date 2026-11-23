@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { importHistory, exportHistory, newLocalHistoryIndex, historyWindowStart } from "@/lib/handlers/history-handler";
+import {
+  importHistory, exportHistory, newLocalHistoryIndex, historyWindowStart, historyReach, historySinceApplied,
+} from "@/lib/handlers/history-handler";
 import { KEYS } from "@/lib/utils/storage";
 
 // A guard on the WORK a sync does, not on its wall-clock.
@@ -427,6 +429,58 @@ describe("the local-history scan reads only the window a peer reaches back to (#
     // Nothing to place the window by, so it falls back to the old full read.
     expect(historyWindowStart([{ url: "https://x.example/", title: "", lastVisitTime: 0, visitCount: 1 }])).toBe(0);
     expect(historyWindowStart([])).toBe(Infinity);
+  });
+});
+
+describe("a changed peer packet is weighed only from where the last import ended (#96)", () => {
+  // A peer in use rewrites its whole history file on every visit, so a changed packet was
+  // the normal case, and every one was compared against 30 days of local history. All of
+  // it up to the last import's newest visit had been weighed already.
+
+  const DAY = 24 * 60 * 60 * 1000;
+  const NOW = 1_800_000_000_000;
+  const peer = (url: string, at: number) => ({ url, title: url, lastVisitTime: at, visitCount: 1 });
+  const lastPacket = [peer("https://old.example/", NOW - 7 * DAY), peer("https://mid.example/", NOW - DAY)];
+  const last = historyReach(lastPacket)!;
+
+  it("reads the span a packet carries", () => {
+    expect(last).toEqual({ newest: NOW - DAY, oldest: NOW - 7 * DAY });
+    expect(historyReach([])).toBeNull();
+    expect(historyReach([{ url: "https://x.example/", title: "", lastVisitTime: 0, visitCount: 1 }])).toBeNull();
+  });
+
+  it("keeps only what is new since the last import, so the local read covers minutes", () => {
+    const next = [...lastPacket, peer("https://new.example/", NOW - 60_000)];
+    const fresh = historySinceApplied(next, last);
+    // The last import's newest entry stays in: an equal time cannot prove it was weighed.
+    expect(fresh.map((i) => i.url)).toEqual(["https://mid.example/", "https://new.example/"]);
+    expect(historyWindowStart(fresh)).toBeGreaterThanOrEqual(NOW - DAY - 1000);
+  });
+
+  it("weighs everything when there is no record of an earlier import", () => {
+    expect(historySinceApplied(lastPacket, undefined)).toHaveLength(2);
+  });
+
+  it("weighs everything when the peer now reaches further back (days limit raised, History back on)", () => {
+    const wider = [peer("https://older.example/", NOW - 30 * DAY), ...lastPacket];
+    expect(historySinceApplied(wider, last)).toHaveLength(3);
+  });
+
+  it("still weighs a window that only slid forward from the last one", () => {
+    const slid = [peer("https://mid.example/", NOW - DAY), peer("https://new.example/", NOW)];
+    expect(historySinceApplied(slid, last).map((i) => i.url)).toEqual(["https://mid.example/", "https://new.example/"]);
+  });
+
+  it("keeps an older page this browser refused once its hold has run out", () => {
+    const fresh = historySinceApplied(lastPacket, last, new Set(["https://old.example/"]));
+    expect(fresh.map((i) => i.url)).toEqual(["https://old.example/", "https://mid.example/"]);
+  });
+
+  it("keeps an entry with no visit time, which asks for the whole read as before", () => {
+    const undated = [...lastPacket, { url: "https://undated.example/", title: "", lastVisitTime: 0, visitCount: 1 }];
+    const fresh = historySinceApplied(undated, last);
+    expect(fresh.map((i) => i.url)).toContain("https://undated.example/");
+    expect(historyWindowStart(fresh)).toBe(0);
   });
 });
 

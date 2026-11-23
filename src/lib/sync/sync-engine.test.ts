@@ -2250,3 +2250,217 @@ describe("SyncEngine: a peer's unchanged history is not imported again (#96)", (
     expect(applied?.peer1).toBeUndefined();
   });
 });
+
+describe("SyncEngine: a changed peer history is compared only from its last import (#96)", () => {
+  // In a group of devices in use, every peer's history file changes between two syncs, so
+  // skipping an unchanged packet saved nothing, and every changed one was compared against
+  // the peer's whole window of local history: 100,000 rows and a stalled browser a minute.
+
+  const DAY = 24 * 60 * 60 * 1000;
+  const NOW = Date.now();
+  const item = (url: string, at: number) => ({ url, title: url, lastVisitTime: at, visitCount: 1 });
+  async function peerPacket(engine: SyncEngine, items: ReturnType<typeof item>[]): Promise<SyncPacket> {
+    const packet = await priv(engine).buildPacket("history", items);
+    packet.device_id = "peer1";
+    return packet;
+  }
+  const nextSync = (engine: SyncEngine) => { (engine as unknown as { historyIndexThisSync: unknown }).historyIndexThisSync = null; };
+  /** The start of every local read an import makes (the export asks for 5,000 rows, these for more). */
+  function importReads(): number[] {
+    const starts: number[] = [];
+    const h = chrome.history as unknown as { search: (q: { maxResults?: number; startTime?: number }) => Promise<unknown> };
+    const real = h.search.bind(h);
+    h.search = async (q) => { if ((q.maxResults ?? 0) > 5000) starts.push(q.startTime ?? 0); return real(q); };
+    return starts;
+  }
+  const has = async (url: string) =>
+    (await chrome.history.search({ text: "", startTime: 0, maxResults: 1000 })).some((h) => h.url === url);
+
+  function quiet() {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.spyOn(console, "debug").mockImplementation(() => {});
+  }
+
+  it("remembers the span of the packet it imported, and reads only what is newer next time", async () => {
+    quiet();
+    const engine = new SyncEngine({ ...DEFAULT_SETTINGS, device_id: "me" }, () => {});
+    const backend = new FakeBackend();
+    const first = [item("https://old.example/", NOW - 6 * DAY), item("https://mid.example/", NOW - DAY)];
+    backend.files.set("history_peer1", await peerPacket(engine, first));
+
+    await priv(engine).syncType("history", backend, DEFAULT_STATE);
+    const reach = (await chrome.storage.local.get(KEYS.HIST_REACH))[KEYS.HIST_REACH];
+    expect(reach).toEqual({ peer1: { newest: NOW - DAY, oldest: NOW - 6 * DAY } });
+
+    const starts = importReads();
+    backend.files.set("history_peer1", await peerPacket(engine, [...first, item("https://new.example/", NOW - 60_000)]));
+    nextSync(engine);
+    await priv(engine).syncType("history", backend, DEFAULT_STATE);
+
+    expect(starts).toHaveLength(1);
+    expect(starts[0]).toBeGreaterThanOrEqual(NOW - DAY - 1000); // not six days back
+    expect(await has("https://new.example/")).toBe(true);
+    expect((await chrome.storage.local.get(KEYS.HIST_REACH))[KEYS.HIST_REACH])
+      .toEqual({ peer1: { newest: NOW - 60_000, oldest: NOW - 6 * DAY } });
+  });
+
+  it("compares everything again when the peer's packet reaches further back than before", async () => {
+    quiet();
+    const engine = new SyncEngine({ ...DEFAULT_SETTINGS, device_id: "me" }, () => {});
+    const backend = new FakeBackend();
+    const first = [item("https://mid.example/", NOW - DAY)];
+    backend.files.set("history_peer1", await peerPacket(engine, first));
+    await priv(engine).syncType("history", backend, DEFAULT_STATE);
+
+    // The peer raised its days limit: a page from 20 days ago now shows up in its file.
+    const starts = importReads();
+    backend.files.set("history_peer1", await peerPacket(engine, [item("https://older.example/", NOW - 20 * DAY), ...first]));
+    nextSync(engine);
+    await priv(engine).syncType("history", backend, DEFAULT_STATE);
+
+    expect(starts[0]).toBeLessThanOrEqual(NOW - 20 * DAY);
+    expect(await has("https://older.example/")).toBe(true);
+  });
+
+  it("does not record the span of an import that failed", async () => {
+    quiet();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const engine = new SyncEngine({ ...DEFAULT_SETTINGS, device_id: "me" }, () => {});
+    const backend = new FakeBackend();
+    const packet = await peerPacket(engine, [item("https://one.example/", NOW - DAY)]);
+    backend.files.set("history_peer1", { ...packet, checksum: "0".repeat(64) });
+
+    await priv(engine).syncType("history", backend, DEFAULT_STATE).catch(() => {});
+
+    expect((await chrome.storage.local.get(KEYS.HIST_REACH))[KEYS.HIST_REACH]?.peer1).toBeUndefined();
+  });
+});
+
+describe("SyncEngine: history is published at most every 15 minutes on a scheduled sync (#96)", () => {
+  // A device in use rewrote its whole history file every minute, and every peer downloaded
+  // all of it again: in the reporter's group, 15 MB a sync on every device.
+
+  const visit = (url: string) => chrome.history.addUrl({ url });
+  const historyUploads = (b: FakeBackend) => b.uploads.filter((u) => u.data_type === "history");
+  const published = (p: SyncPacket) => (JSON.parse(p.payload) as Array<{ url: string }>).map((i) => i.url);
+  const nextSync = (engine: SyncEngine, userAsked = false) => {
+    const e = engine as unknown as { historyIndexThisSync: unknown; userAskedThisSync: boolean };
+    e.historyIndexThisSync = null;
+    e.userAskedThisSync = userAsked;
+  };
+  /** Exports of this device's own history (the 5,000-row read). */
+  function exportReads(): { n: number } {
+    const c = { n: 0 };
+    const h = chrome.history as unknown as { search: (q: { maxResults?: number }) => Promise<unknown> };
+    const real = h.search.bind(h);
+    h.search = async (q) => { if (q.maxResults === 5000) c.n++; return real(q); };
+    return c;
+  }
+  const ageLastPublish = async (ms: number) => {
+    const at = (await chrome.storage.local.get(KEYS.HIST_PUBLISHED))[KEYS.HIST_PUBLISHED] as number;
+    await chrome.storage.local.set({ [KEYS.HIST_PUBLISHED]: at - ms });
+  };
+
+  async function setup(withPeer: boolean) {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.spyOn(console, "debug").mockImplementation(() => {});
+    const engine = new SyncEngine({ ...DEFAULT_SETTINGS, device_id: "me" }, () => {});
+    const backend = new FakeBackend();
+    if (withPeer) {
+      const packet = await priv(engine).buildPacket("history", [
+        { url: "https://peer.example/", title: "", lastVisitTime: Date.now() - 60_000, visitCount: 1 },
+      ]);
+      packet.device_id = "peer1";
+      backend.files.set("history_peer1", packet);
+    }
+    await visit("https://first.example/");
+    await priv(engine).syncType("history", backend, DEFAULT_STATE);
+    expect(historyUploads(backend)).toHaveLength(1);
+    return { engine, backend };
+  }
+
+  for (const withPeer of [false, true]) {
+    const where = withPeer ? "with a peer" : "alone";
+    it(`holds a new visit until the 15 minutes are up, without reading its own history (${where})`, async () => {
+      const { engine, backend } = await setup(withPeer);
+      await visit("https://second.example/");
+      const reads = exportReads();
+
+      nextSync(engine);
+      await priv(engine).syncType("history", backend, DEFAULT_STATE);
+      expect(historyUploads(backend)).toHaveLength(1);
+      expect(reads.n).toBe(0);
+
+      await ageLastPublish(15 * 60 * 1000);
+      nextSync(engine);
+      await priv(engine).syncType("history", backend, DEFAULT_STATE);
+      expect(historyUploads(backend)).toHaveLength(2);
+      expect(published(historyUploads(backend)[1])).toContain("https://second.example/");
+      expect(reads.n).toBe(1); // once, not before and after the fold
+    });
+
+    it(`publishes at once when someone asked for the sync (${where})`, async () => {
+      const { engine, backend } = await setup(withPeer);
+      await visit("https://asked.example/");
+
+      nextSync(engine, true);
+      await priv(engine).syncType("history", backend, DEFAULT_STATE);
+
+      expect(historyUploads(backend)).toHaveLength(2);
+      expect(published(historyUploads(backend)[1])).toContain("https://asked.example/");
+    });
+  }
+
+  it("still imports a peer's new visits while its own publish is held", async () => {
+    const { engine, backend } = await setup(true);
+    const packet = await priv(engine).buildPacket("history", [
+      { url: "https://peer.example/", title: "", lastVisitTime: Date.now() - 60_000, visitCount: 1 },
+      { url: "https://peer-later.example/", title: "", lastVisitTime: Date.now(), visitCount: 1 },
+    ]);
+    packet.device_id = "peer1";
+    backend.files.set("history_peer1", packet);
+
+    nextSync(engine);
+    await priv(engine).syncType("history", backend, DEFAULT_STATE);
+
+    expect(historyUploads(backend)).toHaveLength(1);
+    const local = await chrome.history.search({ text: "", startTime: 0, maxResults: 1000 });
+    expect(local.some((h) => h.url === "https://peer-later.example/")).toBe(true);
+  });
+
+  it("publishes at once when the file out there is in the other encryption form", async () => {
+    const { engine, backend } = await setup(false);
+    // What turning E2EE on or off does to the upload record's form.
+    const tags = (await chrome.storage.local.get(KEYS.UPLOAD_CHECKSUMS))[KEYS.UPLOAD_CHECKSUMS] as Record<string, string>;
+    await chrome.storage.local.set({ [KEYS.UPLOAD_CHECKSUMS]: { ...tags, history: tags.history.replace("|plain:", "|enc:") } });
+    await visit("https://second.example/");
+
+    nextSync(engine);
+    await priv(engine).syncType("history", backend, DEFAULT_STATE);
+
+    expect(historyUploads(backend)).toHaveLength(2);
+  });
+
+  it("publishes at once when its own file has gone from the folder", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { engine, backend } = await setup(false);
+    (engine as unknown as { ownFilesMissing: Set<DataType> }).ownFilesMissing.add("history");
+
+    nextSync(engine);
+    await priv(engine).syncType("history", backend, DEFAULT_STATE);
+
+    expect(historyUploads(backend)).toHaveLength(2);
+  });
+
+  it("does not hold other data types", async () => {
+    const { engine, backend } = await setup(false);
+    const before = backend.uploads.length;
+    await chrome.bookmarks.create({ parentId: "1", title: "New", url: "https://bm.example/" });
+
+    nextSync(engine);
+    await priv(engine).syncType("bookmarks", backend, DEFAULT_STATE);
+
+    expect(backend.uploads.length).toBe(before + 1);
+  });
+});
