@@ -1,5 +1,5 @@
 import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncExtension, ConflictItem, BackendConfig,
-  DeviceInfo, DeviceBrowser, ConflictDiff,
+  DeviceInfo, DeviceBrowser, ConflictDiff, IBackend, PeerFile,
 } from "@/lib/types";
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { normalizeRepoSlug } from "@/lib/backends/github-backend";
@@ -44,6 +44,9 @@ import {
   dropRemoteDevices,
   getAppliedHistory,
   recordAppliedHistory,
+  getPeerFiles,
+  setPeerFiles,
+  type PeerFileRecord,
 } from "@/lib/utils/storage";
 import { logger } from "@/lib/utils/logger";
 import { noteCleanSync } from "@/lib/rate-prompt";
@@ -92,6 +95,21 @@ const CONFLICTABLE_TYPES = new Set<DataType>(["bookmarks", "history"]);
  * answer them differently.
  */
 const MERGE_MUTATES_LOCAL = new Set<DataType>(["bookmarks", "history"]);
+
+/**
+ * How long after a WebDAV ETag was first listed a read has to happen before that ETag may
+ * stand in for a download (#96).
+ *
+ * Plenty of servers (nginx, lighttpd, Apache by default) build the ETag from the
+ * modification time in whole seconds and the size. A peer that rewrites its file at the
+ * same length inside the second we read it leaves the ETag as it was, and trusting it at
+ * once would keep the first version here until that peer changed again: the Send to device
+ * exchange lost a tab exactly this way (see sent-tabs.ts). A read that starts this long
+ * after a listing which already showed the ETag cannot share a second with the write it
+ * names, so what it returns is what the ETag stands for. The cost is one extra download
+ * per change, on WebDAV only: Drive and GitHub markers are content hashes.
+ */
+export const PEER_MARKER_SETTLE_MS = 5_000;
 
 /**
  * The queued conflicts that can still exist, given the gate above.
@@ -291,6 +309,12 @@ export class SyncEngine {
   // The other devices whose files this sync read, across every type. Only the rating
   // card asks (lib/rate-prompt.ts): a sync with no other device has nothing to show yet.
   private peersThisSync = new Set<string>();
+  // Peer packets handed to syncType without their payload (an unchanged history file, #96),
+  // each with the function that fetches it. See `fullPacket`.
+  private lazyPeers = new WeakMap<SyncPacket, () => Promise<SyncPacket>>();
+  // Devices whose file, fetched on demand, turned out not to be the one their remembered
+  // marker named. Their record is dropped so the next sync downloads them outright.
+  private stalePeerRecords = new Set<string>();
   // Set once the rating card has counted all the syncs it needs, so the rest of this
   // worker's life does not even read the counter.
   private rateCountDone = false;
@@ -1082,6 +1106,159 @@ export class SyncEngine {
     );
   }
 
+  /**
+   * Every peer's packet for a data type, leaving on the server what has not changed since
+   * this device last read it (#96).
+   *
+   * Before this, every sync downloaded every peer's file in full. With six devices and long
+   * histories that was about 16 MB a minute (50.4 GB over 3,197 syncs in the report), almost
+   * all of it files that had not moved. The listing each backend fetches anyway carries a
+   * change marker for every file (Drive's md5, GitHub's blob sha, a WebDAV ETag), and a file
+   * whose marker is the one we remembered is not downloaded.
+   *
+   * A skipped peer still arrives in `peers`, so everything downstream reads the list it
+   * would have read after a download: `peersThisSync`, `pruneVanishedPeers`, the
+   * newest-first order, the encryption checks and the `manual` gate. What stands in for the
+   * download differs by type:
+   *
+   * - bookmarks, sessions, extensions: the packet itself, kept from the last read. The
+   *   bookmark merge has to run against every peer every sync, since it also acts on local
+   *   changes (an approved deletion, a kept shell, a raised threshold, a lifted exclusion),
+   *   so it must see the very packet a download would have returned. Sessions and extensions
+   *   are small, and filing them again keeps their caches exactly as a download would.
+   * - history: the envelope only. History packets run to megabytes, and an unchanged one is
+   *   never opened (`applyRemote` skips it on `konode_hist_applied` before decrypting), so
+   *   keeping the payload would cost storage for nothing. Anything that does need it gets it
+   *   through `fullPacket`, which downloads that one file.
+   *
+   * `remember` is called once the type's peers have been processed, with the ones that went
+   * through. Only those are remembered, so a peer that failed is downloaded again.
+   */
+  private async pullPeers(
+    dataType: DataType,
+    backend: IBackend
+  ): Promise<{ peers: SyncPacket[]; remember: (processed: Set<string>) => Promise<void> }> {
+    const own = this.settings.device_id;
+    if (!backend.downloadChanged) {
+      const peers = await backend.downloadAll(dataType, own);
+      // Count pulled bytes (the serialized peer payloads) toward the transfer stat.
+      for (const p of peers) this.bytesThisSync += p.payload?.length ?? 0;
+      return { peers, remember: async () => {} };
+    }
+
+    const scope = this.peerFileScope();
+    const memory = await getPeerFiles(dataType);
+    const held: Record<string, PeerFileRecord> = memory?.scope === scope ? memory.peers : {};
+    const known: Record<string, string> = {};
+    for (const [id, r] of Object.entries(held)) if (r.settled) known[id] = r.marker;
+
+    const listingStarted = Date.now();
+    const pull = await backend.downloadChanged(dataType, own, known);
+    const listed = Date.now();
+
+    const peers: SyncPacket[] = [];
+    const next: Record<string, PeerFileRecord> = {};
+    for (const { packet, file } of pull.fetched) {
+      // Count pulled bytes (the serialized peer payloads) toward the transfer stat.
+      this.bytesThisSync += packet.payload?.length ?? 0;
+      peers.push(packet);
+      // A file that says it is another device's is used as it always was, never remembered.
+      if (!file.marker || packet.device_id !== file.device_id) continue;
+      const prev = held[file.device_id];
+      const seen_at = prev?.marker === file.marker ? prev.seen_at : listed;
+      next[file.device_id] = {
+        marker: file.marker,
+        settled: file.exact || (prev?.marker === file.marker && listingStarted - seen_at >= PEER_MARKER_SETTLE_MS),
+        seen_at,
+        packet: dataType === "history" ? { ...packet, payload: "" } : packet,
+      };
+    }
+    for (const file of pull.unchanged) {
+      const prev = held[file.device_id];
+      if (!prev) {
+        // The backend only reports what `known` named, so this cannot happen unless the
+        // record went in between. Fetch the file outright then.
+        const packet = await this.downloadPeerFile(backend, dataType, file);
+        if (packet) peers.push(packet);
+        continue;
+      }
+      next[file.device_id] = prev;
+      const packet: SyncPacket = { ...prev.packet };
+      if (dataType === "history") {
+        this.lazyPeers.set(packet, async () => {
+          const loaded = await this.downloadPeerFile(backend, dataType, file);
+          if (!loaded) throw new Error(`The ${dataType} file of ${file.device_id.slice(0, 8)} is gone or unreadable`);
+          if (loaded.checksum !== packet.checksum) this.stalePeerRecords.add(file.device_id);
+          return loaded;
+        });
+      }
+      peers.push(packet);
+    }
+    if (pull.unchanged.length) {
+      logger.debug("SyncEngine", `${dataType}: ${pull.unchanged.length} peer file(s) unchanged since the last read, not downloaded`);
+    }
+
+    const remember = async (processed: Set<string>) => {
+      const keep: Record<string, PeerFileRecord> = {};
+      for (const [id, r] of Object.entries(next)) {
+        if (processed.has(id) && !this.stalePeerRecords.has(id)) keep[id] = r;
+      }
+      // Written only when something moved: an idle group rewrites nothing.
+      const same =
+        memory?.scope === scope &&
+        Object.keys(keep).length === Object.keys(held).length &&
+        Object.entries(keep).every(([id, r]) => held[id] === r);
+      if (!same) await setPeerFiles(dataType, { scope, peers: keep });
+    };
+    return { peers, remember };
+  }
+
+  /** One peer's packet, downloaded on its own, or null when it is gone or unreadable. */
+  private async downloadPeerFile(backend: IBackend, dataType: DataType, file: PeerFile): Promise<SyncPacket | null> {
+    const name = `konode_${dataType}_${file.device_id}.json`;
+    const raw = await backend.getFile(name);
+    if (raw === null) return null;
+    try {
+      const packet = JSON.parse(raw) as SyncPacket;
+      this.bytesThisSync += packet.payload?.length ?? 0;
+      return packet;
+    } catch {
+      logger.warn("SyncEngine", `Skipping unreadable sync file: ${name}`);
+      return null;
+    }
+  }
+
+  /** The packet with its payload, fetching it if `pullPeers` handed it over without one. */
+  private async fullPacket(packet: SyncPacket): Promise<SyncPacket> {
+    const load = this.lazyPeers.get(packet);
+    if (!load) return packet;
+    const full = await load();
+    // Fetched once per sync, however many steps ask.
+    this.lazyPeers.delete(packet);
+    this.lazyPeers.set(packet, () => Promise.resolve(full));
+    return full;
+  }
+
+  /**
+   * Which folder a remembered marker belongs to. A WebDAV ETag only means something to the
+   * server that issued it, so switching servers or folders must not let one stand in for a
+   * file it never described. Drive and GitHub markers are content hashes, safe anywhere,
+   * but scoped all the same. No secret goes in: the URL, user name, repository and path
+   * are already in the settings next to it.
+   */
+  private peerFileScope(): string {
+    const cfg = this.settings.backends.find((b) => b.type === this.settings.active_backend);
+    if (!cfg) return "";
+    switch (cfg.type) {
+      case "webdav":
+        return JSON.stringify(["webdav", cfg.webdav?.url ?? "", cfg.webdav?.path ?? "", cfg.webdav?.username ?? ""]);
+      case "github":
+        return JSON.stringify(["github", cfg.github?.repo ?? "", cfg.github?.branch ?? "", cfg.github?.path ?? ""]);
+      default:
+        return JSON.stringify([cfg.type]);
+    }
+  }
+
   private async syncType(
     dataType: DataType,
     backend: ReturnType<typeof createBackend>,
@@ -1096,12 +1273,14 @@ export class SyncEngine {
       //    newest-first by packet timestamp: backends list files in arbitrary
       //    order, but both the manual-conflict path and the newest→oldest fold
       //    below rely on peers[0] being the most recent.
-      const peers = orderPeersByTime(
-        await backend.downloadAll(dataType, this.settings.device_id)
-      );
-      // Count pulled bytes (the serialized peer payloads) toward the transfer stat.
-      for (const p of peers) this.bytesThisSync += p.payload?.length ?? 0;
+      //    A peer whose file is unchanged since we last read it is not downloaded (#96):
+      //    see pullPeers for what stands in for it.
+      const pull = await this.pullPeers(dataType, backend);
+      const peers = orderPeersByTime(pull.peers);
       for (const p of peers) this.peersThisSync.add(p.device_id);
+      // The peers that went through this sync without an error. Only their markers are
+      // remembered, so a peer that failed is downloaded again next time.
+      const processed = new Set<string>();
 
       // A device we hold a cached session / extension list for, that did NOT arrive here,
       // may simply be gone from the folder — someone forgot it on another machine. Runs
@@ -1194,7 +1373,7 @@ export class SyncEngine {
             fresh.push(conflict);
             // Park the raw peer packet OUTSIDE konode_state — "use remote" needs it to
             // decrypt and verify, but it must not ride along on every status broadcast.
-            await putConflictPacket(conflict.id, peer);
+            await putConflictPacket(conflict.id, await this.fullPacket(peer));
           }
         }
         const pending = [
@@ -1226,6 +1405,9 @@ export class SyncEngine {
         // silently, while the sync reported success. Same principle as the E2EE-mismatch
         // path above: skip the merge, still publish, let the group converge.
         await this.uploadIfChanged(backend, dataType, localPayload);
+        // Every peer was weighed: queued, settled, resolved before, or set aside for its
+        // encryption, and all of those are decided again from the same packet next time.
+        for (const peer of peers) processed.add(peer.device_id);
       } else {
         // Auto-resolve across ALL peers. applyRemote is non-destructive for every
         // data type (bookmarks/history merge additively + tombstones; sessions/
@@ -1258,10 +1440,14 @@ export class SyncEngine {
           // below as a non-fatal "enable E2EE here" nudge, on the device that can fix it.)
           if (this.encryptionBarrier(peer) === "silent") {
             logger.debug("SyncEngine", `Skipping plaintext peer ${peer.device_id} (E2EE on here): stale or unencrypted, not merged`);
+            // Decided from the envelope alone, which the remembered packet carries too, so
+            // the same file is skipped the same way next time without being fetched.
+            processed.add(peer.device_id);
             continue;
           }
           try {
             await this.applyRemote(dataType, peer, false);
+            processed.add(peer.device_id);
           } catch (err) {
             // An encryption disagreement (plaintext peer while we encrypt, encrypted
             // peer we can't decrypt, or a wrong passphrase) must NOT be swallowed
@@ -1295,6 +1481,10 @@ export class SyncEngine {
           await this.uploadIfChanged(backend, dataType, merged);
         }
       }
+
+      // Only now, with every peer through: a type that threw above never gets here, and
+      // its peers are downloaded again next sync, like a failed history import (#96).
+      await pull.remember(processed);
 
       // 4. Update sync count
       const currentState = await getState();
@@ -1543,17 +1733,20 @@ export class SyncEngine {
       logger.debug("SyncEngine", `history: ${packet.device_id.slice(0, 8)} unchanged since its last import, skipping`);
       return;
     }
-    const payload = await this.openPacket(packet);
+    // An unchanged history file comes without its payload (#96). Reaching this line means
+    // the check above did not recognise it after all, so it is fetched now.
+    const full = await this.fullPacket(packet);
+    const payload = await this.openPacket(full);
     await this.applyPayload(dataType, payload, {
-      device_id: packet.device_id,
-      timestamp: packet.timestamp,
+      device_id: full.device_id,
+      timestamp: full.timestamp,
       // Outside the encrypted payload, so it reads even with E2EE on. It is what the
       // recovery notice shows instead of a truncated id when the guard blocks.
-      device_label: packet.device_label ?? null,
+      device_label: full.device_label ?? null,
     }, isLocalEmpty);
     // Recorded only once the import went through: openPacket has verified the checksum by
     // now, and a failed import must be tried again on the next sync.
-    if (dataType === "history") await recordAppliedHistory(packet.device_id, packet.checksum);
+    if (dataType === "history") await recordAppliedHistory(full.device_id, full.checksum);
   }
 
   /**
@@ -1563,7 +1756,8 @@ export class SyncEngine {
    * under exactly the same rules (#34): it has to see what a peer holds to know whether the
    * two devices disagree at all.
    */
-  private async openPacket(packet: SyncPacket): Promise<unknown> {
+  private async openPacket(lazy: SyncPacket): Promise<unknown> {
+    const packet = await this.fullPacket(lazy);
     const localE2ee = this.e2eeActive;
     // Refuse to import a plaintext peer while E2EE is active here. The auto-merge
     // path already skips plaintext peers before calling applyRemote (they're stale/

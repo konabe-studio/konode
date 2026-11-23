@@ -1,4 +1,5 @@
-import type { IBackend, BackendConfig, DataType, SyncPacket } from "@/lib/types";
+import { peerDeviceId } from "@/lib/types";
+import type { IBackend, BackendConfig, DataType, SyncPacket, PeerFile, PeerPull } from "@/lib/types";
 import { withRetry, HttpError, defaultShouldRetry, rateLimitMessage } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 import { utf8ToBase64 } from "@/lib/utils/base64";
@@ -180,6 +181,15 @@ export class GitHubBackend implements IBackend {
   }
 
   async downloadAll(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket[]> {
+    return (await this.downloadChanged(data_type, excludeDeviceId ?? "", {})).fetched.map((f) => f.packet);
+  }
+
+  /**
+   * Every peer file, minus the ones whose blob `sha` still equals the one in `known` (#96).
+   * The contents listing carries each file's git blob sha, which is a hash of its bytes,
+   * so an equal one is equal content (`exact`) and the check costs no extra request.
+   */
+  async downloadChanged(data_type: DataType, excludeDeviceId: string, known: Record<string, string>): Promise<PeerPull> {
     return withRetry(async () => {
       const res = await fetch(
         `${GITHUB_API}/repos/${this.repoSlug}/contents/${this.path}?ref=${this.branch}`,
@@ -189,17 +199,21 @@ export class GitHubBackend implements IBackend {
       // transient/real error — throw so withRetry retries it and a persistent failure
       // surfaces, instead of silently masquerading as "no peers" (which would hide the
       // peers' data and let this device overwrite the group with its own).
-      if (res.status === 404) return [];
+      if (res.status === 404) return { fetched: [], unchanged: [] };
       if (!res.ok) throw new HttpError(res.status, `GitHub list failed: ${res.status}`);
-      const files: Array<{ name: string }> = await res.json();
-      const own = excludeDeviceId ? `konode_${data_type}_${excludeDeviceId}.json` : null;
-      const matches = files.filter(
-        f => f.name.includes(`konode_${data_type}_`) && f.name.endsWith(".json") && f.name !== own
-      );
+      const files: Array<{ name: string; sha?: string }> = await res.json();
       // Fetch each via the authenticated Contents API (Accept: raw); the public
       // download_url is unauthenticated and 404s/HTMLs on private repos.
-      const packets: SyncPacket[] = [];
-      for (const m of matches) {
+      const fetched: PeerPull["fetched"] = [];
+      const unchanged: PeerFile[] = [];
+      for (const m of files) {
+        const deviceId = peerDeviceId(m.name, data_type);
+        if (!deviceId || deviceId === excludeDeviceId) continue;
+        const file: PeerFile = { device_id: deviceId, marker: m.sha || null, exact: true };
+        if (file.marker && known[deviceId] === file.marker) {
+          unchanged.push(file);
+          continue;
+        }
         const r = await fetch(
           `${GITHUB_API}/repos/${this.repoSlug}/contents/${this.path}/${m.name}?ref=${this.branch}`,
           { headers: { ...this.headers(), Accept: "application/vnd.github.raw+json" }, cache: "no-store" }
@@ -214,12 +228,12 @@ export class GitHubBackend implements IBackend {
           continue;
         }
         try {
-          packets.push(JSON.parse(await r.text()) as SyncPacket);
+          fetched.push({ packet: JSON.parse(await r.text()) as SyncPacket, file });
         } catch {
           logger.warn("GitHub.downloadAll", `Skipping unreadable sync file: ${m.name}`);
         }
       }
-      return packets;
+      return { fetched, unchanged };
     });
   }
 

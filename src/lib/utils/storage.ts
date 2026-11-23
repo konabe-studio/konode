@@ -127,6 +127,8 @@ export const KEYS = {
   HIST_REJECTED: "konode_hist_rejected",
   HIST_VISITTIME_OK: "konode_hist_visittime_ok",
   HIST_APPLIED: "konode_hist_applied",
+  // One key per data type, `konode_peer_files_<type>` (#96, see peerFilesKey).
+  PEER_FILES_PREFIX: "konode_peer_files_",
   // Sent tabs (#92, lib/sync/sent-tabs.ts).
   SENT_OUT: "konode_sent_out",
   SENT_OPENED: "konode_sent_opened",
@@ -641,6 +643,53 @@ export async function recordAppliedHistory(deviceId: string, checksum: string): 
     ...(current ?? {}),
     [deviceId]: checksum,
   }), {});
+}
+
+// ─── Peer files read (#96) ──────────────────────────────────────────────────
+
+/**
+ * A peer's sync file as this device last read it, so the next sync can leave it on the
+ * server while its listing still carries the same marker (see PeerFile in types.ts).
+ */
+export interface PeerFileRecord {
+  /** The listing's change marker for the file this record describes. */
+  marker: string;
+  /**
+   * Whether the marker may stand in for a download. An exact marker (a content hash) may at
+   * once; a WebDAV ETag only after a read made well after the marker was first listed.
+   */
+  settled: boolean;
+  /** When this device first saw the marker, epoch ms, taken after that listing returned. */
+  seen_at: number;
+  /**
+   * The packet behind the marker, handed to the sync in place of a download. History keeps
+   * the envelope alone (`payload: ""`): its packets run to megabytes and an unchanged one is
+   * never opened (see `applyRemote`), so the payload is fetched only if something asks.
+   */
+  packet: SyncPacket;
+}
+
+export interface PeerFileMemory {
+  /** Which folder the markers came from. Records from another one are ignored. */
+  scope: string;
+  peers: Record<string, PeerFileRecord>;
+}
+
+/**
+ * One key per data type, so a session or history change elsewhere doesn't rewrite the
+ * bookmark trees held here.
+ */
+export function peerFilesKey(dataType: DataType): string {
+  return `${KEYS.PEER_FILES_PREFIX}${dataType}`;
+}
+
+export async function getPeerFiles(dataType: DataType): Promise<PeerFileMemory | null> {
+  const v = await get<PeerFileMemory | null>(peerFilesKey(dataType), null);
+  return v && typeof v === "object" && typeof v.scope === "string" && v.peers && typeof v.peers === "object" ? v : null;
+}
+
+export async function setPeerFiles(dataType: DataType, memory: PeerFileMemory): Promise<void> {
+  await set(peerFilesKey(dataType), memory);
 }
 
 /**

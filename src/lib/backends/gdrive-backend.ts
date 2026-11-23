@@ -1,4 +1,5 @@
-import type { IBackend, BackendConfig, DataType, ListedFile, SyncPacket } from "@/lib/types";
+import { peerDeviceId } from "@/lib/types";
+import type { IBackend, BackendConfig, DataType, ListedFile, PeerFile, PeerPull, SyncPacket } from "@/lib/types";
 import { withRetry, HttpError, rateLimitMessage } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 import { getAccessToken, getStoredGDriveUser } from "./gdrive-oauth";
@@ -206,14 +207,24 @@ export class GDriveBackend implements IBackend {
   }
 
   async downloadAll(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket[]> {
+    return (await this.downloadChanged(data_type, excludeDeviceId ?? "", {})).fetched.map((f) => f.packet);
+  }
+
+  /**
+   * Every peer file, minus the ones whose `md5Checksum` still equals the one in `known`
+   * (#96). The checksum comes with the listing, which is fetched anyway, and it is over the
+   * file's bytes, so an equal one is equal content (`exact`). A file the listing gives no
+   * checksum for is always downloaded.
+   */
+  async downloadChanged(data_type: DataType, excludeDeviceId: string, known: Record<string, string>): Promise<PeerPull> {
     return withRetry(async () => {
       const folderId = this.folderId ?? (await this.ensureFolder());
       const h = await this.authHeaders();
       const q = encodeURIComponent(`name contains 'konode_${data_type}_' and '${folderId}' in parents and trashed=false`);
-      const listRes = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`, { headers: h, cache: "no-store" });
+      const listRes = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,modifiedTime,md5Checksum)&orderBy=modifiedTime desc`, { headers: h, cache: "no-store" });
       if (!listRes.ok) throw new HttpError(listRes.status, `Drive list failed: ${listRes.status}`);
       const { files } = await listRes.json();
-      if (!files?.length) return [];
+      if (!files?.length) return { fetched: [], unchanged: [] };
       // Every peer file (newest first), minus our own, and at most ONE file per device.
       //
       // Both filters are about Drive in particular. `contains` is a loose token match, the
@@ -228,18 +239,18 @@ export class GDriveBackend implements IBackend {
       // and, folded in last, was the one that won. The device-keyed caches now refuse an
       // older entry on their own, but a stale bookmark tree has no business being merged in
       // the first place, and neither has the download it costs.
-      const prefix = `konode_${data_type}_`;
       const seen = new Set<string>();
-      const peers: Array<{ id: string; name: string }> = [];
-      for (const f of files as Array<{ id: string; name: string }>) {
-        if (!f.name?.startsWith(prefix) || !f.name.endsWith(".json")) continue;
-        const deviceId = f.name.slice(prefix.length, -".json".length);
+      const fetched: PeerPull["fetched"] = [];
+      const unchanged: PeerFile[] = [];
+      for (const f of files as Array<{ id: string; name: string; md5Checksum?: string }>) {
+        const deviceId = f.name ? peerDeviceId(f.name, data_type) : null;
         if (!deviceId || deviceId === excludeDeviceId || seen.has(deviceId)) continue;
         seen.add(deviceId);
-        peers.push(f);
-      }
-      const packets: SyncPacket[] = [];
-      for (const f of peers) {
+        const file: PeerFile = { device_id: deviceId, marker: f.md5Checksum || null, exact: true };
+        if (file.marker && known[deviceId] === file.marker) {
+          unchanged.push(file);
+          continue;
+        }
         const r = await fetch(`${DRIVE_API}/files/${f.id}?alt=media`, { headers: h, cache: "no-store" });
         if (!r.ok) {
           // See the note in webdav-backend: a peer we can't fetch silently vanished from
@@ -251,12 +262,12 @@ export class GDriveBackend implements IBackend {
           continue;
         }
         try {
-          packets.push(JSON.parse(await r.text()) as SyncPacket);
+          fetched.push({ packet: JSON.parse(await r.text()) as SyncPacket, file });
         } catch {
           logger.warn("GDrive.downloadAll", `Skipping unreadable sync file: ${f.name}`);
         }
       }
-      return packets;
+      return { fetched, unchanged };
     });
   }
 

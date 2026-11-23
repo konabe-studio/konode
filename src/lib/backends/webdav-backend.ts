@@ -1,4 +1,5 @@
-import type { IBackend, BackendConfig, DataType, ListedFile, SyncPacket } from "@/lib/types";
+import { peerDeviceId } from "@/lib/types";
+import type { IBackend, BackendConfig, DataType, ListedFile, PeerFile, PeerPull, SyncPacket } from "@/lib/types";
 import { withRetry, HttpError, rateLimitMessage } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 import { isSecureBackendUrl } from "@/lib/utils/url";
@@ -44,6 +45,37 @@ export function parsePropfindListing(xml: string): ListedFile[] {
     const stamp = /<(?:[a-z0-9]+:)?getlastmodified[^>]*>([^<]+)<\/(?:[a-z0-9]+:)?getlastmodified>/i.exec(block[1]);
     const t = stamp ? Date.parse(stamp[1].trim()) : NaN;
     out.push({ name: hrefBasename(href[1].trim()), modified: Number.isNaN(t) ? null : t });
+  }
+  return out;
+}
+
+/**
+ * The ETag a PROPFIND response block carries, as a change marker, or null.
+ *
+ * A weak ETag (`W/"…"`) counts as none: it promises only that two versions are equivalent
+ * by the server's own judgement, not that the bytes match, and Apache hands out a weak one
+ * for exactly the case that matters here, a file written within the last second. Kept
+ * verbatim otherwise (quotes, entity-escaped or not) since it is only ever compared with
+ * what the same server said before.
+ */
+function etagOf(block: string): string | null {
+  const m = /<(?:[a-z0-9]+:)?getetag[^>]*>([^<]*)<\/(?:[a-z0-9]+:)?getetag>/i.exec(block);
+  const etag = m?.[1].trim() ?? "";
+  if (!etag || /^W\//i.test(etag)) return null;
+  return etag;
+}
+
+/**
+ * The files in a PROPFIND multistatus with each one's href and ETag (#96). Namespace
+ * prefixes are matched loosely, as in parsePropfindListing.
+ */
+export function parsePropfindEtags(xml: string): Array<{ name: string; href: string; etag: string | null }> {
+  const out: Array<{ name: string; href: string; etag: string | null }> = [];
+  for (const block of xml.matchAll(/<(?:[a-z0-9]+:)?response\b[^>]*>([\s\S]*?)<\/(?:[a-z0-9]+:)?response>/gi)) {
+    const href = /<(?:[a-z0-9]+:)?href>([^<]+)<\/(?:[a-z0-9]+:)?href>/i.exec(block[1]);
+    if (!href) continue;
+    const h = href[1].trim();
+    out.push({ name: hrefBasename(h), href: h, etag: etagOf(block[1]) });
   }
   return out;
 }
@@ -214,12 +246,23 @@ export class WebDAVBackend implements IBackend {
   }
 
   async downloadAll(data_type: DataType, excludeDeviceId?: string): Promise<SyncPacket[]> {
+    return (await this.downloadChanged(data_type, excludeDeviceId ?? "", {})).fetched.map((f) => f.packet);
+  }
+
+  /**
+   * Every peer file, minus the ones whose ETag still equals the one in `known` (#96).
+   *
+   * The ETag is asked for in the same PROPFIND that lists the folder, so the check costs no
+   * extra request. It is never exact (see PeerFile): the engine decides when to trust one.
+   * A server that sends no ETag, or a weak one, has every file downloaded as before.
+   */
+  async downloadChanged(data_type: DataType, excludeDeviceId: string, known: Record<string, string>): Promise<PeerPull> {
     return withRetry(async () => {
       // PROPFIND to list files in folder
       const res = await davFetch(this.baseUrl + "/", {
         method: "PROPFIND",
         headers: { ...this.headers(), Depth: "1" },
-        body: `<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/></d:prop></d:propfind>`,
+        body: `<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/><d:getetag/></d:prop></d:propfind>`,
         cache: "no-store",
       });
 
@@ -227,30 +270,25 @@ export class WebDAVBackend implements IBackend {
       // 207 Multi-Status (res.ok covers it). Any other non-OK is transient/real —
       // throw so withRetry retries and a persistent failure surfaces, instead of
       // silently masquerading as "no peers" (which would hide the peers' data).
-      if (res.status === 404) return [];
+      if (res.status === 404) return { fetched: [], unchanged: [] };
       if (!res.ok) throw new HttpError(res.status, `WebDAV list failed: ${res.status}`);
 
-      const xml = await res.text();
-      // Extract hrefs from PROPFIND response. Match any namespace prefix
-      // (d:href, D:href, lp1:href, or bare href) — servers differ.
-      const own = excludeDeviceId ? `konode_${data_type}_${excludeDeviceId}.json` : null;
       // Compare the DECODED basename exactly — hrefs can be percent-encoded and an
       // `endsWith(own)` substring check could both miss our own file and wrongly
       // exclude a peer whose name ends with the same suffix.
-      const basename = (h: string): string => {
-        try { return decodeURIComponent(h).split("/").pop() ?? ""; }
-        catch { return h.split("/").pop() ?? ""; }
-      };
-      const hrefs = [...xml.matchAll(/<(?:[a-z0-9]+:)?href>([^<]+)<\/(?:[a-z0-9]+:)?href>/gi)]
-        .map(m => m[1])
-        .filter(h => {
-          const name = basename(h);
-          return name.startsWith(`konode_${data_type}_`) && name.endsWith(".json") && name !== own;
-        });
+      const listed = parsePropfindEtags(await res.text())
+        .map((f) => ({ ...f, device_id: peerDeviceId(f.name, data_type) }))
+        .filter((f): f is typeof f & { device_id: string } => !!f.device_id && f.device_id !== excludeDeviceId);
 
-      const packets: SyncPacket[] = [];
-      for (const href of hrefs) {
-        const fullUrl = href.startsWith("http") ? href : new URL(href, this.w.url).href;
+      const fetched: PeerPull["fetched"] = [];
+      const unchanged: PeerFile[] = [];
+      for (const f of listed) {
+        const file: PeerFile = { device_id: f.device_id, marker: f.etag, exact: false };
+        if (file.marker && known[f.device_id] === file.marker) {
+          unchanged.push(file);
+          continue;
+        }
+        const fullUrl = f.href.startsWith("http") ? f.href : new URL(f.href, this.w.url).href;
         const r = await davFetch(fullUrl, {
           headers: { Authorization: this.authHeader() },
           cache: "no-store", // avoid a stale peer file from the browser HTTP cache
@@ -264,21 +302,21 @@ export class WebDAVBackend implements IBackend {
           // other peers, because one unreadable file must not stop syncing altogether.
           logger.warn(
             "WebDAV.downloadAll",
-            `Couldn't download ${basename(href)} (HTTP ${r.status}) — that device is left out of this sync`
+            `Couldn't download ${f.name} (HTTP ${r.status}) — that device is left out of this sync`
           );
           continue;
         }
         try {
-          packets.push(JSON.parse(await r.text()) as SyncPacket);
+          fetched.push({ packet: JSON.parse(await r.text()) as SyncPacket, file });
         } catch {
           // A corrupt/partial file (e.g. trailing junk from a non-truncating write)
           // must not abort the whole sync — skip it; the owner rewrites it next sync.
           // Name only: an href is a full DAV path, which on Nextcloud/ownCloud embeds
           // the account username (see the note in upload()).
-          logger.warn("WebDAV.downloadAll", `Skipping unreadable sync file: ${basename(href)}`);
+          logger.warn("WebDAV.downloadAll", `Skipping unreadable sync file: ${f.name}`);
         }
       }
-      return packets;
+      return { fetched, unchanged };
     });
   }
 

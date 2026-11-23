@@ -31,6 +31,15 @@ All notable changes to Konode. Format loosely follows
   an error or a conflict, so routine work looked like a warning. The icon now changes only
   when something needs you: a red **!** for an error, an orange **?** for a conflict. The
   popup still shows when a sync is running.
+- **Konode no longer downloads what has not changed (#96).** Every sync used to fetch each
+  of your other devices' files in full, whether or not anything was new in them. With
+  several devices and long histories that added up to megabytes a minute: one user's
+  Activity page showed 50 GB moved over about 3,200 syncs. Konode now checks the folder
+  listing it reads anyway, which says whether a file has changed, and leaves an unchanged
+  file where it is. A device that has been idle costs a sync nothing to download, and the
+  transferred total on the Activity page counts only what was actually moved. What arrives
+  is the same as before. On WebDAV, a newly changed file is read twice before Konode relies
+  on that answer, because many servers can't tell two writes within the same second apart.
 
 ## [1.6.0] - 2026-11-19
 
