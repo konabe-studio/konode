@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { detectBrowser, readDeviceBrowser } from "@/lib/utils/browser-identity";
+import { detectBrowser, isOpera, readDeviceBrowser } from "@/lib/utils/browser-identity";
 import { browser } from "@/lib/utils/ext";
 
 // What a device tells its peers it runs (#10). Every user agent below is a real one; the
@@ -111,5 +111,31 @@ describe("readDeviceBrowser", () => {
     expect(readDeviceBrowser({ engine: "chromium", name: 42 })).toEqual({ engine: "chromium" });
     expect(readDeviceBrowser({ engine: "chromium", name: "\u202EevarB" })).toEqual({ engine: "chromium", name: "evarB" });
     expect(readDeviceBrowser({ engine: "chromium", name: "x".repeat(200) })?.name).toHaveLength(32);
+  });
+});
+
+describe("isOpera", () => {
+  // The bookmark code sets Opera's Trash, Speed Dials and Pinboards aside, so it has to
+  // know Opera. Opera 140 on Windows, 2026-11-23: "Not-A.Brand", "Opera", "Chromium", and
+  // OPR/ in the user agent.
+  it("knows Opera by its brand, Opera GX included", () => {
+    as({ userAgent: `${CHROME_UA} OPR/140.0.0.0`, userAgentData: brands("Not-A.Brand", "Opera", "Chromium") });
+    expect(isOpera()).toBe(true);
+    as({ userAgent: CHROME_UA, userAgentData: brands("Opera GX", "Chromium") });
+    expect(isOpera()).toBe(true);
+  });
+
+  it("and by the OPR/ token when no brand names it", () => {
+    as({ userAgent: `${CHROME_UA} OPR/114.0.0.0` });
+    expect(isOpera()).toBe(true);
+  });
+
+  it("is false for every other browser", () => {
+    as({ userAgent: CHROME_UA, userAgentData: brands("Google Chrome", "Chromium") });
+    expect(isOpera()).toBe(false);
+    as({ userAgent: `${CHROME_UA} Edg/130.0.0.0`, userAgentData: brands("Microsoft Edge", "Chromium") });
+    expect(isOpera()).toBe(false);
+    as({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0" });
+    expect(isOpera()).toBe(false);
   });
 });

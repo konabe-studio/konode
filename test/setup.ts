@@ -25,9 +25,15 @@ const sessionStore = new Map();
 let bmSeq = 100;
 let alarmStore = new Map();
 let bmNodes = new Map();
+// Opera keeps what `remove()` is given (Opera 140, 2026-11-23): the node, a folder with all it
+// holds, goes into its Trash root at index 0, and only a remove of something already in the
+// Trash removes it. `__setTrash(id)` plays that with root `id`; null is every other browser.
+// The fake fires no events, so a test fires the `onMoved` Opera would, as for any move.
+let bmTrash = null;
 
 function resetBookmarks(roots) {
   bmSeq = 100;
+  bmTrash = null;
   bmNodes = new Map();
   bmNodes.set("0", { id: "0", parentId: undefined, title: "", index: 0 });
   const defaults = [
@@ -209,6 +215,24 @@ function bmRepack(parentId) {
   bmChildren(parentId).forEach((s, i) => { s.index = i; });
 }
 
+/** Is `id` the Trash or somewhere inside it? */
+function bmInTrash(id) {
+  for (let n = bmNodes.get(id); n; n = bmNodes.get(n.parentId)) if (n.id === bmTrash) return true;
+  return false;
+}
+
+/** Opera's remove: into the Trash, first, with the old folder re-packed. */
+function bmToTrash(id) {
+  const n = bmNodes.get(id);
+  if (!n) return Promise.reject(new Error("Can't find bookmark for id."));
+  const from = n.parentId;
+  for (const s of bmChildren(bmTrash)) s.index = (s.index ?? 0) + 1;
+  n.parentId = bmTrash;
+  n.index = 0;
+  if (from) bmRepack(from);
+  return Promise.resolve();
+}
+
 function bmBuild(id) {
   const n = bmNodes.get(id);
   const node = { id: n.id, parentId: n.parentId, title: n.title, dateAdded: n.dateAdded, index: n.index };
@@ -247,12 +271,18 @@ function makeBookmarks() {
       return Promise.resolve(bmBuild(id));
     },
     remove: (id) => {
+      if (bmTrash && !bmInTrash(id)) {
+        // Opera, like Chromium, refuses a non-empty folder here.
+        if (bmChildren(id).length) return Promise.reject(new Error("Can't remove non-empty folder (use recursive to force)."));
+        return bmToTrash(id);
+      }
       const parentId = bmNodes.get(id)?.parentId;
       bmNodes.delete(id);
       if (parentId) bmRepack(parentId);
       return Promise.resolve();
     },
     removeTree: (id) => {
+      if (bmTrash && !bmInTrash(id)) return bmToTrash(id);
       const parentId = bmNodes.get(id)?.parentId;
       const collect = (pid) => {
         for (const c of bmChildren(pid)) { collect(c.id); bmNodes.delete(c.id); }
@@ -301,6 +331,8 @@ function makeBookmarks() {
     // `__engine`): Edge after its id renumbering, a managed root, an account + local
     // pair. Clears every bookmark, so call it before seeding. Reset per test as usual.
     __setRoots: (roots) => resetBookmarks(roots),
+    // Opera's Trash (see bmTrash). Call after __setRoots, which resets it.
+    __setTrash: (id) => { bmTrash = id ?? null; },
   };
 }
 
@@ -456,6 +488,7 @@ beforeEach(() => {
     store: new Map([...store].map(([k, v]) => [k, structuredClone(v)])),
     bookmarks: new Map([...bmNodes].map(([k, v]) => [k, { ...v }])),
     seq: bmSeq,
+    trash: bmTrash,
     history: new Map([...histEntries].map(([k, v]) => [k, { ...v }])),
   }),
   restore: (snap) => {
@@ -463,6 +496,7 @@ beforeEach(() => {
     for (const [k, v] of snap.store) store.set(k, structuredClone(v));
     bmNodes = new Map([...snap.bookmarks].map(([k, v]) => [k, { ...v }]));
     bmSeq = snap.seq;
+    bmTrash = snap.trash ?? null;
     histEntries = new Map([...snap.history].map(([k, v]) => [k, { ...v }]));
   },
   // A brand-new browser. `seq` starts each device's local ids in its own range, so no

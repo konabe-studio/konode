@@ -97,6 +97,19 @@ function chromiumName(ua: string, nav: NavigatorLike | undefined): string | unde
   return undefined;
 }
 
+/**
+ * Is this Opera, or a build of it (Opera GX names itself "Opera GX")?
+ *
+ * The bookmark code has to know, because Opera keeps its Speed Dials, Pinboards and Trash in
+ * the bookmark tree and moves a removed bookmark into that Trash (see `browserOwnRootIds`).
+ * The brand first, then the `OPR/` token Opera keeps in its user agent.
+ */
+export function isOpera(): boolean {
+  const nav = (globalThis as { navigator?: NavigatorLike }).navigator;
+  if (nav?.userAgentData?.brands?.some((b) => /^Opera\b/.test(b.brand))) return true;
+  return /\bOPR\//.test(nav?.userAgent ?? "");
+}
+
 const ENGINES: readonly BrowserEngine[] = ["chromium", "gecko", "webkit"];
 const MAX_NAME = 32;
 

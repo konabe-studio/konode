@@ -14,11 +14,13 @@ import {
   updateFolderDeletes,
   getAppeared, updateAppeared, getKeptShells, updateKeptShells,
   getCreated, updateCreated, getPeerRemovals, updatePeerRemovals, getBookmarkExclusions,
+  getTrashMark, setTrashMark,
 } from "@/lib/utils/storage";
 import {
-  asRootKind, defaultOtherRootId, findLocalRootByKind, matchLocalRoot, matchLocalRootEx,
-  rootKindOf,
+  asRootKind, browserOwnRootIds, defaultOtherRootId, findLocalRootByKind, matchLocalRoot, matchLocalRootEx,
+  rootKindOf, trashMarkOf,
 } from "@/lib/utils/bookmark-roots";
+import { isOpera } from "@/lib/utils/browser-identity";
 import { canonicalUrlKey } from "@/lib/utils/url";
 import {
   excludedByOwnRule, excludedInSubtree, folderPathExcluded, mayHaveOwnRule, partitionExcluded, peerRules,
@@ -52,21 +54,98 @@ export async function exportBookmarks(): Promise<SyncBookmark[]> {
 interface LocalExclusions {
   rules: BookmarkExclusion[];
   part: Partition<SyncBookmark>;
-  /** The real roots, excluded nodes included. */
+  /** The real roots this device syncs, excluded nodes included. The browser's own roots
+   *  (Opera's Trash, Speed Dials and Pinboards, see `browserOwnRootIds`) are not among them:
+   *  nothing is ever matched to those. */
   roots: BookmarkNode[];
 }
 
-/** This device's tree, split into what syncs and what it keeps to itself (#54). */
+/**
+ * This device's tree, split into what syncs and what it keeps to itself (#54).
+ *
+ * What the browser keeps for itself is set aside the same way: Opera's Trash, Speed Dials and
+ * Pinboards are roots of the bookmark tree, and a bookmark deleted on Opera is MOVED into that
+ * Trash rather than removed. Left in, a deletion made on Opera was a move that never reached
+ * another device, and everything in those roots went to every peer's Other bookmarks.
+ */
 async function localExclusions(rules?: BookmarkExclusion[]): Promise<LocalExclusions> {
-  const [raw, stored] = await Promise.all([
+  const opera = isOpera();
+  const [raw, stored, trash] = await Promise.all([
     browser.bookmarks.getTree(),
     rules ? Promise.resolve(rules) : getBookmarkExclusions(),
+    opera ? getTrashMark() : Promise.resolve(null),
   ]);
+  const roots: BookmarkNode[] = raw[0]?.children ?? [];
+  const own = browserOwnRootIds(roots, { opera, trash });
+  const full = raw.map((node) => mapNode(node, 0));
+  const part = partitionExcluded(full, stored, { byId: true });
   return {
     rules: stored,
-    part: partitionExcluded(raw.map((node) => mapNode(node, 0)), stored, { byId: true }),
-    roots: raw[0]?.children ?? [],
+    part: own.size ? setAsideOwnRoots(full, part, own) : part,
+    roots: own.size ? roots.filter((r) => !own.has(r.id)) : roots,
   };
+}
+
+/**
+ * `part` with the browser's own roots emptied: each stays as an empty shell, as an excluded
+ * root does, because a receiver on an older build still matches roots by position, and
+ * everything that was in it counts as excluded, so the listeners treat a move into it as the
+ * deletion it is to the peers and a move out of it as an arrival.
+ */
+function setAsideOwnRoots(
+  full: SyncBookmark[], part: Partition<SyncBookmark>, own: Set<string>,
+): Partition<SyncBookmark> {
+  const excludedIds = new Set(part.excludedIds);
+  const collect = (n: SyncBookmark): void => {
+    excludedIds.add(n.id);
+    n.children?.forEach(collect);
+  };
+  for (const root of full[0]?.children ?? []) if (own.has(root.id)) collect(root);
+  const tree = part.tree.map((virtual) => (virtual.children
+    ? { ...virtual, children: virtual.children.map((r) => (own.has(r.id) ? { ...r, children: [] } : r)) }
+    : virtual));
+  return { ...part, tree, excludedIds };
+}
+
+/**
+ * `roots` without the browser's own (see `browserOwnRootIds`): a merge, a replace and a restore
+ * never match a peer's root to one of those, so nothing is ever created in Opera's Trash.
+ */
+async function syncRoots(roots: BookmarkNode[]): Promise<BookmarkNode[]> {
+  if (!isOpera()) return roots;
+  const own = browserOwnRootIds(roots, { opera: true, trash: await getTrashMark() });
+  return own.size ? roots.filter((r) => !own.has(r.id)) : roots;
+}
+
+/**
+ * Learn where this browser's `remove()` puts a bookmark, from one a merge has just removed.
+ *
+ * On Opera the bookmark is still there, in the Trash, and that root is remembered: the one
+ * signal about the Trash that does not rest on Opera's numbering (see `browserOwnRootIds`).
+ * Anywhere else `get` finds nothing and there is nothing to learn.
+ */
+async function noteTrash(id: string, roots: BookmarkNode[]): Promise<void> {
+  if (!isOpera()) return;
+  try {
+    const rootIds = new Set(roots.map((r) => r.id));
+    let currentId: string | undefined = id;
+    for (let hops = 0; hops < 64 && currentId; hops++) {
+      const [node]: BookmarkNode[] = await browser.bookmarks.get(currentId);
+      if (!node?.parentId) return;
+      if (rootIds.has(node.parentId)) {
+        const mark = trashMarkOf(roots, node.parentId);
+        const held = await getTrashMark();
+        if (mark && (held?.id !== mark.id || held.slot !== mark.slot)) {
+          await setTrashMark(mark);
+          logger.info("Bookmarks", "This browser keeps removed bookmarks in a trash folder; it is left out of the sync");
+        }
+        return;
+      }
+      currentId = node.parentId;
+    }
+  } catch {
+    // Removed for real.
+  }
 }
 
 /**
@@ -392,9 +471,13 @@ async function localUrlSet(): Promise<Set<string>> {
  */
 async function withRemovedContents(node: BookmarkNode): Promise<BookmarkNode> {
   if (node.url || node.children) return node;
+  return (await cachedNode(node.id)) ?? node;
+}
+
+/** Node `id` as the last synced snapshot (konode_bm_cache) holds it, subtree and all. */
+async function cachedNode(id: string): Promise<BookmarkNode | undefined> {
   const cache = await getBookmarkCache<SyncBookmark[]>();
-  const cached = cache ? flattenNodes(cache).find((n) => n.id === node.id) : undefined;
-  return (cached as BookmarkNode | undefined) ?? node;
+  return cache ? (flattenNodes(cache).find((n) => n.id === id) as BookmarkNode | undefined) : undefined;
 }
 
 /** Record tombstones for every URL in a removed bookmark/folder subtree — but only
@@ -1108,8 +1191,10 @@ async function clearAndImport(tree: SyncBookmark[], excluded: Set<string> = new 
   // Get the local root folders. Ids are browser-specific (Chrome numbers them
   // "1"/"2"/"3"; Firefox uses "toolbar_____"/"unfiled_____"/…) — bookmark-roots.ts
   // maps between them by kind, so nothing here hardcodes Chrome ids.
+  // Not the browser's own roots (Opera's Trash, Speed Dials, Pinboards): nothing of the
+  // peer's belongs there, and clearing one would empty the user's Speed Dials.
   const localTree = await browser.bookmarks.getTree();
-  const localRoots = localTree[0]?.children ?? [];
+  const localRoots = await syncRoots(localTree[0]?.children ?? []);
 
   // Clear all children from each local root folder, except what this device keeps to itself
   // (#54) and the folders on the way to it, which stay standing for the restore to fill.
@@ -1230,8 +1315,11 @@ async function mergeBookmarks(
   // "Is this a root?" is a question about the TREE: on a renumbered profile (Edge 142,
   // crbug 456225717) a root's id matches no table, and a folder the user named "Favorites
   // bar" matches the title table, so neither id nor title can answer it.
-  const localRoots = (await browser.bookmarks.getTree())[0]?.children ?? [];
-  const localRootIds = new Set(localRoots.map((r) => r.id));
+  // Every root is a root, never a shell to prune, but only the ones that sync are matched to
+  // a peer's: Opera's Trash, Speed Dials and Pinboards are the browser's own (browserOwnRootIds).
+  const allRoots = (await browser.bookmarks.getTree())[0]?.children ?? [];
+  const localRootIds = new Set(allRoots.map((r) => r.id));
+  const localRoots = await syncRoots(allRoots);
 
   // Index local URL bookmarks (ids + when each canonical URL last appeared here). That is
   // the newest dateAdded, or later if an import kept an older date than the moment the
@@ -1415,6 +1503,8 @@ async function mergeBookmarks(
     for (const id of toRemove) {
       try {
         await browser.bookmarks.remove(id);
+        // Once per merge: Opera keeps what it was asked to remove, in its Trash.
+        if (!removed) await noteTrash(id, allRoots);
         removed++;
         removedKeys.add(keyOfId.get(id) as string);
         const parent = parentOf.get(id);
@@ -2163,7 +2253,7 @@ export async function restoreBookmarks(snapshot: SyncBookmark[]): Promise<number
     const tombs = await getTombstones();
     await setTombstones(tombs.filter((t) => !snapUrls.has(canonicalUrlKey(t.url))));
 
-    const localRoots = (await browser.bookmarks.getTree())[0]?.children ?? [];
+    const localRoots = await syncRoots((await browser.bookmarks.getTree())[0]?.children ?? []);
     const otherId = defaultOtherRootId(localRoots);
     if (!otherId) return 0;
 
@@ -2255,13 +2345,21 @@ export type BookmarkChangeCallback = () => void;
  * is often the very one being judged, so the set may well be built after the move or the
  * removal it is asked about, and by then it cannot say where the node itself was. The parent
  * is there on both sides of the event; the node's own rules are checked separately.
+ *
+ * On Opera the set is never empty, rules or not: it holds Opera's Trash, Speed Dials and
+ * Pinboards (browserOwnRootIds). That is what turns a bookmark deleted on Opera, which arrives
+ * as a move into the Trash, into the deletion it is, and one taken back out into an arrival.
  */
 let excludedCache: { sig: string; rules: BookmarkExclusion[]; ids: Set<string> } | null = null;
 
 async function excludedNow(): Promise<typeof excludedCache> {
-  const rules = await getBookmarkExclusions();
-  if (!rules.length) return (excludedCache = null);
-  const sig = JSON.stringify(rules);
+  const opera = isOpera();
+  const [rules, trash] = await Promise.all([
+    getBookmarkExclusions(),
+    opera ? getTrashMark() : Promise.resolve(null),
+  ]);
+  if (!rules.length && !opera) return (excludedCache = null);
+  const sig = JSON.stringify({ rules, trash });
   if (excludedCache?.sig !== sig) {
     excludedCache = { sig, rules, ids: (await localExclusions(rules)).part.excludedIds };
   }
@@ -2315,9 +2413,15 @@ async function subtreeNodes(id: string): Promise<BookmarkNode[]> {
  * Something synced was moved into an excluded folder (#54), so for the peers it is gone.
  * Recorded as the deletion it is to them: they still hold it under its old folder, and the
  * next merge would put it straight back here as a second copy outside the excluded one.
+ *
+ * This is also how a bookmark deleted on Opera is recorded: Opera moves it into its Trash, a
+ * folder alone in a single event, and the Trash is set aside like an excluded folder. Its
+ * contents are still under it there. If the Trash was emptied before the worker this move woke
+ * got here, the last synced snapshot still knows what went.
  */
 async function recordLeftSync(id: string, oldParentId: string): Promise<void> {
-  const [node] = await browser.bookmarks.getSubTree(id).catch(() => [] as BookmarkNode[]);
+  const [live] = await browser.bookmarks.getSubTree(id).catch(() => [] as BookmarkNode[]);
+  const node = live ?? await cachedNode(id);
   if (!node) return;
   await recordRemovedTombstones(node);
   await recordRemovedFolder(oldParentId, node);
@@ -2514,19 +2618,19 @@ export function registerBookmarkListeners(onChange: BookmarkChangeCallback): voi
       const ex = await exclusions();
       if (ex) {
         const [node] = await browser.bookmarks.get(id).catch(() => [] as BookmarkNode[]);
-        if (node) {
-          const was = await excludedUnder(ex, moveInfo.oldParentId, node);
-          const now = await excludedUnder(ex, moveInfo.parentId, node);
-          if (was && now) return; // reshuffled inside: nothing syncs
-          // In or out, the set no longer describes the tree.
-          if (was !== now) excludedCache = null;
-          if (now) {
-            swallow(recordLeftSync(id, moveInfo.oldParentId));
-            onChange();
-            return;
-          }
-          if (was) swallow(recordJoinedSync(id));
+        // A node that is gone already is judged by its parents alone: Opera's Trash emptied
+        // before the event that moved something into it was handled.
+        const was = node ? await excludedUnder(ex, moveInfo.oldParentId, node) : ex.ids.has(moveInfo.oldParentId);
+        const now = node ? await excludedUnder(ex, moveInfo.parentId, node) : ex.ids.has(moveInfo.parentId);
+        if (was && now) return; // reshuffled inside: nothing syncs
+        // In or out, the set no longer describes the tree.
+        if (was !== now) excludedCache = null;
+        if (now) {
+          swallow(recordLeftSync(id, moveInfo.oldParentId));
+          onChange();
+          return;
         }
+        if (was) swallow(recordJoinedSync(id));
       }
       // Record the move (per URL, timestamped) so the new placement propagates.
       swallow(recordMove(id));
