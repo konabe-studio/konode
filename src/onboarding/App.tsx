@@ -4,7 +4,8 @@ import { browser } from "@/lib/utils/ext";
 import { t, tParts } from "@/lib/utils/i18n";
 import { interactiveSignIn, isDriveAuthAvailable, getStoredGDriveUser } from "@/lib/backends/gdrive-oauth";
 import { loadDraft, saveDraft, clearDraft, type DraftStep } from "@/lib/onboarding-draft";
-import { isRefusedHttpUrl } from "@/lib/utils/url";
+import { isRefusedHttpUrl, isSecureBackendUrl } from "@/lib/utils/url";
+import { forgeBaseUrl } from "@/lib/backends/gitea-backend";
 
 // Some engines (notably iOS WebKit, e.g. Orion) don't support interactive Google
 // sign-in; gate the Drive option so users aren't sent into a dead end.
@@ -75,6 +76,13 @@ export default function OnboardingApp() {
   const [githubChecking, setGithubChecking] = useState(false);
   const [showToken, setShowToken] = useState(false);
   const [githubError, setGithubError] = useState<string | null>(null);
+  // Gitea / Forgejo. Its own fields, not GitHub's: a token typed for one forge must never
+  // be sent to the other. Not checked as it is typed, unlike GitHub's: the instance can be
+  // reached only once its host permission is granted, which Finish asks for.
+  const [giteaUrl, setGiteaUrl] = useState("");
+  const [giteaToken, setGiteaToken] = useState("");
+  const [giteaRepo, setGiteaRepo] = useState("");
+  const [giteaBranch, setGiteaBranch] = useState("main");
   // Latest-wins guard + debounce timer for the token check. See scheduleVerify.
   const verifySeq = useRef(0);
   const verifyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -148,6 +156,8 @@ export default function OnboardingApp() {
   const backend: BackendType | null = provider ? providerById(provider).backend : null;
   const effectiveWebdavUrl = provider === "nextcloud" ? nextcloudUrl(ncHost, webdavUser) : webdavUrl;
   const webdavUrlRefused = isRefusedHttpUrl(effectiveWebdavUrl);
+  const giteaBase = forgeBaseUrl(giteaUrl);
+  const giteaUrlRefused = isRefusedHttpUrl(giteaUrl);
 
   // Per-card WebDAV credentials, remembered while the wizard is open. The fields are
   // shared by every WebDAV card, so switching swaps them rather than wiping them —
@@ -269,6 +279,10 @@ export default function OnboardingApp() {
         setGithubToken(draft.githubToken);
         setGithubRepo(draft.githubRepo);
         setGithubBranch(draft.githubBranch);
+        setGiteaUrl(draft.giteaUrl);
+        setGiteaToken(draft.giteaToken);
+        setGiteaRepo(draft.giteaRepo);
+        setGiteaBranch(draft.giteaBranch);
         setWebdavUrl(draft.webdavUrl);
         setWebdavUser(draft.webdavUser);
         setWebdavPass(draft.webdavPass);
@@ -297,12 +311,14 @@ export default function OnboardingApp() {
       void saveDraft({
         step: step as DraftStep, deviceLabel, provider,
         githubToken, githubRepo, githubBranch,
+        giteaUrl, giteaToken, giteaRepo, giteaBranch,
         webdavUrl, webdavUser, webdavPass, ncHost,
         dataTypes, bookmarkExclusions: exclusions,
       }).catch(() => { /* a draft that cannot be written costs a retype, nothing more */ });
     }, 300);
     return () => clearTimeout(id);
   }, [restored, step, deviceLabel, provider, githubToken, githubRepo, githubBranch,
+    giteaUrl, giteaToken, giteaRepo, giteaBranch,
     webdavUrl, webdavUser, webdavPass, ncHost, dataTypes, exclusions]);
 
   useEffect(() => {
@@ -346,6 +362,7 @@ export default function OnboardingApp() {
     if (!provider) return false;
     if (provider === "gdrive") return !!gdriveUser;
     if (provider === "github") return !!githubUser && !!githubRepo;
+    if (provider === "gitea") return !!giteaBase && isSecureBackendUrl(giteaBase) && !!giteaToken.trim() && !!giteaRepo.trim();
     if (provider === "nextcloud") return !!(ncHost && webdavUser && webdavPass);
     if (webdavUrlRefused) return false;
     return !!(effectiveWebdavUrl && webdavUser && webdavPass);
@@ -397,6 +414,19 @@ export default function OnboardingApp() {
         return;
       }
     }
+    if (backend === "gitea") {
+      // The same rules as WebDAV just above, for the same reasons: synchronous, so the
+      // gesture survives, and a restored draft may carry an address Continue would refuse.
+      if (!giteaBase) {
+        setSetupError(t("gitea_err_bad_url"));
+        return;
+      }
+      if (!isSecureBackendUrl(giteaBase)) {
+        setSetupError(t("gitea_err_http"));
+        return;
+      }
+      origins.push(new URL(giteaBase).origin + "/*");
+    }
 
     const seq = ++finishSeq.current;
     if (optPerms.length || origins.length) {
@@ -424,7 +454,9 @@ export default function OnboardingApp() {
         setSetupError(
           outcome === "cannot-prompt"
             ? t("onb_err_perms_no_prompt")
-            : t(origins.length ? "onb_err_perms_webdav" : "onb_err_perms_types")
+            : !origins.length
+              ? t("onb_err_perms_types")
+              : backend === "gitea" ? t("gitea_err_perms") : t("onb_err_perms_webdav")
         );
         return;
       }
@@ -449,6 +481,11 @@ export default function OnboardingApp() {
         backends.push({
           type: "github" as const, label: "GitHub", enabled: true,
           github: { token: githubToken, repo: githubRepo, branch: githubBranch.trim() || "main" },
+        });
+      } else if (backend === "gitea") {
+        backends.push({
+          type: "gitea" as const, label: "Gitea / Forgejo", enabled: true,
+          gitea: { url: giteaBase, token: giteaToken.trim(), repo: giteaRepo.trim(), branch: giteaBranch.trim() || "main" },
         });
       } else if (backend === "webdav") {
         backends.push({
@@ -783,6 +820,46 @@ export default function OnboardingApp() {
                       >
                         {t("onb_github_token_link")}
                       </a>
+                    </div>
+                  )}
+
+                  {/* Gitea / Forgejo: the instance's address, then GitHub's fields */}
+                  {on && p.backend === "gitea" && (
+                    <div style={S.authPanel} onClick={(e) => e.stopPropagation()}>
+                      <input style={{ ...S.input, fontFamily: "monospace" }}
+                        placeholder="git.example.com" /* an example host, the same in every language */
+                        value={giteaUrl} onChange={(e) => setGiteaUrl(e.target.value)} />
+                      {giteaUrlRefused && (
+                        <div style={S.errorRow} role="alert"><XCircle size={12} style={{ flexShrink: 0 }} /> {t("gitea_err_http")}</div>
+                      )}
+                      <div style={{ position: "relative" }}>
+                        <input
+                          style={{ ...S.input, fontFamily: "monospace", paddingRight: 32 }}
+                          type={showToken ? "text" : "password"}
+                          placeholder={t("opt_gitea_token_label")}
+                          value={giteaToken}
+                          onChange={(e) => setGiteaToken(e.target.value)}
+                        />
+                        <button style={S.eyeBtn} onClick={() => setShowToken(v => !v)}>
+                          {showToken ? <EyeOff size={12} /> : <Eye size={12} />}
+                        </button>
+                      </div>
+                      <input style={{ ...S.input, fontFamily: "monospace" }}
+                        placeholder="username/konode-sync"
+                        value={giteaRepo} onChange={(e) => setGiteaRepo(e.target.value)} />
+                      <input style={{ ...S.input, fontFamily: "monospace" }}
+                        placeholder={t("onb_github_branch_placeholder")}
+                        value={giteaBranch} onChange={(e) => setGiteaBranch(e.target.value)} />
+                      {p.noteKey && <div style={hintStyle}>{t(p.noteKey)}</div>}
+                      {giteaBase && isSecureBackendUrl(giteaBase) && (
+                        <a
+                          href={`${giteaBase}/user/settings/applications`}
+                          target="_blank" rel="noreferrer"
+                          style={{ fontSize: 12, color: "var(--text-link)", textDecoration: "none", marginTop: 4, display: "inline-block" }}
+                        >
+                          {t("gitea_token_link")}
+                        </a>
+                      )}
                     </div>
                   )}
                 </div>

@@ -7,6 +7,13 @@ All notable changes to Konode. Format loosely follows
 
 ### Added
 
+- **Gitea and Forgejo storage (#32).** A new **Gitea / Forgejo** card, in setup and under
+  Settings → Storage, syncs to a private repository on your own Gitea or Forgejo server, the
+  way the GitHub card does on GitHub. Enter the server's address, the repository and an
+  access token with the repository permission set to Read and Write. Konode asks your
+  browser for permission to reach that server when you save, and connects only over
+  `https://` (or `http://` to a server on the same computer), because the token goes with
+  every request. Public repositories are refused, as on GitHub. Asked for in #32 and #76.
 - **Send to device can leave the right-click menu.** Turn off **Send to device in the
   right-click menu** under Settings → Device → Sync behavior, and Konode adds nothing to the
   menu you get by right-clicking a page, a link or a Firefox tab. The paper-plane icon in the

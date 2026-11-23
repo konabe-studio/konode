@@ -3,6 +3,7 @@ import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncEx
 } from "@/lib/types";
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { normalizeRepoSlug } from "@/lib/backends/github-backend";
+import { forgeBaseUrl, normalizeForgeRepoSlug } from "@/lib/backends/gitea-backend";
 import { createSnapshot as writeSnapshot, listSnapshots as readSnapshots, restoreSnapshot as applySnapshot, deleteSnapshot as dropSnapshot, type SnapshotMeta } from "@/lib/sync/snapshots";
 import {
   bookmarkContent, exportBookmarkPayload, importBookmarks, peerTreeAsMerged, type BulkDeleteBlock,
@@ -209,6 +210,11 @@ export function backendOrigins(cfg: BackendConfig | undefined): string[] {
       return ["https://www.googleapis.com/*", "https://oauth2.googleapis.com/*"];
     case "github":
       return ["https://api.github.com/*"];
+    case "gitea": {
+      const base = forgeBaseUrl(cfg.gitea?.url);
+      if (!base) return [];
+      try { return [new URL(base).origin + "/*"]; } catch { return []; }
+    }
     default:
       return [];
   }
@@ -223,6 +229,8 @@ export function storageName(cfg: BackendConfig | undefined): string {
       return "Google Drive";
     case "github":
       return "GitHub";
+    case "gitea":
+      try { return new URL(forgeBaseUrl(cfg.gitea?.url)).host; } catch { return "your storage"; }
     default:
       return "your storage";
   }
@@ -251,8 +259,8 @@ export async function explainSyncFailure(err: unknown, cfg: BackendConfig | unde
   const origins = backendOrigins(cfg);
   if (!origins.length || (await hasPermission({ origins }))) return msg;
 
-  const where = cfg?.type === "webdav" && cfg.webdav?.url
-    ? (() => { try { return new URL(cfg.webdav!.url).host; } catch { return "your storage"; } })()
+  const where = (cfg?.type === "webdav" && cfg.webdav?.url) || (cfg?.type === "gitea" && cfg.gitea?.url)
+    ? storageName(cfg)
     : "your storage provider";
   // Cause and cure FIRST, original last. The popup clamps this to two lines, and it was
   // clamping away the half that says what to do about it.
@@ -1254,6 +1262,8 @@ export class SyncEngine {
         return JSON.stringify(["webdav", cfg.webdav?.url ?? "", cfg.webdav?.path ?? "", cfg.webdav?.username ?? ""]);
       case "github":
         return JSON.stringify(["github", cfg.github?.repo ?? "", cfg.github?.branch ?? "", cfg.github?.path ?? ""]);
+      case "gitea":
+        return JSON.stringify(["gitea", forgeBaseUrl(cfg.gitea?.url), cfg.gitea?.repo ?? "", cfg.gitea?.branch ?? "", cfg.gitea?.path ?? ""]);
       default:
         return JSON.stringify([cfg.type]);
     }
@@ -1617,6 +1627,10 @@ export class SyncEngine {
       case "github": {
         const g = cfg.github;
         return `github:${normalizeRepoSlug(g?.repo)}@${g?.branch ?? "main"}/${g?.path ?? "konode"}`;
+      }
+      case "gitea": {
+        const g = cfg.gitea;
+        return `gitea:${forgeBaseUrl(g?.url)}/${normalizeForgeRepoSlug(g?.repo, g?.url)}@${g?.branch ?? "main"}/${g?.path ?? "konode"}`;
       }
       case "webdav": {
         const w = cfg.webdav;

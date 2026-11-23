@@ -59,6 +59,7 @@ export const BACKEND_LABEL: Record<BackendType, string> = {
   gdrive: "Google Drive",
   webdav: "WebDAV",
   github: "GitHub", // GitHub only — see the provider card note in storage-providers.ts
+  gitea: "Gitea / Forgejo",
 };
 
 /**

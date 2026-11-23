@@ -184,11 +184,16 @@ describe("provider cards only name hosts the backend can actually reach", () => 
     expect(`${github.label} ${en(github.descKey)}`).not.toMatch(/gitea|gitlab/i);
   });
 
-  it("names no Git host other than GitHub anywhere in the card copy", () => {
+  it("names Gitea and Forgejo only on their own card, and no Git host Konode can't reach", () => {
+    // Gitea and Forgejo have a card of their own since #32, with their own config block,
+    // so naming them there is true. Anywhere else it is the old mistake again, and GitLab,
+    // Bitbucket and Codeberg are reached by no card at all.
     for (const p of PROVIDERS) {
-      expect(`${p.label} ${en(p.descKey)} ${p.noteKey ? en(p.noteKey) : ""}`)
-        .not.toMatch(/gitea|gitlab|bitbucket|codeberg|forgejo/i);
+      const copy = `${p.label} ${en(p.descKey)} ${p.noteKey ? en(p.noteKey) : ""}`;
+      expect(copy).not.toMatch(/gitlab|bitbucket|codeberg/i);
+      if (p.id !== "gitea") expect(copy).not.toMatch(/gitea|forgejo/i);
     }
+    expect(providerById("gitea").backend).toBe("gitea");
   });
 });
 

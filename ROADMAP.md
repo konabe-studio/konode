@@ -409,6 +409,9 @@ Sequenced by where our value prop is strongest, not by raw browser size:
      duplicate), whose API follows Gitea's. Gitea's contents API is shaped like GitHub's,
      so the missing piece is a configurable API base URL on the GitHub backend rather than
      a backend of its own. The #32 reporter offered to test against a real instance.
+     **Built for 1.7.0** (2026-11-23): a `gitea` backend type on the GitHub backend, with its
+     own card and config block. A two-device sync through a local Gitea 28.4.0 passed;
+     Forgejo, and the #32 reporter's own instance, are still to come.
      GitLab is a bigger job: different API, different auth header, project ids.
    - [#44](https://github.com/konabe-studio/konode/issues/44) **GitHub Gist**, kept open as
      a candidate. A secret gist is unlisted rather than private, so it needs E2EE

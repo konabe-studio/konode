@@ -120,6 +120,7 @@ Storage**. All your devices use the same one.
 |---|---|---|
 | **Google Drive** | A Google account. One sign-in. | The least setup. Konode sees only the files it created (`drive.file` scope). |
 | **GitHub** | A private repository and a fine-grained token with Contents: Read and write. | A full history of every change, as commits. Public repositories are refused. |
+| **Gitea / Forgejo** *(next version)* | Your server's address, a private repository and an access token with the repository permission set to Read and Write. | Your own Git server, with the same history of commits as GitHub. Konode asks your browser for permission to reach the server when you save. Public repositories are refused. |
 | **Nextcloud / ownCloud** | Your server's host, your username and an app password. | Your own server. Konode builds the WebDAV address from the host. |
 | **pCloud** | Your account region (EU or US). A paid pCloud plan. | pCloud users. |
 | **Koofr** | Your Koofr email and a Koofr app password. | Koofr users. |
@@ -129,10 +130,11 @@ Storage**. All your devices use the same one.
 
 **Test connection** checks the details before you save. Konode connects to a WebDAV server
 only over `https://`, or over `http://` to a server on the same computer, because WebDAV sends
-your password with every request.
+your password with every request. The same goes for a Gitea or Forgejo server, which gets
+your access token with every request.
 
-Konode keeps one file per device and data type in a `Konode` folder (`konode` on GitHub and
-WebDAV). You can look at it, or delete it, with your provider's own tools.
+Konode keeps one file per device and data type in a `Konode` folder (`konode` on GitHub,
+Gitea / Forgejo and WebDAV). You can look at it, or delete it, with your provider's own tools.
 
 ## End-to-end encryption
 

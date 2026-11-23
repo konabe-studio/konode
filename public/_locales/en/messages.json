@@ -367,6 +367,42 @@
     "message": "Private repository",
     "description": "One short line under the provider's name on its tile in Settings, Storage. Keep it to about three words: the tile is narrow and the line is cut, not wrapped."
   },
+  "provider_gitea_desc": {
+    "message": "Your synced data lives in a private repository on your own Gitea or Forgejo server, which Konode reaches with an access token.",
+    "description": "Description of the Gitea / Forgejo storage card. Gitea and Forgejo are product names: never translate them."
+  },
+  "provider_gitea_hint": {
+    "message": "Your own Git server",
+    "description": "The short line under the Gitea / Forgejo card's name on the Settings grid. A few words only."
+  },
+  "provider_gitea_note": {
+    "message": "Create the token on your server under Settings → Applications, with the repository permission set to Read and Write. Then allow Konode to reach your server when the browser asks.",
+    "description": "Shown once the Gitea / Forgejo card is selected. 'repository' is the name of the permission in Gitea's and Forgejo's token form; Read and Write is its setting."
+  },
+  "opt_gitea_token_label": {
+    "message": "Access token",
+    "description": "Label (Settings) and placeholder (setup wizard) of the Gitea / Forgejo token field."
+  },
+  "gitea_token_link": {
+    "message": "Create an access token on your server →",
+    "description": "Link to the token page of the user's own Gitea / Forgejo server."
+  },
+  "gitea_err_http": {
+    "message": "Konode does not connect to a Gitea or Forgejo server over http://, because your access token would be sent unencrypted with every request. Use an https:// address. http:// works only for a server on this computer (localhost).",
+    "description": "Why a plain http:// Gitea / Forgejo address is refused. Keep http://, https:// and localhost as they are."
+  },
+  "gitea_err_perms": {
+    "message": "Konode needs permission to reach your Gitea or Forgejo server. Allow it when the browser asks, then try again.",
+    "description": "The browser's permission to reach the user's Gitea / Forgejo server was declined."
+  },
+  "gitea_err_perms_no_prompt": {
+    "message": "This browser can't show permission prompts, so Konode couldn't ask for access to your Gitea or Forgejo server. Grant it on Konode's permissions screen in your browser's extension settings, then try again.",
+    "description": "On a browser that cannot show permission prompts (Firefox for Android), the Gitea / Forgejo host permission has to be granted in the browser's extension settings."
+  },
+  "gitea_err_bad_url": {
+    "message": "Enter your server's address, such as git.example.com.",
+    "description": "The Gitea / Forgejo server address field is empty or not an address. git.example.com is an example host: keep it as it is."
+  },
   "provider_webdav_desc": {
     "message": "Synology, kDrive, or any other WebDAV server."
   },

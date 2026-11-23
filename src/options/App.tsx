@@ -97,7 +97,8 @@ import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encrypt
 import { KEYS, normalizeRemoteExtensions, sendContextMenuOn, setRateAnswered, type AuditEntry } from "@/lib/utils/storage";
 import { menusApi } from "@/lib/sent-tabs-browser";
 import { auditLogText } from "@/lib/utils/audit-text";
-import { isRefusedHttpUrl, isSafeContentUrl } from "@/lib/utils/url";
+import { isRefusedHttpUrl, isSafeContentUrl, isSecureBackendUrl } from "@/lib/utils/url";
+import { forgeBaseUrl } from "@/lib/backends/gitea-backend";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
 import { browser, currentStore } from "@/lib/utils/ext";
 import { missingLocally, installOrSearchUrl, storeUrlFor, inferStore, STORE_NAME, type LocalExtLike } from "@/lib/utils/extensions-match";
@@ -728,10 +729,12 @@ export default function OptionsApp() {
     const ab = settings.active_backend;
     const w = settings.backends.find((b) => b.type === "webdav")?.webdav;
     const g = settings.backends.find((b) => b.type === "github")?.github;
+    const ge = settings.backends.find((b) => b.type === "gitea")?.gitea;
     const configured =
       ab === "gdrive" ? !!gdriveUser
       : ab === "webdav" ? !!(w?.url && w?.username && w?.password)
       : ab === "github" ? !!(g?.token && g?.repo)
+      : ab === "gitea" ? !!(ge?.url && ge?.token && ge?.repo)
       : false;
     if (configured && settings.enabled_types.length > 0) {
       update({ onboarding_completed: true });
@@ -1019,6 +1022,25 @@ export default function OptionsApp() {
           ? t("opt_err_perms_bad_url")
           : t("opt_err_perms_denied");
 
+  // Gitea / Forgejo: the instance is a host of the user's own, like a WebDAV server, so the
+  // same rules hold: http is refused before the prompt (#83), and the request is the first
+  // thing awaited, so it keeps the click's gesture (`forgeBaseUrl` is synchronous).
+  const requestGiteaHostPermission = async (): Promise<PermissionOutcome | "bad-url" | "insecure"> => {
+    const base = forgeBaseUrl(getBackend("gitea")?.gitea?.url);
+    if (!base) return "bad-url";
+    if (!isSecureBackendUrl(base)) return "insecure";
+    return await ensurePermission({ origins: [new URL(base).origin + "/*"] });
+  };
+
+  const giteaPermissionError = (outcome: PermissionOutcome | "bad-url" | "insecure"): string =>
+    outcome === "insecure"
+      ? t("gitea_err_http")
+      : outcome === "cannot-prompt"
+        ? t("gitea_err_perms_no_prompt")
+        : outcome === "bad-url"
+          ? t("gitea_err_bad_url")
+          : t("gitea_err_perms");
+
   const save = async () => {
     if (!settings) return;
     setSaveError(null);
@@ -1034,6 +1056,13 @@ export default function OptionsApp() {
       const outcome = await requestWebdavHostPermission();
       if (outcome !== "granted") {
         setSaveError(webdavPermissionError(outcome));
+        return;
+      }
+    }
+    if (settings.active_backend === "gitea") {
+      const outcome = await requestGiteaHostPermission();
+      if (outcome !== "granted") {
+        setSaveError(giteaPermissionError(outcome));
         return;
       }
     }
@@ -1109,6 +1138,13 @@ export default function OptionsApp() {
       const outcome = await requestWebdavHostPermission();
       if (outcome !== "granted") {
         setTestStatus({ ok: false, message: webdavPermissionError(outcome) });
+        return;
+      }
+    }
+    if (settings.active_backend === "gitea") {
+      const outcome = await requestGiteaHostPermission();
+      if (outcome !== "granted") {
+        setTestStatus({ ok: false, message: giteaPermissionError(outcome) });
         return;
       }
     }
@@ -1407,6 +1443,7 @@ export default function OptionsApp() {
     if (ab === "gdrive") return !!gdriveUser;
     if (ab === "webdav") { const w = getBackend("webdav")?.webdav; return !!(w?.url && w?.username && w?.password); }
     if (ab === "github") { const g = getBackend("github")?.github; return !!(g?.token && g?.repo); }
+    if (ab === "gitea") { const g = getBackend("gitea")?.gitea; return !!(g?.url && g?.token && g?.repo); }
     return false;
   })();
   const setupComplete = activeBackendConfigured && settings.enabled_types.length > 0;
@@ -1495,8 +1532,8 @@ export default function OptionsApp() {
                   under ITS row. Eight cards stacked with one expanded pushed most of the
                   choices below the fold; as tiles they stay in view while one is open, and the
                   panel sits next to the tile it belongs to rather than at the end. Two columns,
-                  so eight providers fill every row and a translated hint fits on one line;
-                  one on a phone. `gridCols` must say what the CSS draws, since it decides
+                  so a translated hint fits on one line; one on a phone. Nine providers since
+                  Gitea / Forgejo, so the catch-all WebDAV tile sits alone in the last row. `gridCols` must say what the CSS draws, since it decides
                   which tile the panel follows. */}
               <div className="provider-grid">
                 {(() => {
@@ -1753,6 +1790,72 @@ export default function OptionsApp() {
                           </a>
                         </div>
                       )}
+
+                      {/* ── Gitea / Forgejo: the GitHub fields plus the instance's address.
+                          Its own config block, so a token typed here never goes to GitHub. ── */}
+                      {isActive && p.backend === "gitea" && (() => {
+                        const g = getBackend("gitea")?.gitea;
+                        const setG = (patch: Partial<NonNullable<BackendConfig["gitea"]>>) =>
+                          updateBackend("gitea", { gitea: { ...getBackend("gitea")?.gitea, ...patch } });
+                        const base = forgeBaseUrl(g?.url);
+                        return (
+                          <div className="backend-config" onClick={(e) => e.stopPropagation()}>
+                            <div className="field-group">
+                              <label className="field-label">{t("opt_webdav_host_label")}</label>
+                              <input
+                                className="field-input mono"
+                                value={g?.url ?? ""}
+                                onChange={(e) => setG({ url: e.target.value })}
+                                placeholder="git.example.com" /* an example host, the same in every language */
+                              />
+                            </div>
+                            {isRefusedHttpUrl(g?.url) && (
+                              <div className="error-row"><AlertTriangle size={12} /> {t("gitea_err_http")}</div>
+                            )}
+                            <div className="field-group">
+                              <label className="field-label">{t("opt_gitea_token_label")}</label>
+                              <SecretField
+                                value={g?.token ?? ""}
+                                placeholder="••••••••"
+                                sensitive
+                                onChange={(v) => setG({ token: v })}
+                              />
+                            </div>
+                            <div className="field-row-2">
+                              <div className="field-group" style={{ flex: 2 }}>
+                                <label className="field-label">{t("opt_github_repo_label")}</label>
+                                <input
+                                  className="field-input mono"
+                                  value={g?.repo ?? ""}
+                                  onChange={(e) => setG({ repo: e.target.value })}
+                                  placeholder="username/repo-name"
+                                />
+                              </div>
+                              <div className="field-group" style={{ flex: 1 }}>
+                                <label className="field-label">{t("opt_github_branch_label")}</label>
+                                <input
+                                  className="field-input mono"
+                                  value={g?.branch ?? "main"}
+                                  onChange={(e) => setG({ branch: e.target.value })}
+                                  placeholder="main"
+                                />
+                              </div>
+                            </div>
+                            {p.noteKey && <InfoHint>{t(p.noteKey)}</InfoHint>}
+                            {/* Only once the address is one Konode would connect to: the link
+                                is built from what the user typed. */}
+                            {base && isSecureBackendUrl(base) && (
+                              <a
+                                href={`${base}/user/settings/applications`}
+                                target="_blank" rel="noreferrer"
+                                className="link-external"
+                              >
+                                <ExternalLink size={12} /> {t("gitea_token_link")}
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Inside the card, under the fields it checks. It tests what is in
                           the form rather than what is saved, and the form IS this card, so

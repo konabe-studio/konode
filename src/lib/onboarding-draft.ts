@@ -10,7 +10,7 @@
  *
  * What is kept, and what is not:
  * - Where the wizard was, the device name, the storage card and its fields, the data
- *   types, and the bookmarks picked to stay out of sync (#54). The GitHub token and the WebDAV password are kept too: GitHub shows a
+ *   types, and the bookmarks picked to stay out of sync (#54). The GitHub and Gitea tokens and the WebDAV password are kept too: GitHub shows a
  *   fine-grained token once, and both end up in the same storage the moment setup
  *   completes. What the completed case does not have is a token sitting there for a setup
  *   the user walked away from, so the draft lives a day at most (DRAFT_TTL_MS), goes the
@@ -41,6 +41,10 @@ export interface OnboardingDraft {
   githubToken: string;
   githubRepo: string;
   githubBranch: string;
+  giteaUrl: string;
+  giteaToken: string;
+  giteaRepo: string;
+  giteaBranch: string;
   webdavUrl: string;
   webdavUser: string;
   webdavPass: string;
@@ -103,6 +107,11 @@ function validDraft(raw: Partial<OnboardingDraft>, now: number): OnboardingDraft
     githubToken: str(raw.githubToken),
     githubRepo: str(raw.githubRepo),
     githubBranch: str(raw.githubBranch) || "main",
+    // A draft from before Gitea had none of these, which is the same as nothing typed.
+    giteaUrl: str(raw.giteaUrl),
+    giteaToken: str(raw.giteaToken),
+    giteaRepo: str(raw.giteaRepo),
+    giteaBranch: str(raw.giteaBranch) || "main",
     webdavUrl: str(raw.webdavUrl),
     webdavUser: str(raw.webdavUser),
     webdavPass: str(raw.webdavPass),
