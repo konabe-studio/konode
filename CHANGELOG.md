@@ -60,6 +60,14 @@ All notable changes to Konode. Format loosely follows
   transferred total on the Activity page counts only what was actually moved. What arrives
   is the same as before. On WebDAV, a newly changed file is read twice before Konode relies
   on that answer, because many servers can't tell two writes within the same second apart.
+- **History syncs without slowing your browser when all your devices are in use (#96).**
+  While you browse, a device's history changes with almost every page, and its whole history
+  file was sent again at every sync. Each of your other devices then downloaded all of it
+  and checked it against weeks of local history, once a minute, which is the slowdown and
+  the freezes one user saw in Edge. Konode now sends a device's history at most every 15
+  minutes, and checks only what is new since the last time it heard from each device. A
+  page you visit reaches your other devices within about 15 minutes; **Sync now** still
+  sends it at once. Bookmarks, open tabs and extensions sync as often as before.
 
 ## [1.6.0] - 2026-11-19
 
