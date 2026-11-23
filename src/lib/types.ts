@@ -3,7 +3,7 @@ import type { RootKind } from "@/lib/utils/bookmark-roots";
 // ─── Core Types ────────────────────────────────────────────────────────────
 
 export type DataType = "bookmarks" | "history" | "sessions" | "extensions";
-export type BackendType = "gdrive" | "webdav" | "github";
+export type BackendType = "gdrive" | "webdav" | "github" | "gitea";
 export type SyncStatus = "idle" | "syncing" | "success" | "error" | "conflict";
 export type ConflictStrategy = "lww" | "prefer-local" | "prefer-remote" | "manual";
 
@@ -362,6 +362,15 @@ export interface BackendConfig {
   };
   // GitHub
   github?: {
+    token?: string;
+    repo?: string; // "owner/repo"
+    branch?: string;
+    path?: string; // subfolder in repo, default "konode"
+  };
+  // Gitea / Forgejo: the GitHub block plus the instance address. A block of its own, not
+  // a base URL on GitHub's, so switching cards can never send one forge's token to the other.
+  gitea?: {
+    url?: string; // the instance, e.g. "https://git.example.com" (a subpath install keeps its path)
     token?: string;
     repo?: string; // "owner/repo"
     branch?: string;

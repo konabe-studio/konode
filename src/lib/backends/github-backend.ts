@@ -1,5 +1,5 @@
 import { peerDeviceId } from "@/lib/types";
-import type { IBackend, BackendConfig, DataType, SyncPacket, PeerFile, PeerPull } from "@/lib/types";
+import type { IBackend, BackendConfig, BackendType, DataType, SyncPacket, PeerFile, PeerPull } from "@/lib/types";
 import { withRetry, HttpError, defaultShouldRetry, rateLimitMessage } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 import { utf8ToBase64 } from "@/lib/utils/base64";
@@ -22,39 +22,120 @@ export function normalizeRepoSlug(input: string | undefined): string {
     .replace(/^\/+|\/+$/g, "");
 }
 
+/**
+ * Is this repository empty, so the first write has to create its branch?
+ *
+ * GitHub leaves `default_branch` out of an empty repository. Gitea and Forgejo name one
+ * anyway (the instance's default, `main` unless configured) and say `empty: true`
+ * instead, so asking only for the branch would read every new Gitea repository as
+ * initialized.
+ */
+export function isEmptyRepo(repo: { empty?: boolean; default_branch?: string | null }): boolean {
+  return repo.empty === true || !repo.default_branch;
+}
+
+/** The settings a git forge backend reads: GitHub's block, or Gitea's minus its `url`. */
+export interface ForgeSettings {
+  token?: string;
+  repo?: string;
+  branch?: string;
+  path?: string;
+}
+
+/**
+ * The GitHub contents API backend, and the base of `GiteaBackend` (Gitea and Forgejo,
+ * whose contents API is shaped like GitHub's). What differs per forge is in the
+ * overridable members at the top; everything under them is shared.
+ */
 export class GitHubBackend implements IBackend {
-  readonly type = "github" as const;
+  readonly type: BackendType = "github";
 
-  constructor(private config: BackendConfig) {}
+  constructor(protected config: BackendConfig) {}
 
-  isConfigured(): boolean {
-    const gh = this.config.github;
-    return !!(gh?.token && gh?.repo);
-  }
+  // ── What differs per forge. GitHub's answers here; GiteaBackend overrides them. ──
 
-  private get gh() {
-    if (!this.config.github?.token) throw new Error("GitHub token not configured");
-    return this.config.github;
-  }
-
-  private get branch(): string { return this.gh.branch ?? "main"; }
-  private get path(): string { return this.gh.path ?? "konode"; }
+  /** The name the log lines and error messages use. */
+  protected get forgeName(): string { return "GitHub"; }
+  /** Where `/user` and `/repos/…` live, without a trailing slash. */
+  protected get api(): string { return GITHUB_API; }
+  protected get settings(): ForgeSettings | undefined { return this.config.github; }
   /** `owner/repo`, tolerant of a pasted URL / `.git` suffix / trailing slash. */
-  private get repoSlug(): string { return normalizeRepoSlug(this.gh.repo); }
+  protected get repoSlug(): string { return normalizeRepoSlug(this.forge.repo); }
 
-  private headers(): HeadersInit {
+  protected headers(): Record<string, string> {
     return {
-      Authorization: `Bearer ${this.gh.token}`,
+      Authorization: `Bearer ${this.forge.token}`,
       "Content-Type": "application/json",
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
     };
   }
 
+  /** A file's bytes. GitHub answers the contents URL with them when asked for `raw`. */
+  protected rawRequest(filePath: string): { url: string; headers: Record<string, string> } {
+    return {
+      url: `${this.contentsUrl(filePath)}?ref=${encodeURIComponent(this.branch)}`,
+      headers: { ...this.headers(), Accept: "application/vnd.github.raw+json" },
+    };
+  }
+
+  /** GitHub's contents PUT creates a file without a `sha` and updates one with it. */
+  protected writeMethod(_sha: string | null): "PUT" | "POST" { return "PUT"; }
+
+  /** A write that lost a race on our own file: re-read the `sha` and try again. */
+  protected isWriteConflict(status: number): boolean { return status === 409; }
+
+  /** What a 403 on the repository usually means for this forge's tokens. */
+  protected get noAccessHint(): string {
+    return "For Fine-grained tokens: ensure Contents → Read & Write is enabled.";
+  }
+
+  /** The likely cause when the first commit of an empty repository is refused. */
+  protected get cannotWriteHint(): string {
+    return "The token likely doesn't have Contents: write on this repository.";
+  }
+
+  /** May `GET /user` refuse the token while the repository still works? */
+  protected get userCheckOptional(): boolean { return false; }
+
+  /** Anything wrong with the settings before a request is made, or null. */
+  protected settingsProblem(): string | null { return null; }
+
+  // ── Shared from here on ──
+
+  isConfigured(): boolean {
+    const s = this.settings;
+    return !!(s?.token && s?.repo);
+  }
+
+  protected get forge(): ForgeSettings {
+    const s = this.settings;
+    if (!s?.token) throw new Error(`${this.forgeName} token not configured`);
+    return s;
+  }
+
+  protected get branch(): string { return this.forge.branch ?? "main"; }
+  protected get path(): string { return this.forge.path ?? "konode"; }
+
+  protected contentsUrl(filePath: string): string {
+    return `${this.api}/repos/${this.repoSlug}/contents/${filePath}`;
+  }
+
+  /** Create or update one file, with `sha` when it already exists. */
+  private writeFile(filePath: string, body: Record<string, unknown>, sha: string | null): Promise<Response> {
+    return fetch(this.contentsUrl(filePath), {
+      method: this.writeMethod(sha),
+      headers: this.headers(),
+      body: JSON.stringify(sha ? { ...body, sha } : body),
+    });
+  }
+
   async connect(): Promise<void> {
-    if (!this.gh.token) throw new Error("No token configured");
-    if (!this.gh.repo) throw new Error("No repository configured");
-    logger.info("GitHub connected", this.gh.repo ?? "");
+    if (!this.forge.token) throw new Error("No token configured");
+    if (!this.forge.repo) throw new Error("No repository configured");
+    const problem = this.settingsProblem();
+    if (problem) throw new Error(problem);
+    logger.info(`${this.forgeName} connected`, this.forge.repo ?? "");
   }
 
   async disconnect(): Promise<void> {}
@@ -63,7 +144,7 @@ export class GitHubBackend implements IBackend {
     // Ensure repo is initialized before first upload
     await this.ensureRepoInitialized();
 
-    const branch = this.gh.branch ?? "main";
+    const branch = this.branch;
     const filename = `${this.path}/konode_${packet.data_type}_${packet.device_id}.json`;
     // Same UTF-8-then-base64 as before, via the shared helper — the old
     // btoa(unescape(encodeURIComponent(…))) idiom is byte-identical but leans on
@@ -76,30 +157,24 @@ export class GitHubBackend implements IBackend {
         // consistent, so right after a write a stale SHA can come back and cause a
         // 409 ("…does not match <sha>"); backing off and re-reading lets it settle.
         const sha = await this.getFileSHA(filename, branch);
-        const body: Record<string, unknown> = {
+        const res = await this.writeFile(filename, {
           message: `sync: ${packet.data_type} [${packet.device_id.slice(0, 8)}]`,
           content,
           branch,
-        };
-        if (sha) body.sha = sha;
-
-        const res = await fetch(
-          `${GITHUB_API}/repos/${this.repoSlug}/contents/${filename}`,
-          { method: "PUT", headers: this.headers(), body: JSON.stringify(body) }
-        );
+        }, sha);
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          throw new HttpError(res.status, `GitHub upload failed: ${res.status}. ${err.message ?? ""}`);
+          throw new HttpError(res.status, `${this.forgeName} upload failed: ${res.status}. ${err.message ?? ""}`);
         }
 
-        logger.info("GitHub.upload", `${packet.data_type} → ${filename}`);
+        logger.info(`${this.forgeName}.upload`, `${packet.data_type} → ${filename}`);
       },
       {
-        // A 409 here is a stale-SHA conflict on our *own* file — retry it (with
-        // backoff, re-reading the SHA) on top of the default transient set.
+        // A 409 here (422 on Gitea) is a stale-SHA conflict on our *own* file. Retry
+        // it (with backoff, re-reading the SHA) on top of the default transient set.
         maxAttempts: 5,
         shouldRetry: (e) =>
-          defaultShouldRetry(e) || (e instanceof HttpError && e.status === 409),
+          defaultShouldRetry(e) || (e instanceof HttpError && this.isWriteConflict(e.status)),
       }
     );
   }
@@ -108,17 +183,19 @@ export class GitHubBackend implements IBackend {
 
   private async ensureRepoInitialized(): Promise<void> {
     if (this.repoInitialized) return;
+    const problem = this.settingsProblem();
+    if (problem) throw new Error(problem);
 
     const repoRes = await fetch(
-      `${GITHUB_API}/repos/${this.repoSlug}`,
+      `${this.api}/repos/${this.repoSlug}`,
       { headers: this.headers() }
     );
 
     if (!repoRes.ok) {
       throw new Error(
         repoRes.status === 404
-          ? `Repository '${this.repoSlug}' not found. Create it on GitHub first.`
-          : `GitHub repo check failed: ${repoRes.status}`
+          ? `Repository '${this.repoSlug}' not found. Create it on ${this.forgeName} first.`
+          : `${this.forgeName} repo check failed: ${repoRes.status}`
       );
     }
 
@@ -133,21 +210,17 @@ export class GitHubBackend implements IBackend {
     }
 
     // If repo is empty (no commits), initialize it
-    if (!repoData.default_branch) {
-      const initRes = await fetch(`${GITHUB_API}/repos/${this.repoSlug}/contents/README.md`, {
-        method: "PUT",
-        headers: this.headers(),
-        body: JSON.stringify({
-          message: "chore: initialize Konode sync repository",
-          content: btoa("# Konode Sync\n\nThis repository is used by the Konode browser extension to sync browser data.\n"),
-          // The CONFIGURED branch, not a hardcoded "main". Every other request here uses
-          // `this.branch`, so pinning the first commit to main meant a user who had set
-          // any other branch got their initial commit on a branch nothing else ever
-          // touches — and then every single upload failed against a branch that did not
-          // exist. On an empty repo this call is what creates the branch.
-          branch: this.branch,
-        }),
-      });
+    if (isEmptyRepo(repoData)) {
+      const initRes = await this.writeFile("README.md", {
+        message: "chore: initialize Konode sync repository",
+        content: btoa("# Konode Sync\n\nThis repository is used by the Konode browser extension to sync browser data.\n"),
+        // The CONFIGURED branch, not a hardcoded "main". Every other request here uses
+        // `this.branch`, so pinning the first commit to main meant a user who had set
+        // any other branch got their initial commit on a branch nothing else ever
+        // touches, and then every single upload failed against a branch that did not
+        // exist. On an empty repo this call is what creates the branch.
+        branch: this.branch,
+      }, null);
       // The result was thrown away, and `repoInitialized` was set regardless. A token
       // without Contents: write fails HERE, where we know exactly what went wrong — but
       // the error surfaced later as an unexplained upload failure instead, once per data
@@ -155,7 +228,7 @@ export class GitHubBackend implements IBackend {
       if (!initRes.ok) {
         throw new HttpError(
           initRes.status,
-          `Couldn't initialize '${this.repoSlug}': writing the first commit failed (HTTP ${initRes.status}). The token likely doesn't have Contents: write on this repository.`
+          `Couldn't initialize '${this.repoSlug}': writing the first commit failed (HTTP ${initRes.status}). ${this.cannotWriteHint}`
         );
       }
     }
@@ -165,7 +238,7 @@ export class GitHubBackend implements IBackend {
 
   private async getFileSHA(path: string, branch: string): Promise<string | null> {
     const res = await fetch(
-      `${GITHUB_API}/repos/${this.repoSlug}/contents/${path}?ref=${branch}`,
+      `${this.contentsUrl(path)}?ref=${encodeURIComponent(branch)}`,
       // GitHub sends `Cache-Control: max-age=60` on contents reads, so the browser
       // HTTP cache can hand back a stale SHA right after a write — which then makes
       // the next PUT 409 ("does not match"). `no-store` forces a fresh read.
@@ -176,7 +249,7 @@ export class GitHubBackend implements IBackend {
     // withRetry can back off and re-read, instead of silently omitting the sha and
     // turning a transient read failure into a spurious 409/422 create attempt.
     if (res.status === 404) return null;
-    if (!res.ok) throw new HttpError(res.status, `GitHub SHA read failed: ${res.status}`);
+    if (!res.ok) throw new HttpError(res.status, `${this.forgeName} SHA read failed: ${res.status}`);
     return (await res.json()).sha ?? null;
   }
 
@@ -188,11 +261,13 @@ export class GitHubBackend implements IBackend {
    * Every peer file, minus the ones whose blob `sha` still equals the one in `known` (#96).
    * The contents listing carries each file's git blob sha, which is a hash of its bytes,
    * so an equal one is equal content (`exact`) and the check costs no extra request.
+   * Gitea and Forgejo fill the same `sha` on every listed entry (`entry.ID`), so this
+   * holds there too.
    */
   async downloadChanged(data_type: DataType, excludeDeviceId: string, known: Record<string, string>): Promise<PeerPull> {
     return withRetry(async () => {
       const res = await fetch(
-        `${GITHUB_API}/repos/${this.repoSlug}/contents/${this.path}?ref=${this.branch}`,
+        `${this.contentsUrl(this.path)}?ref=${encodeURIComponent(this.branch)}`,
         { headers: this.headers(), cache: "no-store" }
       );
       // 404 = the sync folder doesn't exist yet (no peers). Any other non-OK is a
@@ -200,9 +275,9 @@ export class GitHubBackend implements IBackend {
       // surfaces, instead of silently masquerading as "no peers" (which would hide the
       // peers' data and let this device overwrite the group with its own).
       if (res.status === 404) return { fetched: [], unchanged: [] };
-      if (!res.ok) throw new HttpError(res.status, `GitHub list failed: ${res.status}`);
+      if (!res.ok) throw new HttpError(res.status, `${this.forgeName} list failed: ${res.status}`);
       const files: Array<{ name: string; sha?: string }> = await res.json();
-      // Fetch each via the authenticated Contents API (Accept: raw); the public
+      // Fetch each through the authenticated API (`rawRequest`); the public
       // download_url is unauthenticated and 404s/HTMLs on private repos.
       const fetched: PeerPull["fetched"] = [];
       const unchanged: PeerFile[] = [];
@@ -214,15 +289,13 @@ export class GitHubBackend implements IBackend {
           unchanged.push(file);
           continue;
         }
-        const r = await fetch(
-          `${GITHUB_API}/repos/${this.repoSlug}/contents/${this.path}/${m.name}?ref=${this.branch}`,
-          { headers: { ...this.headers(), Accept: "application/vnd.github.raw+json" }, cache: "no-store" }
-        );
+        const raw = this.rawRequest(`${this.path}/${m.name}`);
+        const r = await fetch(raw.url, { headers: raw.headers, cache: "no-store" });
         if (!r.ok) {
           // See the note in webdav-backend: a peer we can't fetch silently vanished from
           // the sync while it still reported success.
           logger.warn(
-            "GitHub.downloadAll",
+            `${this.forgeName}.downloadAll`,
             `Couldn't download ${m.name} (HTTP ${r.status}) — that device is left out of this sync`
           );
           continue;
@@ -230,7 +303,7 @@ export class GitHubBackend implements IBackend {
         try {
           fetched.push({ packet: JSON.parse(await r.text()) as SyncPacket, file });
         } catch {
-          logger.warn("GitHub.downloadAll", `Skipping unreadable sync file: ${m.name}`);
+          logger.warn(`${this.forgeName}.downloadAll`, `Skipping unreadable sync file: ${m.name}`);
         }
       }
       return { fetched, unchanged };
@@ -244,28 +317,22 @@ export class GitHubBackend implements IBackend {
     await withRetry(
       async () => {
         const sha = await this.getFileSHA(filename, this.branch);
-        const body: Record<string, unknown> = { message: `snapshot: ${name}`, content: encoded, branch: this.branch };
-        if (sha) body.sha = sha;
-        const res = await fetch(`${GITHUB_API}/repos/${this.repoSlug}/contents/${filename}`, {
-          method: "PUT", headers: this.headers(), body: JSON.stringify(body),
-        });
+        const res = await this.writeFile(filename, { message: `snapshot: ${name}`, content: encoded, branch: this.branch }, sha);
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          throw new HttpError(res.status, `GitHub putFile failed: ${res.status}. ${err.message ?? ""}`);
+          throw new HttpError(res.status, `${this.forgeName} putFile failed: ${res.status}. ${err.message ?? ""}`);
         }
       },
-      { maxAttempts: 5, shouldRetry: (e) => defaultShouldRetry(e) || (e instanceof HttpError && e.status === 409) }
+      { maxAttempts: 5, shouldRetry: (e) => defaultShouldRetry(e) || (e instanceof HttpError && this.isWriteConflict(e.status)) }
     );
   }
 
   async getFile(name: string): Promise<string | null> {
     return withRetry(async () => {
-      const res = await fetch(
-        `${GITHUB_API}/repos/${this.repoSlug}/contents/${this.path}/${name}?ref=${this.branch}`,
-        { headers: { ...this.headers(), Accept: "application/vnd.github.raw+json" }, cache: "no-store" }
-      );
+      const raw = this.rawRequest(`${this.path}/${name}`);
+      const res = await fetch(raw.url, { headers: raw.headers, cache: "no-store" });
       if (res.status === 404) return null;
-      if (!res.ok) throw new HttpError(res.status, `GitHub getFile failed: ${res.status}`);
+      if (!res.ok) throw new HttpError(res.status, `${this.forgeName} getFile failed: ${res.status}`);
       return res.text();
     });
   }
@@ -273,11 +340,11 @@ export class GitHubBackend implements IBackend {
   async listFiles(prefix: string): Promise<string[]> {
     return withRetry(async () => {
       const res = await fetch(
-        `${GITHUB_API}/repos/${this.repoSlug}/contents/${this.path}?ref=${this.branch}`,
+        `${this.contentsUrl(this.path)}?ref=${encodeURIComponent(this.branch)}`,
         { headers: this.headers(), cache: "no-store" }
       );
       if (res.status === 404) return [];
-      if (!res.ok) throw new HttpError(res.status, `GitHub list failed: ${res.status}`);
+      if (!res.ok) throw new HttpError(res.status, `${this.forgeName} list failed: ${res.status}`);
       const files: Array<{ name: string }> = await res.json();
       return files.map(f => f.name).filter(n => n.startsWith(prefix));
     });
@@ -288,47 +355,55 @@ export class GitHubBackend implements IBackend {
     await withRetry(async () => {
       const sha = await this.getFileSHA(filename, this.branch);
       if (!sha) return; // already gone
-      const res = await fetch(`${GITHUB_API}/repos/${this.repoSlug}/contents/${filename}`, {
+      const res = await fetch(this.contentsUrl(filename), {
         method: "DELETE", headers: this.headers(),
         body: JSON.stringify({ message: `snapshot: delete ${name}`, sha, branch: this.branch }),
       });
-      if (!res.ok && res.status !== 404) throw new HttpError(res.status, `GitHub DELETE failed: ${res.status}`);
+      if (!res.ok && res.status !== 404) throw new HttpError(res.status, `${this.forgeName} DELETE failed: ${res.status}`);
     });
   }
 
 
   async testConnection(): Promise<{ ok: boolean; message: string }> {
     try {
-      if (!this.gh.token) return { ok: false, message: "No token. Paste a Personal Access Token or Fine-grained token" };
+      if (!this.settings?.token) return { ok: false, message: "No token. Paste a Personal Access Token or Fine-grained token" };
+      const problem = this.settingsProblem();
+      if (problem) return { ok: false, message: problem };
 
       // Verify token works
-      const userRes = await fetch(`${GITHUB_API}/user`, { headers: this.headers() });
-      if (userRes.status === 429) return { ok: false, message: rateLimitMessage("GitHub") };
-      if (!userRes.ok) {
+      const userRes = await fetch(`${this.api}/user`, { headers: this.headers() });
+      if (userRes.status === 429) return { ok: false, message: rateLimitMessage(this.forgeName) };
+      // A Gitea token scoped to the repository alone is refused here with 403 and still
+      // syncs, so there it only costs the name in the result.
+      const userSkipped = userRes.status === 403 && this.userCheckOptional;
+      if (!userRes.ok && !userSkipped) {
         return {
           ok: false,
           message: userRes.status === 401
             ? "Invalid token. Check it hasn't expired"
-            : `Token check failed (HTTP ${userRes.status})`,
+            : userRes.status === 404
+              ? `No ${this.forgeName} API at ${this.api}. Check the address.`
+              : `Token check failed (HTTP ${userRes.status})`,
         };
       }
-      const user = await userRes.json();
+      const user: { login?: string } = userSkipped ? {} : await userRes.json();
+      const who = user.login ? `@${user.login}` : "Token accepted";
 
-      if (!this.gh.repo) return { ok: true, message: `Signed in as @${user.login}. Set a repository below` };
+      if (!this.settings?.repo) return { ok: true, message: `${user.login ? `Signed in as @${user.login}` : who}. Set a repository below` };
 
       // Check repo access
-      const repoRes = await fetch(`${GITHUB_API}/repos/${this.repoSlug}`, { headers: this.headers() });
+      const repoRes = await fetch(`${this.api}/repos/${this.repoSlug}`, { headers: this.headers() });
 
       if (repoRes.status === 404) {
         return {
           ok: false,
-          message: `Repository '${this.repoSlug}' not found. Create it on GitHub (private) then retry.`,
+          message: `Repository '${this.repoSlug}' not found. Create it on ${this.forgeName} (private) then retry.`,
         };
       }
       if (repoRes.status === 403) {
         return {
           ok: false,
-          message: `No access to '${this.repoSlug}'. For Fine-grained tokens: ensure Contents → Read & Write is enabled.`,
+          message: `No access to '${this.repoSlug}'. ${this.noAccessHint}`,
         };
       }
       if (!repoRes.ok) {
@@ -342,7 +417,7 @@ export class GitHubBackend implements IBackend {
           message: `'${repo.full_name}' is a public repository. Your synced data would be visible to everyone. Use a private repo.`,
         };
       }
-      const isEmpty = !repo.default_branch;
+      const isEmpty = isEmptyRepo(repo);
 
       // Verify the BRANCH as well. A typo here passed this test and then 404'd on every
       // upload — and 404 isn't retried, so the sync failed permanently while the test
@@ -351,7 +426,7 @@ export class GitHubBackend implements IBackend {
       if (!isEmpty) {
         const branch = this.branch;
         const brRes = await fetch(
-          `${GITHUB_API}/repos/${this.repoSlug}/branches/${encodeURIComponent(branch)}`,
+          `${this.api}/repos/${this.repoSlug}/branches/${encodeURIComponent(branch)}`,
           { headers: this.headers() }
         );
         if (brRes.status === 404) {
@@ -365,7 +440,7 @@ export class GitHubBackend implements IBackend {
 
       return {
         ok: true,
-        message: `@${user.login} → ${repo.full_name}${isEmpty ? " (empty repo, will initialize on first sync)" : ` (${this.branch})`}`,
+        message: `${who} → ${repo.full_name}${isEmpty ? " (empty repo, will initialize on first sync)" : ` (${this.branch})`}`,
       };
     } catch (err) {
       return { ok: false, message: err instanceof Error ? err.message : "Connection failed" };
