@@ -44,6 +44,9 @@ const APP_VERSION = browser.runtime.getManifest().version;
 // there; following it also ends the popup's one-time card (lib/rate-prompt.ts), so nobody
 // is asked for a rating they already gave. Null on a build no store knows.
 const REVIEW_PAGE = reviewPageFor(browser.runtime.id);
+// Firefox for Android has no context menus for extensions, so the switch that takes "Send to
+// device" out of the right-click menu would switch nothing there.
+const hasContextMenus = menusApi() !== null;
 
 function useScrollEdges<T extends HTMLElement>(axis: "x" | "y", revision: unknown = 0) {
   // A CALLBACK ref, not useRef, and that distinction was the whole bug. The audit list
@@ -91,7 +94,8 @@ function BrandMark({ size = 14, color = "currentColor" }: { size?: number; color
 }
 
 import { generateRecoveryKey, MIN_PASSPHRASE_LENGTH } from "@/lib/crypto/encryption";
-import { KEYS, normalizeRemoteExtensions, setRateAnswered, type AuditEntry } from "@/lib/utils/storage";
+import { KEYS, normalizeRemoteExtensions, sendContextMenuOn, setRateAnswered, type AuditEntry } from "@/lib/utils/storage";
+import { menusApi } from "@/lib/sent-tabs-browser";
 import { auditLogText } from "@/lib/utils/audit-text";
 import { isRefusedHttpUrl, isSafeContentUrl } from "@/lib/utils/url";
 import { defaultOtherRootId } from "@/lib/utils/bookmark-roots";
@@ -2200,6 +2204,22 @@ export default function OptionsApp() {
                     <span className="toggle-track"><span className="toggle-thumb" /></span>
                   </label>
                 </div>
+                {/* On unless turned off (asked for on Reddit after 1.6.0). The worker rebuilds
+                    the menu when this changes; the popup's paper plane stays either way. Not
+                    shown where the browser has no context menus (Firefox for Android). */}
+                {hasContextMenus && (
+                <div className="settings-row">
+                  <div className="settings-row-left">
+                    <div><div className="row-label">{t("opt_send_menu_label")}</div><div className="row-desc">{t("opt_send_menu_desc")}</div></div>
+                  </div>
+                  <label className="toggle-wrap">
+                    <input type="checkbox" className="toggle-input" checked={sendContextMenuOn(settings)}
+                      aria-label={t("opt_send_menu_label")}
+                      onChange={(e) => update({ send_context_menu: e.target.checked })} />
+                    <span className="toggle-track"><span className="toggle-thumb" /></span>
+                  </label>
+                </div>
+                )}
                 <div className="settings-row">
                   <div className="settings-row-left">
                     <div><div className="row-label">{t("opt_interval_label")}</div><div className="row-desc">{t("opt_interval_desc")}</div></div>

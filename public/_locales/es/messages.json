@@ -872,6 +872,12 @@
   "opt_notifications_desc": {
     "message": "Estado de la sincronización y alertas de conflictos."
   },
+  "opt_send_menu_label": {
+    "message": "«Enviar a un dispositivo» en el menú contextual"
+  },
+  "opt_send_menu_desc": {
+    "message": "Muestra «Enviar a un dispositivo» al hacer clic derecho en una página o un enlace. El botón del avión de papel de la ventana emergente funciona en ambos casos."
+  },
   "opt_interval_label": {
     "message": "Intervalo de sincronización"
   },

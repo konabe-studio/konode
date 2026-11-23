@@ -1014,6 +1014,14 @@
   "opt_notifications_desc": {
     "message": "Sync status and conflict alerts."
   },
+  "opt_send_menu_label": {
+    "message": "Send to device in the right-click menu",
+    "description": "Settings, Device, Sync behavior: a switch, on by default. When off, Konode's Send to device entry (send_menu_title) is removed from the browser's right-click menu. Use the same wording as send_menu_title for the entry's name."
+  },
+  "opt_send_menu_desc": {
+    "message": "Shows Send to device when you right-click a page or a link. The paper-plane button in the popup works either way.",
+    "description": "Under opt_send_menu_label. The paper-plane button is the Send to device icon in the popup's header (popup_send_label); turning this switch off does not remove it."
+  },
   "opt_interval_label": {
     "message": "Sync interval"
   },

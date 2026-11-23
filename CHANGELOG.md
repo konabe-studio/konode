@@ -5,6 +5,14 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+
+- **Send to device can leave the right-click menu.** Turn off **Send to device in the
+  right-click menu** under Settings → Device → Sync behavior, and Konode adds nothing to the
+  menu you get by right-clicking a page, a link or a Firefox tab. The paper-plane icon in the
+  popup still sends the page you are on. It is on unless you turn it off, so nothing changes
+  until you do. Asked for on Reddit.
+
 ### Changed
 
 - **Restoring another device's tabs leaves its pinned tabs out.** Pinned tabs are usually

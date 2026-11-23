@@ -881,6 +881,12 @@
   "opt_notifications_desc": {
     "message": "Szinkronizálási állapot és ütközési figyelmeztetések."
   },
+  "opt_send_menu_label": {
+    "message": "Küldés eszközre a jobb gombos menüben"
+  },
+  "opt_send_menu_desc": {
+    "message": "Megjeleníti a Küldés eszközre pontot, ha jobb gombbal egy oldalra vagy linkre kattintasz. A felugró ablak papírrepülő gombja mindkét esetben működik."
+  },
   "opt_interval_label": {
     "message": "Szinkronizálási időköz"
   },

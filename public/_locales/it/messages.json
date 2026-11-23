@@ -881,6 +881,12 @@
   "opt_notifications_desc": {
     "message": "Stato della sincronizzazione e avvisi di conflitto."
   },
+  "opt_send_menu_label": {
+    "message": "«Invia a un dispositivo» nel menu contestuale"
+  },
+  "opt_send_menu_desc": {
+    "message": "Mostra «Invia a un dispositivo» quando fai clic destro su una pagina o un link. Il pulsante con l'aeroplanino di carta nel popup funziona in ogni caso."
+  },
   "opt_interval_label": {
     "message": "Intervallo di sincronizzazione"
   },
