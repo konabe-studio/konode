@@ -218,7 +218,9 @@ keeps the two from being confused.
   release build as well as the store build. **Built on 2026-11-23** (branch `feat/dropbox`):
   an App folder app (`Apps/Konode`), PKCE with `token_access_type=offline`, the listing's
   `content_hash` as the #96 marker, and the bare redirect URL registered for the Web Store,
-  Edge, Firefox and `dist/` ids. OneDrive follows it, gated on whether Entra
+  Edge, Firefox and `dist/` ids. A two-device run against real Dropbox (Chromium and
+  Firefox 160) passed: bookmarks, history and open tabs both ways, Send to device, no
+  download of an unchanged file, token refresh after expiry and after a 401. OneDrive follows it, gated on whether Entra
   accepts a `chromiumapp.org` redirect; MEGA waits for appetite for a provider-side crypto
   library. See *Platform priority* item 3 below.
 - **[#11](https://github.com/konabe-studio/konode/issues/11): tab groups have shipped, the
