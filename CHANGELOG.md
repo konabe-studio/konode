@@ -73,6 +73,14 @@ All notable changes to Konode. Format loosely follows
 
 - **The unsaved-changes note in Settings is translated.** The line beside **Save changes**
   that says an edit is still waiting showed in English in every language since 1.2.0.
+- **Konode no longer crashes in Yandex Browser on Android.** With Open tabs on, Yandex
+  Browser 26.11 for Android crashed Konode at every sync, about once a minute, and setup and
+  Settings kept showing the browser's "That was unexpected" page. Yandex grants the
+  permission Konode asks for to read tab group names and colours, but has nothing behind
+  it, and the first look at it closes Konode's process. On Android, in every browser, Konode
+  now never asks for that permission and never looks at it. Open tabs keep their groups
+  where the browser has them, without the names and colours. An install that already
+  granted the permission is fixed by the update alone, with nothing to change.
 
 ## [1.6.0] - 2026-11-19
 
