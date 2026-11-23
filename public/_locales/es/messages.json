@@ -233,6 +233,33 @@
   "provider_gdrive_hint": {
     "message": "Cuenta de Google"
   },
+  "provider_dropbox_desc": {
+    "message": "Se sincroniza con una carpeta propia en tu Dropbox. Konode no puede ver nada más allí, y el token de acceso se guarda únicamente en este dispositivo."
+  },
+  "provider_dropbox_hint": {
+    "message": "Cuenta de Dropbox"
+  },
+  "opt_dropbox_unavailable": {
+    "message": "El inicio de sesión con Dropbox no está disponible en este navegador. Elige otra opción."
+  },
+  "onb_sign_in_dropbox": {
+    "message": "Iniciar sesión con Dropbox"
+  },
+  "opt_dropbox_folder_hint": {
+    "message": "Konode guarda sus archivos en $FOLDER$ en tu Dropbox y no puede abrir nada fuera de esa carpeta.",
+    "placeholders": {
+      "folder": {
+        "content": "$1",
+        "example": "Apps/Konode"
+      }
+    }
+  },
+  "dropbox_err_perms": {
+    "message": "Konode necesita permiso para acceder a Dropbox. Concédelo cuando el navegador lo pregunte y luego reintenta."
+  },
+  "dropbox_err_perms_no_prompt": {
+    "message": "Este navegador no puede mostrar mensajes de solicitud de permisos, por lo que Konode no pudo solicitar acceso a Dropbox. Concédelo en la pantalla de permisos de Konode, que se encuentra en la configuración de extensiones de tu navegador, y luego reintenta."
+  },
   "provider_nextcloud_desc": {
     "message": "Tu propio servidor de Nextcloud u ownCloud."
   },
@@ -682,6 +709,9 @@
   },
   "opt_save_changes": {
     "message": "Guardar cambios"
+  },
+  "opt_unsaved_changes": {
+    "message": "Hay cambios sin guardar en esta sección o en otra. Al guardar se aplican todos."
   },
   "opt_nav_backend": {
     "message": "Almacenamiento"

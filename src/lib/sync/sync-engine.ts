@@ -1,16 +1,19 @@
-import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncExtension, ConflictItem, BackendConfig,
+import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncExtension, SyncHistoryItem, ConflictItem, BackendConfig,
   DeviceInfo, DeviceBrowser, ConflictDiff, IBackend, PeerFile,
 } from "@/lib/types";
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { normalizeRepoSlug } from "@/lib/backends/github-backend";
 import { forgeBaseUrl, normalizeForgeRepoSlug } from "@/lib/backends/gitea-backend";
+import { DROPBOX_ORIGINS } from "@/lib/backends/dropbox-oauth";
 import { createSnapshot as writeSnapshot, listSnapshots as readSnapshots, restoreSnapshot as applySnapshot, deleteSnapshot as dropSnapshot, type SnapshotMeta } from "@/lib/sync/snapshots";
 import {
   bookmarkContent, exportBookmarkPayload, importBookmarks, peerTreeAsMerged, type BulkDeleteBlock,
 } from "@/lib/handlers/bookmarks-handler";
 import { diffBookmarks, diffHistory } from "./conflict-diff";
 import { exportSession, importSession } from "@/lib/handlers/tabs-handler";
-import { exportHistory, importHistory, newLocalHistoryIndex, type LocalHistoryIndex } from "@/lib/handlers/history-handler";
+import {
+  exportHistory, importHistory, newLocalHistoryIndex, historyReach, historySinceApplied, type LocalHistoryIndex,
+} from "@/lib/handlers/history-handler";
 import { exchangeSentTabs, queueSentTab, sentFileName } from "@/lib/sync/sent-tabs";
 import { openSentTabs } from "@/lib/sent-tabs-browser";
 import { exportExtensions } from "@/lib/handlers/extensions-handler";
@@ -45,6 +48,11 @@ import {
   dropRemoteDevices,
   getAppliedHistory,
   recordAppliedHistory,
+  getHistoryReach,
+  getHistoryPublishedAt,
+  setHistoryPublishedAt,
+  getRejectedHistoryUrls,
+  rejectionStillHolds,
   getPeerFiles,
   setPeerFiles,
   type PeerFileRecord,
@@ -60,6 +68,21 @@ import { ConflictResolver, notifyConflict, orderPeersByTime } from "./conflict-r
 // within a live worker `isSyncing` already prevents a double-run, so this can be
 // short. 2 min comfortably covers a retry-heavy multi-type sync.
 const SYNC_LOCK_TTL_MS = 2 * 60 * 1000;
+
+/**
+ * How often a scheduled sync publishes this device's history (#96). Every other type goes
+ * out on the sync after it changed; history waits this long after the last time it went
+ * out, because a device in use changes its history on nearly every page, its file is
+ * rewritten whole each time, and every peer then downloads all of it again. In a group of
+ * active devices that was every peer's whole history, every minute, on every device: the
+ * 15 MB a sync behind #96. History is not time-critical, and Sync now publishes at once.
+ */
+export const HISTORY_PUBLISH_EVERY_MS = 15 * 60 * 1000;
+/**
+ * Room for the sync itself and for an alarm that fires a little early, so a device whose
+ * interval is the full 15 minutes does not skip every other publish over a few seconds.
+ */
+const HISTORY_PUBLISH_SLACK_MS = 60 * 1000;
 
 /**
  * The data types a conflict can exist for.
@@ -183,6 +206,17 @@ export class EncryptionMismatchError extends Error {
  */
 export type SyncOutcome = "ran" | "no-backend" | "already-running" | "nothing-enabled";
 
+/** How a sync was asked for. */
+export interface SyncOptions {
+  /**
+   * Someone pressed Sync now, saved Settings or finished setup. Such a sync publishes
+   * this device's history even inside `HISTORY_PUBLISH_EVERY_MS`: the person asking
+   * expects what they just did to go out, and a settings change (the days limit,
+   * encryption) has to reach the file now rather than in a quarter of an hour.
+   */
+  userAsked?: boolean;
+}
+
 /**
  * The status a finished sync should report. `sync()` used to hard-code
  * `problems ? "error" : "success"`, which OVERWROTE the "conflict" status that syncType
@@ -215,6 +249,8 @@ export function backendOrigins(cfg: BackendConfig | undefined): string[] {
       if (!base) return [];
       try { return [new URL(base).origin + "/*"]; } catch { return []; }
     }
+    case "dropbox":
+      return [...DROPBOX_ORIGINS];
     default:
       return [];
   }
@@ -231,6 +267,8 @@ export function storageName(cfg: BackendConfig | undefined): string {
       return "GitHub";
     case "gitea":
       try { return new URL(forgeBaseUrl(cfg.gitea?.url)).host; } catch { return "your storage"; }
+    case "dropbox":
+      return "Dropbox";
     default:
       return "your storage";
   }
@@ -368,6 +406,8 @@ export class SyncEngine {
   // sync and read only as far back as those peers reach. Null until a history import needs
   // it, so a cycle that imports no history never pays for it. See `LocalHistoryIndex`.
   private historyIndexThisSync: LocalHistoryIndex | null = null;
+  // This sync was asked for by a person (see SyncOptions.userAsked).
+  private userAskedThisSync = false;
 
   constructor(
     private settings: SyncSettings,
@@ -434,7 +474,7 @@ export class SyncEngine {
 
   // ─── Main Entry Point ─────────────────────────────────────────────────
 
-  async sync(types?: DataType[]): Promise<SyncOutcome> {
+  async sync(types?: DataType[], options: SyncOptions = {}): Promise<SyncOutcome> {
     if (this.isSyncing) {
       logger.warn("SyncEngine", "Already syncing, skipping");
       return "already-running";
@@ -512,6 +552,7 @@ export class SyncEngine {
     this.peersThisSync.clear();
     this.bulkBlockedThisSync = null;
     this.historyIndexThisSync = null;
+    this.userAskedThisSync = options.userAsked === true;
     const backend = createBackend(backendConfig);
 
     try {
@@ -1264,6 +1305,8 @@ export class SyncEngine {
         return JSON.stringify(["github", cfg.github?.repo ?? "", cfg.github?.branch ?? "", cfg.github?.path ?? ""]);
       case "gitea":
         return JSON.stringify(["gitea", forgeBaseUrl(cfg.gitea?.url), cfg.gitea?.repo ?? "", cfg.gitea?.branch ?? "", cfg.gitea?.path ?? ""]);
+      case "dropbox":
+        return JSON.stringify(["dropbox", cfg.dropbox?.account ?? ""]);
       default:
         return JSON.stringify([cfg.type]);
     }
@@ -1300,21 +1343,34 @@ export class SyncEngine {
       await this.pruneVanishedPeers(dataType, backend, peers);
 
       // 2. Build local payload
-      const localPayload = await this.buildPayload(dataType);
-      const isEmpty = await this.isPayloadEmpty(dataType, localPayload);
+      //
+      // History is published on its own cadence (#96, HISTORY_PUBLISH_EVERY_MS), so a
+      // scheduled sync inside it pulls the peers and leaves this device's file alone. Its
+      // local payload is not built up front either when only the fold follows, which
+      // rebuilds it afterwards anyway (MERGE_MUTATES_LOCAL): reading it twice was half of
+      // every history sync's own rows. `manual` still needs it to compare, and so does a
+      // sync with no peers, which publishes straight from it.
+      const manualGate = peers.length > 0 && this.settings.conflict_strategy === "manual" && CONFLICTABLE_TYPES.has(dataType);
+      const holdHistory = dataType === "history" && (await this.historyPublishHeld());
+      const deferLocal = dataType === "history" && !manualGate && (holdHistory || peers.length > 0);
+      const localPayload = deferLocal ? null : await this.buildPayload(dataType);
+      const isEmpty = deferLocal ? true : await this.isPayloadEmpty(dataType, localPayload);
 
       // Verbose troubleshooting line (only emitted when Debug mode is on).
-      logger.debug("SyncEngine", `${dataType}: ${peers.length} peer(s), local ${isEmpty ? "empty" : "non-empty"}, strategy ${this.settings.conflict_strategy}`);
+      logger.debug("SyncEngine", `${dataType}: ${peers.length} peer(s), local ${deferLocal ? "not read yet" : isEmpty ? "empty" : "non-empty"}, strategy ${this.settings.conflict_strategy}${holdHistory ? ", publish held" : ""}`);
 
       // 3. Decide flow
       if (peers.length === 0) {
         // No peers yet — push our own data if we have any.
-        if (!isEmpty) {
+        if (holdHistory) {
+          logger.debug("SyncEngine", "history: published less than 15 minutes ago, next one later");
+        } else if (!isEmpty) {
           await this.uploadIfChanged(backend, dataType, localPayload);
+          if (dataType === "history") await setHistoryPublishedAt(Date.now());
         } else {
           logger.info("SyncEngine", `${dataType}: nothing to sync`);
         }
-      } else if (!isEmpty && this.settings.conflict_strategy === "manual" && CONFLICTABLE_TYPES.has(dataType)) {
+      } else if (!isEmpty && manualGate) {
         // Manual: queue a conflict for EACH diverging peer, not just the newest —
         // otherwise with 3+ devices the other peers' differences are never surfaced.
         // Dedupe by data_type + peer device so the same conflict doesn't pile up
@@ -1414,7 +1470,11 @@ export class SyncEngine {
         // yet" and a keep-local resolution), so its changes reached no other device —
         // silently, while the sync reported success. Same principle as the E2EE-mismatch
         // path above: skip the merge, still publish, let the group converge.
-        await this.uploadIfChanged(backend, dataType, localPayload);
+        // History keeps its own cadence here too (HISTORY_PUBLISH_EVERY_MS).
+        if (!holdHistory) {
+          await this.uploadIfChanged(backend, dataType, localPayload);
+          if (dataType === "history") await setHistoryPublishedAt(Date.now());
+        }
         // Every peer was weighed: queued, settled, resolved before, or set aside for its
         // encryption, and all of those are decided again from the same packet next time.
         for (const peer of peers) processed.add(peer.device_id);
@@ -1484,11 +1544,17 @@ export class SyncEngine {
         // storage only for bookmarks (the tombstone log), so reusing it for sessions and
         // extensions is the same computation, not an approximation. See
         // MERGE_MUTATES_LOCAL.
-        const rebuild = MERGE_MUTATES_LOCAL.has(dataType);
-        const merged = rebuild ? await this.buildPayload(dataType) : localPayload;
-        const mergedEmpty = rebuild ? await this.isPayloadEmpty(dataType, merged) : isEmpty;
-        if (!mergedEmpty) {
-          await this.uploadIfChanged(backend, dataType, merged);
+        //
+        // History inside its publish cadence stops here: nothing of ours goes out, so
+        // there is nothing to rebuild either.
+        if (!holdHistory) {
+          const rebuild = MERGE_MUTATES_LOCAL.has(dataType);
+          const merged = rebuild ? await this.buildPayload(dataType) : localPayload;
+          const mergedEmpty = rebuild ? await this.isPayloadEmpty(dataType, merged) : isEmpty;
+          if (!mergedEmpty) {
+            await this.uploadIfChanged(backend, dataType, merged);
+          }
+          if (dataType === "history") await setHistoryPublishedAt(Date.now());
         }
       }
 
@@ -1632,6 +1698,9 @@ export class SyncEngine {
         const g = cfg.gitea;
         return `gitea:${forgeBaseUrl(g?.url)}/${normalizeForgeRepoSlug(g?.repo, g?.url)}@${g?.branch ?? "main"}/${g?.path ?? "konode"}`;
       }
+      case "dropbox":
+        // The account, not a folder: an App folder app always writes to its own folder.
+        return `dropbox:${cfg.dropbox?.account ?? "default"}`;
       case "webdav": {
         const w = cfg.webdav;
         return `webdav:${w?.username ?? ""}@${(w?.url ?? "").replace(/\/$/, "")}/${w?.path ?? "konode"}`;
@@ -1751,7 +1820,12 @@ export class SyncEngine {
     // the check above did not recognise it after all, so it is fetched now.
     const full = await this.fullPacket(packet);
     const payload = await this.openPacket(full);
-    await this.applyPayload(dataType, payload, {
+    // A CHANGED history packet is compared only from where the last one imported from that
+    // peer ended (#96, historySinceApplied), so the local read covers minutes, not the
+    // peer's whole window.
+    const reach = dataType === "history" && Array.isArray(payload) ? historyReach(payload as SyncHistoryItem[]) : null;
+    const toApply = reach ? await this.historyStillToWeigh(full.device_id, payload as SyncHistoryItem[]) : payload;
+    await this.applyPayload(dataType, toApply, {
       device_id: full.device_id,
       timestamp: full.timestamp,
       // Outside the encrypted payload, so it reads even with E2EE on. It is what the
@@ -1760,7 +1834,44 @@ export class SyncEngine {
     }, isLocalEmpty);
     // Recorded only once the import went through: openPacket has verified the checksum by
     // now, and a failed import must be tried again on the next sync.
-    if (dataType === "history") await recordAppliedHistory(full.device_id, full.checksum);
+    if (dataType === "history") await recordAppliedHistory(full.device_id, full.checksum, reach);
+  }
+
+  /** The entries of a peer's changed history packet this import still has to weigh. */
+  private async historyStillToWeigh(deviceId: string, items: SyncHistoryItem[]): Promise<SyncHistoryItem[]> {
+    const last = (await getHistoryReach())[deviceId];
+    if (!last) return items;
+    const now = Date.now();
+    const retry = new Set<string>();
+    for (const [key, at] of Object.entries(await getRejectedHistoryUrls())) {
+      if (!rejectionStillHolds(at, now)) retry.add(key);
+    }
+    const fresh = historySinceApplied(items, last, retry);
+    logger.debug(
+      "SyncEngine",
+      fresh.length === items.length
+        ? `history: ${deviceId.slice(0, 8)} changed, comparing all ${items.length} entries`
+        : `history: ${deviceId.slice(0, 8)} changed, comparing the ${fresh.length} of ${items.length} entries since its last import`,
+    );
+    return fresh;
+  }
+
+  /**
+   * Whether this sync leaves this device's history file as it is (#96). It does while the
+   * last publish is under `HISTORY_PUBLISH_EVERY_MS` old, unless a person asked for this
+   * sync, or the file out there is missing, was never written, or was written for another
+   * destination or in the other encryption form. Those last cases are what a change of
+   * backend or of E2EE leaves behind, and the group needs the new file now.
+   */
+  private async historyPublishHeld(): Promise<boolean> {
+    if (this.userAskedThisSync || this.ownFilesMissing.has("history")) return false;
+    const last = await getLastUploadChecksum("history");
+    if (!last?.startsWith(this.uploadTag("", this.e2eeActive))) return false;
+    const at = await getHistoryPublishedAt();
+    if (at === null) return false;
+    const since = Date.now() - at;
+    // A clock that went backwards reads as "long ago", not as a hold that never ends.
+    return since >= 0 && since < HISTORY_PUBLISH_EVERY_MS - HISTORY_PUBLISH_SLACK_MS;
   }
 
   /**

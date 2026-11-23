@@ -97,11 +97,24 @@ on any Chromium browser and on Firefox.
   findings", because the second one never arrives.
 
 ## Now live
-Konode is live on three stores, **all serving 1.5.1**. Firefox Add-ons had it within
-minutes of the upload on 2026-11-02, listed for Firefox for Android too from that version,
-and the Chrome Web Store the same day, after a few hours in review. **Microsoft Edge
+Konode is live on three stores. **1.6.0 is live on Firefox Add-ons and the Chrome Web Store
+since 2026-11-20**, the day it was submitted, and in review on Edge Add-ons, which serves
+1.5.1 until it passes. 1.5.1
+reached Firefox Add-ons within minutes of the upload on 2026-11-02, listed for Firefox for
+Android too from that version, and the Chrome Web Store the same day, after a few hours in
+review. **Microsoft Edge
 Add-ons** is the third store (#43): its first submission, 1.5.1 from the same package as the
 Web Store, went in on 2026-11-02 and is live as of 2026-11-06.
+
+**1.6.0 shipped on 2026-11-19**, tagged `v1.6.0` at `153dc07`, and went to all three stores
+on 2026-11-20. It carries Send to device (#92; Firefox for Android receives but cannot send),
+the popup's pause (#89), the windowed history read (#96), the held-back deletion's list (#23),
+the device list's last upload and browser (#10), the conflict diff (#35), the provider grid
+and a plainer look, and a feature guide with screenshots. Two new required permissions,
+`contextMenus` and `activeTab`, neither of which prompts. Both uploads were built from an LF
+`git archive` of the tag, and a second build from a fresh unpack matched them byte for byte;
+a build from the working tree did not (CRLF in the eight catalogues and `onboarding.html`),
+which is the 1.4.0 finding again.
 
 **1.5.1 shipped on 2026-11-02**, tagged `v1.5.1` at `64fcc87`, and it is the first store
 release since 1.4.0: 1.5.0 (tagged 2026-11-01 at `2c9b649`) went to neither store, so 1.5.1
@@ -139,13 +152,16 @@ tag* above). Three of the fixes did come from a report, #16, filed by someone wh
 stuck on the same blocked deletion for weeks; the comment on that thread when 1.3.1 went
 out says which half of his problem the release solves and which half it does not.
 
-- [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/): **serving 1.5.1**
-  since 2026-11-02, for Firefox for Android too, listed since 2026-08-04. Before it 1.4.0
+- [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/konode/): **serving 1.6.0**
+  since 2026-11-20, for Firefox for Android too, listed since 2026-08-04. Before it 1.5.1
+  from 2026-11-02, 1.4.0
   from 2026-09-29, and 1.3.2 from 2026-09-10; 1.3.1 went out
   the same morning and was superseded within two hours. AMO auto-approves and signs an
   update on upload, so each goes out within minutes; the source submission a bundled add-on
   requires is reviewed afterwards rather than before.
-- Chrome Web Store: **serving 1.5.1 since 2026-11-02**, out the same day it was submitted.
+- Chrome Web Store: **serving 1.6.0 since 2026-11-20**, out the same day it was submitted,
+  with justifications for the two new permissions. Before it 1.5.1 from 2026-11-02, also out
+  the same day it was submitted.
   Before it 1.4.0 from 2026-09-30, a day after it was submitted. 1.3.2
   was served from 2026-09-13, after a second review. 1.3.1 was
   submitted on 2026-09-10 and withdrawn the same day in favour of 1.3.2, so it never reached
@@ -166,7 +182,8 @@ out says which half of his problem the release solves and which half it does not
     the strength of it and filed the issue. Screenshots are the part of a listing no test can
     read, so a backend claim changing means checking them by eye.
 - Microsoft Edge Add-ons ([#43](https://github.com/konabe-studio/konode/issues/43)): **first
-  submission 2026-11-02**, 1.5.1, **live as of 2026-11-06**, at
+  submission 2026-11-02**, 1.5.1, **live as of 2026-11-06**; 1.6.0 submitted 2026-11-20 from the
+  same zip as the Web Store, in review. At
   <https://microsoftedge.microsoft.com/addons/detail/acmngpjfommajbkfbfmdfemlheiamfoe>.
   It takes the Web Store's zip unchanged, so every release goes to both from one file, and
   an Edge user can still install from the Web Store as before. The listing gets its own
@@ -186,36 +203,15 @@ are built by hand with Konode's own OAuth client compiled in and live in
 keeps the two from being confused.
 
 ## Next
-- **1.6.0, the next release**, in preparation since 2026-11-19 and not yet in any store. Its
-  scope was set on 2026-11-04 from the issue round after 1.5.1 and grew on the way; everything
-  below is merged to `main`:
-  - [#23](https://github.com/konabe-studio/konode/issues/23): a held-back deletion lists
-    the bookmarks it holds, title and address, capped with "and N more", and the four
-    conflict-resolution options say what each does with another device's deletions.
-  - [#10](https://github.com/konabe-studio/konode/issues/10): the device list says when a
-    device was last active in human terms ("39 days ago") and flags the ones that are
-    plainly dead, then shows the browser on each row. Taking over an identity and
-    renaming a peer wait on the open questions in the issue, which stays open.
-  - [#35](https://github.com/konabe-studio/konode/issues/35): a Resolve button on the
-    conflict card opens a full tab in Settings that lists what differs, next to the
-    held-back deletion card from #23. #34, which it was waiting for, shipped in 1.5.1.
-  - [#89](https://github.com/konabe-studio/konode/issues/89): a pause icon in the popup
-    holds both automatic syncs; Sync now keeps working.
-  - [#92](https://github.com/konabe-studio/konode/issues/92): Send to device, from the
-    right-click menu and the popup, through the user's own storage. Firefox for Android
-    receives but cannot send (its popup sees no page, and it has no extension menus).
-  - [#96](https://github.com/konabe-studio/konode/issues/96): history sync reads only the
-    window the other devices' history reaches back to, and skips a packet it already
-    imported. This closes the *History sync performance* item that sat here.
-  - The provider grid in Settings and a plainer look across the views, and a feature guide
-    with screenshots (`docs/FEATURES.md`, and konode.org/features.html).
-
-  Before it ships: the Web Store permission justifications for `contextMenus` and
-  `activeTab`, which are new required permissions.
-- **1.7.0: Dropbox**, the first new backend, moved here from 1.6.0 on 2026-11-19 when that
-  version went to the release above. It leads the backends because Dropbox signs in with PKCE
+- **1.7.0: Dropbox**, the next release and the first new backend, moved here from 1.6.0 on
+  2026-11-19 when that version number went to the release under *Now live*. It leads the backends because Dropbox signs in with PKCE
   and a public client, so unlike Drive it needs no client secret and works in the GitHub
-  release build as well as the store build. OneDrive follows it, gated on whether Entra
+  release build as well as the store build. **Built on 2026-11-23** (branch `feat/dropbox`):
+  an App folder app (`Apps/Konode`), PKCE with `token_access_type=offline`, the listing's
+  `content_hash` as the #96 marker, and the bare redirect URL registered for the Web Store,
+  Edge, Firefox and `dist/` ids. A two-device run against real Dropbox (Chromium and
+  Firefox 160) passed: bookmarks, history and open tabs both ways, Send to device, no
+  download of an unchanged file, token refresh after expiry and after a 401. OneDrive follows it, gated on whether Entra
   accepts a `chromiumapp.org` redirect; MEGA waits for appetite for a provider-side crypto
   library. See *Platform priority* item 3 below.
 - **[#11](https://github.com/konabe-studio/konode/issues/11): tab groups have shipped, the

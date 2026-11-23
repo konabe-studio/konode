@@ -245,6 +245,33 @@
   "provider_gdrive_hint": {
     "message": "Google-Konto"
   },
+  "provider_dropbox_desc": {
+    "message": "Synchronisiert in einen eigenen Ordner in deiner Dropbox. Konode sieht dort nichts anderes, und das Zugriffstoken wird nur auf diesem Gerät gespeichert."
+  },
+  "provider_dropbox_hint": {
+    "message": "Dropbox-Konto"
+  },
+  "opt_dropbox_unavailable": {
+    "message": "Die Dropbox-Anmeldung ist in diesem Browser nicht verfügbar. Wähle eine andere Option."
+  },
+  "onb_sign_in_dropbox": {
+    "message": "Mit Dropbox anmelden"
+  },
+  "opt_dropbox_folder_hint": {
+    "message": "Konode legt seine Dateien in $FOLDER$ in deiner Dropbox ab und kann außerhalb dieses Ordners nichts öffnen.",
+    "placeholders": {
+      "folder": {
+        "content": "$1",
+        "example": "Apps/Konode"
+      }
+    }
+  },
+  "dropbox_err_perms": {
+    "message": "Konode braucht die Berechtigung, Dropbox zu erreichen. Erlaube sie, wenn der Browser fragt, und versuche es dann erneut."
+  },
+  "dropbox_err_perms_no_prompt": {
+    "message": "Dieser Browser kann keine Berechtigungsdialoge anzeigen, daher konnte Konode nicht um Zugriff auf Dropbox bitten. Erteile ihn auf der Berechtigungsseite von Konode in den Erweiterungseinstellungen deines Browsers und versuche es dann erneut."
+  },
   "provider_nextcloud_desc": {
     "message": "Dein eigener Nextcloud- oder ownCloud-Server."
   },
@@ -691,6 +718,9 @@
   },
   "opt_save_changes": {
     "message": "Änderungen speichern"
+  },
+  "opt_unsaved_changes": {
+    "message": "Ungespeicherte Änderungen in diesem oder einem anderen Bereich. Beim Speichern werden alle übernommen."
   },
   "opt_nav_backend": {
     "message": "Speicher"

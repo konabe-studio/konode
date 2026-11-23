@@ -182,8 +182,11 @@ async function handleMessage(message: ExtensionMessage): Promise<ExtensionRespon
       // Await the sync so the pending message response keeps the MV3 worker alive
       // for its whole duration — otherwise a mid-sync suspension can skip the
       // lock's finally and strand the persisted lock until its TTL (C2).
+      // Asked for by a person (the Sync now button, a settings save, the end of setup), so
+      // this device's history goes out now rather than on its 15-minute cadence (#96).
       const outcome = await syncEngine.sync(
-        message.payload?.data_type ? [message.payload.data_type] : undefined
+        message.payload?.data_type ? [message.payload.data_type] : undefined,
+        { userAsked: true },
       );
       // Don't answer OK for a sync that never started. This used to be a blanket OK, so
       // a stranded lock made "Sync now" a no-op that reported success.

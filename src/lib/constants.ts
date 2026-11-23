@@ -60,6 +60,7 @@ export const BACKEND_LABEL: Record<BackendType, string> = {
   webdav: "WebDAV",
   github: "GitHub", // GitHub only — see the provider card note in storage-providers.ts
   gitea: "Gitea / Forgejo",
+  dropbox: "Dropbox",
 };
 
 /**

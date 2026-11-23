@@ -2,10 +2,29 @@
 
 /** Error carrying an HTTP status so retry logic can tell transient from terminal. */
 export class HttpError extends Error {
-  constructor(public readonly status: number, message?: string) {
+  /**
+   * `retryAfterMs` is how long the server asked us to wait (a 429's `Retry-After`), when it
+   * said. `withRetry` waits exactly that instead of its own backoff, and gives up at once
+   * when it is longer than the backoff would ever wait: holding a sync for five minutes is
+   * worse than failing it and trying again at the next interval.
+   */
+  constructor(public readonly status: number, message?: string, public readonly retryAfterMs?: number) {
     super(message ?? `HTTP ${status}`);
     this.name = "HttpError";
   }
+}
+
+/**
+ * A response's `Retry-After`, in milliseconds: delta-seconds or an HTTP date, as RFC 9110
+ * allows both. Undefined when absent or unreadable. 0 is a real answer ("retry now"), and
+ * Dropbox sends it for some write contention.
+ */
+export function retryAfterMs(res: Response, now = Date.now()): number | undefined {
+  const raw = res.headers?.get?.("Retry-After")?.trim();
+  if (!raw) return undefined;
+  if (/^\d+$/.test(raw)) return Number(raw) * 1000;
+  const at = Date.parse(raw);
+  return Number.isNaN(at) ? undefined : Math.max(0, at - now);
 }
 
 /**
@@ -74,8 +93,13 @@ export async function withRetry<T>(
       // deterministic failure just wastes time and rate-limit budget.
       if (attempt === maxAttempts || !shouldRetry(lastError)) break;
 
+      // A server that said how long to wait is taken at its word, unless the wait is longer
+      // than this helper would ever sleep: then the next sync is the retry.
+      const asked = lastError instanceof HttpError ? lastError.retryAfterMs : undefined;
+      if (asked !== undefined && asked > maxDelayMs) break;
+
       const delay = Math.min(baseDelayMs * Math.pow(2, attempt - 1), maxDelayMs);
-      const finalDelay = jitter ? delay * (0.5 + Math.random() * 0.5) : delay;
+      const finalDelay = asked !== undefined ? asked : jitter ? delay * (0.5 + Math.random() * 0.5) : delay;
 
       onRetry?.(attempt, lastError);
       await sleep(finalDelay);

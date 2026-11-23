@@ -5,6 +5,7 @@ import {
   getImportedHistoryStamps, recordImportedHistory, releaseImportedHistory,
   getRejectedHistoryUrls, recordRejectedHistoryUrls, rejectionStillHolds,
   clearRejectedHistoryUrls, getVisitTimeSupport, setVisitTimeSupport,
+  type HistoryReach,
 } from "@/lib/utils/storage";
 import { browser } from "@/lib/utils/ext";
 import { assertDataTypeApi } from "@/lib/utils/capabilities";
@@ -161,6 +162,63 @@ export function historyWindowStart(items: SyncHistoryItem[]): number {
     if (item.lastVisitTime < oldest) oldest = item.lastVisitTime;
   }
   return oldest === Infinity ? Infinity : Math.max(0, Math.floor(oldest) - WINDOW_SLACK_MS);
+}
+
+/**
+ * The newest and oldest visit a peer's history packet carries, or null when no entry has a
+ * visit time. Remembered with the packet's checksum once it is imported (`konode_hist_reach`),
+ * so the next changed packet can be cut down to what is new (`historySinceApplied`).
+ */
+export function historyReach(items: SyncHistoryItem[]): HistoryReach | null {
+  let newest = -Infinity;
+  let oldest = Infinity;
+  for (const item of items) {
+    if (!item.url || !item.lastVisitTime) continue;
+    if (item.lastVisitTime > newest) newest = item.lastVisitTime;
+    if (item.lastVisitTime < oldest) oldest = item.lastVisitTime;
+  }
+  return oldest === Infinity ? null : { newest, oldest };
+}
+
+/**
+ * The entries of a peer's CHANGED history packet that still need weighing against local
+ * history, given the reach of the last packet from that peer this device imported (#96).
+ *
+ * A peer rewrites its whole history file on every visit, so in a group of devices in use
+ * nearly every sync brings a changed packet from every peer, and comparing all of it meant
+ * reading local history as far back as the peer's window: 30 days, 100,000 rows, a stall
+ * of a third of a second in the browser, once a minute. But everything up to the newest
+ * visit of the last packet was weighed by that import already. Since then a page's local
+ * time can only have moved forward, which an import never has to undo, so an entry dated
+ * before that point would be skipped again. Only what is at or after it is new, which is
+ * minutes of browsing, and the local read shrinks with it.
+ *
+ * Everything is compared again, as before, when:
+ * - there is no record of an earlier import from this peer;
+ * - the new packet reaches further back than the last one. A peer's window only slides
+ *   forward on its own, so an older start means it now sends entries the last import never
+ *   saw: the days limit was raised there, or History was switched back on;
+ * - an entry has no visit time at all (then `historyWindowStart` asks for everything anyway).
+ *
+ * `retry` holds the canonical URLs this browser refused earlier whose hold has run out
+ * (`HIST_REJECT_RETRY_MS`). They are kept whatever their date, so a refusal that was only
+ * transient still heals the way it did when every import compared everything.
+ *
+ * Deliberately, a page this device deleted from its own history after it arrived is not
+ * brought back by the peer's next visit elsewhere: only a newer visit there brings it.
+ */
+export function historySinceApplied(
+  items: SyncHistoryItem[],
+  last: HistoryReach | undefined,
+  retry: ReadonlySet<string> = new Set(),
+): SyncHistoryItem[] {
+  if (!last || !Number.isFinite(last.newest) || !Number.isFinite(last.oldest)) return items;
+  const reach = historyReach(items);
+  if (!reach || reach.oldest < last.oldest) return items;
+  return items.filter((item) =>
+    !item.lastVisitTime ||
+    item.lastVisitTime >= last.newest ||
+    (retry.size > 0 && !!item.url && retry.has(canonicalUrlKey(item.url))));
 }
 
 /**

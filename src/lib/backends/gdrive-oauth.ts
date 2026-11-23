@@ -22,6 +22,7 @@
 import { logger } from "@/lib/utils/logger";
 import { KEYS } from "@/lib/utils/storage";
 import { browser } from "@/lib/utils/ext";
+import { codeChallenge, randomVerifier } from "@/lib/utils/pkce";
 
 const CLIENT_ID = "754300898931-2gejbfi1k9ul3lct0n09ke128gtv4j8l.apps.googleusercontent.com";
 const CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET ?? "";
@@ -132,25 +133,6 @@ export async function clearGDriveSession(): Promise<void> {
 export async function getStoredGDriveUser(): Promise<{ email: string; displayName: string } | null> {
   const s = await loadGDriveSession();
   return s ? { email: s.email, displayName: s.displayName } : null;
-}
-
-// ─── PKCE helpers ─────────────────────────────────────────────────────────────
-
-function base64url(bytes: Uint8Array): string {
-  let bin = "";
-  for (let i = 0; i < bytes.length; i += 0x8000) {
-    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  }
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function randomVerifier(): string {
-  return base64url(crypto.getRandomValues(new Uint8Array(64)));
-}
-
-async function codeChallenge(verifier: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
-  return base64url(new Uint8Array(digest));
 }
 
 // ─── Token endpoint ───────────────────────────────────────────────────────────

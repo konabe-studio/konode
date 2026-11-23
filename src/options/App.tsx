@@ -6,6 +6,9 @@ import { DORMANT_DEVICE_DAYS, isDormant, relativeTime } from "@/lib/device-activ
 import { ENGINE_LABEL } from "@/lib/utils/browser-identity";
 import { interactiveSignIn, isDriveAuthAvailable, clearGDriveSession } from "@/lib/backends/gdrive-oauth";
 import {
+  interactiveDropboxSignIn, isDropboxAuthAvailable, clearDropboxSession, getStoredDropboxUser, DROPBOX_ORIGINS,
+} from "@/lib/backends/dropbox-oauth";
+import {
   allDataTypeAvailability, dataTypeAvailability, dataTypeApiPresent, ensurePermission,
   hasPermission, unsupportedReason, eventPresent, permissionsToEnable, tabGroupsAskable,
   type Availability, type PermissionOutcome,
@@ -27,6 +30,11 @@ import {
 // Interactive Google sign-in isn't supported on every engine (e.g. iOS WebKit /
 // Orion); gate the Drive sign-in so users get a note instead of a dead end.
 const DRIVE_AVAILABLE = isDriveAuthAvailable();
+// Dropbox signs in through the same auth window, so the same engines lack it.
+const DROPBOX_AVAILABLE = isDropboxAuthAvailable();
+/** A sign-in card this browser cannot complete: dimmed and said so on the tile. */
+const signInOff = (p: { signIn?: boolean; backend: BackendType }): boolean =>
+  !!p.signIn && !(p.backend === "dropbox" ? DROPBOX_AVAILABLE : DRIVE_AVAILABLE);
 import {
   Github, Info,
   Puzzle, AlertTriangle, CheckCircle2, XCircle,
@@ -396,6 +404,11 @@ export default function OptionsApp() {
   const [gdriveConnecting, setGdriveConnecting] = useState(false);
   const [gdriveError, setGdriveError]         = useState<string | null>(null);
 
+  // Dropbox, the same three as Drive
+  const [dropboxUser, setDropboxUser]             = useState<{ email: string; displayName: string } | null>(null);
+  const [dropboxConnecting, setDropboxConnecting] = useState(false);
+  const [dropboxError, setDropboxError]           = useState<string | null>(null);
+
   // GitHub user info (fetched after token entry)
   const [githubUser, setGithubUser] = useState<{ login: string; name: string } | null>(null);
   const [githubChecking, setGithubChecking] = useState(false);
@@ -528,6 +541,9 @@ export default function OptionsApp() {
       const s = r[KEYS.GDRIVE_SESSION];
       if (s) setGdriveUser({ email: s.email ?? "", displayName: s.displayName ?? "" });
     }).catch(() => { /* no session to show is the normal case, not an error */ });
+    void getStoredDropboxUser().then((u) => {
+      if (u) setDropboxUser({ email: u.email, displayName: u.displayName });
+    }).catch(() => { /* as above */ });
     loadRemoteExtensions();
   }, [load, loadRemoteExtensions]);
 
@@ -732,6 +748,7 @@ export default function OptionsApp() {
     const ge = settings.backends.find((b) => b.type === "gitea")?.gitea;
     const configured =
       ab === "gdrive" ? !!gdriveUser
+      : ab === "dropbox" ? !!dropboxUser
       : ab === "webdav" ? !!(w?.url && w?.username && w?.password)
       : ab === "github" ? !!(g?.token && g?.repo)
       : ab === "gitea" ? !!(ge?.url && ge?.token && ge?.repo)
@@ -740,7 +757,7 @@ export default function OptionsApp() {
       update({ onboarding_completed: true });
       void sendMessage({ type: "SAVE_SETTINGS", payload: { onboarding_completed: true } });
     }
-  }, [settings, gdriveUser]);
+  }, [settings, gdriveUser, dropboxUser]);
 
   /** A false positive here is harmless (Save stays clickable); a false negative would not
    *  be, which is why nothing is ever disabled on the strength of it. */
@@ -823,6 +840,12 @@ export default function OptionsApp() {
   const scopeHint = () => {
     const [before, after] = tParts("opt_gdrive_scope_hint");
     return <>{before}<code>drive.file</code>{after}</>;
+  };
+
+  // The App folder by its path, a literal like the Drive scope above.
+  const dropboxFolderHint = () => {
+    const [before, after] = tParts("opt_dropbox_folder_hint");
+    return <>{before}<code>Apps/Konode</code>{after}</>;
   };
 
   // The word carrying the warning is emphasised, so it is its own key dropped into the
@@ -1066,6 +1089,15 @@ export default function OptionsApp() {
         return;
       }
     }
+    // Asked at sign-in already; asked again here, without a prompt when held, for a device
+    // whose permission was taken back in the browser's settings since.
+    if (settings.active_backend === "dropbox") {
+      const outcome = await ensurePermission({ origins: DROPBOX_ORIGINS });
+      if (outcome !== "granted") {
+        setSaveError(outcome === "cannot-prompt" ? t("dropbox_err_perms_no_prompt") : t("dropbox_err_perms"));
+        return;
+      }
+    }
     setSaving(true);
     // Everything but the popup's pause. This page holds a copy of the settings from
     // when it loaded, so saving that copy whole would quietly undo a pause (or a resume)
@@ -1124,7 +1156,7 @@ export default function OptionsApp() {
               assume it was dropped, and then have it go out with an unrelated save later. */}
           {dirty && !saveError && (
             <span className="unsaved-note">
-              <AlertTriangle size={12} /> Unsaved changes on this or another tab. Saving applies all of them.
+              <AlertTriangle size={12} /> {t("opt_unsaved_changes")}
             </span>
           )}
         </div>
@@ -1248,6 +1280,39 @@ export default function OptionsApp() {
     void clearGDriveSession().catch(() => {});
     setGdriveUser(null);
     if (settings?.active_backend === "gdrive") update({ active_backend: null });
+  };
+
+  // ─── Dropbox OAuth ─────────────────────────────────────────────────────
+
+  /** Dropbox's two API hosts first, while the click's gesture is still live (see
+   *  `ensurePermission`), then the sign-in window. Signing in without them would only
+   *  succeed for the first sync to fail on a missing permission. */
+  const connectDropbox = async () => {
+    setDropboxConnecting(true); setDropboxError(null);
+    try {
+      const outcome = await ensurePermission({ origins: DROPBOX_ORIGINS });
+      if (outcome !== "granted") {
+        setDropboxError(outcome === "cannot-prompt" ? t("dropbox_err_perms_no_prompt") : t("dropbox_err_perms"));
+        return;
+      }
+      const s = await interactiveDropboxSignIn();
+      setDropboxUser({ email: s.email, displayName: s.displayName });
+      // The account goes into the config, which the destination tag is built from: a
+      // device moved to another Dropbox account then uploads everything into it again.
+      updateBackend("dropbox", { dropbox: { account: s.account_id } });
+      update({ active_backend: "dropbox" });
+    } catch (err) {
+      setDropboxError(err instanceof Error ? err.message : t("opt_gdrive_connect_failed"));
+    } finally {
+      setDropboxConnecting(false);
+    }
+  };
+
+  const disconnectDropbox = () => {
+    // Forgets the session here and revokes its token at Dropbox (best effort).
+    void clearDropboxSession().catch(() => {});
+    setDropboxUser(null);
+    if (settings?.active_backend === "dropbox") update({ active_backend: null });
   };
 
   // ─── Export ───────────────────────────────────────────────────────────
@@ -1441,6 +1506,7 @@ export default function OptionsApp() {
   const activeBackendConfigured = (() => {
     const ab = settings.active_backend;
     if (ab === "gdrive") return !!gdriveUser;
+    if (ab === "dropbox") return !!dropboxUser;
     if (ab === "webdav") { const w = getBackend("webdav")?.webdav; return !!(w?.url && w?.username && w?.password); }
     if (ab === "github") { const g = getBackend("github")?.github; return !!(g?.token && g?.repo); }
     if (ab === "gitea") { const g = getBackend("gitea")?.gitea; return !!(g?.url && g?.token && g?.repo); }
@@ -1544,9 +1610,9 @@ export default function OptionsApp() {
                     // Selection drives the panel; only the persisted provider earns "active".
                     const isSel = selectedProvider === card.id;
                     const isSaved = savedProvider === card.id;
-                    // No Google sign-in here at all (Firefox for Android has no identity API):
+                    // No sign-in window here at all (Firefox for Android has no identity API):
                     // said on the tile itself, as an unsupported data type is, not only once picked.
-                    const tileOff = card.id === "gdrive" && !DRIVE_AVAILABLE;
+                    const tileOff = signInOff(card);
                     return (
                       <Fragment key={card.id}>
                         <div
@@ -1577,13 +1643,44 @@ export default function OptionsApp() {
                     // each card carried its own.
                     const p = cards[sel];
                     const isActive = true;
-                    const driveOff = p.id === "gdrive" && !DRIVE_AVAILABLE;
+                    const signInUnavailable = p.backend === "dropbox" ? t("opt_dropbox_unavailable") : t("opt_drive_unavailable");
                     return (
                     <div className="provider-panel" role="group" aria-label={providerLabel(p)}>
                       <div className="provider-panel-head">
                         <div className="provider-panel-name">{providerLabel(p)}</div>
-                        <div className="backend-desc">{driveOff ? t("opt_drive_unavailable") : t(p.descKey)}</div>
+                        <div className="backend-desc">{signInOff(p) ? signInUnavailable : t(p.descKey)}</div>
                       </div>
+
+                      {/* ── Dropbox: a sign-in and nothing to type, like Drive ── */}
+                      {isActive && p.backend === "dropbox" && (
+                        <div className="backend-config" onClick={(e) => e.stopPropagation()}>
+                          {dropboxUser ? (
+                            <div className="account-row">
+                              <div className="account-avatar"><User size={14} /></div>
+                              <div className="account-info">
+                                <div className="account-name"><bdi>{dropboxUser.displayName}</bdi></div>
+                                <div className="account-email">{dropboxUser.email}</div>
+                              </div>
+                              <button className="btn-disconnect" onClick={disconnectDropbox}>
+                                <LogOut size={12} /> {t("opt_drive_disconnect")}
+                              </button>
+                            </div>
+                          ) : signInOff(p) ? (
+                            <div className="error-row">
+                              <XCircle size={12} /> {signInUnavailable}
+                            </div>
+                          ) : (
+                            <div>
+                              <button className="btn-connect-google" onClick={connectDropbox} disabled={dropboxConnecting}>
+                                {dropboxConnecting ? <Loader2 size={14} className="spin" /> : <ProviderLogo id="dropbox" size={16} color="#0061FE" />}
+                                {dropboxConnecting ? t("onb_connecting") : t("onb_sign_in_dropbox")}
+                              </button>
+                              {dropboxError && <div className="error-row"><XCircle size={12} /> {dropboxError}</div>}
+                            </div>
+                          )}
+                          <InfoHint>{dropboxFolderHint()}</InfoHint>
+                        </div>
+                      )}
 
                       {/* ── Google Drive ── */}
                       {isActive && p.id === "gdrive" && (

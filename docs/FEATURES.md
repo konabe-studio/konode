@@ -119,6 +119,7 @@ Storage**. All your devices use the same one.
 | Storage | You need | Good for |
 |---|---|---|
 | **Google Drive** | A Google account. One sign-in. | The least setup. Konode sees only the files it created (`drive.file` scope). |
+| **Dropbox** *(next version)* | A Dropbox account. One sign-in. | The least setup after Drive. Konode gets a folder of its own, `Apps/Konode`, and can't see anything else in your Dropbox. Not on Firefox for Android. |
 | **GitHub** | A private repository and a fine-grained token with Contents: Read and write. | A full history of every change, as commits. Public repositories are refused. |
 | **Gitea / Forgejo** *(next version)* | Your server's address, a private repository and an access token with the repository permission set to Read and Write. | Your own Git server, with the same history of commits as GitHub. Konode asks your browser for permission to reach the server when you save. Public repositories are refused. |
 | **Nextcloud / ownCloud** | Your server's host, your username and an app password. | Your own server. Konode builds the WebDAV address from the host. |
@@ -134,7 +135,8 @@ your password with every request. The same goes for a Gitea or Forgejo server, w
 your access token with every request.
 
 Konode keeps one file per device and data type in a `Konode` folder (`konode` on GitHub,
-Gitea / Forgejo and WebDAV). You can look at it, or delete it, with your provider's own tools.
+Gitea / Forgejo and WebDAV, `Apps/Konode` on Dropbox). You can look at it, or delete it, with
+your provider's own tools.
 
 ## End-to-end encryption
 

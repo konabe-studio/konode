@@ -245,6 +245,33 @@
   "provider_gdrive_hint": {
     "message": "Google 帳戶"
   },
+  "provider_dropbox_desc": {
+    "message": "同步到你 Dropbox 裡一個專屬的資料夾。Konode 看不到其他任何內容，存取權杖只會留在這台裝置上。"
+  },
+  "provider_dropbox_hint": {
+    "message": "Dropbox 帳戶"
+  },
+  "opt_dropbox_unavailable": {
+    "message": "這個瀏覽器無法使用 Dropbox 登入。請選擇其他選項。"
+  },
+  "onb_sign_in_dropbox": {
+    "message": "使用 Dropbox 登入"
+  },
+  "opt_dropbox_folder_hint": {
+    "message": "Konode 會把檔案放在你 Dropbox 的 $FOLDER$，無法開啟這個資料夾以外的任何東西。",
+    "placeholders": {
+      "folder": {
+        "content": "$1",
+        "example": "Apps/Konode"
+      }
+    }
+  },
+  "dropbox_err_perms": {
+    "message": "Konode 需要連到 Dropbox 的權限。請在瀏覽器詢問時允許，然後再試一次。"
+  },
+  "dropbox_err_perms_no_prompt": {
+    "message": "這個瀏覽器沒辦法顯示權限提示，所以 Konode 無法請求連到 Dropbox 的存取權。請到瀏覽器擴充功能設定裡 Konode 的權限頁面授予，然後再試一次。"
+  },
   "provider_nextcloud_desc": {
     "message": "你自己的 Nextcloud 或 ownCloud 伺服器。"
   },
@@ -691,6 +718,9 @@
   },
   "opt_save_changes": {
     "message": "儲存變更"
+  },
+  "opt_unsaved_changes": {
+    "message": "這一頁或其他設定頁有尚未儲存的變更，儲存時會一併套用。"
   },
   "opt_nav_backend": {
     "message": "儲存空間"
