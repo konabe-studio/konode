@@ -19,6 +19,8 @@ import type {
   DataType,
   IBackend,
   ListedFile,
+  PeerFile,
+  PeerPull,
   SnapshotMeta,
   SyncPacket,
   SyncSettings,
@@ -47,6 +49,13 @@ import type {
  */
 
 // ─── The shared folder ──────────────────────────────────────────────────────
+
+/** A content hash for a listing marker, as Drive's md5 or GitHub's blob sha would be. */
+function contentHash(text: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+  return `${(h >>> 0).toString(16)}-${text.length}`;
+}
 
 /** One `Konode` folder, seen by every device. The thing the QA steps tell you to open. */
 class Folder implements IBackend {
@@ -81,6 +90,28 @@ class Folder implements IBackend {
         (p) => p.data_type === data_type && p.device_id !== excludeDeviceId
       )
     );
+  }
+  /** Every peer file this folder handed out in full, by name, in order. */
+  downloads: string[] = [];
+  /**
+   * The pull every real backend makes (#96): a file whose content hash is the one the
+   * device remembered stays here. On by default, so every scenario in this file runs
+   * against remembered packets wherever nothing changed, the way a real group does.
+   */
+  downloadChanged(data_type: DataType, excludeDeviceId: string, known: Record<string, string>): Promise<PeerPull> {
+    const out: PeerPull = { fetched: [], unchanged: [] };
+    for (const [name, p] of this.packets) {
+      if (p.data_type !== data_type || p.device_id === excludeDeviceId) continue;
+      const blob = this.blobs.get(name)!;
+      const file: PeerFile = { device_id: p.device_id, marker: contentHash(blob), exact: true };
+      if (known[p.device_id] === file.marker) {
+        out.unchanged.push(file);
+        continue;
+      }
+      this.downloads.push(name);
+      out.fetched.push({ packet: JSON.parse(blob) as SyncPacket, file });
+    }
+    return Promise.resolve(out);
   }
   putFile(name: string, content: string): Promise<void> {
     this.write(name, content);
@@ -1176,5 +1207,51 @@ describe("AF. Norton Neo keeps chrome://newtab/ as neo://newtab/ (#41)", () => {
     await cycle(H, N, H, N);
     await at(N, async () => { expect(await urlsHere()).toEqual([KEPT, site(0)].sort()); });
     await at(H, async () => { expect(await urlsHere()).toEqual([PEER, site(0)].sort()); });
+  });
+});
+
+// ─── An unchanged peer file stays on the server (#96) ───────────────────────
+
+describe("an unchanged peer file is not downloaded again (#96)", () => {
+  it("downloads nothing once the group is idle, and still carries an edit made between cycles", async () => {
+    const [A, B, C] = await seedGroup(5);
+    // One more round so every device has read every file in its final form.
+    await cycle(A, B, C);
+    folder.downloads = [];
+
+    await cycle(A, B, C, A, B, C);
+    expect(folder.downloads, "an idle group re-read files that had not changed").toEqual([]);
+
+    // An edit on B changes B's file, which the two others read again. C also reads A's,
+    // since A republished after taking the bookmark in; nothing else moved.
+    await at(B, async () => { await add("New on B", site(99)); });
+    await cycle(B, A, C);
+    expect(folder.downloads.sort()).toEqual([fileOf(A), fileOf(B), fileOf(B)]);
+    for (const d of [A, C]) {
+      await at(d, async () => { expect(await urlsHere()).toContain(site(99)); });
+    }
+
+    // A and C changed their own trees by taking it in, so the next round reads theirs; after
+    // that the group is idle again and nothing moves.
+    await cycle(A, B, C);
+    folder.downloads = [];
+    await cycle(A, B, C);
+    expect(folder.downloads).toEqual([]);
+  });
+
+  it("still merges an unchanged peer against a local edit: a deletion stays deleted", async () => {
+    const [A, B, C] = await seedGroup(5);
+    await cycle(A, B, C);
+    // C deletes one. B's and A's files still list it, and neither file changes before C's
+    // next sync, so C merges against remembered packets: the tombstone must keep it gone.
+    await at(C, async () => { await del(site(2)); });
+    folder.downloads = [];
+    await cycle(C);
+    expect(folder.downloads).toEqual([]);
+    await at(C, async () => { expect(await urlsHere()).not.toContain(site(2)); });
+    await cycle(A, B, C, A, B, C);
+    for (const d of [A, B, C]) {
+      await at(d, async () => { expect(await urlsHere()).toEqual([site(0), site(1), site(3), site(4)].sort()); });
+    }
   });
 });
