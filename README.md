@@ -70,6 +70,7 @@ next version (pausing sync, and sending a tab to another device).
 |---------|------|-------|
 | **Google Drive** | One-time sign-in | Scoped to `drive.file`, so Konode only ever touches the files it creates. |
 | **GitHub** | Fine-grained token | Point it at a single private repository. |
+| **Gitea / Forgejo** | Access token | *Next version.* A private repository on your own Gitea or Forgejo server. |
 | **WebDAV** | Username + password | Presets fill in the address for Nextcloud / ownCloud, pCloud, Koofr, Fastmail, and Nutstore (坚果云), which works from mainland China where Google Drive can't be reached. **WebDAV (other)** takes Synology, kDrive, or any standard WebDAV server. |
 
 ## How Konode compares
@@ -284,7 +285,8 @@ use a dedicated manager like [Bitwarden](https://bitwarden.com),
   lists the bookmarks it holds ([#23](https://github.com/konabe-studio/konode/issues/23)) · a
   device list that says when each device was last active and which browser it is
   ([#10](https://github.com/konabe-studio/konode/issues/10)) · a conflict view that shows what
-  differs ([#35](https://github.com/konabe-studio/konode/issues/35)).
+  differs ([#35](https://github.com/konabe-studio/konode/issues/35)) · Gitea and Forgejo storage
+  ([#32](https://github.com/konabe-studio/konode/issues/32)).
 - **Next**: the reading list ([#77](https://github.com/konabe-studio/konode/issues/77)) · more backends, cheapest sign-in first (Dropbox token and S3-compatible, then Dropbox OAuth
   and OneDrive) · faster history sync · more languages (Japanese, Estonian, Arabic).
 - **Later**: right-to-left languages · incremental diff for very large bookmark trees ·
