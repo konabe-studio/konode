@@ -230,6 +230,33 @@
   "provider_gdrive_hint": {
     "message": "Account Google"
   },
+  "provider_dropbox_desc": {
+    "message": "Sincronizzazione in una cartella dedicata nel tuo Dropbox. Konode non vede nient'altro, e il token di accesso viene conservato esclusivamente su questo dispositivo."
+  },
+  "provider_dropbox_hint": {
+    "message": "Account Dropbox"
+  },
+  "opt_dropbox_unavailable": {
+    "message": "L'accesso con Dropbox non è disponibile in questo browser. Scegli un'altra opzione."
+  },
+  "onb_sign_in_dropbox": {
+    "message": "Accedi con Dropbox"
+  },
+  "opt_dropbox_folder_hint": {
+    "message": "Konode salva i suoi file in $FOLDER$ nel tuo Dropbox e non può aprire nulla al di fuori di quella cartella.",
+    "placeholders": {
+      "folder": {
+        "content": "$1",
+        "example": "Apps/Konode"
+      }
+    }
+  },
+  "dropbox_err_perms": {
+    "message": "Konode ha bisogno dell'autorizzazione per raggiungere Dropbox. Concedila quando il browser lo chiede, poi riprova."
+  },
+  "dropbox_err_perms_no_prompt": {
+    "message": "Questo browser non può mostrare richieste di autorizzazione, quindi Konode non ha potuto chiedere l'accesso a Dropbox. Concedilo dalla schermata delle autorizzazioni di Konode nelle impostazioni delle estensioni del browser, poi riprova."
+  },
   "provider_nextcloud_desc": {
     "message": "Il tuo server Nextcloud o ownCloud personale."
   },

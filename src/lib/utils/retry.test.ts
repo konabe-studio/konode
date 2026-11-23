@@ -79,3 +79,43 @@ describe("withRetry", () => {
     expect(recovering).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("Retry-After", () => {
+  const res = (v?: string) => new Response(null, { status: 429, headers: v === undefined ? {} : { "Retry-After": v } });
+
+  it("reads delta-seconds and an HTTP date, and nothing else", async () => {
+    const { retryAfterMs } = await import("@/lib/utils/retry");
+    const now = Date.parse("2026-11-23T10:00:00Z");
+    expect(retryAfterMs(res("0"), now)).toBe(0);
+    expect(retryAfterMs(res("7"), now)).toBe(7000);
+    expect(retryAfterMs(res("Mon, 23 Nov 2026 10:00:30 GMT"), now)).toBe(30_000);
+    expect(retryAfterMs(res("Mon, 23 Nov 2026 09:00:00 GMT"), now)).toBe(0);
+    expect(retryAfterMs(res(), now)).toBeUndefined();
+    expect(retryAfterMs(res("soon"), now)).toBeUndefined();
+  });
+
+  it("waits what the server asked instead of the backoff", async () => {
+    vi.useFakeTimers();
+    try {
+      let n = 0;
+      const p = withRetry(async () => {
+        if (++n === 1) throw new HttpError(429, "slow down", 2000);
+        return "ok";
+      }, { baseDelayMs: 10, maxDelayMs: 30_000 });
+      await vi.advanceTimersByTimeAsync(1999);
+      expect(n).toBe(1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(await p).toBe("ok");
+      expect(n).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("gives up at once when asked to wait longer than it ever would", async () => {
+    let n = 0;
+    await expect(withRetry(async () => { n++; throw new HttpError(429, "come back in five minutes", 300_000); }))
+      .rejects.toThrow("come back in five minutes");
+    expect(n).toBe(1);
+  });
+});

@@ -4,6 +4,7 @@ import type { SyncSettings, SyncState, DataType, SyncPacket, SyncSession, SyncEx
 import { createBackend } from "@/lib/backends/abstract-backend";
 import { normalizeRepoSlug } from "@/lib/backends/github-backend";
 import { forgeBaseUrl, normalizeForgeRepoSlug } from "@/lib/backends/gitea-backend";
+import { DROPBOX_ORIGINS } from "@/lib/backends/dropbox-oauth";
 import { createSnapshot as writeSnapshot, listSnapshots as readSnapshots, restoreSnapshot as applySnapshot, deleteSnapshot as dropSnapshot, type SnapshotMeta } from "@/lib/sync/snapshots";
 import {
   bookmarkContent, exportBookmarkPayload, importBookmarks, peerTreeAsMerged, type BulkDeleteBlock,
@@ -215,6 +216,8 @@ export function backendOrigins(cfg: BackendConfig | undefined): string[] {
       if (!base) return [];
       try { return [new URL(base).origin + "/*"]; } catch { return []; }
     }
+    case "dropbox":
+      return [...DROPBOX_ORIGINS];
     default:
       return [];
   }
@@ -231,6 +234,8 @@ export function storageName(cfg: BackendConfig | undefined): string {
       return "GitHub";
     case "gitea":
       try { return new URL(forgeBaseUrl(cfg.gitea?.url)).host; } catch { return "your storage"; }
+    case "dropbox":
+      return "Dropbox";
     default:
       return "your storage";
   }
@@ -1264,6 +1269,8 @@ export class SyncEngine {
         return JSON.stringify(["github", cfg.github?.repo ?? "", cfg.github?.branch ?? "", cfg.github?.path ?? ""]);
       case "gitea":
         return JSON.stringify(["gitea", forgeBaseUrl(cfg.gitea?.url), cfg.gitea?.repo ?? "", cfg.gitea?.branch ?? "", cfg.gitea?.path ?? ""]);
+      case "dropbox":
+        return JSON.stringify(["dropbox", cfg.dropbox?.account ?? ""]);
       default:
         return JSON.stringify([cfg.type]);
     }
@@ -1632,6 +1639,9 @@ export class SyncEngine {
         const g = cfg.gitea;
         return `gitea:${forgeBaseUrl(g?.url)}/${normalizeForgeRepoSlug(g?.repo, g?.url)}@${g?.branch ?? "main"}/${g?.path ?? "konode"}`;
       }
+      case "dropbox":
+        // The account, not a folder: an App folder app always writes to its own folder.
+        return `dropbox:${cfg.dropbox?.account ?? "default"}`;
       case "webdav": {
         const w = cfg.webdav;
         return `webdav:${w?.username ?? ""}@${(w?.url ?? "").replace(/\/$/, "")}/${w?.path ?? "konode"}`;

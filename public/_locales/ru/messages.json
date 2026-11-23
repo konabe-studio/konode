@@ -245,6 +245,33 @@
   "provider_gdrive_hint": {
     "message": "Аккаунт Google"
   },
+  "provider_dropbox_desc": {
+    "message": "Синхронизация в отдельную папку в вашем Dropbox. Ничего другого там Konode не видит, а токен доступа хранится только на этом устройстве."
+  },
+  "provider_dropbox_hint": {
+    "message": "Аккаунт Dropbox"
+  },
+  "opt_dropbox_unavailable": {
+    "message": "Вход через Dropbox в этом браузере недоступен. Выберите другой вариант."
+  },
+  "onb_sign_in_dropbox": {
+    "message": "Войти через Dropbox"
+  },
+  "opt_dropbox_folder_hint": {
+    "message": "Konode хранит свои файлы в папке $FOLDER$ вашего Dropbox и не может открыть ничего за её пределами.",
+    "placeholders": {
+      "folder": {
+        "content": "$1",
+        "example": "Apps/Konode"
+      }
+    }
+  },
+  "dropbox_err_perms": {
+    "message": "Konode нужно разрешение на доступ к Dropbox. Разрешите его, когда браузер спросит, и повторите попытку."
+  },
+  "dropbox_err_perms_no_prompt": {
+    "message": "Этот браузер не умеет показывать запросы разрешений, поэтому Konode не смог запросить доступ к Dropbox. Предоставьте его на странице разрешений Konode в настройках расширений браузера, а затем повторите попытку."
+  },
   "provider_nextcloud_desc": {
     "message": "Ваш собственный сервер Nextcloud или ownCloud."
   },

@@ -1,14 +1,14 @@
 # Konode Privacy Policy
 
-_Last updated: November 19, 2026_
+_Last updated: November 23, 2026_
 
 ## The short version
 
 Konode is a browser extension that syncs your own browser data to storage **you
 control**. We do not run any servers, we do not have a database, and we never
 receive your data. Everything you sync goes directly from your browser to the
-storage backend **you** choose and sign in to (Google Drive, GitHub, or a WebDAV
-server). We don't track you, show ads, or use analytics.
+storage backend **you** choose and sign in to (Google Drive, Dropbox, GitHub, a Gitea
+or Forgejo server, or a WebDAV server). We don't track you, show ads, or use analytics.
 
 In plain terms: **your data stays yours.** Konode is the pipe, not the destination.
 
@@ -64,7 +64,9 @@ When you set up Konode, you choose **one** storage backend and sign in to it wit
 your own account:
 
 - **Google Drive** (via Google sign-in),
-- **GitHub** (via a personal access token you create), or
+- **Dropbox** (via Dropbox sign-in),
+- **GitHub** (via a personal access token you create),
+- a **Gitea or Forgejo server** (via an access token you create on it), or
 - a **WebDAV server** (your own, or a provider you use).
 
 Your synced data is written **directly from your browser to that backend, under your
@@ -72,14 +74,15 @@ own account.** Konode operates **no servers of its own** and therefore never
 receives, stores, processes, or has access to your synced data. We cannot see your
 bookmarks, history, tabs, or extension list.
 
-Each backend is operated by a third party (Google, GitHub, or your WebDAV provider).
+Each backend is operated by a third party (Google, Dropbox, GitHub, or whoever runs
+your Gitea, Forgejo or WebDAV server).
 Once your data is stored there, it is also subject to **that provider's** privacy
 policy and terms. Konode is not affiliated with these providers.
 
 ## Your credentials
 
-The credentials you enter (a Google OAuth token, a GitHub personal access token, or
-a WebDAV username and password) are stored **only on your device**, in the browser's own
+The credentials you enter (a Google or Dropbox OAuth token, a GitHub personal access
+token, a Gitea or Forgejo access token, or a WebDAV username and password) are stored **only on your device**, in the browser's own
 local extension storage (`storage.local`). They are used solely to
 authenticate to the backend you chose. They are **never transmitted to us** (we have
 no server to transmit them to) and are not shared with anyone else.
@@ -145,6 +148,14 @@ including the **Limited Use** requirements. We use this access solely to read an
 write your sync files at your direction; we do not transfer or sell this data, and we
 do not use it for advertising or any purpose other than providing the sync feature.
 
+## Dropbox access
+
+When you choose Dropbox, Konode is an **App folder** app: Dropbox gives it one folder,
+`Apps/Konode`, and Konode cannot see, read or change anything else in your Dropbox. It
+reads your account's name and email address at sign-in and when you press Test connection,
+only to show you which account is connected; they stay on your device. Sign-in uses OAuth with PKCE, so no
+Konode secret is involved and no Konode server takes part.
+
 ## What we do *not* do
 
 - We do **not** run servers or databases that hold your data.
@@ -163,11 +174,13 @@ Because Konode stores nothing on its own infrastructure, **you control retention
 - **Access you granted:** uninstalling deletes Konode's copy of a credential but cannot
   withdraw the permission at the other end, because that lives in your provider's account.
   To finish the job, remove Konode's Drive access under
-  [Google account permissions](https://myaccount.google.com/permissions), delete the
-  GitHub token you created, or revoke the WebDAV app password.
+  [Google account permissions](https://myaccount.google.com/permissions), remove Konode
+  under [Dropbox connected apps](https://www.dropbox.com/account/connected_apps), delete the
+  GitHub, Gitea or Forgejo token you created, or revoke the WebDAV app password. Disconnecting Dropbox in
+  Konode's Settings also withdraws that device's access at Dropbox.
 - **On your backend:** you can delete the files Konode created (in the `Konode` /
-  `konode` folder of your Drive, repository, or WebDAV server) at any time, directly
-  through that provider.
+  `konode` folder of your Drive, repository, or WebDAV server, or `Apps/Konode` in your
+  Dropbox) at any time, directly through that provider.
 
 ## Children's privacy
 
