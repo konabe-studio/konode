@@ -302,6 +302,33 @@
   "provider_github_hint": {
     "message": "Privát GitHub-repó"
   },
+  "provider_gitea_desc": {
+    "message": "A szinkronizált adatok a saját Gitea- vagy Forgejo-szervered egy privát repójában tárolódnak, amelyhez hozzáférési tokennel fér hozzá a Konode."
+  },
+  "provider_gitea_hint": {
+    "message": "Saját Git-szerver"
+  },
+  "provider_gitea_note": {
+    "message": "A tokent a szervereden a Beállítások → Alkalmazások oldalon hozd létre, a repository jogosultságot Read and Write értékre állítva. Utána engedélyezd, hogy a Konode elérje a szerveredet, amikor a böngésző rákérdez."
+  },
+  "opt_gitea_token_label": {
+    "message": "Hozzáférési token"
+  },
+  "gitea_token_link": {
+    "message": "Hozzáférési token létrehozása a szervereden →"
+  },
+  "gitea_err_http": {
+    "message": "A Konode nem kapcsolódik Gitea- vagy Forgejo-szerverhez http:// címen, mert a hozzáférési tokened minden kéréssel titkosítatlanul utazna. Használj https:// címet. A http:// csak ezen a gépen futó szerverhez (localhost) működik."
+  },
+  "gitea_err_perms": {
+    "message": "A Konode-nak engedély kell a Gitea- vagy Forgejo-szervered eléréséhez. Engedélyezd, amikor a böngésző rákérdez, majd próbáld újra."
+  },
+  "gitea_err_perms_no_prompt": {
+    "message": "Ez a böngésző nem tud engedélykérő ablakot megjeleníteni, ezért a Konode nem tudott hozzáférést kérni a Gitea- vagy Forgejo-szerveredhez. Engedélyezd a hozzáférést a Konode bővítménybeállításainál a böngésződben, majd próbáld meg újra."
+  },
+  "gitea_err_bad_url": {
+    "message": "Add meg a szervered címét, például: git.example.com."
+  },
   "provider_webdav_desc": {
     "message": "Synology, kDrive vagy bármelyik más WebDAV szerver."
   },

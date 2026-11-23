@@ -302,6 +302,33 @@
   "provider_github_hint": {
     "message": "Privates Repository"
   },
+  "provider_gitea_desc": {
+    "message": "Deine Sync-Daten liegen in einem privaten Repository auf deinem eigenen Gitea- oder Forgejo-Server, auf das Konode mit einem Zugriffstoken zugreift."
+  },
+  "provider_gitea_hint": {
+    "message": "Eigener Git-Server"
+  },
+  "provider_gitea_note": {
+    "message": "Erstelle den Token auf deinem Server unter Einstellungen → Anwendungen und setze die Berechtigung repository auf Lesen und Schreiben. Erlaube Konode danach den Zugriff auf deinen Server, wenn der Browser fragt."
+  },
+  "opt_gitea_token_label": {
+    "message": "Zugriffstoken"
+  },
+  "gitea_token_link": {
+    "message": "Zugriffstoken auf deinem Server erstellen →"
+  },
+  "gitea_err_http": {
+    "message": "Konode verbindet sich nicht über http:// mit einem Gitea- oder Forgejo-Server, weil dein Zugriffstoken sonst bei jeder Anfrage unverschlüsselt übertragen würde. Verwende eine https://-Adresse. http:// funktioniert nur für einen Server auf diesem Computer (localhost)."
+  },
+  "gitea_err_perms": {
+    "message": "Konode braucht die Berechtigung, deinen Gitea- oder Forgejo-Server zu erreichen. Erlaube sie, wenn der Browser fragt, und versuche es dann erneut."
+  },
+  "gitea_err_perms_no_prompt": {
+    "message": "Dieser Browser kann keine Berechtigungsdialoge anzeigen, daher konnte Konode nicht um Zugriff auf deinen Gitea- oder Forgejo-Server bitten. Erteile ihn auf der Berechtigungsseite von Konode in den Erweiterungseinstellungen deines Browsers und versuche es dann erneut."
+  },
+  "gitea_err_bad_url": {
+    "message": "Gib die Adresse deines Servers ein, zum Beispiel git.example.com."
+  },
   "provider_webdav_desc": {
     "message": "Synology, kDrive oder ein beliebiger anderer WebDAV-Server."
   },

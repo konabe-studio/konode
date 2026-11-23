@@ -18,6 +18,10 @@ const DRAFT: Omit<OnboardingDraft, "savedAt"> = {
   githubToken: "github_pat_example",
   githubRepo: "me/konode-sync",
   githubBranch: "main",
+  giteaUrl: "",
+  giteaToken: "",
+  giteaRepo: "",
+  giteaBranch: "main",
   webdavUrl: "",
   webdavUser: "",
   webdavPass: "",
@@ -64,7 +68,7 @@ describe("the setup wizard's draft", () => {
   });
 
   it("is dropped when it names a storage card this build does not have", async () => {
-    await chrome.storage.local.set({ [KEYS.ONBOARDING_DRAFT]: { ...DRAFT, savedAt: NOW, provider: "gitea" } });
+    await chrome.storage.local.set({ [KEYS.ONBOARDING_DRAFT]: { ...DRAFT, savedAt: NOW, provider: "gitlab" } });
 
     expect(await loadDraft(NOW)).toBeNull();
   });

@@ -290,6 +290,33 @@
   "provider_github_hint": {
     "message": "私有仓库"
   },
+  "provider_gitea_desc": {
+    "message": "你的同步数据存放在你自己的 Gitea 或 Forgejo 服务器上的一个私有仓库中，Konode 通过访问令牌进行访问。"
+  },
+  "provider_gitea_hint": {
+    "message": "你自己的 Git 服务器"
+  },
+  "provider_gitea_note": {
+    "message": "在你的服务器上的“设置 → 应用”中创建令牌，并将 repository 权限设为读写。然后在浏览器询问时，允许 Konode 访问你的服务器。"
+  },
+  "opt_gitea_token_label": {
+    "message": "访问令牌"
+  },
+  "gitea_token_link": {
+    "message": "在你的服务器上创建访问令牌 →"
+  },
+  "gitea_err_http": {
+    "message": "Konode 不会通过 http:// 连接 Gitea 或 Forgejo 服务器，因为每次请求都会以未加密的方式发送您的访问令牌。请使用 https:// 地址。http:// 仅适用于本机上的服务器（localhost）。"
+  },
+  "gitea_err_perms": {
+    "message": "Konode 需要访问你的 Gitea 或 Forgejo 服务器的权限。请在浏览器询问时允许，然后重试。"
+  },
+  "gitea_err_perms_no_prompt": {
+    "message": "此浏览器无法显示权限提示，因此 Konode 无法请求访问您的 Gitea 或 Forgejo 服务器。请在浏览器扩展设置的 Konode 权限页面中授予权限，然后重试。"
+  },
+  "gitea_err_bad_url": {
+    "message": "请输入你的服务器地址，例如 git.example.com。"
+  },
   "provider_webdav_desc": {
     "message": "Synology、kDrive，或任何其他 WebDAV 服务器。"
   },

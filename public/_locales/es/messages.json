@@ -290,6 +290,33 @@
   "provider_github_hint": {
     "message": "Repositorio privado"
   },
+  "provider_gitea_desc": {
+    "message": "Tus datos sincronizados se almacenan en un repositorio privado de tu propio servidor Gitea o Forgejo, al que Konode accede mediante un token de acceso."
+  },
+  "provider_gitea_hint": {
+    "message": "Tu propio servidor Git"
+  },
+  "provider_gitea_note": {
+    "message": "Crea el token en tu servidor en Configuración → Aplicaciones, con el permiso repository en Lectura y escritura. Después, permite que Konode acceda a tu servidor cuando el navegador lo pregunte."
+  },
+  "opt_gitea_token_label": {
+    "message": "Token de acceso"
+  },
+  "gitea_token_link": {
+    "message": "Crear un token de acceso en tu servidor →"
+  },
+  "gitea_err_http": {
+    "message": "Konode no se conecta a un servidor Gitea o Forgejo por http://, porque tu token de acceso se enviaría sin cifrar en cada solicitud. Usa una dirección https://. http:// solo funciona con un servidor en este equipo (localhost)."
+  },
+  "gitea_err_perms": {
+    "message": "Konode necesita permiso para acceder a tu servidor Gitea o Forgejo. Concédelo cuando el navegador lo pregunte y luego reintenta."
+  },
+  "gitea_err_perms_no_prompt": {
+    "message": "Este navegador no puede mostrar mensajes de solicitud de permisos, por lo que Konode no pudo solicitar acceso a tu servidor Gitea o Forgejo. Concédelo en la pantalla de permisos de Konode, que se encuentra en la configuración de extensiones de tu navegador, y luego reintenta."
+  },
+  "gitea_err_bad_url": {
+    "message": "Ingresa la dirección de tu servidor, por ejemplo git.example.com."
+  },
   "provider_webdav_desc": {
     "message": "Synology, kDrive o cualquier otro servidor WebDAV."
   },

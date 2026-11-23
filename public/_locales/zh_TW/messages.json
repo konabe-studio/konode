@@ -302,6 +302,33 @@
   "provider_github_hint": {
     "message": "私人儲存庫"
   },
+  "provider_gitea_desc": {
+    "message": "你的同步資料放在你自己的 Gitea 或 Forgejo 伺服器上的一個私人儲存庫裡，Konode 透過存取權杖存取它。"
+  },
+  "provider_gitea_hint": {
+    "message": "你自己的 Git 伺服器"
+  },
+  "provider_gitea_note": {
+    "message": "在你的伺服器上的「設定 → 應用程式」建立權杖，並把 repository 權限設為讀寫。接著在瀏覽器詢問時，允許 Konode 連到你的伺服器。"
+  },
+  "opt_gitea_token_label": {
+    "message": "存取權杖"
+  },
+  "gitea_token_link": {
+    "message": "在你的伺服器上建立存取權杖 →"
+  },
+  "gitea_err_http": {
+    "message": "Konode 不會透過 http:// 連線到 Gitea 或 Forgejo 伺服器，因為每次請求都會以未加密的方式送出你的存取權杖。請改用 https:// 網址。http:// 只適用於這台電腦上的伺服器（localhost）。"
+  },
+  "gitea_err_perms": {
+    "message": "Konode 需要連到你 Gitea 或 Forgejo 伺服器的權限。請在瀏覽器詢問時允許，然後再試一次。"
+  },
+  "gitea_err_perms_no_prompt": {
+    "message": "這個瀏覽器沒辦法顯示權限提示，所以 Konode 無法請求連到你 Gitea 或 Forgejo 伺服器的存取權。請到瀏覽器擴充功能設定裡 Konode 的權限頁面授予，然後再試一次。"
+  },
+  "gitea_err_bad_url": {
+    "message": "請輸入你的伺服器位址，例如 git.example.com。"
+  },
   "provider_webdav_desc": {
     "message": "Synology、kDrive，或任何其他 WebDAV 伺服器。"
   },
