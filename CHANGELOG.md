@@ -69,6 +69,11 @@ All notable changes to Konode. Format loosely follows
   page you visit reaches your other devices within about 15 minutes; **Sync now** still
   sends it at once. Bookmarks, open tabs and extensions sync as often as before.
 
+### Fixed
+
+- **The unsaved-changes note in Settings is translated.** The line beside **Save changes**
+  that says an edit is still waiting showed in English in every language since 1.2.0.
+
 ## [1.6.0] - 2026-11-19
 
 ### Added

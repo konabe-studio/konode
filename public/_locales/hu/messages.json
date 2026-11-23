@@ -719,6 +719,9 @@
   "opt_save_changes": {
     "message": "Változások mentése"
   },
+  "opt_unsaved_changes": {
+    "message": "Nem mentett változások ezen vagy egy másik fülön. A mentés mindegyiket alkalmazza."
+  },
   "opt_nav_backend": {
     "message": "Tárhely"
   },
