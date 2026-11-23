@@ -719,6 +719,9 @@
   "opt_save_changes": {
     "message": "Salva modifiche"
   },
+  "opt_unsaved_changes": {
+    "message": "Modifiche non salvate in questa sezione o in un'altra. Salvando si applicano tutte."
+  },
   "opt_nav_backend": {
     "message": "Archiviazione"
   },

@@ -1156,7 +1156,7 @@ export default function OptionsApp() {
               assume it was dropped, and then have it go out with an unrelated save later. */}
           {dirty && !saveError && (
             <span className="unsaved-note">
-              <AlertTriangle size={12} /> Unsaved changes on this or another tab. Saving applies all of them.
+              <AlertTriangle size={12} /> {t("opt_unsaved_changes")}
             </span>
           )}
         </div>

@@ -710,6 +710,9 @@
   "opt_save_changes": {
     "message": "Guardar cambios"
   },
+  "opt_unsaved_changes": {
+    "message": "Hay cambios sin guardar en esta sección o en otra. Al guardar se aplican todos."
+  },
   "opt_nav_backend": {
     "message": "Almacenamiento"
   },

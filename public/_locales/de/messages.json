@@ -719,6 +719,9 @@
   "opt_save_changes": {
     "message": "Änderungen speichern"
   },
+  "opt_unsaved_changes": {
+    "message": "Ungespeicherte Änderungen in diesem oder einem anderen Bereich. Beim Speichern werden alle übernommen."
+  },
   "opt_nav_backend": {
     "message": "Speicher"
   },

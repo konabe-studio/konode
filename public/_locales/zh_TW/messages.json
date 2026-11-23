@@ -719,6 +719,9 @@
   "opt_save_changes": {
     "message": "儲存變更"
   },
+  "opt_unsaved_changes": {
+    "message": "這一頁或其他設定頁有尚未儲存的變更，儲存時會一併套用。"
+  },
   "opt_nav_backend": {
     "message": "儲存空間"
   },

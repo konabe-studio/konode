@@ -835,6 +835,10 @@
   "opt_save_changes": {
     "message": "Save changes"
   },
+  "opt_unsaved_changes": {
+    "message": "Unsaved changes on this or another tab. Saving applies all of them.",
+    "description": "Shown beside Save in Settings while something is changed but not saved. \"Tab\" means the four sections of the Settings page (Storage, Data types, Device, Advanced), not a browser tab: they share one Save, so an edit left on another section goes out with the next save."
+  },
   "opt_nav_backend": {
     "message": "Storage",
     "description": "Tab in the Settings navigation strip. Keep every nav label short: the strip has to stay legible when the window is narrow. The section heading is a separate key (opt_backend_head), so you can be shorter here than there."

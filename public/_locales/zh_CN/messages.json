@@ -710,6 +710,9 @@
   "opt_save_changes": {
     "message": "保存更改"
   },
+  "opt_unsaved_changes": {
+    "message": "本页或其他设置页中有未保存的更改，保存时会一并应用。"
+  },
   "opt_nav_backend": {
     "message": "存储"
   },
