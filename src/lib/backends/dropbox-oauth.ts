@@ -27,14 +27,14 @@ import { logger } from "@/lib/utils/logger";
 import { KEYS } from "@/lib/utils/storage";
 import { browser } from "@/lib/utils/ext";
 import { codeChallenge, randomVerifier } from "@/lib/utils/pkce";
-import { HttpError } from "@/lib/utils/retry";
+import { HttpError, retryAfterMs, withRetry } from "@/lib/utils/retry";
 
 /**
  * The Dropbox app key (OAuth client_id). Public, see above, so it lives here in the source.
  * `VITE_DROPBOX_APP_KEY` replaces it at build time, for a fork that registers a Dropbox app
  * of its own (its extension id differs, so Konode's registered redirects cannot match it).
  */
-export const DROPBOX_APP_KEY: string = import.meta.env.VITE_DROPBOX_APP_KEY || "";
+export const DROPBOX_APP_KEY: string = import.meta.env.VITE_DROPBOX_APP_KEY ?? "cq03j1aywgriemo";
 
 const AUTH_ENDPOINT = "https://www.dropbox.com/oauth2/authorize";
 const TOKEN_ENDPOINT = "https://api.dropboxapi.com/oauth2/token";
@@ -66,10 +66,10 @@ interface TokenResponse {
 }
 
 /** Why a token request failed. An HttpError, so a 429 or 5xx is retried like any other
- *  call, while a 400 (a dead refresh token) is not. */
+ *  call (with Dropbox's Retry-After), while a 400 (a dead refresh token) is not. */
 export class DropboxTokenError extends HttpError {
-  constructor(status: number, public readonly code: string, message: string) {
-    super(status, message);
+  constructor(status: number, public readonly code: string, message: string, retryAfter?: number) {
+    super(status, message, retryAfter);
     this.name = "DropboxTokenError";
   }
 }
@@ -90,6 +90,11 @@ const DECLINED_MSG =
   "Access was not allowed on Dropbox's consent screen. Try again to connect Dropbox.";
 export const DROPBOX_EXPIRED_MSG =
   "Dropbox no longer accepts Konode's saved access. Open Konode's Settings and sign in to Dropbox again.";
+
+const TOKEN_BUSY_MSG =
+  "Dropbox is busy and asked Konode to wait. Try again in a minute. (HTTP 429)";
+const TOKEN_DOWN_MSG =
+  "Dropbox couldn't finish the sign-in just now. Try again in a minute.";
 
 const WINDOW_CLOSED_RE = /cancel|denied|did not approve/i;
 const UNSUPPORTED_RE = /not an object|not a function|parameters\.length/i;
@@ -152,12 +157,26 @@ async function exchange(params: Record<string, string>): Promise<TokenResponse> 
     body: body.toString(),
   });
   if (!res.ok) {
-    const e = await res.json().catch(() => ({} as Record<string, string>));
-    const code = String(e.error ?? "");
-    throw new DropboxTokenError(
-      res.status, code,
-      `Dropbox token request failed: ${res.status} ${code} ${e.error_description ?? ""}`.trim()
+    // The body is JSON (`error`, `error_description`) or plain text, and the text can be a
+    // whole server stack trace: a first sign-in on 2026-11-23 got a 429 whose body was 60
+    // lines of Go from the App folder's creation, and it reached the screen as the error.
+    // The log gets the start of it, the screen a sentence.
+    const text = await res.text().catch(() => "");
+    let code = "";
+    let detail = text;
+    try {
+      const e = JSON.parse(text);
+      code = String(e.error ?? "");
+      detail = String(e.error_description ?? "");
+    } catch { /* plain text */ }
+    logger.warn(
+      "Dropbox.oauth",
+      `Token request (${params.grant_type}) failed: HTTP ${res.status} ${code} ${detail.replace(/\s+/g, " ").slice(0, 300)}`.trim()
     );
+    const message = res.status === 429 ? TOKEN_BUSY_MSG
+      : res.status >= 500 ? TOKEN_DOWN_MSG
+      : `Dropbox didn't accept the sign-in (HTTP ${res.status}${code ? `, ${code}` : ""}). Try again.`;
+    throw new DropboxTokenError(res.status, code, message, retryAfterMs(res));
   }
   return res.json() as Promise<TokenResponse>;
 }
@@ -224,12 +243,14 @@ export async function interactiveDropboxSignIn(): Promise<DropboxSession> {
     throw new Error(`Dropbox sign-in failed: ${error ?? "no code"}. Try again.`);
   }
 
-  const tok = await exchange({
+  // Retried on a 429 or 5xx (Retry-After honoured): an app's first sign-in is when Dropbox
+  // creates its App folder, and that answered 429 in testing. A code lives a few minutes.
+  const tok = await withRetry(() => exchange({
     grant_type: "authorization_code",
     code,
     redirect_uri: dropboxRedirectUri(),
     code_verifier: verifier,
-  });
+  }), { maxAttempts: 4, baseDelayMs: 1500 });
   const account = await fetchDropboxAccount(tok.access_token);
   const session: DropboxSession = {
     access_token: tok.access_token,

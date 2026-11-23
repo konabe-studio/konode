@@ -97,6 +97,34 @@ describe("Dropbox PKCE sign-in", () => {
     expect(stored.expires_at).toBeGreaterThan(Date.now() + 14_000_000);
   });
 
+  // 2026-11-23, the first real sign-in: the code exchange answered 429 with 60 lines of a
+  // server stack trace as plain text (Dropbox creating the App folder), and that text was
+  // the error on screen. The exchange is retried now, and the screen gets a sentence.
+  const TRACE = "Request has been rate limited! rpc error: code = ResourceExhausted\n" + "go/src/dropbox/courier/status/errors.go:84 +0x7882746\n".repeat(60);
+
+  it("retries the code exchange after a 429 with Retry-After", async () => {
+    const m = await load();
+    withIdentity(() => Promise.resolve(`${REDIRECT}?code=the-code`));
+    let tokenCalls = 0;
+    serve((c) => {
+      if (!c.url.endsWith("/oauth2/token")) return json({ account_id: "dbid:AAA", email: "", name: { display_name: "Ann" } });
+      return ++tokenCalls === 1
+        ? new Response(TRACE, { status: 429, headers: { "Retry-After": "0", "Content-Type": "text/plain" } })
+        : json({ access_token: "at1", refresh_token: "rt1", expires_in: 14400 });
+    });
+    const s = await m.interactiveDropboxSignIn();
+    expect(tokenCalls).toBe(2);
+    expect(s.refresh_token).toBe("rt1");
+  });
+
+  it("puts a sentence on screen, not Dropbox's raw error text", async () => {
+    const m = await load();
+    withIdentity(() => Promise.resolve(`${REDIRECT}?code=the-code`));
+    serve(() => new Response(TRACE, { status: 400, headers: { "Content-Type": "text/plain" } }));
+    const err = await m.interactiveDropboxSignIn().catch((e: Error) => e);
+    expect((err as Error).message).toBe("Dropbox didn't accept the sign-in (HTTP 400). Try again.");
+  });
+
   it("reports a closed window as closed, on both engines' wording", async () => {
     const m = await load();
     for (const words of ["The user did not approve access.", "User cancelled or denied access."]) {
