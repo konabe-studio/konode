@@ -206,3 +206,30 @@ describe("providerLabel", () => {
     expect(providerLabel(providerById("webdav"))).toBe(en("provider_webdav_other"));
   });
 });
+
+describe("the Dropbox card (1.7.0)", () => {
+  it("is a sign-in card on the dropbox backend, next to Drive, and round-trips from the config", () => {
+    const p = providerById("dropbox");
+    expect(p).toMatchObject({ backend: "dropbox", label: "Dropbox", signIn: true });
+    expect(providerById("gdrive").signIn).toBe(true);
+    expect(PROVIDERS.filter((x) => x.signIn).map((x) => x.id)).toEqual(["gdrive", "dropbox"]);
+    expect(providerCards("en").map((x) => x.id).slice(0, 2)).toEqual(["gdrive", "dropbox"]);
+    expect(providerFromConfig("dropbox", undefined)).toBe("dropbox");
+    en(p.descKey);
+    en(p.hintKey);
+    // Sign-in cards have nothing to type, so none of the WebDAV shapes may apply.
+    expect(p.fixedUrl ?? p.regions ?? p.needsHost ?? p.custom).toBeUndefined();
+  });
+
+  it("can reach the Dropbox API through the manifest's optional hosts", async () => {
+    const { backendOrigins, storageName } = await import("@/lib/sync/sync-engine");
+    const cfg = { type: "dropbox" as const, label: "Dropbox", enabled: true };
+    expect(backendOrigins(cfg)).toEqual(["https://api.dropboxapi.com/*", "https://content.dropboxapi.com/*"]);
+    expect(storageName(cfg)).toBe("Dropbox");
+    const { readFileSync } = await import("node:fs");
+    const manifest = JSON.parse(readFileSync("public/manifest.json", "utf8"));
+    // Optional `https://*/*` covers both: asked for at sign-in, never at install.
+    expect(manifest.optional_host_permissions).toContain("https://*/*");
+    expect(manifest.host_permissions.join(" ")).not.toMatch(/dropbox/);
+  });
+});

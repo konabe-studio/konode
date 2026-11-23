@@ -245,6 +245,33 @@
   "provider_gdrive_hint": {
     "message": "Google-fiók"
   },
+  "provider_dropbox_desc": {
+    "message": "Szinkronizálás egy saját mappába a Dropboxodon. A Konode semmi mást nem lát ott, a hozzáférési token pedig csak ezen az eszközön tárolódik."
+  },
+  "provider_dropbox_hint": {
+    "message": "Dropbox-fiók"
+  },
+  "opt_dropbox_unavailable": {
+    "message": "A Dropbox-bejelentkezés ebben a böngészőben nem működik. Válassz másik lehetőséget."
+  },
+  "onb_sign_in_dropbox": {
+    "message": "Bejelentkezés Dropbox-fiókkal"
+  },
+  "opt_dropbox_folder_hint": {
+    "message": "A Konode a fájljait a Dropboxod $FOLDER$ mappájába teszi, és azon kívül semmit sem tud megnyitni.",
+    "placeholders": {
+      "folder": {
+        "content": "$1",
+        "example": "Apps/Konode"
+      }
+    }
+  },
+  "dropbox_err_perms": {
+    "message": "A Konode-nak engedély kell a Dropbox eléréséhez. Engedélyezd, amikor a böngésző rákérdez, majd próbáld újra."
+  },
+  "dropbox_err_perms_no_prompt": {
+    "message": "Ez a böngésző nem tud engedélykérő ablakot megjeleníteni, ezért a Konode nem tudott hozzáférést kérni a Dropboxhoz. Engedélyezd a hozzáférést a Konode bővítménybeállításainál a böngésződben, majd próbáld meg újra."
+  },
   "provider_nextcloud_desc": {
     "message": "A saját Nextcloud vagy ownCloud szervered."
   },

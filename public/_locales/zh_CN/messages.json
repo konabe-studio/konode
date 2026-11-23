@@ -233,6 +233,33 @@
   "provider_gdrive_hint": {
     "message": "Google 账号"
   },
+  "provider_dropbox_desc": {
+    "message": "同步到您 Dropbox 中的一个专属文件夹。Konode 看不到其中的其他内容，访问令牌仅保存在此设备上。"
+  },
+  "provider_dropbox_hint": {
+    "message": "Dropbox 账号"
+  },
+  "opt_dropbox_unavailable": {
+    "message": "此浏览器不支持 Dropbox 登录。请选择其他选项。"
+  },
+  "onb_sign_in_dropbox": {
+    "message": "通过 Dropbox 登录"
+  },
+  "opt_dropbox_folder_hint": {
+    "message": "Konode 将文件保存在您 Dropbox 的 $FOLDER$ 中，无法打开该文件夹以外的任何内容。",
+    "placeholders": {
+      "folder": {
+        "content": "$1",
+        "example": "Apps/Konode"
+      }
+    }
+  },
+  "dropbox_err_perms": {
+    "message": "Konode 需要访问 Dropbox 的权限。请在浏览器询问时允许，然后重试。"
+  },
+  "dropbox_err_perms_no_prompt": {
+    "message": "此浏览器无法显示权限提示，因此 Konode 无法请求访问 Dropbox。请在浏览器扩展设置的 Konode 权限页面中授予权限，然后重试。"
+  },
   "provider_nextcloud_desc": {
     "message": "您自己的 Nextcloud 或 ownCloud 服务器。"
   },

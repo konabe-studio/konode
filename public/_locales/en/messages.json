@@ -303,6 +303,40 @@
     "message": "Google account",
     "description": "One short line under the provider's name on its tile in Settings, Storage. Keep it to about three words: the tile is narrow and the line is cut, not wrapped."
   },
+  "provider_dropbox_desc": {
+    "message": "Syncs to a folder of its own in your Dropbox. Konode can't see anything else there, and the access token is kept on this device only.",
+    "description": "Description of the Dropbox card in Settings and the setup wizard. Konode uses an App folder, so it sees only its own folder in the user's Dropbox."
+  },
+  "provider_dropbox_hint": {
+    "message": "Dropbox account",
+    "description": "One short line under the provider's name on its tile in Settings, Storage. Keep it to about three words: the tile is narrow and the line is cut, not wrapped."
+  },
+  "opt_dropbox_unavailable": {
+    "message": "Dropbox sign-in isn't available in this browser. Pick another option.",
+    "description": "Shown on the Dropbox card when the browser has no sign-in window (Firefox for Android, iOS WebKit)."
+  },
+  "onb_sign_in_dropbox": {
+    "message": "Sign in with Dropbox",
+    "description": "Button that opens Dropbox's sign-in window. \"Dropbox\" is a brand name and is never translated."
+  },
+  "opt_dropbox_folder_hint": {
+    "message": "Konode's files go to $FOLDER$ in your Dropbox, and it can't open anything outside that folder.",
+    "description": "$FOLDER$ is the App folder path Apps/Konode, rendered as code and never translated. Split around the placeholder with tParts.",
+    "placeholders": {
+      "folder": {
+        "content": "$1",
+        "example": "Apps/Konode"
+      }
+    }
+  },
+  "dropbox_err_perms": {
+    "message": "Konode needs permission to reach Dropbox. Allow it when the browser asks, then try again.",
+    "description": "When the browser did not grant Konode access to Dropbox's two API hosts, asked for when the user signs in."
+  },
+  "dropbox_err_perms_no_prompt": {
+    "message": "This browser can't show permission prompts, so Konode couldn't ask for access to Dropbox. Grant it on Konode's permissions screen in your browser's extension settings, then try again.",
+    "description": "On a browser that cannot show permission prompts (Firefox for Android), the Dropbox host permission has to be granted in the browser's extension settings."
+  },
   "provider_nextcloud_desc": {
     "message": "Your own Nextcloud or ownCloud server."
   },

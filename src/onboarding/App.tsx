@@ -3,6 +3,9 @@ import { sendMessage, request } from "@/lib/utils/messaging";
 import { browser } from "@/lib/utils/ext";
 import { t, tParts } from "@/lib/utils/i18n";
 import { interactiveSignIn, isDriveAuthAvailable, getStoredGDriveUser } from "@/lib/backends/gdrive-oauth";
+import {
+  interactiveDropboxSignIn, isDropboxAuthAvailable, getStoredDropboxUser, DROPBOX_ORIGINS,
+} from "@/lib/backends/dropbox-oauth";
 import { loadDraft, saveDraft, clearDraft, type DraftStep } from "@/lib/onboarding-draft";
 import { isRefusedHttpUrl, isSecureBackendUrl } from "@/lib/utils/url";
 import { forgeBaseUrl } from "@/lib/backends/gitea-backend";
@@ -10,10 +13,15 @@ import { forgeBaseUrl } from "@/lib/backends/gitea-backend";
 // Some engines (notably iOS WebKit, e.g. Orion) don't support interactive Google
 // sign-in; gate the Drive option so users aren't sent into a dead end.
 const DRIVE_AVAILABLE = isDriveAuthAvailable();
+// Dropbox signs in through the same auth window, so the same engines lack it.
+const DROPBOX_AVAILABLE = isDropboxAuthAvailable();
+/** A sign-in card this browser cannot complete: dimmed, and said so on the card. */
+const signInOff = (p: { signIn?: boolean; backend: BackendType }): boolean =>
+  !!p.signIn && !(p.backend === "dropbox" ? DROPBOX_AVAILABLE : DRIVE_AVAILABLE);
 import type { BackendType, BookmarkExclusion, DataType, SyncSettings } from "@/lib/types";
 import { BookmarkExclusionTree } from "@/lib/ui/bookmark-exclusion-tree";
 import {
-  allDataTypeAvailability, ensurePermissionWatched, unsupportedReason,
+  allDataTypeAvailability, ensurePermission, ensurePermissionWatched, unsupportedReason,
   permissionsToEnable, tabGroupsAskable, type Availability,
 } from "@/lib/utils/capabilities";
 import {
@@ -67,6 +75,11 @@ export default function OnboardingApp() {
   const [gdriveUser, setGdriveUser] = useState<{ email: string; displayName: string } | null>(null);
   const [gdriveConnecting, setGdriveConnecting] = useState(false);
   const [gdriveError, setGdriveError] = useState<string | null>(null);
+
+  // Dropbox, the same three as Drive
+  const [dropboxUser, setDropboxUser] = useState<{ email: string; displayName: string; account_id: string } | null>(null);
+  const [dropboxConnecting, setDropboxConnecting] = useState(false);
+  const [dropboxError, setDropboxError] = useState<string | null>(null);
 
   // GitHub
   const [githubToken, setGithubToken] = useState("");
@@ -192,6 +205,10 @@ export default function OnboardingApp() {
     const [before, after] = tParts("provider_syncing_to");
     return <>{before}<code>{url}</code>{after}</>;
   };
+  const dropboxFolderHint = () => {
+    const [before, after] = tParts("opt_dropbox_folder_hint");
+    return <>{before}<code>Apps/Konode</code>{after}</>;
+  };
   // The pCloud hint names the region that is actually selected ("Pick the EU region if
   // that is where your account lives"), so it needs the label of the chosen one rather
   // than a generic sentence. A card is always picked with a region already set —
@@ -258,10 +275,11 @@ export default function OnboardingApp() {
   useEffect(() => {
     void (async () => {
       try {
-        const [res, draft, driveUser] = await Promise.all([
+        const [res, draft, driveUser, dbxUser] = await Promise.all([
           request({ type: "GET_SETTINGS" }),
           loadDraft().catch(() => null),
           getStoredGDriveUser().catch(() => null),
+          getStoredDropboxUser().catch(() => null),
         ]);
         const detected = res.ok && res.res.type === "SETTINGS" ? res.res.payload.device_label ?? "" : "";
         // interactiveSignIn stores the session as it completes, so a sign-in that finished
@@ -269,6 +287,7 @@ export default function OnboardingApp() {
         // from its own state, showed a signed-in user as signed out, and sent them back
         // through Google's consent: on a phone, the same trip that lost the page.
         if (driveUser) setGdriveUser(driveUser);
+        if (dbxUser) setDropboxUser(dbxUser);
         if (!draft) {
           setDeviceLabel(detected);
           return;
@@ -361,6 +380,7 @@ export default function OnboardingApp() {
   const canProceedBackend = () => {
     if (!provider) return false;
     if (provider === "gdrive") return !!gdriveUser;
+    if (provider === "dropbox") return !!dropboxUser;
     if (provider === "github") return !!githubUser && !!githubRepo;
     if (provider === "gitea") return !!giteaBase && isSecureBackendUrl(giteaBase) && !!giteaToken.trim() && !!giteaRepo.trim();
     if (provider === "nextcloud") return !!(ncHost && webdavUser && webdavPass);
@@ -427,6 +447,9 @@ export default function OnboardingApp() {
       }
       origins.push(new URL(giteaBase).origin + "/*");
     }
+    // Granted at sign-in already, so normally no prompt: asked again in case it was taken
+    // back in the browser's settings since.
+    if (backend === "dropbox") origins.push(...DROPBOX_ORIGINS);
 
     const seq = ++finishSeq.current;
     if (optPerms.length || origins.length) {
@@ -456,7 +479,8 @@ export default function OnboardingApp() {
             ? t("onb_err_perms_no_prompt")
             : !origins.length
               ? t("onb_err_perms_types")
-              : backend === "gitea" ? t("gitea_err_perms") : t("onb_err_perms_webdav")
+              : backend === "gitea" ? t("gitea_err_perms")
+              : backend === "dropbox" ? t("dropbox_err_perms") : t("onb_err_perms_webdav")
         );
         return;
       }
@@ -477,6 +501,10 @@ export default function OnboardingApp() {
       if (backend === "gdrive") {
         // The session (incl. refresh token) was already persisted by connectGDrive.
         backends.push({ type: "gdrive" as const, label: "Google Drive", enabled: true, gdrive: {} });
+      } else if (backend === "dropbox") {
+        // The session was persisted by connectDropbox; the account goes into the config,
+        // which the destination tag is built from.
+        backends.push({ type: "dropbox" as const, label: "Dropbox", enabled: true, dropbox: { account: dropboxUser?.account_id } });
       } else if (backend === "github") {
         backends.push({
           type: "github" as const, label: "GitHub", enabled: true,
@@ -549,6 +577,28 @@ export default function OnboardingApp() {
         setGdriveError(err instanceof Error ? err.message : t("onb_signin_failed"));
       } finally {
         setGdriveConnecting(false);
+      }
+    })();
+  };
+
+  // ─── Dropbox OAuth ─────────────────────────────────────────────────────
+
+  /** The API hosts first, while the click's gesture is live, then the sign-in window. */
+  const connectDropbox = () => {
+    setDropboxConnecting(true); setDropboxError(null);
+    void (async () => {
+      try {
+        const outcome = await ensurePermission({ origins: DROPBOX_ORIGINS });
+        if (outcome !== "granted") {
+          setDropboxError(outcome === "cannot-prompt" ? t("dropbox_err_perms_no_prompt") : t("dropbox_err_perms"));
+          return;
+        }
+        const s = await interactiveDropboxSignIn();
+        setDropboxUser({ email: s.email, displayName: s.displayName, account_id: s.account_id });
+      } catch (err) {
+        setDropboxError(err instanceof Error ? err.message : t("onb_signin_failed"));
+      } finally {
+        setDropboxConnecting(false);
       }
     })();
   };
@@ -665,7 +715,8 @@ export default function OnboardingApp() {
               const on = provider === p.id;
               // No Google sign-in here at all (Firefox for Android has no identity API): said on
               // the card itself, as the unsupported Bookmarks row is, not only once it is picked.
-              const driveOff = p.id === "gdrive" && !DRIVE_AVAILABLE;
+              const driveOff = signInOff(p);
+              const offText = p.backend === "dropbox" ? t("opt_dropbox_unavailable") : t("onb_drive_unavailable");
               return (
                 <div
                   key={p.id}
@@ -678,7 +729,7 @@ export default function OnboardingApp() {
                     <ProviderLogo id={p.id} size={18} color={on ? "var(--text-primary)" : "var(--text-secondary)"} />
                     <div>
                       <div style={S.backendName}>{providerLabel(p)}</div>
-                      <div style={S.backendDesc}>{driveOff ? t("onb_drive_unavailable") : t(p.descKey)}</div>
+                      <div style={S.backendDesc}>{driveOff ? offText : t(p.descKey)}</div>
                     </div>
                     <div style={{ ...S.radio, ...(on ? S.radioChecked : {}) }} />
                   </div>
@@ -713,6 +764,33 @@ export default function OnboardingApp() {
                           {gdriveError && <div style={S.errorRow}><XCircle size={12} /> {gdriveError}</div>}
                         </>
                       )}
+                    </div>
+                  )}
+
+                  {/* Dropbox: a sign-in, like Drive */}
+                  {on && p.backend === "dropbox" && (
+                    <div style={S.authPanel} onClick={(e) => e.stopPropagation()}>
+                      {dropboxUser ? (
+                        <div style={S.verifiedRow}>
+                          <CheckCircle2 size={14} color="var(--success)" />
+                          <span style={{ color: "var(--success)", fontSize: 14 }}>
+                            <bdi>{dropboxUser.displayName}</bdi>{dropboxUser.email ? ` (${dropboxUser.email})` : ""}
+                          </span>
+                        </div>
+                      ) : driveOff ? (
+                        <div style={S.errorRow}>
+                          <XCircle size={12} /> {offText}
+                        </div>
+                      ) : (
+                        <>
+                          <button style={S.btnGoogle} onClick={(e) => { e.stopPropagation(); connectDropbox(); }} disabled={dropboxConnecting}>
+                            {dropboxConnecting ? <Loader2 size={14} className="spin" /> : <ProviderLogo id="dropbox" size={14} color="#0061FE" />}
+                            {dropboxConnecting ? t("onb_connecting") : t("onb_sign_in_dropbox")}
+                          </button>
+                          {dropboxError && <div style={S.errorRow}><XCircle size={12} /> {dropboxError}</div>}
+                        </>
+                      )}
+                      <div style={hintStyle}>{dropboxFolderHint()}</div>
                     </div>
                   )}
 
