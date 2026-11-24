@@ -73,6 +73,25 @@ All notable changes to Konode. Format loosely follows
 
 - **The unsaved-changes note in Settings is translated.** The line beside **Save changes**
   that says an edit is still waiting showed in English in every language since 1.2.0.
+- **The encryption messages send you to the right place.** When your other devices are
+  encrypted and this one is not, or the passphrases differ, the message now points to
+  Settings → Storage, where the Encryption card is. It still said Settings → Advanced.
+- **A browser's own add-ons stay off your extension list.** Iceraven, and browsers built like
+  it, count parts of themselves (the "Mozilla Android Components") as installed add-ons, so
+  your other devices listed them as extensions you were missing. Konode leaves them out.
+- **A sign-in the browser refuses outright says so.** Yandex for Android closes the Google
+  sign-in window before any page opens. Konode said the window had closed and to try again,
+  which never works there. When the window closes too fast for anyone to have closed it, the
+  message now says the browser may not let extensions sign in, and names the storage that
+  needs no sign-in. The same goes for Dropbox.
+- **Konode no longer crashes in Yandex Browser on Android.** With Open tabs on, Yandex
+  Browser 26.11 for Android crashed Konode at every sync, about once a minute, and setup and
+  Settings kept showing the browser's "That was unexpected" page. Yandex grants the
+  permission Konode asks for to read tab group names and colours, but has nothing behind
+  it, and the first look at it closes Konode's process. On Android, in every browser, Konode
+  now never asks for that permission and never looks at it. Open tabs keep their groups
+  where the browser has them, without the names and colours. An install that already
+  granted the permission is fixed by the update alone, with nothing to change.
 
 - **A bookmark deleted on Opera or Vivaldi is now deleted on your other devices.** Neither
   browser deletes a bookmark straight away: each moves it into its Trash, and Konode took

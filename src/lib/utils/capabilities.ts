@@ -286,9 +286,10 @@ export async function ensurePermissionWatched(
  * Can this browser show a runtime permission prompt at all?
  *
  * There is no capability bit for this — `permissions.request` is a perfectly normal
- * function on Firefox for Android, it just never asks anybody. So this is the one place
- * that has to identify the platform rather than the feature, and it does it through
- * `runtime.getPlatformInfo()` rather than the user agent, which is spoofable.
+ * function on Firefox for Android, it just never asks anybody. So this is one of the two
+ * places that have to identify the platform rather than the feature (`tabGroupsOffLimits`
+ * is the other), and it does it through `runtime.getPlatformInfo()` rather than the user
+ * agent, which is spoofable.
  *
  * Cached: the answer cannot change within a page's lifetime, and the callers are click
  * handlers.
@@ -317,16 +318,47 @@ export function resetCapabilityCache(): void {
  *   probably Orion, which only a device can say). Sessions restore ungrouped, as before.
  * - `membership`: `tabs.group` and `Tab.groupId` work, and they need NO permission on
  *   either engine (Chromium gates only the `tabGroups` namespace; MDN says the same for
- *   Firefox). Names and colours are out of reach, because `tabGroups` is not granted or
- *   the browser has none (Firefox 138).
+ *   Firefox). Names and colours are out of reach, because `tabGroups` is not granted, the
+ *   browser has none (Firefox 138), or the browser runs on Android, where the namespace is
+ *   never read at all (see `tabGroupsOffLimits`).
  * - `full`: `tabGroups` granted, so names and colours can be read and written too. The
  *   namespace is `undefined` until the permission is granted, like `history`, which is
- *   why the permission is checked and not just the API.
+ *   why the permission is checked and not just the API. Never on Android.
  */
 export type TabGroupSupport = "none" | "membership" | "full";
 
+/**
+ * Must Konode keep away from the `tabGroups` namespace entirely? Yes on Android.
+ *
+ * Yandex Browser 26.11 for Android (on Android 15, 2026-11-23) knows the `tabGroups`
+ * permission and grants it, but its build has no schema for the API behind it. The first
+ * READ of the `chrome.tabGroups` property, before any call is made, fails a native check in
+ * the extension's renderer:
+ *
+ *   [FATAL:native_extension_bindings_system.cc:300] Unknown API tabGroups
+ *
+ * That kills the process. Konode's own pages share it with the service worker, so every
+ * scheduled sync (once a minute) crashed it, and setup and Settings showed the browser's
+ * "That was unexpected" page and reloaded. No JavaScript can catch it, and every way of
+ * asking whether the API is there (`typeof`, `?.`, `apiPresent`) IS that read. So the rule
+ * at the top of this file, ask the browser rather than assume, cannot be followed here: the
+ * question is the crash. The platform is the only safe check, and `runtime.getPlatformInfo()`
+ * answers it without going near `tabGroups`.
+ *
+ * Android loses the names and colours, in every browser there and not only Yandex, which is
+ * the price of not being able to tell them apart safely. Membership stays: `tabs.group` and
+ * `Tab.groupId` belong to `tabs`, a namespace every one of these browsers has. Nothing has
+ * to be revoked either. An install that already holds `tabGroups` keeps it and simply never
+ * reads it again, so the update alone stops the crash.
+ */
+async function tabGroupsOffLimits(): Promise<boolean> {
+  return isAndroid();
+}
+
 export async function tabGroupSupport(): Promise<TabGroupSupport> {
   if (!apiPresent("tabs", "group")) return "none";
+  // Before the namespace is touched, because touching it is what crashes.
+  if (await tabGroupsOffLimits()) return "membership";
   if (apiPresent("tabGroups", "get") && (await hasPermission({ permissions: ["tabGroups"] }))) {
     return "full";
   }
@@ -346,10 +378,17 @@ let tabGroupsAskableCache: boolean | undefined;
  * Answered by asking, not by the version: `permissions.contains()` resolves for a
  * permission the browser knows, granted or not, and throws for one it doesn't, on Chrome
  * and on Firefox alike.
+ *
+ * Except on Android, which answers no without asking. Knowing the permission is not enough
+ * there: Yandex Browser 26.11 knows it, grants it, and then crashes on the first read of
+ * the namespace (see `tabGroupsOffLimits`), so a permission Konode will never use is not
+ * asked for. Open tabs asks for `tabs` alone, and the Settings row for names and colours
+ * stays hidden.
  */
 export async function tabGroupsAskable(): Promise<boolean> {
   if (tabGroupsAskableCache !== undefined) return tabGroupsAskableCache;
   if (!apiPresent("tabs", "group")) return (tabGroupsAskableCache = false);
+  if (await tabGroupsOffLimits()) return (tabGroupsAskableCache = false);
   try {
     await browser.permissions.contains({ permissions: ["tabGroups"] });
     tabGroupsAskableCache = true;
@@ -402,9 +441,10 @@ export async function isAndroid(): Promise<boolean> {
     const info = await browser.runtime.getPlatformInfo();
     androidCache = info.os === "android";
   } catch {
-    // Older/limited builds may not answer. The user agent is a worse signal — it can be
-    // spoofed — but a wrong answer here only changes the wording of an error message,
-    // never whether something is allowed.
+    // Older/limited builds may not answer. The user agent is a worse signal, since it can be
+    // spoofed, but a wrong answer here only changes the wording of an error message and
+    // whether tab group names sync (`tabGroupsOffLimits`), never whether something is
+    // allowed. Every Android browser seen so far answers getPlatformInfo anyway.
     androidCache = /android/i.test(globalThis.navigator?.userAgent ?? "");
   }
   return androidCache;
