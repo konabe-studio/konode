@@ -73,9 +73,9 @@ if you enable encryption, the **same passphrase**) to sync together.
    to a `Konode` folder. In Settings you can name a different folder by its ID under
    **Drive Folder ID** (optional).
 
-> Works on any Chromium browser (Chrome, Brave, Helium, ungoogled-chromium) and on
-> Firefox. The sign-in uses a browser-agnostic flow, not Chrome-only Google
-> integration.
+> Works on any desktop Chromium browser (Chrome, Brave, Helium, ungoogled-chromium) and
+> on Firefox. The sign-in uses a browser-agnostic flow, not Chrome-only Google
+> integration. On a phone it depends on the browser: see [COMPATIBILITY.md](COMPATIBILITY.md).
 
 ### GitHub
 

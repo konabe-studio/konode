@@ -149,6 +149,9 @@ you had in mind. Picking one system for bookmarks is the simple answer.
   Firefox for Android gives extensions no bookmarks, history or Google sign-in
   ([details](TROUBLESHOOTING.md#firefox-for-android)).
 
+Browser by browser, with what has been tested and what is still open:
+[COMPATIBILITY.md](COMPATIBILITY.md).
+
 > On non-Chrome Chromium browsers, Google Drive sign-in uses the OAuth PKCE flow
 > (`launchWebAuthFlow`), so Drive sync works even where `chrome.identity.getAuthToken`
 > isn't available.

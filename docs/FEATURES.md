@@ -305,8 +305,9 @@ computer to your phone, or a page from work to home, without bookmarking it.
   on.
 - To keep your right-click menu clear, turn off **Send to device in the right-click menu**
   under Settings → Device → Sync behavior. The paper-plane icon in the popup stays.
-- Firefox for Android receives tabs but cannot send them: it gives extensions no right-click
-  menu, and its popup cannot see the page it was opened over.
+- Firefox for Android gives extensions no right-click menu, so there you send from the popup:
+  open the page, then the browser menu → **Extensions** → **Konode**, and press the
+  paper-plane icon.
 - Konode has no server, so the tab travels through your storage and opens on the other device
   at its next sync, quietly, in a background tab. With Auto sync on that is within a minute or
   so. A device that is off opens it when it starts.
