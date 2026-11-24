@@ -47,3 +47,18 @@ describe("exportExtensions: a revoked `management` permission is not a sync fail
     expect((await exportExtensions()).map((e) => e.id)).toEqual(["keep-me"]);
   });
 });
+
+describe("exportExtensions: the browser's own add-ons stay home", () => {
+  it("leaves out Mozilla Android Components, which GeckoView reports as normal installs", async () => {
+    // As Iceraven 2.53.1 lists them: same type and installType as an add-on from AMO.
+    (globalThis as any).chrome.management = {
+      getAll: () => Promise.resolve([
+        { id: "icons@mozac.org", name: "Mozilla Android Components - Browser Icons", version: "1.0", enabled: true, type: "extension", installType: "normal" },
+        { id: "readerview@mozac.org", name: "Mozilla Android Components - ReaderView", version: "1.0", enabled: true, type: "extension", installType: "normal" },
+        { id: "uBlock0@raymondhill.net", name: "uBlock Origin", version: "1.0", enabled: true, type: "extension", installType: "normal" },
+      ]),
+    };
+
+    expect((await exportExtensions()).map((e) => e.id)).toEqual(["uBlock0@raymondhill.net"]);
+  });
+});

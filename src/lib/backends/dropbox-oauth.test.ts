@@ -37,6 +37,7 @@ afterEach(() => {
   delete chromeStub.chrome.identity;
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+  vi.restoreAllMocks();
 });
 
 describe("Dropbox sign-in availability", () => {
@@ -127,10 +128,20 @@ describe("Dropbox PKCE sign-in", () => {
 
   it("reports a closed window as closed, on both engines' wording", async () => {
     const m = await load();
+    // The flow takes a person's time, so the cancel reads as a window someone closed.
+    let now = 1_000_000;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
     for (const words of ["The user did not approve access.", "User cancelled or denied access."]) {
-      withIdentity(() => Promise.reject(new Error(words)));
+      withIdentity(() => { now += 5000; return Promise.reject(new Error(words)); });
       await expect(m.interactiveDropboxSignIn()).rejects.toThrow(/window closed before the sign-in came back/i);
     }
+  });
+
+  it("says the window closed at once when the browser cancels before any page could load", async () => {
+    // Yandex for Android does this with every auth window (26.11, 2026-11-24).
+    const m = await load();
+    withIdentity(() => Promise.reject(new Error("canceled")));
+    await expect(m.interactiveDropboxSignIn()).rejects.toThrow(/closed at once.*doesn't let extensions sign in/i);
   });
 
   it("says the user declined only when Dropbox says access_denied", async () => {

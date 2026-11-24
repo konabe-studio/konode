@@ -84,6 +84,12 @@ const NO_KEY_MSG =
   "This build of Konode has no Dropbox app key, so it can't sign in to Dropbox.";
 const WINDOW_CLOSED_MSG =
   "The Dropbox sign-in window closed before the sign-in came back to Konode. Try again.";
+/** Rejected sooner than anyone could close a page, as Yandex for Android does with every
+ *  auth window (see the same case in gdrive-oauth.ts). */
+const CLOSED_AT_ONCE_MSG =
+  "The Dropbox sign-in window closed at once, before Dropbox's page could load. If you " +
+  "didn't close it, this browser doesn't let extensions sign in: use another storage provider.";
+const CLOSED_AT_ONCE_MS = 1500;
 const SIGNIN_FAILED_MSG =
   "Dropbox sign-in didn't complete. What the browser reported is in Settings → Activity. Try again.";
 const DECLINED_MSG =
@@ -214,6 +220,7 @@ export async function interactiveDropboxSignIn(): Promise<DropboxSession> {
     `&token_access_type=offline`;
 
   let responseUrl: string | undefined;
+  const started = Date.now();
   try {
     responseUrl = await browser.identity.launchWebAuthFlow({ url: authUrl, interactive: true });
   } catch (err) {
@@ -223,6 +230,11 @@ export async function interactiveDropboxSignIn(): Promise<DropboxSession> {
       throw new Error(UNSUPPORTED_MSG);
     }
     if (WINDOW_CLOSED_RE.test(msg)) {
+      const took = Date.now() - started;
+      if (took < CLOSED_AT_ONCE_MS) {
+        logSignInEnd("closed at once", `${msg} (after ${took} ms)`);
+        throw new Error(CLOSED_AT_ONCE_MSG);
+      }
       logSignInEnd("window closed", msg);
       throw new Error(WINDOW_CLOSED_MSG);
     }

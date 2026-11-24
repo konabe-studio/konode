@@ -9,7 +9,16 @@ const chromeStub = globalThis as unknown as { chrome: { identity?: unknown } };
 afterEach(() => {
   delete chromeStub.chrome.identity;
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
+
+/** A flow that takes a person's time: the clock moves 5 s while it runs, so a cancel it
+ *  ends with reads as a window someone closed, not one the browser refused at once. */
+function afterAWhile<T>(flow: () => Promise<T>): () => Promise<T> {
+  let now = 1_000_000;
+  vi.spyOn(Date, "now").mockImplementation(() => now);
+  return () => { now += 5000; return flow(); };
+}
 
 describe("Drive auth availability gate", () => {
   it("reports unavailable when launchWebAuthFlow is absent (e.g. an engine without chrome.identity)", () => {
@@ -47,7 +56,7 @@ describe("Drive auth availability gate", () => {
     it(`reports a closed window on ${engine} as closed, not as a cancel`, async () => {
       chromeStub.chrome.identity = {
         getRedirectURL: () => "https://ext.example/gdrive",
-        launchWebAuthFlow: () => Promise.reject(new Error(words)),
+        launchWebAuthFlow: afterAWhile(() => Promise.reject(new Error(words))),
       };
       const err = await interactiveSignIn().catch((e: Error) => e);
       expect(err).toBeInstanceOf(Error);
@@ -55,6 +64,19 @@ describe("Drive auth availability gate", () => {
       expect((err as Error).message).not.toMatch(/cancel|isn't available in this browser/i);
     });
   }
+
+  // Yandex for Android rejects every auth window with a cancel inside a second, before any
+  // Google page opens (26.11, 2026-11-24). "The window closed" sent people to try again.
+  it("says the window closed at once when the cancel comes before anyone could have closed it", async () => {
+    chromeStub.chrome.identity = {
+      getRedirectURL: () => "https://ext.example/gdrive",
+      launchWebAuthFlow: () => Promise.reject(new Error("canceled")),
+    };
+    const { message } = (await interactiveSignIn().catch((e: Error) => e)) as Error;
+    expect(message).toMatch(/closed at once/i);
+    expect(message).toMatch(/doesn't let extensions sign in to Google/);
+    expect(message).toMatch(/GitHub or WebDAV/);
+  });
 
   it("says the same when the browser resolves with nothing", async () => {
     chromeStub.chrome.identity = {
@@ -106,7 +128,8 @@ describe("Drive auth availability gate", () => {
   it("logs every way a sign-in ends, each under its own name, with the redirect", async () => {
     const redirect = "https://abc-123.extensions.allizom.org/gdrive";
     const endings: Array<[string, () => Promise<string | undefined>]> = [
-      ["window closed", () => Promise.reject(new Error("User cancelled or denied access."))],
+      ["window closed", afterAWhile(() => Promise.reject(new Error("User cancelled or denied access.")))],
+      ["closed at once", () => Promise.reject(new Error("User cancelled or denied access."))],
       ["flow failed", () => Promise.reject(new Error("Authorization page could not be loaded."))],
       ["browser refused", () => Promise.reject(new TypeError("undefined is not an object"))],
       ["no redirect", () => Promise.resolve(undefined)],
