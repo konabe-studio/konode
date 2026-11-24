@@ -254,9 +254,10 @@ right-click **Bookmarks** and choose **Set as Bookmarks Bar Folder**. Vivaldi's 
 bar stays a folder inside it.
 
 **A bookmark you delete in Vivaldi stays on your other devices.** Vivaldi moves a deleted
-bookmark to its Trash, and extensions see that as a move, not a deletion. Until Konode
-handles it, delete the bookmark on another device, and Vivaldi follows. (Measured on Vivaldi
-8.3, November 2026.)
+bookmark to its Trash, and extensions see that as a move, not a deletion. From the next
+version Konode counts a bookmark moved to the Trash as deleted, and the deletion reaches
+your other devices. Until then, delete the bookmark on another device, and Vivaldi follows.
+(Measured on Vivaldi 8.3, November 2026.)
 
 ## ungoogled-chromium
 
@@ -276,9 +277,10 @@ like anywhere else.
 ## Opera
 
 **A bookmark you delete in Opera stays on your other devices.** Like Vivaldi, Opera moves a
-deleted bookmark to its Trash, and extensions see that as a move, not a deletion. Until
-Konode handles it, delete the bookmark on another device, and Opera follows. (Measured on
-Opera 140, November 2026.)
+deleted bookmark to its Trash, and extensions see that as a move, not a deletion. From the
+next version Konode counts a bookmark moved to the Trash as deleted, and the deletion
+reaches your other devices. Until then, delete the bookmark on another device, and Opera
+follows. (Measured on Opera 140, November 2026.)
 
 ## Starting over
 
