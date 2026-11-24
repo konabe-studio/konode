@@ -33,11 +33,12 @@ export type TabsForSend = Pick<typeof chrome.tabs, "query">;
  * The page the popup was opened over, or null when there is none worth sending: the active
  * tab of the popup's window, readable because opening the popup granted activeTab on it.
  *
- * Never another tab, so the popup cannot send a page the user is not looking at. That is
- * also why Firefox for Android cannot send: it shows the popup in a window of its own, and
- * from there no web page is visible at all, not as the active tab, not in any window, and
- * not through `tabs.getCurrent()` (measured on the konode-a15 emulator, Firefox 158,
- * 2026-11-19). It has no context menus for extensions either, so Android receives only.
+ * Never another tab, so the popup cannot send a page the user is not looking at. Firefox for
+ * Android has no context menus for extensions, so this is its only way to send, and it works
+ * there: the real popup (browser menu → Extensions → Konode) sees the page it was opened over
+ * and sent it (konode-a15 emulator, Firefox 158.0.2, 2026-11-23). An earlier probe on
+ * 2026-11-19 said no page was visible, but it opened the popup as a tab of its own, which is
+ * not where Firefox shows it.
  */
 export async function pageToSend(tabs: TabsForSend = browser.tabs): Promise<{ url: string; title?: string } | null> {
   const [active] = await tabs.query({ active: true, currentWindow: true });
