@@ -466,7 +466,7 @@ export class SyncEngine {
     if (packet.encrypted && !this.e2eeActive) {
       return (
         "Some of your devices are end-to-end encrypted. Enable E2EE with the same " +
-        "passphrase here (Settings → Advanced) to sync with them."
+        "passphrase here (Settings → Storage) to sync with them."
       );
     }
     return null;
@@ -1907,7 +1907,7 @@ export class SyncEngine {
       if (!localE2ee) {
         throw new EncryptionMismatchError(
           "Some of your devices are end-to-end encrypted. Enable E2EE with the same " +
-            "passphrase here (Settings → Advanced) to sync with them."
+            "passphrase here (Settings → Storage) to sync with them."
         );
       }
       const pass = this.settings.encryption_passphrase!;
@@ -1916,7 +1916,7 @@ export class SyncEngine {
       if (packet.verifier && !(await verifyPassphrase(pass, packet.verifier))) {
         throw new PassphraseError(
           `Your encryption passphrase doesn't match device ${packet.device_id.slice(0, 8)}. ` +
-            "Use the same passphrase on all your devices (Settings → Advanced)."
+            "Use the same passphrase on all your devices (Settings → Storage)."
         );
       }
       try {

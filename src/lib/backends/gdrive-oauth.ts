@@ -74,6 +74,18 @@ const DRIVE_WINDOW_CLOSED_MSG =
   "The Google sign-in window closed before the sign-in came back to Konode. Try again, or " +
   "use GitHub or WebDAV, which need no Google sign-in.";
 
+/** The window "closed" sooner than anyone could have read a Google page, let alone closed
+ *  it. Yandex for Android does that: the call rejects with a cancel inside a second and no
+ *  page ever opens (Yandex 26.11, 2026-11-24). A slip of the finger ends the same way, so
+ *  the message says both. */
+const DRIVE_CLOSED_AT_ONCE_MSG =
+  "The Google sign-in window closed at once, before Google's page could load. If you didn't " +
+  "close it, this browser doesn't let extensions sign in to Google: use GitHub or WebDAV, " +
+  "which need no Google sign-in.";
+
+/** Under this, a cancel-shaped rejection is the browser's, not a person's. */
+export const SIGNIN_CLOSED_AT_ONCE_MS = 1500;
+
 /** The flow failed some other way. The browser's own words go to the log, not the screen. */
 const DRIVE_SIGNIN_FAILED_MSG =
   "Google sign-in didn't complete. What the browser reported is in Settings → Activity. " +
@@ -208,6 +220,7 @@ export async function interactiveSignIn(): Promise<GDriveSession> {
   // The polyfill returns a promise that resolves to the redirect URL (and rejects
   // on cancel / error) on both Chromium and Firefox — no chrome.runtime.lastError.
   let responseUrl: string | undefined;
+  const started = Date.now();
   try {
     responseUrl = await browser.identity.launchWebAuthFlow({ url: authUrl, interactive: true });
   } catch (err) {
@@ -218,6 +231,11 @@ export async function interactiveSignIn(): Promise<GDriveSession> {
       throw new Error(DRIVE_UNSUPPORTED_MSG);
     }
     if (WINDOW_CLOSED_RE.test(msg)) {
+      const took = Date.now() - started;
+      if (took < SIGNIN_CLOSED_AT_ONCE_MS) {
+        logSignInEnd("closed at once", `${msg} (after ${took} ms)`);
+        throw new Error(DRIVE_CLOSED_AT_ONCE_MSG);
+      }
       logSignInEnd("window closed", msg);
       throw new Error(DRIVE_WINDOW_CLOSED_MSG);
     }

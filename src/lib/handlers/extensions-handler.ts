@@ -49,6 +49,11 @@ export async function exportExtensions(): Promise<SyncExtension[]> {
       if (ext.id === selfId) return false;             // don't sync ourselves
       if (ext.type === "theme") return false;          // themes aren't installable "extensions"
       if (ext.installType === "admin") return false;   // policy force-installs the user can't manage
+      // The browser's own parts on GeckoView browsers (Iceraven, and Firefox for Android's
+      // family): Mozilla Android Components ship as add-ons with ids under @mozac.org and
+      // report installType "normal", so they looked like something the user installed and
+      // reached every other device as "missing" (Iceraven 2.53.1, 2026-11-24).
+      if (ext.id.endsWith("@mozac.org")) return false;
       // NOTE: previously "other" was also dropped as "built-in", but that also
       // silently excluded sideloaded/externally-installed extensions. Chrome
       // reports genuine dev/sideload installs as "development"/"sideload", so
