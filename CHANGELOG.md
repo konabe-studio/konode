@@ -84,6 +84,14 @@ All notable changes to Konode. Format loosely follows
   which never works there. When the window closes too fast for anyone to have closed it, the
   message now says the browser may not let extensions sign in, and names the storage that
   needs no sign-in. The same goes for Dropbox.
+- **Konode no longer crashes in Yandex Browser on Android.** With Open tabs on, Yandex
+  Browser 26.11 for Android crashed Konode at every sync, about once a minute, and setup and
+  Settings kept showing the browser's "That was unexpected" page. Yandex grants the
+  permission Konode asks for to read tab group names and colours, but has nothing behind
+  it, and the first look at it closes Konode's process. On Android, in every browser, Konode
+  now never asks for that permission and never looks at it. Open tabs keep their groups
+  where the browser has them, without the names and colours. An install that already
+  granted the permission is fixed by the update alone, with nothing to change.
 
 ## [1.6.0] - 2026-11-19
 

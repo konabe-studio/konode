@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, beforeEach } from "vitest";
 import { cleanGroup, exportOpenTabs, exportSession, importSession } from "@/lib/handlers/tabs-handler";
 import {
   permissionsToEnable, resetCapabilityCache, tabGroupSupport, tabGroupsAskable,
@@ -283,5 +283,96 @@ describe("what the browser can do with groups", () => {
     expect(permissionsToEnable("sessions", false)).toEqual(["tabs"]);
     expect(permissionsToEnable("history", true)).toEqual(["history"]);
     expect(permissionsToEnable("bookmarks", true)).toEqual([]);
+  });
+});
+
+describe("on Android, where reading tabGroups can take the browser down", () => {
+  // Yandex Browser 26.11 for Android grants `tabGroups` and has no API behind it, so the
+  // first READ of `chrome.tabGroups` is a native CHECK that kills the extension's process
+  // (2026-11-23). No try/catch can stand in for that, so the namespace is replaced by a
+  // getter that counts every read, and each test asserts the count stayed at zero. The
+  // getter hands back the working fake, so a regression would also show as names and
+  // colours turning up where they must not.
+  const runtime = chrome.runtime as unknown as { getPlatformInfo: () => Promise<{ os: string; arch?: string }> };
+  const realPlatform = runtime.getPlatformInfo;
+  let reads = 0;
+  let asked: string[][] = [];
+
+  function onPlatform(os: string): void {
+    runtime.getPlatformInfo = () => Promise.resolve({ os, arch: "x86-64" });
+    resetCapabilityCache();
+  }
+
+  beforeEach(() => {
+    onPlatform("android");
+    reads = 0;
+    asked = [];
+    Object.defineProperty(chrome, "tabGroups", {
+      configurable: true,
+      enumerable: true,
+      get() { reads++; return realTabGroups; },
+      // The outer afterEach puts the namespace back by assignment, which lands here.
+      set(v) { Object.defineProperty(chrome, "tabGroups", { value: v, writable: true, configurable: true, enumerable: true }); },
+    });
+    (chrome.permissions as any).contains = (req: { permissions?: string[] }) => {
+      asked.push(req.permissions ?? []);
+      return realContains(req as chrome.permissions.Permissions);
+    };
+  });
+
+  afterEach(() => {
+    runtime.getPlatformInfo = realPlatform;
+    (chrome as any).tabGroups = realTabGroups;
+  });
+
+  it("never offers tabGroups, and does not even ask whether the browser knows it", async () => {
+    expect(await tabGroupsAskable()).toBe(false);
+    expect(asked.some((p) => p.includes("tabGroups"))).toBe(false);
+    expect(permissionsToEnable("sessions", await tabGroupsAskable())).toEqual(["tabs"]);
+    expect(reads).toBe(0);
+  });
+
+  it("keeps membership, never full, even with the permission already held", async () => {
+    // The fake holds every permission, as an install from before this fix does.
+    expect(await realContains({ permissions: ["tabGroups"] })).toBe(true);
+    expect(await tabGroupSupport()).toBe("membership");
+    expect(reads).toBe(0);
+  });
+
+  it("publishes grouped tabs by membership alone, without reading the namespace", async () => {
+    const a = await open("https://a.example/");
+    const b = await open("https://b.example/");
+    const c = await open("https://c.example/");
+    const id = await tabs.group({ tabIds: [a, c] });
+    await realTabGroups.update(id, { title: "Work", color: "blue" });
+    void b;
+
+    const out = await exportOpenTabs();
+    expect(out.tabs.map((t) => t.group)).toEqual([0, undefined, 0]);
+    expect(out.groups).toEqual([{}]);
+    expect(reads).toBe(0);
+  });
+
+  it("restores the groups unnamed, without reading the namespace", async () => {
+    await setSingleTabOpenLimit(false);
+    await importSession(session(
+      [{ url: "https://a.example/", group: 0 }, { url: "https://b.example/", group: 0 }, { url: "https://c.example/" }],
+      [{ title: "Work", color: "blue" }],
+    ));
+
+    const now = await openNow();
+    expect(now[0].groupId).toBeGreaterThanOrEqual(0);
+    expect(now[1].groupId).toBe(now[0].groupId);
+    expect(now[2].groupId).toBe(-1);
+    expect(realTabGroups.__groups()).toHaveLength(1);
+    expect(realTabGroups.__groups()[0]).toMatchObject({ title: "", color: "grey" }); // the browser's pick
+    expect(reads).toBe(0);
+  });
+
+  it("still reads it everywhere else, so the zeros above are not the getter failing", async () => {
+    onPlatform("win");
+    expect(await tabGroupsAskable()).toBe(true);
+    expect(await tabGroupSupport()).toBe("full");
+    expect(reads).toBeGreaterThan(0);
   });
 });
