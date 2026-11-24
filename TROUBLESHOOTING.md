@@ -244,6 +244,42 @@ November 2026.)
 A separate Zen **profile** is a different matter: each profile is its own Konode device,
 with its own file in your storage, as in any browser.
 
+## Vivaldi
+
+**Bookmarks from your other browsers' bar are not on Vivaldi's bookmark bar.** Vivaldi shows
+a folder of your choosing as its bar, and out of the box that is a "Bookmarks Bar" folder
+inside its Bookmarks folder. Extensions only see the Bookmarks folder as the bar, so that is
+where Konode puts your other browsers' bar. To see it on the bar, open the Bookmarks panel,
+right-click **Bookmarks** and choose **Set as Bookmarks Bar Folder**. Vivaldi's own starter
+bar stays a folder inside it.
+
+**A bookmark you delete in Vivaldi stays on your other devices.** Vivaldi moves a deleted
+bookmark to its Trash, and extensions see that as a move, not a deletion. Until Konode
+handles it, delete the bookmark on another device, and Vivaldi follows. (Measured on Vivaldi
+8.3, November 2026.)
+
+## ungoogled-chromium
+
+**Google Drive sign-in ends in "Access blocked: Authorization Error" (Error 400:
+invalid_request).** ungoogled-chromium replaces Google's addresses throughout its own code
+with made-up ones, and that includes the address a sign-in returns to: instead of
+`https://<extension-id>.chromiumapp.org/gdrive` the browser asks Google to return to a
+`…ch40m1umapp.qjz9zk` address, which Google cannot accept. This is by design in
+ungoogled-chromium, so Drive can't be used there; choose **GitHub** or a **WebDAV** provider
+instead. Both work normally. (Measured on ungoogled-chromium 157, November 2026.)
+
+**Installing from the Chrome Web Store.** ungoogled-chromium can't install from the Web Store
+out of the box. Its first-run page, `chrome://ungoogled-first-run/`, describes the steps
+(a flag and the chromium-web-store helper); after those, Konode installs from the Web Store
+like anywhere else.
+
+## Opera
+
+**A bookmark you delete in Opera stays on your other devices.** Like Vivaldi, Opera moves a
+deleted bookmark to its Trash, and extensions see that as a move, not a deletion. Until
+Konode handles it, delete the bookmark on another device, and Opera follows. (Measured on
+Opera 140, November 2026.)
+
 ## Starting over
 
 Google Drive has a **Disconnect** button in **Settings → Storage**. GitHub and WebDAV
