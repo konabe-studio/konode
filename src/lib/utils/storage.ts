@@ -23,6 +23,7 @@ import { BACKEND_LABEL } from "@/lib/constants";
 import { inferStore, storeUrlFor } from "@/lib/utils/extensions-match";
 import { canonicalUrlKey } from "@/lib/utils/url";
 import { sanitizeExclusions } from "@/lib/utils/bookmark-exclusions";
+import type { TrashMark } from "@/lib/utils/bookmark-roots";
 
 // ─── Device name detection ─────────────────────────────────────────────────
 
@@ -119,6 +120,9 @@ export const KEYS = {
   BOOKMARK_KEPT_SHELLS: "konode_bm_kept_shells",
   BOOKMARK_CREATED: "konode_bm_created",
   BOOKMARK_PEER_REMOVED: "konode_bm_peer_removed",
+  // Where this browser's `bookmarks.remove()` puts a bookmark instead of removing it (Opera's
+  // Trash), once a merge has seen it happen. A remembered engine measurement.
+  BOOKMARK_TRASH: "konode_bm_trash",
   // Superseded by the backend-side `konode_snap_index.json`, which every device can
   // read. Kept only so the one-time migration in sync/snapshots.ts can drain the
   // counts this device recorded before dropping the key.
@@ -769,6 +773,20 @@ export async function getSingleTabOpenLimit(): Promise<boolean | null> {
 }
 export async function setSingleTabOpenLimit(limited: boolean): Promise<void> {
   await set(KEYS.TABS_SINGLE_OPEN, limited);
+}
+
+/**
+ * The root this browser's `bookmarks.remove()` moves a bookmark into instead of removing it
+ * (Opera's Trash), once a merge has seen it happen, or null. Persisted for the same reason as
+ * the two measurements above: it is learned from what the browser did, and only when a peer's
+ * deletion gives the merge something to remove.
+ */
+export async function getTrashMark(): Promise<TrashMark | null> {
+  const v = await get<TrashMark | null>(KEYS.BOOKMARK_TRASH, null);
+  return v && typeof v.id === "string" && typeof v.slot === "number" ? v : null;
+}
+export async function setTrashMark(mark: TrashMark): Promise<void> {
+  await set(KEYS.BOOKMARK_TRASH, mark);
 }
 
 /** Forget every recorded rejection, e.g. once we learn WE were the cause. */

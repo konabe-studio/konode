@@ -125,6 +125,8 @@ export type RootLike = {
   title?: string;
   folderType?: string;
   syncing?: boolean;
+  /** Vivaldi marks its Trash root `trash: true` (see `browserOwnRootIds`). */
+  trash?: boolean;
   rootKind?: RootKind;
 };
 
@@ -262,6 +264,88 @@ export function matchLocalRootEx(
   // guess entirely (see 4a above), so the result can't hinge on root enumeration order.
   if (kind) return { id: defaultOtherRootId(localRoots), confident: false };
   return { id: candidates[index]?.id ?? defaultOtherRootId(localRoots), confident: false };
+}
+
+// ─── The browser's own roots (Opera, Vivaldi) ───────────────────────────────
+//
+// Opera and Vivaldi keep more under the bookmark tree than bookmarks. Both have a Trash root,
+// and on both `bookmarks.remove()` does not remove anything: it moves the node into that Trash
+// and fires `onMoved`, never `onRemoved`. Opera also keeps its Speed Dials and two Pinboards
+// there as roots. Konode read all of it as bookmarks: a deletion made on either browser was a
+// move that never reached another device, and those roots went to every peer's Other
+// bookmarks.
+//
+// Vivaldi says which root is its Trash: the node carries `trash: true` (Vivaldi 8.3, Chromium
+// 156, 2026-11-23), on root "4", titled "Kuka" in a Hungarian UI. That flag is taken on any
+// engine, since nothing else sets it.
+//
+// Opera's roots say nothing. Measured on Opera 140 (Chromium 157), 2026-11-23: no
+// `folderType` (only the bar and Chromium's other node carry one), no `unmodifiable`,
+// `syncing: false` like every other root, and localized titles (the Trash is "Kuka" in a
+// Hungarian UI). What is fixed is the numbering and the order, so a root is taken for one of
+// Opera's own only when BOTH agree: its id, and its place among the roots without a
+// `folderType` (`untypedRoots`). The typed ones are left out of the count because Chromium
+// shows its mobile root only when something is in it, and `index` is no help either: getTree
+// numbers the roots it lists, getChildren counts the hidden mobile root as well. A renumbered
+// or reordered Opera therefore hides nothing, which is how 1.6.0 behaved, rather than a root
+// that holds the user's bookmarks.
+//
+// Opera's untyped roots, in getTree order: Pinboard, Speed Dials, Trash, Unsorted bookmarks,
+// Unsynchronized Pinboard, Other bookmarks. Unsorted bookmarks and Other bookmarks hold
+// bookmarks and sync as before.
+const OPERA_OWN_ROOTS: ReadonlyArray<{ id: string; slot: number }> = [
+  { id: "7", slot: 0 }, // Pinboard
+  { id: "6", slot: 1 }, // Speed Dials
+  { id: "9", slot: 2 }, // Trash
+  { id: "8", slot: 4 }, // Unsynchronized Pinboard
+];
+
+/**
+ * Where a `remove()` was seen to put a bookmark instead of removing it: the root's id and its
+ * place among the untyped roots, so a renumbering cannot make the id name another root.
+ */
+export interface TrashMark {
+  id: string;
+  slot: number;
+}
+
+/** Does this browser mark a root as its own (Vivaldi's Trash)? Read without knowing the engine. */
+export function hasFlaggedRoot(roots: RootLike[]): boolean {
+  return roots.some((r) => r.trash === true && !r.folderType);
+}
+
+/** The roots without a `folderType`, in the order the engine lists them. */
+function untypedRoots(roots: RootLike[]): RootLike[] {
+  return roots.filter((r) => !r.folderType);
+}
+
+/** The mark for root `rootId` as the tree stands now, or null when it is not an untyped root. */
+export function trashMarkOf(roots: RootLike[], rootId: string): TrashMark | null {
+  const slot = untypedRoots(roots).findIndex((r) => r.id === rootId);
+  return slot < 0 ? null : { id: rootId, slot };
+}
+
+/**
+ * The roots the browser keeps for itself, which never sync: nothing in them is published, and
+ * the merge never matches, creates, moves or deletes anything there.
+ *
+ * Vivaldi's Trash, by its flag, and Opera's own roots. `trash` is the root a `remove()` of
+ * Konode's own was seen to fill on Opera, the one signal there that is about behaviour rather
+ * than numbering, and it counts while that root is still where it was found.
+ */
+export function browserOwnRootIds(
+  roots: RootLike[],
+  { opera, trash }: { opera: boolean; trash?: TrashMark | null },
+): Set<string> {
+  const own = new Set<string>();
+  for (const r of roots) if (r.trash === true && !r.folderType) own.add(r.id);
+  if (!opera) return own;
+  const untyped = untypedRoots(roots);
+  for (const { id, slot } of OPERA_OWN_ROOTS) {
+    if (untyped[slot]?.id === id) own.add(id);
+  }
+  if (trash && untyped[trash.slot]?.id === trash.id) own.add(trash.id);
+  return own;
 }
 
 /** Convenience wrapper returning just the resolved local root id (guess included). */

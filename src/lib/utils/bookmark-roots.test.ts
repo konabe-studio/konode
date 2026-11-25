@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   rootKind, rootKindFromTitle, rootKindFromFolderType, rootKindOf, asRootKind,
   defaultOtherRootId, findLocalRootByKind, matchLocalRoot, matchLocalRootEx,
+  browserOwnRootIds, hasFlaggedRoot, trashMarkOf,
 } from "./bookmark-roots";
 
 // Chrome numbers its roots; Firefox uses stable guids.
@@ -350,5 +351,94 @@ describe("asRootKind", () => {
     expect(asRootKind("Bookmarks bar")).toBeUndefined();
     expect(asRootKind("")).toBeUndefined();
     expect(asRootKind(undefined)).toBeUndefined();
+  });
+});
+
+// Opera keeps its Speed Dials, Pinboards and Trash in the bookmark tree, and remove() moves a
+// bookmark into that Trash. The roots as Opera 140 lists them in a fresh profile with a
+// Hungarian UI (2026-11-23): only the bar and Chromium's other node carry a folderType, and
+// the Trash is "Kuka" here, so neither a flag nor a title says which root is which.
+const OPERA_ROOTS = [
+  { id: "1", title: "Könyvjelzősáv", folderType: "bookmarks-bar", syncing: false },
+  { id: "2", title: "Importált könyvjelzők", folderType: "other", syncing: false },
+  { id: "7", title: "Pinboard", syncing: false },
+  { id: "6", title: "Speed Dials", syncing: false },
+  { id: "9", title: "Kuka", syncing: false },
+  { id: "4", title: "Besorolatlan könyvjelzők", syncing: false },
+  { id: "8", title: "Unsynchronized Pinboard", syncing: false },
+  { id: "5", title: "Egyéb könyvjelzők", syncing: false },
+];
+const sorted = (s: Set<string>) => [...s].sort();
+
+describe("browserOwnRootIds (Opera's Trash, Speed Dials and Pinboards)", () => {
+  it("names Opera's own roots and leaves Unsorted and Other bookmarks to sync", () => {
+    expect(sorted(browserOwnRootIds(OPERA_ROOTS, { opera: true }))).toEqual(["6", "7", "8", "9"]);
+  });
+
+  it("is empty on every other browser, whatever its roots look like", () => {
+    expect(browserOwnRootIds(OPERA_ROOTS, { opera: false }).size).toBe(0);
+    expect(browserOwnRootIds(CHROME_ROOTS, { opera: false }).size).toBe(0);
+  });
+
+  it("still finds them when Chromium shows its mobile root, which takes a place in the list", () => {
+    // Chromium lists the mobile root only when something is in it, and it sits third. A
+    // count over every root would then be off by one; the untyped roots are not.
+    const withMobile = [...OPERA_ROOTS.slice(0, 2), { id: "3", title: "Mobil", folderType: "mobile", syncing: false }, ...OPERA_ROOTS.slice(2)];
+    expect(sorted(browserOwnRootIds(withMobile, { opera: true }))).toEqual(["6", "7", "8", "9"]);
+  });
+
+  it("sets nothing aside on an Opera that was renumbered", () => {
+    // A guess there could take the root holding the user's bookmarks out of the sync.
+    // Taking nothing out is how 1.6.0 behaved.
+    const renumbered = OPERA_ROOTS.map((r, i) => ({ ...r, id: String(20 + i) }));
+    expect(browserOwnRootIds(renumbered, { opera: true }).size).toBe(0);
+  });
+
+  it("judges each root by its id and its place together", () => {
+    // Unsorted bookmarks moved to the front: Pinboard, Speed Dials and Trash are no longer
+    // where Opera 140 lists them, so none of them is taken on its id alone. The
+    // Unsynchronized Pinboard is still in its place.
+    const reordered = [OPERA_ROOTS[0], OPERA_ROOTS[1], OPERA_ROOTS[5], ...OPERA_ROOTS.slice(2, 5), ...OPERA_ROOTS.slice(6)];
+    expect(sorted(browserOwnRootIds(reordered, { opera: true }))).toEqual(["8"]);
+  });
+
+  it("takes the Trash a merge saw remove() fill, renumbered or not", () => {
+    const renumbered = OPERA_ROOTS.map((r, i) => ({ ...r, id: String(20 + i) }));
+    const mark = trashMarkOf(renumbered, "24");
+    expect(mark).toEqual({ id: "24", slot: 2 });
+    expect(sorted(browserOwnRootIds(renumbered, { opera: true, trash: mark }))).toEqual(["24"]);
+  });
+
+  it("drops that mark once its root is no longer where it was found", () => {
+    // Renumbered after the measurement: "9" now names whatever root got that number.
+    const shifted = OPERA_ROOTS.map((r, i) => ({ ...r, id: String(4 + i) }));
+    expect(browserOwnRootIds(shifted, { opera: true, trash: { id: "9", slot: 2 } }).size).toBe(0);
+  });
+
+  it("marks only a root without a folderType", () => {
+    expect(trashMarkOf(OPERA_ROOTS, "1")).toBeNull();
+    expect(trashMarkOf(OPERA_ROOTS, "9")).toEqual({ id: "9", slot: 2 });
+  });
+});
+
+// Vivaldi 8.3 (Chromium 156), 2026-11-23, Hungarian UI. Its remove() moves into the Trash too,
+// and the Trash says so itself. Vivaldi's brands are Chrome's, so no engine test applies.
+const VIVALDI_ROOTS = [
+  { id: "1", title: "Könyvjelzők", folderType: "bookmarks-bar", syncing: false, trash: false },
+  { id: "2", title: "További könyvjelzők", folderType: "other", syncing: false, trash: false },
+  { id: "4", title: "Kuka", syncing: false, trash: true },
+];
+
+describe("browserOwnRootIds (Vivaldi's Trash)", () => {
+  it("takes the root Vivaldi flags as its Trash, on any engine", () => {
+    expect(sorted(browserOwnRootIds(VIVALDI_ROOTS, { opera: false }))).toEqual(["4"]);
+    expect(hasFlaggedRoot(VIVALDI_ROOTS)).toBe(true);
+  });
+
+  it("ignores the flag on a root the engine types as one of its own", () => {
+    const odd = [{ id: "1", title: "Bookmarks", folderType: "bookmarks-bar", trash: true }];
+    expect(browserOwnRootIds(odd, { opera: false }).size).toBe(0);
+    expect(hasFlaggedRoot(odd)).toBe(false);
+    expect(hasFlaggedRoot(CHROME_ROOTS)).toBe(false);
   });
 });
