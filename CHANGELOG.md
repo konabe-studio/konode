@@ -107,6 +107,18 @@ All notable changes to Konode. Format loosely follows
   your other devices keep the copies they were given, and Opera gets them back as ordinary
   bookmarks on its first sync. Delete them on any device and they go everywhere, while your
   Speed Dials stay as they are.
+- **A storage server that stops answering no longer holds up syncing (#96).** Konode waited
+  for an answer as long as it took. A sync that sent a request the server never answered
+  did not finish: Chromium browsers stopped Konode's background part after 30 seconds,
+  halfway through, and Firefox waited until it was restarted, skipping every sync in the
+  meantime. Konode now gives up on a request after 25 seconds, syncs the other data types,
+  and asks again at the next sync.
+- **A bookmark another device keeps in two folders stays in one place here (#96).** When
+  another device held the same address in two folders and had moved it, Konode moved your
+  copy for the first folder and then tried again for the second. That move failed with
+  "Index out of bounds" in the Activity log, or carried the bookmark to the other folder,
+  so it changed folders on every sync. It now goes to the first folder the other device
+  lists it in, and stays there.
 
 ## [1.6.0] - 2026-11-19
 
