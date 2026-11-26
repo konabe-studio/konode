@@ -1,6 +1,6 @@
 import { peerDeviceId } from "@/lib/types";
 import type { IBackend, BackendConfig, DataType, ListedFile, PeerFile, PeerPull, SyncPacket } from "@/lib/types";
-import { withRetry, HttpError, rateLimitMessage } from "@/lib/utils/retry";
+import { withRetry, HttpError, rateLimitMessage, timedFetch } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 import { isSecureBackendUrl } from "@/lib/utils/url";
 import { utf8ToBase64 } from "@/lib/utils/base64";
@@ -22,7 +22,7 @@ const INSECURE_URL_MSG =
  * is how one of them would have been missed.
  */
 function davFetch(url: string, init: RequestInit = {}): Promise<Response> {
-  return fetch(url, { ...init, credentials: "omit" });
+  return timedFetch(url, { ...init, credentials: "omit" });
 }
 
 /** The last path segment of a PROPFIND href, decoded when it can be. */

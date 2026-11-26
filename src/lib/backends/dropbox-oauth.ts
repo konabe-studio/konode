@@ -27,7 +27,7 @@ import { logger } from "@/lib/utils/logger";
 import { KEYS } from "@/lib/utils/storage";
 import { browser } from "@/lib/utils/ext";
 import { codeChallenge, randomVerifier } from "@/lib/utils/pkce";
-import { HttpError, retryAfterMs, withRetry } from "@/lib/utils/retry";
+import { HttpError, retryAfterMs, withRetry, timedFetch } from "@/lib/utils/retry";
 
 /**
  * The Dropbox app key (OAuth client_id). Public, see above, so it lives here in the source.
@@ -141,7 +141,7 @@ export async function clearDropboxSession(): Promise<void> {
     const token = s.expires_at > Date.now() + EXPIRY_BUFFER_MS || !s.refresh_token
       ? s.access_token
       : (await exchange({ grant_type: "refresh_token", refresh_token: s.refresh_token })).access_token;
-    await fetch(REVOKE_ENDPOINT, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+    await timedFetch(REVOKE_ENDPOINT, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
   } catch (err) {
     logger.info("Dropbox.oauth", `Token revoke skipped: ${err instanceof Error ? err.message : String(err)}`);
   }
@@ -157,7 +157,7 @@ export async function getStoredDropboxUser(): Promise<{ email: string; displayNa
 async function exchange(params: Record<string, string>): Promise<TokenResponse> {
   // No client_secret, ever: a PKCE public client is identified by its app key alone.
   const body = new URLSearchParams({ client_id: DROPBOX_APP_KEY, ...params });
-  const res = await fetch(TOKEN_ENDPOINT, {
+  const res = await timedFetch(TOKEN_ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: body.toString(),
@@ -190,7 +190,7 @@ async function exchange(params: Record<string, string>): Promise<TokenResponse> 
 export async function fetchDropboxAccount(accessToken: string): Promise<{ account_id: string; email: string; displayName: string } | null> {
   try {
     // An RPC endpoint with no arguments: POST with no body and no Content-Type.
-    const res = await fetch(ACCOUNT_ENDPOINT, { method: "POST", headers: { Authorization: `Bearer ${accessToken}` } });
+    const res = await timedFetch(ACCOUNT_ENDPOINT, { method: "POST", headers: { Authorization: `Bearer ${accessToken}` } });
     if (!res.ok) return null;
     const d = await res.json();
     return { account_id: d.account_id ?? "", email: d.email ?? "", displayName: d.name?.display_name ?? "" };

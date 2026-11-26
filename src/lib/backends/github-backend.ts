@@ -1,6 +1,6 @@
 import { peerDeviceId } from "@/lib/types";
 import type { IBackend, BackendConfig, BackendType, DataType, SyncPacket, PeerFile, PeerPull } from "@/lib/types";
-import { withRetry, HttpError, defaultShouldRetry, rateLimitMessage } from "@/lib/utils/retry";
+import { withRetry, HttpError, defaultShouldRetry, rateLimitMessage, timedFetch } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 import { utf8ToBase64 } from "@/lib/utils/base64";
 
@@ -123,7 +123,7 @@ export class GitHubBackend implements IBackend {
 
   /** Create or update one file, with `sha` when it already exists. */
   private writeFile(filePath: string, body: Record<string, unknown>, sha: string | null): Promise<Response> {
-    return fetch(this.contentsUrl(filePath), {
+    return timedFetch(this.contentsUrl(filePath), {
       method: this.writeMethod(sha),
       headers: this.headers(),
       body: JSON.stringify(sha ? { ...body, sha } : body),
@@ -186,7 +186,7 @@ export class GitHubBackend implements IBackend {
     const problem = this.settingsProblem();
     if (problem) throw new Error(problem);
 
-    const repoRes = await fetch(
+    const repoRes = await timedFetch(
       `${this.api}/repos/${this.repoSlug}`,
       { headers: this.headers() }
     );
@@ -237,7 +237,7 @@ export class GitHubBackend implements IBackend {
   }
 
   private async getFileSHA(path: string, branch: string): Promise<string | null> {
-    const res = await fetch(
+    const res = await timedFetch(
       `${this.contentsUrl(path)}?ref=${encodeURIComponent(branch)}`,
       // GitHub sends `Cache-Control: max-age=60` on contents reads, so the browser
       // HTTP cache can hand back a stale SHA right after a write — which then makes
@@ -266,7 +266,7 @@ export class GitHubBackend implements IBackend {
    */
   async downloadChanged(data_type: DataType, excludeDeviceId: string, known: Record<string, string>): Promise<PeerPull> {
     return withRetry(async () => {
-      const res = await fetch(
+      const res = await timedFetch(
         `${this.contentsUrl(this.path)}?ref=${encodeURIComponent(this.branch)}`,
         { headers: this.headers(), cache: "no-store" }
       );
@@ -290,7 +290,7 @@ export class GitHubBackend implements IBackend {
           continue;
         }
         const raw = this.rawRequest(`${this.path}/${m.name}`);
-        const r = await fetch(raw.url, { headers: raw.headers, cache: "no-store" });
+        const r = await timedFetch(raw.url, { headers: raw.headers, cache: "no-store" });
         if (!r.ok) {
           // See the note in webdav-backend: a peer we can't fetch silently vanished from
           // the sync while it still reported success.
@@ -330,7 +330,7 @@ export class GitHubBackend implements IBackend {
   async getFile(name: string): Promise<string | null> {
     return withRetry(async () => {
       const raw = this.rawRequest(`${this.path}/${name}`);
-      const res = await fetch(raw.url, { headers: raw.headers, cache: "no-store" });
+      const res = await timedFetch(raw.url, { headers: raw.headers, cache: "no-store" });
       if (res.status === 404) return null;
       if (!res.ok) throw new HttpError(res.status, `${this.forgeName} getFile failed: ${res.status}`);
       return res.text();
@@ -339,7 +339,7 @@ export class GitHubBackend implements IBackend {
 
   async listFiles(prefix: string): Promise<string[]> {
     return withRetry(async () => {
-      const res = await fetch(
+      const res = await timedFetch(
         `${this.contentsUrl(this.path)}?ref=${encodeURIComponent(this.branch)}`,
         { headers: this.headers(), cache: "no-store" }
       );
@@ -355,7 +355,7 @@ export class GitHubBackend implements IBackend {
     await withRetry(async () => {
       const sha = await this.getFileSHA(filename, this.branch);
       if (!sha) return; // already gone
-      const res = await fetch(this.contentsUrl(filename), {
+      const res = await timedFetch(this.contentsUrl(filename), {
         method: "DELETE", headers: this.headers(),
         body: JSON.stringify({ message: `snapshot: delete ${name}`, sha, branch: this.branch }),
       });
@@ -371,7 +371,7 @@ export class GitHubBackend implements IBackend {
       if (problem) return { ok: false, message: problem };
 
       // Verify token works
-      const userRes = await fetch(`${this.api}/user`, { headers: this.headers() });
+      const userRes = await timedFetch(`${this.api}/user`, { headers: this.headers() });
       if (userRes.status === 429) return { ok: false, message: rateLimitMessage(this.forgeName) };
       // A Gitea token scoped to the repository alone is refused here with 403 and still
       // syncs, so there it only costs the name in the result.
@@ -392,7 +392,7 @@ export class GitHubBackend implements IBackend {
       if (!this.settings?.repo) return { ok: true, message: `${user.login ? `Signed in as @${user.login}` : who}. Set a repository below` };
 
       // Check repo access
-      const repoRes = await fetch(`${this.api}/repos/${this.repoSlug}`, { headers: this.headers() });
+      const repoRes = await timedFetch(`${this.api}/repos/${this.repoSlug}`, { headers: this.headers() });
 
       if (repoRes.status === 404) {
         return {
@@ -425,7 +425,7 @@ export class GitHubBackend implements IBackend {
       // yet, the first upload creates one.
       if (!isEmpty) {
         const branch = this.branch;
-        const brRes = await fetch(
+        const brRes = await timedFetch(
           `${this.api}/repos/${this.repoSlug}/branches/${encodeURIComponent(branch)}`,
           { headers: this.headers() }
         );
