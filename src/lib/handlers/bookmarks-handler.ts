@@ -1550,6 +1550,14 @@ async function mergeBookmarks(
     });
   };
   indexLocal(await exportBookmarks());
+  // Local bookmarks this merge has already placed. `placement` is read once, before the walk,
+  // so after a move it still names the old folder. A peer holding one address in two folders
+  // (or an address and the form this browser keeps it under, #41) reaches the same local
+  // bookmark twice: the second visit took the old folder for the current one and moved the
+  // bookmark inside its new folder by an index meant for the old one ("Index out of bounds.",
+  // an Edge user's log in #96), or carried it back, so it changed folders on every sync. The
+  // first place the peer lists it decides; a later one leaves it be.
+  const placedIds = new Set<string>();
   const suppressedByDeletion = (url: string): boolean => {
     // A deletion of the copy the browser keeps in the bookmark's place counts as well (#41):
     // that copy is the one the user sees and deletes here, and the peer's form must not
@@ -1695,7 +1703,8 @@ async function mergeBookmarks(
         // Already local → relocate to the peer's folder/position if its placement
         // wins AND we could confidently map the peer's root. Without confidence a
         // "move" would displace the bookmark into the default root — skip it.
-        if (shouldMove(node.url) && rootConfident) {
+        if (shouldMove(node.url) && rootConfident && !placedIds.has(loc.id)) {
+          placedIds.add(loc.id);
           try {
             const targetId = await ensureParent();
             // Anchor to the peer's previous sibling (shared by url/title) instead of an
