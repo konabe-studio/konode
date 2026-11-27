@@ -5,6 +5,8 @@ All notable changes to Konode. Format loosely follows
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-11-27
+
 ### Added
 
 - **Dropbox storage.** A new **Dropbox** card, in setup and under Settings → Storage, next to
