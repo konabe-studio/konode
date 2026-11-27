@@ -8,7 +8,7 @@ import { PROVIDERS } from "@/lib/storage-providers";
 // Store metadata is reviewed harder than it used to be, and a run of brand names in a
 // description reads as keyword stuffing however true each name is. The provider cards are
 // the honest place for "we have one ready for Koofr": the store page says what Konode
-// connects to, which is three backends, and the wizard says which servers have a card.
+// connects to, which is four backends, and the wizard says which servers have a card.
 //
 // The copy itself is NOT in the repo. It sits with the other submission material, which
 // carries an OAuth secret placeholder, in a private checkout of the working docs at
@@ -29,10 +29,12 @@ const LOCALES = ["en", ...SHIPPED];
 const SUMMARY_MAX = 132;
 
 /**
- * The three words the copy is allowed to name, because they are what the product connects
- * to rather than a list of brands: a backend each.
+ * The four names the copy is allowed to use, because they are what the product connects
+ * to rather than a list of brands: a backend each. The Gitea / Forgejo card rides on the
+ * GitHub backend and the copy calls it a Git server of your own, so those two names stay
+ * forbidden like any other card's.
  */
-const BACKENDS = ["Google Drive", "GitHub", "WebDAV"];
+const BACKENDS = ["Google Drive", "Dropbox", "GitHub", "WebDAV"];
 
 /**
  * Every other storage brand Konode knows about, derived from the provider cards so a new
@@ -71,7 +73,7 @@ describe.skipIf(!existsSync(DIR))("Chrome Web Store listing copy", () => {
     }
   });
 
-  it("names no storage provider beyond the three backends", () => {
+  it("names no storage provider beyond the four backends", () => {
     // This is the one that stopped a release. The refused sentence listed seven brands in a
     // row; the fix was to describe the backends and leave the providers to the wizard.
     for (const loc of LOCALES) {
@@ -82,7 +84,7 @@ describe.skipIf(!existsSync(DIR))("Chrome Web Store listing copy", () => {
     }
   });
 
-  it("still says which three backends there are", () => {
+  it("still says which four backends there are", () => {
     // The other direction, and the reason this is a pair: trimming the provider list must
     // not take the actual answer with it. The backend names stay in Latin script in every
     // language, Chinese included.
