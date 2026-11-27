@@ -1,6 +1,6 @@
 import { peerDeviceId } from "@/lib/types";
 import type { IBackend, BackendConfig, DataType, ListedFile, PeerFile, PeerPull, SyncPacket } from "@/lib/types";
-import { withRetry, HttpError, rateLimitMessage } from "@/lib/utils/retry";
+import { withRetry, HttpError, rateLimitMessage, timedFetch } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 import { getAccessToken, getStoredGDriveUser } from "./gdrive-oauth";
 import { clearUploadChecksums, getLastDriveFolder, setLastDriveFolder } from "@/lib/utils/storage";
@@ -84,7 +84,7 @@ export class GDriveBackend implements IBackend {
     // connect() runs this on every sync, and it was the one Drive call outside withRetry, so
     // a single transient 500 failed the whole cycle and put an error in the Activity log.
     return withRetry(async () => {
-      const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,createdTime)`, { headers: h });
+      const res = await timedFetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,createdTime)`, { headers: h });
       if (!res.ok) throw new HttpError(res.status, `Drive folder lookup failed: ${res.status}`);
       return ((await res.json()).files ?? []) as DriveFileRef[];
     });
@@ -142,7 +142,7 @@ export class GDriveBackend implements IBackend {
     const existing = pickCanonical(found);
     if (existing) return existing.id;
 
-    const create = await fetch(`${DRIVE_API}/files`, {
+    const create = await timedFetch(`${DRIVE_API}/files`, {
       method: "POST", headers: h,
       body: JSON.stringify({ name: KONODE_FOLDER, mimeType: FOLDER_MIME }),
     });
@@ -177,7 +177,7 @@ export class GDriveBackend implements IBackend {
       // lives in exactly one place.
       const existingId = await this.findFileId(filename, folderId, h);
       if (existingId) {
-        const res = await fetch(`${UPLOAD_API}/files/${existingId}?uploadType=media`, {
+        const res = await timedFetch(`${UPLOAD_API}/files/${existingId}?uploadType=media`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           body: content,
@@ -195,7 +195,7 @@ export class GDriveBackend implements IBackend {
           `--${boundary}\r\n` +
           `Content-Type: application/json\r\n\r\n${content}\r\n` +
           `--${boundary}--`;
-        const res = await fetch(`${UPLOAD_API}/files?uploadType=multipart`, {
+        const res = await timedFetch(`${UPLOAD_API}/files?uploadType=multipart`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": `multipart/related; boundary=${boundary}` },
           body,
@@ -221,7 +221,7 @@ export class GDriveBackend implements IBackend {
       const folderId = this.folderId ?? (await this.ensureFolder());
       const h = await this.authHeaders();
       const q = encodeURIComponent(`name contains 'konode_${data_type}_' and '${folderId}' in parents and trashed=false`);
-      const listRes = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,modifiedTime,md5Checksum)&orderBy=modifiedTime desc`, { headers: h, cache: "no-store" });
+      const listRes = await timedFetch(`${DRIVE_API}/files?q=${q}&fields=files(id,name,modifiedTime,md5Checksum)&orderBy=modifiedTime desc`, { headers: h, cache: "no-store" });
       if (!listRes.ok) throw new HttpError(listRes.status, `Drive list failed: ${listRes.status}`);
       const { files } = await listRes.json();
       if (!files?.length) return { fetched: [], unchanged: [] };
@@ -251,7 +251,7 @@ export class GDriveBackend implements IBackend {
           unchanged.push(file);
           continue;
         }
-        const r = await fetch(`${DRIVE_API}/files/${f.id}?alt=media`, { headers: h, cache: "no-store" });
+        const r = await timedFetch(`${DRIVE_API}/files/${f.id}?alt=media`, { headers: h, cache: "no-store" });
         if (!r.ok) {
           // See the note in webdav-backend: a peer we can't fetch silently vanished from
           // the sync while it still reported success.
@@ -273,7 +273,7 @@ export class GDriveBackend implements IBackend {
 
   private async findFileId(name: string, folderId: string, h: HeadersInit): Promise<string | null> {
     const q = encodeURIComponent(`name='${name}' and '${folderId}' in parents and trashed=false`);
-    const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(id,createdTime)`, { headers: h });
+    const res = await timedFetch(`${DRIVE_API}/files?q=${q}&fields=files(id,createdTime)`, { headers: h });
     if (!res.ok) throw new HttpError(res.status, `Drive lookup failed: ${res.status}`);
     const files = ((await res.json()).files ?? []) as DriveFileRef[];
     if (files.length > 1) {
@@ -292,7 +292,7 @@ export class GDriveBackend implements IBackend {
       const token = await this.getToken(false);
       const existingId = await this.findFileId(name, folderId, h);
       if (existingId) {
-        const res = await fetch(`${UPLOAD_API}/files/${existingId}?uploadType=media`, {
+        const res = await timedFetch(`${UPLOAD_API}/files/${existingId}?uploadType=media`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           body: content,
@@ -307,7 +307,7 @@ export class GDriveBackend implements IBackend {
           `--${boundary}\r\n` +
           `Content-Type: application/json\r\n\r\n${content}\r\n` +
           `--${boundary}--`;
-        const res = await fetch(`${UPLOAD_API}/files?uploadType=multipart`, {
+        const res = await timedFetch(`${UPLOAD_API}/files?uploadType=multipart`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": `multipart/related; boundary=${boundary}` },
           body,
@@ -323,7 +323,7 @@ export class GDriveBackend implements IBackend {
       const h = await this.authHeaders();
       const id = await this.findFileId(name, folderId, h);
       if (!id) return null;
-      const r = await fetch(`${DRIVE_API}/files/${id}?alt=media`, { headers: h, cache: "no-store" });
+      const r = await timedFetch(`${DRIVE_API}/files/${id}?alt=media`, { headers: h, cache: "no-store" });
       if (r.status === 404) return null;
       if (!r.ok) throw new HttpError(r.status, `Drive GET failed: ${r.status}`);
       return r.text();
@@ -336,7 +336,7 @@ export class GDriveBackend implements IBackend {
       const h = await this.authHeaders();
       // Drive's `contains` is a loose token match, so filter to a real startsWith below.
       const q = encodeURIComponent(`name contains '${prefix}' and '${folderId}' in parents and trashed=false`);
-      const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(name)`, { headers: h, cache: "no-store" });
+      const res = await timedFetch(`${DRIVE_API}/files?q=${q}&fields=files(name)`, { headers: h, cache: "no-store" });
       if (!res.ok) throw new HttpError(res.status, `Drive list failed: ${res.status}`);
       const { files } = await res.json();
       return ((files ?? []) as Array<{ name: string }>).map(f => f.name).filter(n => n.startsWith(prefix));
@@ -348,7 +348,7 @@ export class GDriveBackend implements IBackend {
       const folderId = this.folderId ?? (await this.ensureFolder());
       const h = await this.authHeaders();
       const q = encodeURIComponent(`name contains '${prefix}' and '${folderId}' in parents and trashed=false`);
-      const res = await fetch(`${DRIVE_API}/files?q=${q}&fields=files(name,modifiedTime)`, { headers: h, cache: "no-store" });
+      const res = await timedFetch(`${DRIVE_API}/files?q=${q}&fields=files(name,modifiedTime)`, { headers: h, cache: "no-store" });
       if (!res.ok) throw new HttpError(res.status, `Drive list failed: ${res.status}`);
       const { files } = await res.json();
       return ((files ?? []) as Array<{ name: string; modifiedTime?: string }>)
@@ -366,7 +366,7 @@ export class GDriveBackend implements IBackend {
       const h = await this.authHeaders();
       const id = await this.findFileId(name, folderId, h);
       if (!id) return;
-      const res = await fetch(`${DRIVE_API}/files/${id}`, { method: "DELETE", headers: h });
+      const res = await timedFetch(`${DRIVE_API}/files/${id}`, { method: "DELETE", headers: h });
       if (!res.ok && res.status !== 404) throw new HttpError(res.status, `Drive DELETE failed: ${res.status}`);
     });
   }
@@ -381,7 +381,7 @@ export class GDriveBackend implements IBackend {
       // connection test that never touched the connection. getToken() renews via the
       // refresh token first, and throws a clear message if that no longer works.
       const token = await this.getToken(false);
-      const res = await fetch(`${DRIVE_API}/about?fields=user`, {
+      const res = await timedFetch(`${DRIVE_API}/about?fields=user`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401 || res.status === 403) {

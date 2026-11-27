@@ -15,6 +15,50 @@ export class HttpError extends Error {
 }
 
 /**
+ * How long a storage request waits for the server to start answering.
+ *
+ * Konode set no limit, so a server that took a request and never answered held the sync,
+ * and every sync after it ("Already syncing, skipping"), for as long as the worker lived.
+ * Chrome ends that wait its own way: it stops an extension's service worker whose fetch()
+ * response takes more than 30 seconds to arrive (developer.chrome.com, "The extension
+ * service worker lifecycle"), which kills the whole sync midway and leaves the popup on
+ * "Syncing" until the worker starts again. Firefox has no such limit. Under Chrome's 30
+ * seconds, so the request fails on its own, the sync carries on without it, and the next
+ * sync asks again. It times the wait for the response only, not the download of its body:
+ * a large history file on a slow line may take longer than this, and that is not a hang.
+ */
+export const RESPONSE_TIMEOUT_MS = 25_000;
+
+/** The storage did not start answering within `RESPONSE_TIMEOUT_MS`. Not retried by
+ *  `withRetry`: asking a server that does not answer twice more holds the sync for over a
+ *  minute, and the next sync is the retry. */
+export class ResponseTimeoutError extends Error {
+  constructor(public readonly host: string, public readonly ms: number) {
+    super(`${host || "The storage server"} did not answer within ${Math.round(ms / 1000)} seconds. Konode tries again at the next sync.`);
+    this.name = "ResponseTimeoutError";
+  }
+}
+
+/** `fetch`, for every request to the storage and its sign-in service, given up after
+ *  `ms` without a response (see `RESPONSE_TIMEOUT_MS`). */
+export async function timedFetch(url: string, init: RequestInit = {}, ms = RESPONSE_TIMEOUT_MS): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } catch (err) {
+    if (ctrl.signal.aborted) {
+      let host = "";
+      try { host = new URL(url).host; } catch { /* a relative or odd URL: say "the storage server" */ }
+      throw new ResponseTimeoutError(host, ms);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * A response's `Retry-After`, in milliseconds: delta-seconds or an HTTP date, as RFC 9110
  * allows both. Undefined when absent or unreadable. 0 is a real answer ("retry now"), and
  * Dropbox sends it for some write contention.

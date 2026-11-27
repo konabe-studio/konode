@@ -23,6 +23,7 @@ import { logger } from "@/lib/utils/logger";
 import { KEYS } from "@/lib/utils/storage";
 import { browser } from "@/lib/utils/ext";
 import { codeChallenge, randomVerifier } from "@/lib/utils/pkce";
+import { timedFetch } from "@/lib/utils/retry";
 
 const CLIENT_ID = "754300898931-2gejbfi1k9ul3lct0n09ke128gtv4j8l.apps.googleusercontent.com";
 const CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET ?? "";
@@ -156,7 +157,7 @@ async function exchange(params: Record<string, string>): Promise<TokenResponse> 
   // builds inject it via VITE_GOOGLE_CLIENT_SECRET. A source build without the var
   // sends no secret (and would need its own public/desktop OAuth client to work).
   if (CLIENT_SECRET) body.set("client_secret", CLIENT_SECRET);
-  const res = await fetch(TOKEN_ENDPOINT, {
+  const res = await timedFetch(TOKEN_ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: body.toString(),
@@ -170,7 +171,7 @@ async function exchange(params: Record<string, string>): Promise<TokenResponse> 
 
 async function fetchUserInfo(accessToken: string): Promise<{ email: string; displayName: string }> {
   try {
-    const res = await fetch("https://www.googleapis.com/drive/v3/about?fields=user", {
+    const res = await timedFetch("https://www.googleapis.com/drive/v3/about?fields=user", {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!res.ok) return { email: "", displayName: "" };

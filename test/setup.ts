@@ -301,6 +301,15 @@ function makeBookmarks() {
         // Chrome keeps the node in its current parent when parentId is omitted
         // (a same-folder reorder), so default target to the node's current parent.
         const target = dest.parentId ?? n.parentId;
+        // Chromium checks the index against the target's children BEFORE the node leaves
+        // its old place, and rejects one past that count ("Index out of bounds.", as an Edge
+        // user's log showed for a merge move, #96). The fake clamped it, so the merge's moves
+        // could never fail here the way they do in the browser, as `create` once could not.
+        if (typeof dest.index === "number" && (dest.index < 0 || dest.index > bmChildren(target).length)) {
+          return Promise.reject(
+            new Error(`Index out of bounds. (index ${dest.index}, ${bmChildren(target).length} children)`)
+          );
+        }
         // Model the real remove-then-insert: pull the node out, re-pack the rest to
         // contiguous indices, then splice in at the requested FINAL index. (dest.index
         // is the final-array position — Firefox's convention; the handler's moveToIndex

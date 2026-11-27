@@ -1,6 +1,6 @@
 import { peerDeviceId } from "@/lib/types";
 import type { IBackend, BackendConfig, DataType, ListedFile, PeerFile, PeerPull, SyncPacket } from "@/lib/types";
-import { withRetry, HttpError, rateLimitMessage, retryAfterMs } from "@/lib/utils/retry";
+import { withRetry, HttpError, rateLimitMessage, retryAfterMs, timedFetch } from "@/lib/utils/retry";
 import { logger } from "@/lib/utils/logger";
 import { getDropboxAccessToken, getStoredDropboxUser, DROPBOX_EXPIRED_MSG } from "./dropbox-oauth";
 
@@ -87,7 +87,7 @@ export class DropboxBackend implements IBackend {
    */
   private async send(url: string, build: (token: string) => RequestInit): Promise<Response> {
     let token = await getDropboxAccessToken();
-    let res = await fetch(url, { ...build(token), cache: "no-store" });
+    let res = await timedFetch(url, { ...build(token), cache: "no-store" });
     if (res.status === 401) {
       const summary = await errorSummary(res);
       if (/missing_scope/.test(summary)) {
@@ -95,7 +95,7 @@ export class DropboxBackend implements IBackend {
       }
       // Expired or revoked access token: one refresh, then the same request once more.
       token = await getDropboxAccessToken(true);
-      res = await fetch(url, { ...build(token), cache: "no-store" });
+      res = await timedFetch(url, { ...build(token), cache: "no-store" });
       if (res.status === 401) throw new HttpError(401, DROPBOX_EXPIRED_MSG);
     }
     if (res.ok || res.status === 409) return res;

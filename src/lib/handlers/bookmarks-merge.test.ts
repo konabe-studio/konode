@@ -4,6 +4,7 @@ import {
   type BulkDeleteBlock,
 } from "@/lib/handlers/bookmarks-handler";
 import { getTombstones, setTombstones, getBulkDeleteApproval, setBulkDeleteApproval, KEYS } from "@/lib/utils/storage";
+import { logger } from "@/lib/utils/logger";
 import type { BookmarkPayload, SyncBookmark } from "@/lib/types";
 
 // These exercise the real merge/replace logic against the in-memory
@@ -757,6 +758,58 @@ describe("importBookmarks — moves", () => {
     const fLocal = (await chrome.bookmarks.getChildren("1")).find((c) => !c.url && c.title === "F")!;
     const order = (await chrome.bookmarks.getChildren(fLocal.id)).map((c) => c.url);
     expect(order).toEqual(["https://x.com", "https://a.com", "https://b.com"]); // X moved to front
+  });
+
+  // An Edge user's log (#96): "Bookmark move: … Index out of bounds." The merge reads where
+  // each bookmark is once, before it walks the peer's tree. A peer holding one address in two
+  // folders moved the single copy here for the first, then for the second took the copy to be
+  // where it had been, and moved it inside its NEW folder by an index meant for the old one.
+  describe("when the peer holds one address in two folders", () => {
+    const U = "https://u.com";
+    const peerTree = (folders: SyncBookmark[]): BookmarkPayload => ({
+      ...payload(folders),
+      moves: [{ url: U, at: Date.now() + 60_000 }],
+    });
+    const inP = folder("P", [link("A", "https://a.com"), link("B", "https://b.com"), link("C", "https://c.com"), link("U", U)]);
+    const inNew = folder("New", [link("U", U)]);
+
+    async function seedP(): Promise<void> {
+      const p = await chrome.bookmarks.create({ parentId: "1", title: "P" });
+      await chrome.bookmarks.create({ parentId: p.id, title: "U", url: U });
+      for (const s of ["a", "b", "c"]) {
+        await chrome.bookmarks.create({ parentId: p.id, title: s.toUpperCase(), url: `https://${s}.com` });
+      }
+    }
+    async function folderOf(url: string): Promise<string[]> {
+      const out: string[] = [];
+      for (const f of await chrome.bookmarks.getChildren("1")) {
+        if (f.url) continue;
+        for (const c of await chrome.bookmarks.getChildren(f.id)) if (c.url === url) out.push(f.title);
+      }
+      return out;
+    }
+
+    it.each([
+      ["the new folder first", [inNew, inP], "New"],
+      ["the old folder first", [inP, inNew], "P"],
+    ])("moves the copy here once, after %s, and leaves it there", async (_label, folders, home) => {
+      await seedP();
+      const errors = vi.spyOn(logger, "error");
+      const events = vi.spyOn(logger, "event");
+
+      await importBookmarks(peerTree(folders), "merge", "lww");
+      expect(errors).not.toHaveBeenCalled();
+      expect(await folderOf(U)).toEqual([home]);
+
+      // The next sync finds it where the first one left it: nothing moves back and forth.
+      events.mockClear();
+      await importBookmarks(peerTree(folders), "merge", "lww");
+      expect(errors).not.toHaveBeenCalled();
+      expect(events.mock.calls.filter(([, d]) => /moved [1-9]/.test(String(d)))).toEqual([]);
+      expect(await folderOf(U)).toEqual([home]);
+      errors.mockRestore();
+      events.mockRestore();
+    });
   });
 });
 
